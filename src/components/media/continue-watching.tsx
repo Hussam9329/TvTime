@@ -32,15 +32,15 @@ export function ContinueWatching() {
         </div>
       </div>
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-        {followed.slice(0, 10).map((s) => (
-          <ContinueCard key={s.id} showId={s.tmdbId} title={s.title} posterPath={s.posterPath} onGo={() => goTv(s.tmdbId)} />
+        {followed.slice(0, 10).map((s, i) => (
+          <ContinueCard key={s.id} showId={s.tmdbId} title={s.title} posterPath={s.posterPath} onGo={() => goTv(s.tmdbId)} featured={i === 0} />
         ))}
       </div>
     </section>
   );
 }
 
-function ContinueCard({ showId, title, posterPath, onGo }: { showId: number; title: string; posterPath: string | null; onGo: () => void }) {
+function ContinueCard({ showId, title, posterPath, onGo, featured = false }: { showId: number; title: string; posterPath: string | null; onGo: () => void; featured?: boolean }) {
   // We need to find the next unwatched episode.
   // Strategy: fetch watched episodes for this show, then iterate seasons starting from 1,
   // fetch each season's episodes, find the first unwatched one.
@@ -137,9 +137,9 @@ function ContinueCard({ showId, title, posterPath, onGo }: { showId: number; tit
     <motion.div
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      className="flex-shrink-0 w-[280px] sm:w-[320px]"
+      className={featured ? "flex-shrink-0 w-[320px] sm:w-[380px]" : "flex-shrink-0 w-[280px] sm:w-[320px]"}
     >
-      <Card className="overflow-hidden p-0 hover:border-primary/50 transition-colors group">
+      <Card className={`overflow-hidden p-0 hover:border-primary/50 transition-all group ${featured ? "ring-2 ring-primary/30 shadow-lg shadow-primary/10" : ""}`}>
         <div className="flex">
           <button onClick={onGo} className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-muted">
             {ep.still_path ? (
@@ -152,6 +152,11 @@ function ContinueCard({ showId, title, posterPath, onGo }: { showId: number; tit
             <span className="absolute top-1 left-1 bg-background/90 backdrop-blur text-[10px] font-bold px-1.5 py-0.5 rounded">
               S{nextEp!.seasonNumber}E{ep.episode_number}
             </span>
+            {featured && (
+              <span className="absolute bottom-1 right-1 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                Watch Next
+              </span>
+            )}
           </button>
           <div className="flex-1 p-2.5 flex flex-col min-w-0">
             <p className="text-[10px] text-primary font-bold uppercase tracking-wide line-clamp-1">{title}</p>

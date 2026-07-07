@@ -8,7 +8,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Filter, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, SlidersHorizontal, Dices } from "lucide-react";
+import { toast } from "sonner";
 
 const SORT_OPTIONS = [
   { value: "popularity.desc", label: "Most Popular" },
@@ -74,12 +75,31 @@ export function DiscoverView() {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Discover</h1>
             <p className="text-sm text-muted-foreground mt-1">Find your next favorite {discoverTab === "movies" ? "movie" : "show"}</p>
           </div>
-          <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); setPage(1); }}>
-            <TabsList>
-              <TabsTrigger value="movies">Movies</TabsTrigger>
-              <TabsTrigger value="tv">TV Shows</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 border-primary/40 text-primary hover:bg-primary/10"
+              onClick={() => {
+                // Pick a random page (1-20) to get varied results
+                const randomPage = Math.floor(Math.random() * 20) + 1;
+                const randomSort = ["popularity.desc", "vote_average.desc", "primary_release_date.desc", "revenue.desc"][
+                  Math.floor(Math.random() * 4)
+                ];
+                setSortBy(randomSort);
+                setPage(randomPage);
+                toast.success("🎲 Surprise! Here are some random picks");
+              }}
+            >
+              <Dices className="w-4 h-4 mr-1.5" /> Surprise Me
+            </Button>
+            <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); setPage(1); }}>
+              <TabsList>
+                <TabsTrigger value="movies">Movies</TabsTrigger>
+                <TabsTrigger value="tv">TV Shows</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
         {/* Filters */}

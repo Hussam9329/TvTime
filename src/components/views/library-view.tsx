@@ -1,7 +1,7 @@
 "use client";
 
 import { useNav, type LibraryTab } from "@/lib/store";
-import { useWatchlist, useWatchedMovies, useFollowing, useRatings, type WatchlistItemDB, type WatchedMovieDB, type FollowingShowDB, type RatingDB } from "@/hooks/use-tmdb";
+import { useWatchlist, useWatchedMovies, useFollowing, useRatings, useTvDetail, useWatchedEpisodes, type WatchlistItemDB, type WatchedMovieDB, type FollowingShowDB, type RatingDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { BookOpen, Film, Bell, Star, Trash2, Play, Tv, Inbox } from "lucide-reac
 import { img } from "@/lib/tmdb";
 import { useWatchlistToggle, useWatchedMovieToggle, useFollowingToggle, useRatingMutate } from "@/hooks/use-tmdb";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import { RatingStars } from "@/components/media/rating-stars";
 
 export function LibraryView() {
@@ -179,40 +180,7 @@ function FollowingTab() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {items.map((item: FollowingShowDB) => (
-        <Card key={item.id} className="p-3 flex gap-3 group hover:border-primary/40 transition-colors">
-          <button
-            className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
-            onClick={() => goTv(item.tmdbId)}
-          >
-            {item.posterPath ? (
-              <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Tv className="w-5 h-5" /></div>
-            )}
-          </button>
-          <div className="flex-1 min-w-0 flex flex-col">
-            <button onClick={() => goTv(item.tmdbId)} className="text-left">
-              <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h4>
-            </button>
-            <div className="flex items-center gap-1 mt-1 flex-wrap">
-              <Badge variant="secondary" className="text-[10px] bg-amber-500/15 text-amber-400"><Bell className="w-2.5 h-2.5 mr-1" />Following</Badge>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-auto pt-2">Followed {new Date(item.followedAt).toLocaleDateString()}</p>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => goTv(item.tmdbId)}>
-                <Play className="w-3.5 h-3.5 mr-1" /> Track
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-muted-foreground hover:text-destructive"
-                onClick={() => { toggle.mutate({ action: "remove", tmdbId: item.tmdbId, title: item.title }); toast.success("Unfollowed"); }}
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-1" /> Unfollow
-              </Button>
-            </div>
-          </div>
-        </Card>
+        <FollowingCard key={item.id} item={item} onGo={() => goTv(item.tmdbId)} onUnfollow={() => { toggle.mutate({ action: "remove", tmdbId: item.tmdbId, title: item.title }); toast.success("Unfollowed"); }} />
       ))}
     </div>
   );
@@ -273,5 +241,76 @@ function RatingsTab() {
         </Card>
       ))}
     </div>
+  );
+}
+
+function FollowingCard({ item, onGo, onUnfollow }: { item: FollowingShowDB; onGo: () => void; onUnfollow: () => void }) {
+  const detail = useTvDetail(item.tmdbId);
+  const watched = useWatchedEpisodes(item.tmdbId);
+  const totalEpisodes = detail.data?.number_of_episodes ?? 0;
+  const watchedCount = watched.data?.items.length ?? 0;
+  const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
+  const status = detail.data?.status;
+  const seasons = detail.data?.number_of_seasons;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
+        <button
+          className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
+          onClick={onGo}
+        >
+          {item.posterPath ? (
+            <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Tv className="w-5 h-5" /></div>
+          )}
+        </button>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <button onClick={onGo} className="text-left">
+            <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h4>
+          </button>
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <Badge variant="secondary" className="text-[10px] bg-amber-500/15 text-amber-400"><Bell className="w-2.5 h-2.5 mr-1" />Following</Badge>
+            {seasons != null && seasons > 0 && (
+              <Badge variant="secondary" className="text-[10px]">{seasons} season{seasons > 1 ? "s" : ""}</Badge>
+            )}
+            {status && <Badge variant="secondary" className="text-[10px]">{status}</Badge>}
+          </div>
+
+          {/* Watch progress */}
+          {totalEpisodes > 0 && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-0.5">
+                <span>{watchedCount} / {totalEpisodes} episodes</span>
+                <span className="font-bold text-primary">{progress}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          )}
+
+          <p className="text-[10px] text-muted-foreground mt-auto pt-2">Followed {new Date(item.followedAt).toLocaleDateString()}</p>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onGo}>
+              <Play className="w-3.5 h-3.5 mr-1" /> Track
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground hover:text-destructive"
+              onClick={onUnfollow}
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1" /> Unfollow
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </motion.div>
   );
 }

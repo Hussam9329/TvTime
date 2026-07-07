@@ -184,3 +184,43 @@ Task: QA testing, add keyboard shortcuts help overlay, watch progress cards, gen
 4. Add theme toggle animation/transition
 5. Add lazy loading for images (performance optimization)
 6. Add a "random pick" / surprise me button on discover
+
+---
+Task ID: 15
+Agent: main (cron review round 4)
+Task: QA testing, add Following tab watch progress, Surprise Me button, Watch Next featured card, keyboard tooltip
+
+## Current Project Status Assessment
+- Project was stable after round 3 with all features working
+- Lint was clean, no server errors
+- Dev server running on port 3000
+- All previously added features (keyboard shortcuts help, watch progress on home, genre recommendations, improved empty states, person detail, export/import) verified working
+
+## Work Log
+- **QA via agent-browser**: Tested home, discover (with filters + pagination), TV detail (House of the Dragon with episode tracking), stats views. All working correctly, no errors found.
+- **Added watch progress to Library > Following tab**: Created reusable `FollowingCard` component with framer-motion entrance animation. Shows: Following badge, season count, status, watch progress bar (gradient from primary to purple) with "X / Y episodes" and "Z%" label, Track and Unfollow buttons. Fetches show detail + watched episodes to compute progress.
+- **Added "Surprise Me" button on Discover**: New dice icon button next to the Movies/TV tabs. Clicking it randomizes the sort order (from 4 options: popularity, vote_average, release_date, revenue) and jumps to a random page (1-20), showing a toast "🎲 Surprise! Here are some random picks". Styled with primary border and hover effect.
+- **Added "Watch Next" featured card**: The first card in Continue Watching is now larger (320px/380px vs 280px/320px), has a ring-2 primary glow with shadow, and displays a "WATCH NEXT" badge in the bottom-right corner of the episode still. This highlights the single most important next episode to watch.
+- **Added tooltip to keyboard shortcuts button**: Wrapped the keyboard icon button in a TooltipProvider/Tooltip showing "Keyboard shortcuts ?" with a styled kbd element. Added a pulsing primary dot badge on the button to improve discoverability.
+
+## Verification Results
+- ✅ Lint passes clean
+- ✅ No runtime errors in dev.log
+- ✅ Library > Following tab shows watch progress: "0 / 26 episodes" + "0%" with gradient progress bar (VLM confirmed all 5 elements: title, Following badge, season/status, progress, buttons)
+- ✅ Surprise Me button works: changed sort to "Highest Revenue" and jumped to random page
+- ✅ Watch Next featured card shows on home Continue Watching: larger size, ring glow, "WATCH NEXT" badge (VLM confirmed)
+- ✅ Keyboard shortcuts button has tooltip with "?" hint and pulsing dot badge
+- ✅ All previous features still working
+
+## Unresolved Issues / Risks
+- Following card makes 2 API calls per card (show detail + watched episodes) - acceptable for typical library sizes
+- Surprise Me only randomizes within current media type (Movies or TV) - could add cross-type randomization
+- Watch Next badge only appears on the first Continue Watching card
+
+## Priority Recommendations for Next Phase
+1. Add "Watch Next" CTA in the hero/greeting area for even faster access
+2. Add sorting options to Library tabs (e.g., sort watchlist by date added, sort watched by date watched)
+3. Add a "continue watching" badge/count on the Home nav button
+4. Add batch "mark all watched" for a season from the home Continue Watching
+5. Add image lazy-loading with blur-up placeholder effect
+6. Add a "recently added to watchlist" notification/toast

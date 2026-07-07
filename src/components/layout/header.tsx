@@ -31,6 +31,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ProfileDialog } from "@/components/profile/profile-dialog";
 import { ShortcutsHelpDialog } from "@/components/layout/keyboard-shortcuts";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 const navItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
   { view: "home", label: "Home", icon: Home },
@@ -170,15 +171,25 @@ export function Header() {
         </Button>
 
         {/* Keyboard shortcuts help */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setHelpOpen(true)}
-          aria-label="Keyboard shortcuts"
-          className="hidden sm:flex"
-        >
-          <Keyboard className="h-5 w-5" />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setHelpOpen(true)}
+                aria-label="Keyboard shortcuts"
+                className="hidden sm:flex relative"
+              >
+                <Keyboard className="h-5 w-5" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p className="text-xs">Keyboard shortcuts <kbd className="ml-1 px-1 py-0.5 bg-muted rounded text-[10px] font-mono">?</kbd></p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Avatar */}
         <button
