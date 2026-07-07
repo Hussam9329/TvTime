@@ -9,6 +9,7 @@ export type ViewName =
   | "search"
   | "movie-detail"
   | "tv-detail"
+  | "person-detail"
   | "calendar"
   | "library"
   | "stats";
@@ -21,6 +22,7 @@ interface NavState {
   // detail params
   movieId: number | null;
   tvId: number | null;
+  personId: number | null;
   // tabs
   libraryTab: LibraryTab;
   discoverTab: DiscoverTab;
@@ -36,6 +38,7 @@ interface NavState {
   setView: (v: ViewName) => void;
   goMovie: (id: number) => void;
   goTv: (id: number) => void;
+  goPerson: (id: number) => void;
   back: () => void;
   setLibraryTab: (t: LibraryTab) => void;
   setDiscoverTab: (t: DiscoverTab) => void;
@@ -55,6 +58,7 @@ export const useNav = create<NavState>()(
       view: "home",
       movieId: null,
       tvId: null,
+      personId: null,
       libraryTab: "watchlist",
       discoverTab: "movies",
       discoverGenre: null,
@@ -82,6 +86,13 @@ export const useNav = create<NavState>()(
         set((s) => ({
           view: "tv-detail",
           tvId: id,
+          history: [...s.history, s.view].slice(-20),
+        })),
+
+      goPerson: (id) =>
+        set((s) => ({
+          view: "person-detail",
+          personId: id,
           history: [...s.history, s.view].slice(-20),
         })),
 

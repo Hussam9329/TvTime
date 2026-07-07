@@ -3,7 +3,7 @@
 import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useWatchedMovies, useFollowing, useStats } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { ContinueWatching } from "@/components/media/continue-watching";
-import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen } from "lucide-react";
+import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
 import { img, getYear, getTitle } from "@/lib/tmdb";
@@ -84,6 +84,11 @@ export function HomeView() {
       {/* Continue watching (followed shows) - only if user has followed shows */}
       {following.data && following.data.items.length > 0 && (
         <ContinueWatching />
+      )}
+
+      {/* Recently watched movies */}
+      {watchedMovies.data && watchedMovies.data.items.length > 0 && (
+        <RecentlyWatched />
       )}
 
       <MediaRow
@@ -238,6 +243,44 @@ function FollowingSection() {
               )}
             </div>
             <p className="mt-1.5 text-xs font-medium line-clamp-1">{s.title}</p>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RecentlyWatched() {
+  const watchedMovies = useWatchedMovies();
+  const goMovie = useNav((s) => s.goMovie);
+  const items = (watchedMovies.data?.items ?? []).slice(0, 12);
+
+  return (
+    <section className="mb-8">
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <Clock className="w-5 h-5 text-primary" />
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight">Recently Watched</h2>
+        <span className="text-xs text-muted-foreground ml-1">({items.length})</span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+        {items.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => goMovie(m.tmdbId)}
+            className="flex-shrink-0 w-[110px] sm:w-[130px] group"
+          >
+            <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
+              {m.posterPath ? (
+                <img src={img(m.posterPath, "w185")} alt={m.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs p-2 text-center">{m.title}</div>
+              )}
+              <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" />
+              </div>
+            </div>
+            <p className="mt-1.5 text-xs font-medium line-clamp-1">{m.title}</p>
+            <p className="text-[10px] text-muted-foreground">{new Date(m.watchedAt).toLocaleDateString()}</p>
           </button>
         ))}
       </div>

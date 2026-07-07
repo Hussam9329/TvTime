@@ -19,7 +19,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 export function MovieDetailView() {
-  const { movieId, back } = useNav();
+  const { movieId, back, goPerson } = useNav();
   const detail = useMovieDetail(movieId);
   const watchlist = useWatchlist();
   const watchedMovies = useWatchedMovies();
@@ -243,16 +243,20 @@ export function MovieDetailView() {
           {cast.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {cast.map((c: any) => (
-                <Card key={c.id} className="p-3 flex items-center gap-3 hover:border-primary/40 transition-colors">
+                <Card
+                  key={c.id}
+                  className="p-3 flex items-center gap-3 hover:border-primary/40 transition-colors cursor-pointer group"
+                  onClick={() => goPerson(c.id)}
+                >
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
                     {c.profile_path ? (
-                      <img src={img(c.profile_path, "w92")} alt={c.name} className="w-full h-full object-cover" />
+                      <img src={img(c.profile_path, "w92")} alt={c.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Users className="w-5 h-5" /></div>
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-medium text-sm line-clamp-1">{c.name}</p>
+                    <p className="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">{c.name}</p>
                     <p className="text-xs text-muted-foreground line-clamp-1">{c.character}</p>
                   </div>
                 </Card>

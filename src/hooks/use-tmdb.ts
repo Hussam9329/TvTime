@@ -155,6 +155,14 @@ export function useSeasonDetail(tvId: number | null, seasonNumber: number | null
   });
 }
 
+export function usePersonDetail(id: number | null) {
+  return useQuery({
+    queryKey: ["tmdb", "person", id],
+    queryFn: () => tmdbGet<any>(`person/${id}`),
+    enabled: id != null,
+  });
+}
+
 // ---------- Library ----------
 export interface WatchlistItemDB {
   id: string;

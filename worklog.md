@@ -102,3 +102,44 @@ Task: QA testing, fix bugs, and add new features (Continue Watching, Watch Provi
 4. Add export/import library data (JSON backup)
 5. Optimize Calendar API calls with batching
 6. Add genre-based recommendations on home
+
+---
+Task ID: 13
+Agent: main (cron review round 2)
+Task: QA testing, fix calendar bug, add Person detail view, keyboard shortcuts, export/import, Recently Watched
+
+## Current Project Status Assessment
+- Project was stable after round 1 with all features working
+- Lint was clean, no server errors
+- Dev server running on port 3000
+
+## Work Log
+- **QA via agent-browser**: Found critical runtime error `today is not defined` in calendar-view.tsx line 156. The `CalendarGrid` component used `today` variable but it was never defined in scope. Fixed by adding `const today = new Date(); today.setHours(0,0,0,0);` at the top of CalendarGrid.
+- **Added Person/Cast detail view**: New `PersonDetailView` component showing actor's profile photo, name, department, birthday/age, birthplace, biography, stats (movie/TV credits + popularity), "Known For" carousel, and full filmography tabs (Movies/TV). Added `person-detail` view + `goPerson` action + `personId` to Zustand store. Added `usePersonDetail` hook. Made cast cards clickable in both movie-detail-view and tv-detail-view (with hover effects).
+- **Added keyboard shortcuts**: New `KeyboardShortcuts` component (invisible, global keydown listener). Shortcuts: `/` or `s` to focus search, `Esc` to go back/blur, `g h` home, `g d` discover, `g s` stats, `g l` library, `g c` calendar. Respects typing context (doesn't trigger when in input fields, except Esc).
+- **Added export/import library data**: New `/api/library/export` GET endpoint returns all library data as JSON. New `/api/library/import` POST endpoint merges imported data (upserts). Added Backup & Restore section to ProfileDialog with Export (downloads JSON file) and Import (file picker) buttons.
+- **Added Recently Watched section on home**: New `RecentlyWatched` component shows recently watched movies (from watchedMovies library data) with posters, green checkmark badges, and watch dates. Appears between Continue Watching and Trending Now.
+
+## Verification Results
+- ✅ Lint passes clean
+- ✅ No runtime errors in dev.log
+- ✅ Calendar view loads without "today is not defined" error (was crashing before)
+- ✅ Person detail view loads with full biography, stats, Known For, filmography
+- ✅ Cast cards are clickable and navigate to person detail (tested Michael Johnston from Obsession)
+- ✅ Keyboard shortcuts work: `g d` navigated to Discover, `/` focused search input
+- ✅ Profile dialog shows Backup & Restore section with Export/Import buttons
+- ✅ Recently Watched section appears on home after marking movie as watched (shows Obsession poster with green checkmark)
+- ✅ VLM confirmed visual quality of all new features
+
+## Unresolved Issues / Risks
+- Person detail view makes multiple API calls for filmography (could be optimized)
+- Calendar still makes parallel calls per followed show (capped at 12) - acceptable for typical use
+- No keyboard shortcut hint UI yet (users may not discover shortcuts)
+
+## Priority Recommendations for Next Phase
+1. Add keyboard shortcuts help overlay (press `?` to show)
+2. Add genre-based recommendations on home (based on most-watched genres)
+3. Add "watch progress" percentage indicator on followed show cards
+4. Optimize calendar with a batch endpoint or TMDB's TV schedule endpoint
+5. Add dark/light theme persistence improvements
+6. Add social features: share watchlist link (read-only public view)

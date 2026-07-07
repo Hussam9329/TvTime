@@ -133,6 +133,8 @@ interface CalendarGridProps {
 }
 
 function CalendarGrid({ days, todayKey, showIds, showTitles, onShowClick, month, year }: CalendarGridProps) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   // Fetch all show details in parallel to extract episode air dates
   // Each show hook fetches seasons + we then need episode-level data.
   // Since we only care about air dates within the current month, we can use

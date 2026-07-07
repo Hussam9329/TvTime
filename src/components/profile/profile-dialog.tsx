@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useStats } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { useQueryClient } from "@tanstack/react-query";
-import { Settings, User, Trash2, AlertTriangle, Loader2, Check } from "lucide-react";
+import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -31,6 +31,9 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [name, setName] = useState(userName);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setName(userName);
@@ -66,6 +69,55 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       toast.error("Failed to clear data");
     } finally {
       setClearing(false);
+    }
+  };
+
+  const onExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/library/export?userId=${encodeURIComponent(userId)}`);
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cinetrack-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Library exported");
+    } catch {
+      toast.error("Failed to export data");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const res = await fetch(`/api/library/import?userId=${encodeURIComponent(userId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const result = await res.json();
+      qc.invalidateQueries({ queryKey: ["lib"] });
+      const total = result.imported.watchlist + result.imported.watchedMovies + result.imported.watchedEpisodes + result.imported.following + result.imported.ratings;
+      toast.success(`Imported ${total} items`);
+      onOpenChange(false);
+    } catch {
+      toast.error("Failed to import. Check the file format.");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -130,6 +182,34 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               </div>
             </div>
           )}
+
+          {/* Backup & restore */}
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="flex items-start gap-2 mb-2">
+              <Download className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold">Backup & Restore</p>
+                <p className="text-xs text-muted-foreground">Export your library to a JSON file or import a backup.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" onClick={onExport} disabled={exporting}>
+                {exporting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+                Export
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+                {importing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+                Import
+              </Button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              onChange={onImport}
+              className="hidden"
+            />
+          </div>
 
           {/* Danger zone */}
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
