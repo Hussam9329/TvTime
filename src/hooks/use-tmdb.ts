@@ -372,3 +372,82 @@ export function useStats() {
     staleTime: 0,
   });
 }
+
+// ---------- Media (Neon PostgreSQL backend) ----------
+export interface MediaItemDB {
+  id: string;
+  title: string;
+  originalTitle: string | null;
+  year: string | null;
+  type: string;
+  poster: string | null;
+  rating: string | null;
+  overview: string | null;
+  genres: string[];
+  episodes: number | null;
+  seasons: number | null;
+  duration: string | null;
+  status: string | null;
+  author: string | null;
+  pages: number | null;
+  tags: string[];
+  notes: string | null;
+  watched: boolean;
+  watchedAt: string | null;
+  userRating: number | null;
+  rewatch: boolean;
+  runtime: number | null;
+  ratingStatus: string | null;
+  addedAt: string;
+  updatedAt: string;
+}
+
+export interface MediaStats {
+  counts: {
+    total: number;
+    movies: number;
+    series: number;
+    books: number;
+    games: number;
+    rated: number;
+    watched: number;
+    planned: number;
+  };
+  ratingDist: { value: number; count: number }[];
+  typeDist: { type: string; count: number }[];
+  topRated: { id: string; title: string; poster: string | null; userRating: number | null; type: string; year: string | null }[];
+  recentlyAdded: { id: string; title: string; poster: string | null; type: string; year: string | null; addedAt: string }[];
+  avgRating: number;
+}
+
+async function mediaGet<T>(path: string, params?: Record<string, string | number | boolean>): Promise<T> {
+  const url = new URL("/api/media/" + path, window.location.origin);
+  if (params) for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`Media API ${res.status}`);
+  return res.json();
+}
+
+export function useMedia(params: {
+  type?: string;
+  status?: string;
+  watched?: string;
+  rated?: string;
+  search?: string;
+  sortBy?: string;
+  order?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  return useQuery({
+    queryKey: ["media", "list", params],
+    queryFn: () => mediaGet<{ items: MediaItemDB[]; total: number; limit: number; offset: number }>("", params),
+  });
+}
+
+export function useMediaStats() {
+  return useQuery({
+    queryKey: ["media", "stats"],
+    queryFn: () => mediaGet<MediaStats>("stats"),
+  });
+}
