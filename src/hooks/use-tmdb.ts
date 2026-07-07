@@ -420,9 +420,15 @@ export interface MediaStats {
   avgRating: number;
 }
 
-async function mediaGet<T>(path: string, params?: Record<string, string | number | boolean>): Promise<T> {
+async function mediaGet<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
   const url = new URL("/api/media/" + path, window.location.origin);
-  if (params) for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (v != null && v !== undefined && String(v) !== "undefined" && String(v) !== "") {
+        url.searchParams.set(k, String(v));
+      }
+    }
+  }
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Media API ${res.status}`);
   return res.json();

@@ -15,12 +15,12 @@ export async function GET(req: NextRequest) {
   const offset = Number(url.searchParams.get("offset")) || 0;
 
   const where: any = {};
-  if (type) where.type = type;
+  if (type && type !== "undefined" && type !== "all") where.type = type;
   if (status === "planned") where.status = "planned";
   if (watched === "true") where.watched = true;
   if (watched === "false") where.watched = false;
   if (rated === "true") where.userRating = { not: null };
-  if (search) {
+  if (search && search !== "undefined") {
     where.title = { contains: search, mode: "insensitive" };
   }
 
