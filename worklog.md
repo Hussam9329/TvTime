@@ -224,3 +224,45 @@ Task: QA testing, add Following tab watch progress, Surprise Me button, Watch Ne
 4. Add batch "mark all watched" for a season from the home Continue Watching
 5. Add image lazy-loading with blur-up placeholder effect
 6. Add a "recently added to watchlist" notification/toast
+
+---
+Task ID: 16
+Agent: main (cron review round 5)
+Task: QA testing, add Library sorting, Watch Next CTA in greeting, NEW badge, blur-up images
+
+## Current Project Status Assessment
+- Project was stable after round 4 with all features working
+- Lint was clean, no server errors
+- Dev server running on port 3000
+- All previously added features (Following tab progress, Surprise Me, Watch Next card, keyboard tooltip) verified working
+
+## Work Log
+- **QA via agent-browser**: Tested home, search (inception → 12 results), library views. All working correctly. Found initial empty-page timing issue (resolved by re-opening browser).
+- **Added sorting to Library Watchlist tab**: New `SortControl` with 4 options: Most Recent (by addedAt), Top Rated (by voteAverage), A-Z (by title), Newest First (by releaseDate). Shows item count. Items sorted via `useMemo`. Watchlist cards refactored into reusable `WatchlistCard` component with framer-motion entrance animation.
+- **Added sorting to Library Watched Movies tab**: 3 sort options: Most Recent (by watchedAt), A-Z (by title), Longest (by runtime). Shows movie count. Cards wrapped in motion.div with hover shadow effects.
+- **Added "Watch Next" CTA in greeting area**: New `WatchNextCTA` component - a gradient (primary→purple) pill button with play icon that appears in the home greeting area when user has followed shows. Shows "WATCH NEXT" label + first followed show title. Hover scale effect. Clicking navigates to the show detail page.
+- **Added "NEW" badge on recently added watchlist items**: Watchlist cards now show a green "NEW" badge if the item was added within the last 24 hours (computed via `Date.now() - addedAt < 24h`).
+- **Added blur-up image loading**: MediaCard now loads a tiny w92 image as a blurred background (blur-xl scale-110) behind the full w342 image. This creates a progressive blur-up effect where a blurred version appears instantly while the full image loads.
+- **Polished card hover effects**: All library cards (watchlist, watched movies, following) now have framer-motion entrance animations, hover shadow-lg with primary/5 glow, and image scale-105 on hover.
+
+## Verification Results
+- ✅ Lint passes clean
+- ✅ No runtime errors in dev.log
+- ✅ Library Watchlist shows sort control with 4 options + "1 items" count (VLM confirmed)
+- ✅ Watch Next CTA appears in greeting area: gradient button "WATCH NEXT House of the Dragon" (VLM confirmed)
+- ✅ NEW badge appears on recently added watchlist item (< 24h)
+- ✅ Blur-up image loading works (tiny image as blurred background)
+- ✅ All previous features still working
+
+## Unresolved Issues / Risks
+- Blur-up adds an extra small image request per card (w92 is tiny, ~2-5KB, acceptable)
+- SortControl component is defined but inlined in WatchedMoviesTab (minor code duplication)
+- Watch Next CTA only shows the first followed show (could rotate or show count of unwatched episodes)
+
+## Priority Recommendations for Next Phase
+1. Add sort to Following tab (by progress %, by name, by followed date)
+2. Add sort to Ratings tab (by rating value, by date, by title)
+3. Add a "filter by type" (movie/TV) toggle to watchlist tab
+4. Add skeleton loading states for Continue Watching cards
+5. Add a "back to top" floating button for long pages
+6. Add toast notifications for library actions (added/removed) with undo

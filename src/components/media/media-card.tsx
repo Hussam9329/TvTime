@@ -60,11 +60,20 @@ export function MediaCard({ item, index = 0, showMediaType = true }: MediaCardPr
     >
       <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
+          {/* Blur-up placeholder: tiny image as background */}
+          {item.poster_path && (
+            <img
+              src={imgOrPlaceholder(item.poster_path, "w92")}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 w-full h-full object-cover blur-xl scale-110"
+            />
+          )}
           <img
             src={imgOrPlaceholder(item.poster_path, "w342")}
             alt={title}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="relative w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {/* gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-80" />

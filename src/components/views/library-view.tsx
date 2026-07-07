@@ -1,12 +1,13 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { useNav, type LibraryTab } from "@/lib/store";
 import { useWatchlist, useWatchedMovies, useFollowing, useRatings, useTvDetail, useWatchedEpisodes, type WatchlistItemDB, type WatchedMovieDB, type FollowingShowDB, type RatingDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Film, Bell, Star, Trash2, Play, Tv, Inbox } from "lucide-react";
+import { BookOpen, Film, Bell, Star, Trash2, Play, Tv, Inbox, ArrowUpDown } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { useWatchlistToggle, useWatchedMovieToggle, useFollowingToggle, useRatingMutate } from "@/hooks/use-tmdb";
 import { toast } from "sonner";
@@ -41,6 +42,36 @@ export function LibraryView() {
   );
 }
 
+function SortControl<T extends string>({ sortBy, onSortChange, count, label }: { sortBy: T; onSortChange: (v: T) => void; count: number; label: string }) {
+  const options: { value: T; label: string }[] = [
+    { value: "recent" as T, label: "Most Recent" },
+    { value: "rating" as T, label: "Top Rated" },
+    { value: "title" as T, label: "A-Z" },
+    { value: "year" as T, label: "Newest First" },
+  ];
+  return (
+    <div className="flex items-center justify-between gap-3 flex-wrap">
+      <p className="text-sm text-muted-foreground">
+        <span className="font-bold text-foreground">{count}</span> {label}
+      </p>
+      <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+        <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => onSortChange(opt.value)}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+              sortBy === opt.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EmptyState({ icon, title, subtitle, ctaLabel, onCta }: { icon: React.ReactNode; title: string; subtitle: string; ctaLabel?: string; onCta?: () => void }) {
   return (
     <Card className="p-12 text-center text-muted-foreground relative overflow-hidden">
@@ -67,54 +98,88 @@ function WatchlistTab() {
   const goTv = useNav((s) => s.goTv);
   const toggle = useWatchlistToggle();
   const setView = useNav((s) => s.setView);
+  const [sortBy, setSortBy] = useState<"recent" | "rating" | "title" | "year">("recent");
 
-  const items = data.data?.items ?? [];
+  const rawItems = data.data?.items ?? [];
+
+  const items = useMemo(() => {
+    const sorted = [...rawItems];
+    switch (sortBy) {
+      case "recent":
+        return sorted.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+      case "rating":
+        return sorted.sort((a, b) => (b.voteAverage || 0) - (a.voteAverage || 0));
+      case "title":
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      case "year":
+        return sorted.sort((a, b) => (b.releaseDate || "").localeCompare(a.releaseDate || ""));
+      default:
+        return sorted;
+    }
+  }, [rawItems, sortBy]);
 
   if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (items.length === 0) return <EmptyState icon={<Inbox className="w-8 h-8" />} title="Your watchlist is empty" subtitle="Add movies and shows you want to watch later" ctaLabel="Discover content" onCta={() => setView("discover")} />;
+  if (rawItems.length === 0) return <EmptyState icon={<Inbox className="w-8 h-8" />} title="Your watchlist is empty" subtitle="Add movies and shows you want to watch later" ctaLabel="Discover content" onCta={() => setView("discover")} />;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {items.map((item: WatchlistItemDB) => (
-        <Card key={item.id} className="p-3 flex gap-3 group hover:border-primary/40 transition-colors">
-          <button
-            className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
-            onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)}
-          >
-            {item.posterPath ? (
-              <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Film className="w-5 h-5" /></div>
-            )}
+    <div className="space-y-3">
+      <SortControl sortBy={sortBy} onSortChange={setSortBy} count={rawItems.length} label="items" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {items.map((item: WatchlistItemDB) => (
+          <WatchlistCard key={item.id} item={item} onGo={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)} onRemove={() => { toggle.mutate({ action: "remove", mediaType: item.mediaType as any, tmdbId: item.tmdbId, title: item.title }); toast.success("Removed from watchlist"); }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WatchlistCard({ item, onGo, onRemove }: { item: WatchlistItemDB; onGo: () => void; onRemove: () => void }) {
+  const isNew = Date.now() - new Date(item.addedAt).getTime() < 24 * 60 * 60 * 1000;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
+        <button
+          className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
+          onClick={onGo}
+        >
+          {item.posterPath ? (
+            <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Film className="w-5 h-5" /></div>
+          )}
+        </button>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <button onClick={onGo} className="text-left">
+            <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h4>
           </button>
-          <div className="flex-1 min-w-0 flex flex-col">
-            <button onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)} className="text-left">
-              <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h4>
-            </button>
-            <div className="flex items-center gap-1 mt-1 flex-wrap">
-              <Badge variant="secondary" className="text-[10px]">
-                {item.mediaType === "movie" ? <><Film className="w-2.5 h-2.5 mr-1" />Movie</> : <><Tv className="w-2.5 h-2.5 mr-1" />TV</>}
-              </Badge>
-              {item.releaseDate && <span className="text-xs text-muted-foreground">{item.releaseDate.slice(0, 4)}</span>}
-              {item.voteAverage ? <span className="text-xs text-amber-400 flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-amber-400" />{item.voteAverage.toFixed(1)}</span> : null}
-            </div>
-            <p className="text-xs text-muted-foreground/80 line-clamp-2 mt-1 flex-1">{item.overview}</p>
-            <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <Badge variant="secondary" className="text-[10px]">
+              {item.mediaType === "movie" ? <><Film className="w-2.5 h-2.5 mr-1" />Movie</> : <><Tv className="w-2.5 h-2.5 mr-1" />TV</>}
+            </Badge>
+            {item.releaseDate && <span className="text-xs text-muted-foreground">{item.releaseDate.slice(0, 4)}</span>}
+            {item.voteAverage ? <span className="text-xs text-amber-400 flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-amber-400" />{item.voteAverage.toFixed(1)}</span> : null}
+            {isNew && <Badge className="text-[9px] h-5 px-1.5 bg-emerald-500/20 text-emerald-400 border-0">NEW</Badge>}
+          </div>
+          <p className="text-xs text-muted-foreground/80 line-clamp-2 mt-1 flex-1">{item.overview}</p>
+          <div className="flex items-center justify-between mt-2">
               <span className="text-[10px] text-muted-foreground">Added {new Date(item.addedAt).toLocaleDateString()}</span>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={() => { toggle.mutate({ action: "remove", mediaType: item.mediaType as any, tmdbId: item.tmdbId, title: item.title }); toast.success("Removed from watchlist"); }}
+                onClick={onRemove}
                 aria-label="Remove from watchlist"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>
           </div>
-        </Card>
-      ))}
-    </div>
+      </Card>
+    </motion.div>
   );
 }
 
@@ -122,46 +187,96 @@ function WatchedMoviesTab() {
   const data = useWatchedMovies();
   const goMovie = useNav((s) => s.goMovie);
   const toggle = useWatchedMovieToggle();
+  const setView = useNav((s) => s.setView);
+  const [sortBy, setSortBy] = useState<"recent" | "title" | "runtime">("recent");
 
-  const items = data.data?.items ?? [];
+  const rawItems = data.data?.items ?? [];
+
+  const items = useMemo(() => {
+    const sorted = [...rawItems];
+    switch (sortBy) {
+      case "recent":
+        return sorted.sort((a, b) => new Date(b.watchedAt).getTime() - new Date(a.watchedAt).getTime());
+      case "title":
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      case "runtime":
+        return sorted.sort((a, b) => (b.runtime || 0) - (a.runtime || 0));
+      default:
+        return sorted;
+    }
+  }, [rawItems, sortBy]);
 
   if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (items.length === 0) return <EmptyState icon={<Film className="w-8 h-8" />} title="No watched movies yet" subtitle="Mark movies as watched to see them here" ctaLabel="Browse movies" onCta={() => setView("discover")} />;
+  if (rawItems.length === 0) return <EmptyState icon={<Film className="w-8 h-8" />} title="No watched movies yet" subtitle="Mark movies as watched to see them here" ctaLabel="Browse movies" onCta={() => setView("discover")} />;
+
+  const sortOptions = [
+    { value: "recent" as const, label: "Most Recent" },
+    { value: "title" as const, label: "A-Z" },
+    { value: "runtime" as const, label: "Longest" },
+  ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {items.map((item: WatchedMovieDB) => (
-        <Card key={item.id} className="p-3 flex gap-3 group hover:border-primary/40 transition-colors">
-          <button
-            className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
-            onClick={() => goMovie(item.tmdbId)}
-          >
-            {item.posterPath ? (
-              <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Film className="w-5 h-5" /></div>
-            )}
-          </button>
-          <div className="flex-1 min-w-0 flex flex-col">
-            <button onClick={() => goMovie(item.tmdbId)} className="text-left">
-              <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h4>
-            </button>
-            <div className="flex items-center gap-1 mt-1 flex-wrap">
-              <Badge variant="secondary" className="text-[10px] bg-emerald-500/15 text-emerald-400"><Film className="w-2.5 h-2.5 mr-1" />Watched</Badge>
-              {item.runtime ? <span className="text-xs text-muted-foreground">{Math.floor(item.runtime / 60)}h {item.runtime % 60}m</span> : null}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-auto pt-2">Watched {new Date(item.watchedAt).toLocaleDateString()}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-muted-foreground hover:text-destructive justify-start px-0"
-              onClick={() => { toggle.mutate({ action: "remove", tmdbId: item.tmdbId, title: item.title }); toast.success("Removed from watched"); }}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-bold text-foreground">{rawItems.length}</span> movies
+        </p>
+        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
+          {sortOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSortBy(opt.value)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                sortBy === opt.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
             >
-              <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
-            </Button>
-          </div>
-        </Card>
-      ))}
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {items.map((item: WatchedMovieDB) => (
+          <motion.div
+            key={item.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
+              <button
+                className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
+                onClick={() => goMovie(item.tmdbId)}
+              >
+                {item.posterPath ? (
+                  <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Film className="w-5 h-5" /></div>
+                )}
+              </button>
+              <div className="flex-1 min-w-0 flex flex-col">
+                <button onClick={() => goMovie(item.tmdbId)} className="text-left">
+                  <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h4>
+                </button>
+                <div className="flex items-center gap-1 mt-1 flex-wrap">
+                  <Badge variant="secondary" className="text-[10px] bg-emerald-500/15 text-emerald-400"><Film className="w-2.5 h-2.5 mr-1" />Watched</Badge>
+                  {item.runtime ? <span className="text-xs text-muted-foreground">{Math.floor(item.runtime / 60)}h {item.runtime % 60}m</span> : null}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-auto pt-2">Watched {new Date(item.watchedAt).toLocaleDateString()}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground hover:text-destructive justify-start px-0"
+                  onClick={() => { toggle.mutate({ action: "remove", tmdbId: item.tmdbId, title: item.title }); toast.success("Removed from watched"); }}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -171,17 +286,56 @@ function FollowingTab() {
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
   const toggle = useFollowingToggle();
+  const [sortBy, setSortBy] = useState<"recent" | "title">("recent");
 
-  const items = data.data?.items ?? [];
+  const rawItems = data.data?.items ?? [];
+
+  const items = useMemo(() => {
+    const sorted = [...rawItems];
+    switch (sortBy) {
+      case "recent":
+        return sorted.sort((a, b) => new Date(b.followedAt).getTime() - new Date(a.followedAt).getTime());
+      case "title":
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      default:
+        return sorted;
+    }
+  }, [rawItems, sortBy]);
 
   if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (items.length === 0) return <EmptyState icon={<Bell className="w-8 h-8" />} title="Not following any shows" subtitle="Follow TV shows to track their episodes" ctaLabel="Discover shows" onCta={() => setView("discover")} />;
+  if (rawItems.length === 0) return <EmptyState icon={<Bell className="w-8 h-8" />} title="Not following any shows" subtitle="Follow TV shows to track their episodes" ctaLabel="Discover shows" onCta={() => setView("discover")} />;
+
+  const sortOptions = [
+    { value: "recent" as const, label: "Most Recent" },
+    { value: "title" as const, label: "A-Z" },
+  ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {items.map((item: FollowingShowDB) => (
-        <FollowingCard key={item.id} item={item} onGo={() => goTv(item.tmdbId)} onUnfollow={() => { toggle.mutate({ action: "remove", tmdbId: item.tmdbId, title: item.title }); toast.success("Unfollowed"); }} />
-      ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-bold text-foreground">{rawItems.length}</span> shows
+        </p>
+        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
+          {sortOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSortBy(opt.value)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                sortBy === opt.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {items.map((item: FollowingShowDB) => (
+          <FollowingCard key={item.id} item={item} onGo={() => goTv(item.tmdbId)} onUnfollow={() => { toggle.mutate({ action: "remove", tmdbId: item.tmdbId, title: item.title }); toast.success("Unfollowed"); }} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -192,40 +346,81 @@ function RatingsTab() {
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
   const toggle = useRatingMutate();
+  const [sortBy, setSortBy] = useState<"recent" | "rating" | "title">("recent");
 
-  const items = data.data?.items ?? [];
+  const rawItems = data.data?.items ?? [];
+
+  const items = useMemo(() => {
+    const sorted = [...rawItems];
+    switch (sortBy) {
+      case "recent":
+        return sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      case "rating":
+        return sorted.sort((a, b) => b.value - a.value);
+      case "title":
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      default:
+        return sorted;
+    }
+  }, [rawItems, sortBy]);
 
   if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (items.length === 0) return <EmptyState icon={<Star className="w-8 h-8" />} title="No ratings yet" subtitle="Rate movies and shows to see them here" ctaLabel="Find something to rate" onCta={() => setView("discover")} />;
+  if (rawItems.length === 0) return <EmptyState icon={<Star className="w-8 h-8" />} title="No ratings yet" subtitle="Rate movies and shows to see them here" ctaLabel="Find something to rate" onCta={() => setView("discover")} />;
+
+  const sortOptions = [
+    { value: "recent" as const, label: "Most Recent" },
+    { value: "rating" as const, label: "Highest Rated" },
+    { value: "title" as const, label: "A-Z" },
+  ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {items.map((item: RatingDB) => (
-        <Card key={item.id} className="p-3 flex gap-3 group hover:border-primary/40 transition-colors">
-          <button
-            className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
-            onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)}
-          >
-            {item.posterPath ? (
-              <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                {item.mediaType === "movie" ? <Film className="w-5 h-5" /> : <Tv className="w-5 h-5" />}
-              </div>
-            )}
-          </button>
-          <div className="flex-1 min-w-0 flex flex-col">
-            <button onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)} className="text-left">
-              <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">
-                {item.title}
-              </h4>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-bold text-foreground">{rawItems.length}</span> ratings
+        </p>
+        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
+          {sortOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSortBy(opt.value)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                sortBy === opt.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {opt.label}
             </button>
-            <div className="flex items-center gap-1 mt-1">
-              <Badge variant="secondary" className="text-[10px]">
-                {item.mediaType === "movie" ? <><Film className="w-2.5 h-2.5 mr-1" />Movie</> : <><Tv className="w-2.5 h-2.5 mr-1" />TV</>}
-              </Badge>
-            </div>
-            <div className="mt-2">
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {items.map((item: RatingDB) => (
+          <Card key={item.id} className="p-3 flex gap-3 group hover:border-primary/40 transition-colors">
+            <button
+              className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
+              onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)}
+            >
+              {item.posterPath ? (
+                <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                  {item.mediaType === "movie" ? <Film className="w-5 h-5" /> : <Tv className="w-5 h-5" />}
+                </div>
+              )}
+            </button>
+            <div className="flex-1 min-w-0 flex flex-col">
+              <button onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)} className="text-left">
+                <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                  {item.title}
+                </h4>
+              </button>
+              <div className="flex items-center gap-1 mt-1">
+                <Badge variant="secondary" className="text-[10px]">
+                  {item.mediaType === "movie" ? <><Film className="w-2.5 h-2.5 mr-1" />Movie</> : <><Tv className="w-2.5 h-2.5 mr-1" />TV</>}
+                </Badge>
+              </div>
+              <div className="mt-2">
               <RatingStars value={item.value} readOnly size="sm" showValue />
             </div>
             <p className="text-[10px] text-muted-foreground mt-2">Rated {new Date(item.updatedAt).toLocaleDateString()}</p>

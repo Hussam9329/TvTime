@@ -47,6 +47,10 @@ export function HomeView() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Here's what's trending in your cinema world today</p>
         </div>
+        {/* Watch Next CTA - shows when user has followed shows */}
+        {following.data && following.data.items.length > 0 && (
+          <WatchNextCTA />
+        )}
       </div>
 
       {/* Hero featured */}
@@ -317,5 +321,30 @@ function RecentlyWatched() {
         ))}
       </div>
     </section>
+  );
+}
+
+function WatchNextCTA() {
+  const following = useFollowing();
+  const goTv = useNav((s) => s.goTv);
+  const firstShow = following.data?.items[0];
+
+  if (!firstShow) return null;
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      onClick={() => goTv(firstShow.tmdbId)}
+      className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all hover:scale-105"
+    >
+      <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
+        <Play className="w-4 h-4 fill-current" />
+      </div>
+      <div className="text-left">
+        <p className="text-[10px] uppercase tracking-wide font-bold opacity-80">Watch Next</p>
+        <p className="text-sm font-bold line-clamp-1 max-w-[180px]">{firstShow.title}</p>
+      </div>
+    </motion.button>
   );
 }
