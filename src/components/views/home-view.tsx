@@ -2,6 +2,7 @@
 
 import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useWatchedMovies, useFollowing, useStats } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
+import { ContinueWatching } from "@/components/media/continue-watching";
 import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
@@ -24,11 +25,29 @@ export function HomeView() {
   const stats = useStats();
 
   const setView = useNav((s) => s.setView);
+  const userName = useNav((s) => s.userName);
 
   const heroItem = trending.data?.results?.find((m) => m.backdrop_path && (m.overview?.length || 0) > 100) || trending.data?.results?.[0];
 
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
+  })();
+
   return (
     <div className="space-y-6">
+      {/* Greeting */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            {greeting}, <span className="text-gradient">{userName}</span> 👋
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Here's what's trending in your cinema world today</p>
+        </div>
+      </div>
+
       {/* Hero featured */}
       {heroItem && <Hero item={heroItem} />}
 
@@ -64,7 +83,7 @@ export function HomeView() {
 
       {/* Continue watching (followed shows) - only if user has followed shows */}
       {following.data && following.data.items.length > 0 && (
-        <FollowingSection />
+        <ContinueWatching />
       )}
 
       <MediaRow

@@ -200,6 +200,8 @@ export interface RatingDB {
   userId: string;
   mediaType: string;
   tmdbId: number;
+  title: string;
+  posterPath: string | null;
   value: number;
   createdAt: string;
   updatedAt: string;
@@ -424,9 +426,15 @@ export function useRatingMutate() {
   const qc = useQueryClient();
   const userId = useUserId();
   return useMutation({
-    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number }) => {
+    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null }) => {
       if (args.action === "set") {
-        return libPost("ratings", userId, { mediaType: args.mediaType, tmdbId: args.tmdbId, value: args.value });
+        return libPost("ratings", userId, {
+          mediaType: args.mediaType,
+          tmdbId: args.tmdbId,
+          value: args.value,
+          title: args.title,
+          posterPath: args.posterPath,
+        });
       } else {
         return libDelete("ratings", userId, { mediaType: args.mediaType, tmdbId: String(args.tmdbId) });
       }

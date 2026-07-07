@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingStars } from "@/components/media/rating-stars";
 import { MediaRow } from "@/components/media/media-row";
+import { WatchProviders } from "@/components/media/watch-providers";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
@@ -70,6 +71,11 @@ export function TvDetailView() {
   const videos = ((t as any).videos?.results ?? []).filter((v: any) => v.site === "YouTube");
   const trailer = videos.find((v: any) => v.type === "Trailer") || videos[0];
 
+  // Extract TV content rating (US)
+  const contentRatings = (t as any).content_ratings?.results ?? [];
+  const usRating = contentRatings.find((r: any) => r.iso_3166_1 === "US");
+  const contentRating = usRating?.rating || null;
+
   // Filter out specials (season 0) for the main list, but show as option
   const seasons = t.seasons?.filter((s) => s.season_number >= 0) ?? [];
   const defaultSeason = seasons.find((s) => s.season_number === 1)?.season_number ?? seasons[0]?.season_number ?? null;
@@ -104,7 +110,7 @@ export function TvDetailView() {
       ratingMutate.mutate({ action: "remove", mediaType: "tv", tmdbId: t.id });
       toast.success("Rating removed");
     } else {
-      ratingMutate.mutate({ action: "set", mediaType: "tv", tmdbId: t.id, value: v });
+      ratingMutate.mutate({ action: "set", mediaType: "tv", tmdbId: t.id, value: v, title: t.name || `TV ${t.id}`, posterPath: t.poster_path });
       toast.success(`Rated ${v}/10`);
     }
   };
@@ -132,6 +138,7 @@ export function TvDetailView() {
             {t.vote_average > 0 && (
               <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0"><Star className="w-3 h-3 mr-1 fill-amber-300" />{t.vote_average.toFixed(1)}</Badge>
             )}
+            {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
             {t.status && <Badge variant="secondary" className="bg-black/40 backdrop-blur border-0">{t.status}</Badge>}
           </div>
           <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight drop-shadow-lg">{t.name}</h1>
@@ -195,6 +202,9 @@ export function TvDetailView() {
           )}
         </div>
       </div>
+
+      {/* Watch providers */}
+      <WatchProviders providersData={(t as any)["watch/providers"]} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">

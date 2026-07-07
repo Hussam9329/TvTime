@@ -28,6 +28,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ProfileDialog } from "@/components/profile/profile-dialog";
 
 const navItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
   { view: "home", label: "Home", icon: Home },
@@ -44,6 +45,7 @@ export function Header() {
   const [mounted, setMounted] = useState(false);
   const [searchVal, setSearchVal] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -166,17 +168,19 @@ export function Header() {
 
         {/* Avatar */}
         <button
-          onClick={() => goTo("stats")}
+          onClick={() => setProfileOpen(true)}
           className="flex-shrink-0"
           aria-label="Your profile"
         >
-          <Avatar className="w-9 h-9 border-2 border-primary/40">
+          <Avatar className="w-9 h-9 border-2 border-primary/40 hover:border-primary transition-colors">
             <AvatarFallback className="bg-primary/15 text-primary text-xs font-bold">
               {userName.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         </button>
       </div>
+
+      <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
     </header>
   );
 }

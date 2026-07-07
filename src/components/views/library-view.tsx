@@ -222,10 +222,22 @@ function RatingsTab() {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {items.map((item: RatingDB) => (
         <Card key={item.id} className="p-3 flex gap-3 group hover:border-primary/40 transition-colors">
+          <button
+            className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
+            onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)}
+          >
+            {item.posterPath ? (
+              <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                {item.mediaType === "movie" ? <Film className="w-5 h-5" /> : <Tv className="w-5 h-5" />}
+              </div>
+            )}
+          </button>
           <div className="flex-1 min-w-0 flex flex-col">
             <button onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)} className="text-left">
-              <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                {item.mediaType === "movie" ? "Movie" : "Show"} #{item.tmdbId}
+              <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                {item.title}
               </h4>
             </button>
             <div className="flex items-center gap-1 mt-1">

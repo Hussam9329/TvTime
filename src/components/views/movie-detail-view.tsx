@@ -1,8 +1,7 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useMovieDetail } from "@/hooks/use-tmdb";
-import { useWatchlistToggle, useWatchedMovieToggle, useRatingMutate, useRatings } from "@/hooks/use-tmdb";
+import { useMovieDetail, useWatchlist, useWatchedMovies, useWatchlistToggle, useWatchedMovieToggle, useRatingMutate, useRatings } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingStars } from "@/components/media/rating-stars";
 import { MediaRow } from "@/components/media/media-row";
+import { WatchProviders } from "@/components/media/watch-providers";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, ListMinus, CheckCircle2, Circle, ArrowLeft,
   DollarSign, Film, Users, Sparkles, Heart, ChevronRight,
@@ -19,7 +19,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 export function MovieDetailView() {
-  const { movieId, back, goMovie } = useNav();
+  const { movieId, back } = useNav();
   const detail = useMovieDetail(movieId);
   const watchlist = useWatchlist();
   const watchedMovies = useWatchedMovies();
@@ -69,6 +69,11 @@ export function MovieDetailView() {
   const videos = ((m as any).videos?.results ?? []).filter((v: any) => v.site === "YouTube");
   const trailer = videos.find((v: any) => v.type === "Trailer") || videos[0];
 
+  // Extract content rating (MPAA for US)
+  const releaseDates = (m as any).release_dates?.results ?? [];
+  const usRelease = releaseDates.find((r: any) => r.iso_3166_1 === "US");
+  const contentRating = usRelease?.release_dates?.find((r: any) => r.certification)?.certification || null;
+
   const onWatchlist = () => {
     watchlistToggle.mutate({
       action: inWatchlist ? "remove" : "add",
@@ -100,7 +105,7 @@ export function MovieDetailView() {
       ratingMutate.mutate({ action: "remove", mediaType: "movie", tmdbId: m.id });
       toast.success("Rating removed");
     } else {
-      ratingMutate.mutate({ action: "set", mediaType: "movie", tmdbId: m.id, value: v });
+      ratingMutate.mutate({ action: "set", mediaType: "movie", tmdbId: m.id, value: v, title: m.title, posterPath: m.poster_path });
       toast.success(`Rated ${v}/10`);
     }
   };
@@ -132,6 +137,7 @@ export function MovieDetailView() {
                 <Star className="w-3 h-3 mr-1 fill-amber-300" /> {m.vote_average.toFixed(1)}
               </Badge>
             )}
+            {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
             {m.status && <Badge variant="secondary" className="bg-black/40 backdrop-blur border-0">{m.status}</Badge>}
           </div>
           <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight drop-shadow-lg">
@@ -207,6 +213,9 @@ export function MovieDetailView() {
           </div>
         </div>
       </div>
+
+      {/* Watch providers */}
+      <WatchProviders providersData={(m as any)["watch/providers"]} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

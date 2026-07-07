@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   const body = await req.json();
-  const { mediaType, tmdbId, value } = body;
+  const { mediaType, tmdbId, value, title, posterPath } = body;
   if (!mediaType || !tmdbId || value == null) {
     return NextResponse.json({ error: "mediaType, tmdbId, value required" }, { status: 400 });
   }
@@ -42,9 +42,15 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       mediaType,
       tmdbId: Number(tmdbId),
+      title: title || `Unknown`,
+      posterPath: posterPath || null,
       value: v,
     },
-    update: { value: v },
+    update: {
+      value: v,
+      ...(title ? { title } : {}),
+      ...(posterPath !== undefined ? { posterPath } : {}),
+    },
   });
   return NextResponse.json({ item });
 }

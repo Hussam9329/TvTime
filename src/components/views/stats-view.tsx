@@ -1,6 +1,6 @@
 "use client";
 
-import { useStats, useWatchedMovies, useWatchedEpisodes, useFollowing, useWatchlist, useRatings } from "@/hooks/use-tmdb";
+import { useStats, useWatchedMovies, useWatchedEpisodes, useFollowing, useWatchlist, useRatings, useTvDetail } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
 import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, BarChart3 } from "lucide-react";
@@ -211,23 +211,39 @@ function TopShowsList({ items, onGo }: { items: { showId: number; count: number 
   return (
     <div className="space-y-2">
       {items.map((s, i) => (
-        <button
-          key={s.showId}
-          onClick={() => onGo(s.showId)}
-          className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
-        >
-          <span className="w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium">Show #{s.showId}</span>
-              <span className="text-xs text-muted-foreground">{s.count} episodes</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div className="h-full bg-primary" style={{ width: `${(s.count / max) * 100}%` }} />
-            </div>
-          </div>
-        </button>
+        <TopShowRow key={s.showId} showId={s.showId} count={s.count} rank={i + 1} max={max} onGo={onGo} />
       ))}
     </div>
+  );
+}
+
+function TopShowRow({ showId, count, rank, max, onGo }: { showId: number; count: number; rank: number; max: number; onGo: (id: number) => void }) {
+  const detail = useTvDetail(showId);
+  const title = detail.data?.name || `Show #${showId}`;
+  const poster = detail.data?.poster_path;
+
+  return (
+    <button
+      onClick={() => onGo(showId)}
+      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left group"
+    >
+      <span className="w-7 h-7 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">{rank}</span>
+      <div className="w-10 h-14 rounded-md overflow-hidden bg-muted flex-shrink-0">
+        {poster ? (
+          <img src={img(poster, "w92")} alt={title} className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Tv className="w-4 h-4" /></div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1 gap-2">
+          <span className="text-sm font-medium line-clamp-1 group-hover:text-primary transition-colors">{title}</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">{count} ep</span>
+        </div>
+        <div className="h-2 rounded-full bg-muted overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all" style={{ width: `${(count / max) * 100}%` }} />
+        </div>
+      </div>
+    </button>
   );
 }
