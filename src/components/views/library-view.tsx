@@ -435,6 +435,7 @@ function RatingsTab() {
           </div>
         </Card>
       ))}
+      </div>
     </div>
   );
 }
