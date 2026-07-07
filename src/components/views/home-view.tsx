@@ -1,8 +1,9 @@
 "use client";
 
-import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useWatchedMovies, useFollowing, useStats } from "@/hooks/use-tmdb";
+import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useWatchedMovies, useWatchedEpisodes, useFollowing, useStats, useTvDetail } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { ContinueWatching } from "@/components/media/continue-watching";
+import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
@@ -86,6 +87,11 @@ export function HomeView() {
         <ContinueWatching />
       )}
 
+      {/* Your Shows with watch progress */}
+      {following.data && following.data.items.length > 0 && (
+        <FollowingSection />
+      )}
+
       {/* Recently watched movies */}
       {watchedMovies.data && watchedMovies.data.items.length > 0 && (
         <RecentlyWatched />
@@ -135,6 +141,9 @@ export function HomeView() {
         items={(upcoming.data?.results ?? []).filter((m) => m.poster_path)}
         loading={upcoming.isLoading}
       />
+
+      {/* Genre-based recommendations */}
+      <GenreRecommendations />
     </div>
   );
 }
@@ -230,23 +239,46 @@ function FollowingSection() {
       </div>
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
         {items.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => goTv(s.tmdbId)}
-            className="flex-shrink-0 w-[110px] sm:w-[130px] group"
-          >
-            <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
-              {s.posterPath ? (
-                <img src={img(s.posterPath, "w185")} alt={s.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs p-2 text-center">{s.title}</div>
-              )}
-            </div>
-            <p className="mt-1.5 text-xs font-medium line-clamp-1">{s.title}</p>
-          </button>
+          <FollowedShowCard key={s.id} tmdbId={s.tmdbId} title={s.title} posterPath={s.posterPath} onClick={() => goTv(s.tmdbId)} />
         ))}
       </div>
     </section>
+  );
+}
+
+function FollowedShowCard({ tmdbId, title, posterPath, onClick }: { tmdbId: number; title: string; posterPath: string | null; onClick: () => void }) {
+  const detail = useTvDetail(tmdbId);
+  const watched = useWatchedEpisodes(tmdbId);
+  const totalEpisodes = detail.data?.number_of_episodes ?? 0;
+  const watchedCount = watched.data?.items.length ?? 0;
+  const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
+
+  return (
+    <button
+      onClick={onClick}
+      className="flex-shrink-0 w-[110px] sm:w-[130px] group"
+    >
+      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
+        {posterPath ? (
+          <img src={img(posterPath, "w185")} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs p-2 text-center">{title}</div>
+        )}
+        {/* Progress overlay at bottom */}
+        {totalEpisodes > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-1.5 pt-4">
+            <div className="flex items-center justify-between text-[9px] text-white/90 mb-0.5">
+              <span>{watchedCount}/{totalEpisodes}</span>
+              <span className="font-bold">{progress}%</span>
+            </div>
+            <div className="h-1 rounded-full bg-white/20 overflow-hidden">
+              <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs font-medium line-clamp-1">{title}</p>
+    </button>
   );
 }
 

@@ -16,6 +16,7 @@ import {
   Sun,
   Moon,
   ArrowLeft,
+  Keyboard,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ProfileDialog } from "@/components/profile/profile-dialog";
+import { ShortcutsHelpDialog } from "@/components/layout/keyboard-shortcuts";
 
 const navItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
   { view: "home", label: "Home", icon: Home },
@@ -46,6 +48,7 @@ export function Header() {
   const [searchVal, setSearchVal] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -166,6 +169,17 @@ export function Header() {
           {mounted && theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
+        {/* Keyboard shortcuts help */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setHelpOpen(true)}
+          aria-label="Keyboard shortcuts"
+          className="hidden sm:flex"
+        >
+          <Keyboard className="h-5 w-5" />
+        </Button>
+
         {/* Avatar */}
         <button
           onClick={() => setProfileOpen(true)}
@@ -181,6 +195,7 @@ export function Header() {
       </div>
 
       <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
+      <ShortcutsHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </header>
   );
 }

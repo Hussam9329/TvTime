@@ -40,12 +40,22 @@ export function LibraryView() {
   );
 }
 
-function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+function EmptyState({ icon, title, subtitle, ctaLabel, onCta }: { icon: React.ReactNode; title: string; subtitle: string; ctaLabel?: string; onCta?: () => void }) {
   return (
-    <Card className="p-12 text-center text-muted-foreground">
-      <div className="w-14 h-14 rounded-full bg-accent mx-auto mb-3 flex items-center justify-center text-muted-foreground">{icon}</div>
-      <p className="font-medium text-foreground">{title}</p>
-      <p className="text-sm mt-1">{subtitle}</p>
+    <Card className="p-12 text-center text-muted-foreground relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 pointer-events-none" />
+      <div className="relative">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 mx-auto mb-4 flex items-center justify-center text-primary border border-primary/20">
+          {icon}
+        </div>
+        <p className="font-semibold text-foreground text-lg">{title}</p>
+        <p className="text-sm mt-1 max-w-sm mx-auto">{subtitle}</p>
+        {ctaLabel && onCta && (
+          <Button onClick={onCta} className="mt-4" size="sm">
+            {ctaLabel}
+          </Button>
+        )}
+      </div>
     </Card>
   );
 }
@@ -60,7 +70,7 @@ function WatchlistTab() {
   const items = data.data?.items ?? [];
 
   if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (items.length === 0) return <EmptyState icon={<Inbox className="w-7 h-7" />} title="Your watchlist is empty" subtitle="Add movies and shows you want to watch later" />;
+  if (items.length === 0) return <EmptyState icon={<Inbox className="w-8 h-8" />} title="Your watchlist is empty" subtitle="Add movies and shows you want to watch later" ctaLabel="Discover content" onCta={() => setView("discover")} />;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -115,7 +125,7 @@ function WatchedMoviesTab() {
   const items = data.data?.items ?? [];
 
   if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (items.length === 0) return <EmptyState icon={<Film className="w-7 h-7" />} title="No watched movies yet" subtitle="Mark movies as watched to see them here" />;
+  if (items.length === 0) return <EmptyState icon={<Film className="w-8 h-8" />} title="No watched movies yet" subtitle="Mark movies as watched to see them here" ctaLabel="Browse movies" onCta={() => setView("discover")} />;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -158,12 +168,13 @@ function WatchedMoviesTab() {
 function FollowingTab() {
   const data = useFollowing();
   const goTv = useNav((s) => s.goTv);
+  const setView = useNav((s) => s.setView);
   const toggle = useFollowingToggle();
 
   const items = data.data?.items ?? [];
 
   if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (items.length === 0) return <EmptyState icon={<Bell className="w-7 h-7" />} title="Not following any shows" subtitle="Follow TV shows to track their episodes" />;
+  if (items.length === 0) return <EmptyState icon={<Bell className="w-8 h-8" />} title="Not following any shows" subtitle="Follow TV shows to track their episodes" ctaLabel="Discover shows" onCta={() => setView("discover")} />;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -211,12 +222,13 @@ function RatingsTab() {
   const data = useRatings();
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
+  const setView = useNav((s) => s.setView);
   const toggle = useRatingMutate();
 
   const items = data.data?.items ?? [];
 
   if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (items.length === 0) return <EmptyState icon={<Star className="w-7 h-7" />} title="No ratings yet" subtitle="Rate movies and shows to see them here" />;
+  if (items.length === 0) return <EmptyState icon={<Star className="w-8 h-8" />} title="No ratings yet" subtitle="Rate movies and shows to see them here" ctaLabel="Find something to rate" onCta={() => setView("discover")} />;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

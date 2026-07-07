@@ -143,3 +143,44 @@ Task: QA testing, fix calendar bug, add Person detail view, keyboard shortcuts, 
 4. Optimize calendar with a batch endpoint or TMDB's TV schedule endpoint
 5. Add dark/light theme persistence improvements
 6. Add social features: share watchlist link (read-only public view)
+
+---
+Task ID: 14
+Agent: main (cron review round 3)
+Task: QA testing, add keyboard shortcuts help overlay, watch progress cards, genre recommendations, improved empty states
+
+## Current Project Status Assessment
+- Project was stable after round 2 with all features working
+- Lint was clean, no server errors
+- Dev server running on port 3000
+- All previously added features (Person detail, keyboard shortcuts, export/import, Recently Watched, Continue Watching, Watch Providers, Profile dialog) verified working
+
+## Work Log
+- **QA via agent-browser**: Tested home, discover (with Action genre filter + pagination), movie detail (Shawshank Redemption), stats views. All working correctly, no errors found.
+- **Added keyboard shortcuts help overlay**: New `ShortcutsHelpDialog` component (exported from keyboard-shortcuts.tsx) shows all shortcuts in a beautiful dialog with grouped sections (Navigation, Search & Back, Help). Each shortcut displays key combinations in styled `<kbd>` elements. Opens via `?` key or a new keyboard icon button in the header. Closes with Esc.
+- **Added watch progress on followed show cards**: New `FollowedShowCard` component in home view's FollowingSection. Fetches show detail (total episodes) + watched episodes, computes progress percentage, displays a progress bar overlay at the bottom of each poster with "X/Y" count and "Z%" label. Progress updates live when episodes are marked watched.
+- **Re-enabled FollowingSection on home**: The "Your Shows" section with progress cards now renders on home between Continue Watching and Recently Watched (was previously defined but not rendered).
+- **Added genre-based recommendations**: New `GenreRecommendations` component on home. Rotates through TMDB genres daily to show 3 varied recommendation rows: "Top {Genre} Movies" (sorted by rating, 7+), "Popular {Genre} Shows", and "Trending {Genre} Movies". Always visible for discovery.
+- **Improved empty states**: Enhanced `EmptyState` component in library view with gradient icon backgrounds (primary/20 to primary/5), larger rounded icons, gradient card background, and CTA buttons ("Discover content", "Browse movies", "Discover shows", "Find something to rate") that navigate to the discover view. Updated all 4 library tab empty states (watchlist, watched movies, following, ratings).
+
+## Verification Results
+- ✅ Lint passes clean
+- ✅ No runtime errors in dev.log
+- ✅ Keyboard shortcuts help dialog opens via `?` key and header button (VLM confirmed kbd elements)
+- ✅ Watch progress shows on followed show cards: "0/26 0%" → "1/26 4%" after marking episode watched
+- ✅ Genre recommendations show 3 rows: "Top War Movies", "Popular Talk Shows", "Trending Adventure Movies"
+- ✅ Empty states have gradient icons + CTA buttons (VLM confirmed "Discover content" button)
+- ✅ All previous features still working (calendar, person detail, search, discover filters, pagination)
+
+## Unresolved Issues / Risks
+- Genre recommendations make 3 parallel discover API calls on home load (acceptable, cached)
+- Watch progress cards fetch show detail + watched episodes per followed show (capped by Continue Watching's 12-show limit in practice)
+- No keyboard shortcut hint badge on the keyboard icon button (users may not notice it)
+
+## Priority Recommendations for Next Phase
+1. Add a "shortcuts" tooltip or badge on the keyboard icon to improve discoverability
+2. Add watch progress to the Library > Following tab cards (currently only on home)
+3. Add a "Watch next" quick-action that jumps directly to the next unwatched episode
+4. Add theme toggle animation/transition
+5. Add lazy loading for images (performance optimization)
+6. Add a "random pick" / surprise me button on discover
