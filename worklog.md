@@ -300,3 +300,45 @@ Task: Deploy to GitHub and Vercel
 - This makes the app work on any serverless platform without database configuration
 - TMDB API calls still go through Next.js API routes (server-side proxy)
 - API routes for library still exist but are no longer used (can be removed in future cleanup)
+
+---
+Task ID: 18
+Agent: main (Neon PostgreSQL migration)
+Task: Switch from localStorage to Neon PostgreSQL, import 3496 media items from backup
+
+## Current Project Status Assessment
+- User provided Neon PostgreSQL connection string
+- User provided backup JSON file (hussamvision-backup-2026-07-07.json) with 3496 media items
+- Previous deployment used localStorage (client-side only)
+
+## Work Log
+- **Created Media model in Prisma schema**: Unified model matching backup structure (title, type, poster, rating, overview, genres, watched, userRating, status, etc.) with PostgreSQL provider
+- **Pushed schema to Neon**: `prisma db push` created the Media table in Neon PostgreSQL (removed `channel_binding=require` from connection string for compatibility)
+- **Wrote import script** (scripts/import-backup.ts): Reads backup JSON and batch-inserts all items using `createMany` with `skipDuplicates`
+- **Imported all 3496 items**: Successfully imported 3315 movies, 143 TV series, 23 books, 15 games (with 2197 ratings, 12 watched, 50 planned)
+- **Created Media API routes**: 
+  - `/api/media` - GET with filters (type, status, watched, rated, search), sorting (addedAt, userRating, title, year), and pagination
+  - `/api/media/stats` - GET with aggregate counts, rating distribution, type distribution, top rated, recently added
+- **Added useMedia and useMediaStats hooks** in use-tmdb.ts
+- **Created MediaView component**: Full-featured collection browser with type tabs (All/Movies/TV/Books/Games), search, sort, rated-only filter, pagination, and media cards with type badges, user ratings, watched/planned status indicators
+- **Added "My Media" to navigation**: New nav button with Database icon, added to header nav items
+- **Fixed undefined params bug**: Media API was receiving "undefined" as string params, causing empty results. Fixed by filtering out undefined/empty values in both the hook and API route
+- **Configured Vercel env**: Removed old SQLite DATABASE_URL, added Neon PostgreSQL URL
+- **Deployed to Vercel**: Successfully deployed with Neon backend
+
+## Verification Results
+- ✅ Lint passes clean
+- ✅ Neon PostgreSQL database has 3496 items (verified via Prisma count)
+- ✅ Media API returns items: https://tvtime-iota.vercel.app/api/media?limit=5
+- ✅ Media Stats API returns correct counts: total=3496, movies=3315, series=143, books=23, games=15
+- ✅ "My Media" view on Vercel shows "3496 items from your Neon database"
+- ✅ Grid displays 60 items per page with posters, titles, type badges, user ratings
+- ✅ VLM confirmed: total count, filter tabs, media card grid all working
+- ✅ All data is now server-side in Neon PostgreSQL (not localStorage)
+
+## Architecture Change
+- Library data now stored in Neon PostgreSQL (server-side, persistent)
+- TMDB browsing features still use TMDB API via proxy routes
+- The old localStorage-based library hooks still exist for the app's tracking features (watchlist, following, etc.)
+- New "My Media" view provides access to the full imported collection from Neon
+- Data persists across devices/sessions since it's in the cloud database
