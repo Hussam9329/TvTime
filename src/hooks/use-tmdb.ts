@@ -163,99 +163,27 @@ export function usePersonDetail(id: number | null) {
   });
 }
 
-// ---------- Library ----------
-export interface WatchlistItemDB {
-  id: string;
-  userId: string;
-  mediaType: string;
-  tmdbId: number;
-  title: string;
-  posterPath: string | null;
-  backdropPath: string | null;
-  overview: string | null;
-  releaseDate: string | null;
-  voteAverage: number | null;
-  addedAt: string;
-}
-export interface WatchedMovieDB {
-  id: string;
-  userId: string;
-  tmdbId: number;
-  title: string;
-  posterPath: string | null;
-  runtime: number | null;
-  watchedAt: string;
-}
-export interface WatchedEpisodeDB {
-  id: string;
-  userId: string;
-  showId: number;
-  seasonNumber: number;
-  episodeNumber: number;
-  episodeName: string | null;
-  watchedAt: string;
-}
-export interface FollowingShowDB {
-  id: string;
-  userId: string;
-  tmdbId: number;
-  title: string;
-  posterPath: string | null;
-  followedAt: string;
-}
-export interface RatingDB {
-  id: string;
-  userId: string;
-  mediaType: string;
-  tmdbId: number;
-  title: string;
-  posterPath: string | null;
-  value: number;
-  createdAt: string;
-  updatedAt: string;
-}
+// ---------- Library (localStorage-based, works on serverless) ----------
+// Re-export types from local-storage for backwards compatibility
+export type WatchlistItemDB = import("@/lib/local-storage").WatchlistItem;
+export type WatchedMovieDB = import("@/lib/local-storage").WatchedMovie;
+export type WatchedEpisodeDB = import("@/lib/local-storage").WatchedEpisode;
+export type FollowingShowDB = import("@/lib/local-storage").FollowingShow;
+export type RatingDB = import("@/lib/local-storage").Rating;
 
-function useUserId() {
-  return useNav((s) => s.userId);
-}
-
-function libGet<T>(path: string, userId: string, params?: Record<string, string>) {
-  const url = new URL("/api/library/" + path, window.location.origin);
-  url.searchParams.set("userId", userId);
-  if (params) for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  return fetch(url.toString()).then((r) => r.json()) as Promise<T>;
-}
-
-async function libPost(path: string, userId: string, body: unknown) {
-  const res = await fetch(`/api/library/${path}?userId=${encodeURIComponent(userId)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return res.json();
-}
-
-async function libDelete(path: string, userId: string, params: Record<string, string>) {
-  const url = new URL(`/api/library/${path}`, window.location.origin);
-  url.searchParams.set("userId", userId);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  const res = await fetch(url.toString(), { method: "DELETE" });
-  return res.json();
-}
+import { libStorage } from "@/lib/local-storage";
 
 // Watchlist
 export function useWatchlist(mediaType?: "movie" | "tv") {
-  const userId = useUserId();
   return useQuery({
-    queryKey: ["lib", "watchlist", userId, mediaType],
-    queryFn: () => libGet<{ items: WatchlistItemDB[] }>("watchlist", userId, mediaType ? { mediaType } : undefined),
-    enabled: !!userId,
+    queryKey: ["lib", "watchlist", mediaType],
+    queryFn: () => ({ items: libStorage.getWatchlist(mediaType) as any[] }),
+    staleTime: 0,
   });
 }
 
 export function useWatchlistToggle() {
   const qc = useQueryClient();
-  const userId = useUserId();
   return useMutation({
     mutationFn: async (args: {
       action: "add" | "remove";
@@ -269,40 +197,37 @@ export function useWatchlistToggle() {
       voteAverage?: number;
     }) => {
       if (args.action === "add") {
-        return libPost("watchlist", userId, {
+        return libStorage.addToWatchlist({
           mediaType: args.mediaType,
           tmdbId: args.tmdbId,
           title: args.title,
-          posterPath: args.posterPath,
-          backdropPath: args.backdropPath,
-          overview: args.overview,
-          releaseDate: args.releaseDate,
-          voteAverage: args.voteAverage,
+          posterPath: args.posterPath || null,
+          backdropPath: args.backdropPath || null,
+          overview: args.overview || null,
+          releaseDate: args.releaseDate || null,
+          voteAverage: args.voteAverage || null,
         });
       } else {
-        return libDelete("watchlist", userId, { mediaType: args.mediaType, tmdbId: String(args.tmdbId) });
+        return libStorage.removeFromWatchlist(args.mediaType, args.tmdbId);
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["lib", "watchlist", userId] });
-      qc.invalidateQueries({ queryKey: ["lib", "stats", userId] });
+      qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
 // Watched Movies
 export function useWatchedMovies() {
-  const userId = useUserId();
   return useQuery({
-    queryKey: ["lib", "watched-movies", userId],
-    queryFn: () => libGet<{ items: WatchedMovieDB[] }>("watched-movies", userId),
-    enabled: !!userId,
+    queryKey: ["lib", "watched-movies"],
+    queryFn: () => ({ items: libStorage.getWatchedMovies() as any[] }),
+    staleTime: 0,
   });
 }
 
 export function useWatchedMovieToggle() {
   const qc = useQueryClient();
-  const userId = useUserId();
   return useMutation({
     mutationFn: async (args: {
       action: "add" | "remove";
@@ -312,37 +237,33 @@ export function useWatchedMovieToggle() {
       runtime?: number | null;
     }) => {
       if (args.action === "add") {
-        return libPost("watched-movies", userId, {
+        return libStorage.addWatchedMovie({
           tmdbId: args.tmdbId,
           title: args.title,
-          posterPath: args.posterPath,
-          runtime: args.runtime,
+          posterPath: args.posterPath || null,
+          runtime: args.runtime || null,
         });
       } else {
-        return libDelete("watched-movies", userId, { tmdbId: String(args.tmdbId) });
+        return libStorage.removeWatchedMovie(args.tmdbId);
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["lib", "watched-movies", userId] });
-      qc.invalidateQueries({ queryKey: ["lib", "stats", userId] });
+      qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
 // Watched Episodes
 export function useWatchedEpisodes(showId?: number) {
-  const userId = useUserId();
   return useQuery({
-    queryKey: ["lib", "watched-episodes", userId, showId],
-    queryFn: () =>
-      libGet<{ items: WatchedEpisodeDB[] }>("watched-episodes", userId, showId ? { showId: String(showId) } : undefined),
-    enabled: !!userId,
+    queryKey: ["lib", "watched-episodes", showId],
+    queryFn: () => ({ items: libStorage.getWatchedEpisodes(showId) as any[] }),
+    staleTime: 0,
   });
 }
 
 export function useEpisodeToggle() {
   const qc = useQueryClient();
-  const userId = useUserId();
   return useMutation({
     mutationFn: async (args: {
       action: "add" | "remove";
@@ -352,115 +273,102 @@ export function useEpisodeToggle() {
       episodeName?: string;
     }) => {
       if (args.action === "add") {
-        return libPost("watched-episodes", userId, {
+        return libStorage.addWatchedEpisode({
           showId: args.showId,
           seasonNumber: args.seasonNumber,
           episodeNumber: args.episodeNumber,
           episodeName: args.episodeName,
         });
       } else {
-        return libDelete("watched-episodes", userId, {
-          showId: String(args.showId),
-          seasonNumber: String(args.seasonNumber),
-          episodeNumber: String(args.episodeNumber),
-        });
+        return libStorage.removeWatchedEpisode(args.showId, args.seasonNumber, args.episodeNumber);
       }
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["lib", "watched-episodes", userId] });
-      qc.invalidateQueries({ queryKey: ["lib", "watched-episodes", userId, vars.showId] });
-      qc.invalidateQueries({ queryKey: ["lib", "stats", userId] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
 export function useBulkEpisodeToggle() {
   const qc = useQueryClient();
-  const userId = useUserId();
   return useMutation({
     mutationFn: async (args: {
       showId: number;
       episodes: { seasonNumber: number; episodeNumber: number; episodeName?: string }[];
     }) => {
-      return libPost("watched-episodes", userId, { showId: args.showId, episodes: args.episodes });
+      return libStorage.addWatchedEpisodesBulk(args.showId, args.episodes);
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["lib", "watched-episodes", userId] });
-      qc.invalidateQueries({ queryKey: ["lib", "watched-episodes", userId, vars.showId] });
-      qc.invalidateQueries({ queryKey: ["lib", "stats", userId] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
 // Following
 export function useFollowing() {
-  const userId = useUserId();
   return useQuery({
-    queryKey: ["lib", "following", userId],
-    queryFn: () => libGet<{ items: FollowingShowDB[] }>("following", userId),
-    enabled: !!userId,
+    queryKey: ["lib", "following"],
+    queryFn: () => ({ items: libStorage.getFollowing() as any[] }),
+    staleTime: 0,
   });
 }
 
 export function useFollowingToggle() {
   const qc = useQueryClient();
-  const userId = useUserId();
   return useMutation({
     mutationFn: async (args: { action: "add" | "remove"; tmdbId: number; title: string; posterPath?: string | null }) => {
       if (args.action === "add") {
-        return libPost("following", userId, { tmdbId: args.tmdbId, title: args.title, posterPath: args.posterPath });
+        return libStorage.followShow({
+          tmdbId: args.tmdbId,
+          title: args.title,
+          posterPath: args.posterPath || null,
+        });
       } else {
-        return libDelete("following", userId, { tmdbId: String(args.tmdbId) });
+        return libStorage.unfollowShow(args.tmdbId);
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["lib", "following", userId] });
-      qc.invalidateQueries({ queryKey: ["lib", "stats", userId] });
+      qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
 // Ratings
 export function useRatings(mediaType?: "movie" | "tv") {
-  const userId = useUserId();
   return useQuery({
-    queryKey: ["lib", "ratings", userId, mediaType],
-    queryFn: () => libGet<{ items: RatingDB[] }>("ratings", userId, mediaType ? { mediaType } : undefined),
-    enabled: !!userId,
+    queryKey: ["lib", "ratings", mediaType],
+    queryFn: () => ({ items: libStorage.getRatings(mediaType) as any[] }),
+    staleTime: 0,
   });
 }
 
 export function useRatingMutate() {
   const qc = useQueryClient();
-  const userId = useUserId();
   return useMutation({
     mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null }) => {
       if (args.action === "set") {
-        return libPost("ratings", userId, {
+        return libStorage.setRating({
           mediaType: args.mediaType,
           tmdbId: args.tmdbId,
-          value: args.value,
-          title: args.title,
-          posterPath: args.posterPath,
+          value: args.value!,
+          title: args.title || "Unknown",
+          posterPath: args.posterPath || null,
         });
       } else {
-        return libDelete("ratings", userId, { mediaType: args.mediaType, tmdbId: String(args.tmdbId) });
+        return libStorage.removeRating(args.mediaType, args.tmdbId);
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["lib", "ratings", userId] });
-      qc.invalidateQueries({ queryKey: ["lib", "stats", userId] });
+      qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
 // Stats
 export function useStats() {
-  const userId = useUserId();
   return useQuery({
-    queryKey: ["lib", "stats", userId],
-    queryFn: () => libGet<any>("stats", userId),
-    enabled: !!userId,
-    staleTime: 5000,
+    queryKey: ["lib", "stats"],
+    queryFn: () => libStorage.getStats(),
+    staleTime: 0,
   });
 }

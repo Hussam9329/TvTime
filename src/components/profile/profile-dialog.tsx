@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useStats } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { useQueryClient } from "@tanstack/react-query";
+import { libStorage } from "@/lib/local-storage";
 import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -60,8 +61,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const onClearData = async () => {
     setClearing(true);
     try {
-      const res = await fetch(`/api/library/clear?userId=${encodeURIComponent(userId)}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed");
+      libStorage.clearAll();
       qc.invalidateQueries({ queryKey: ["lib"] });
       toast.success("All library data cleared");
       onOpenChange(false);
@@ -75,9 +75,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const onExport = async () => {
     setExporting(true);
     try {
-      const res = await fetch(`/api/library/export?userId=${encodeURIComponent(userId)}`);
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
+      const data = libStorage.exportAll();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -102,15 +100,9 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      const res = await fetch(`/api/library/import?userId=${encodeURIComponent(userId)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      const result = await res.json();
+      const result = libStorage.importAll(data);
       qc.invalidateQueries({ queryKey: ["lib"] });
-      const total = result.imported.watchlist + result.imported.watchedMovies + result.imported.watchedEpisodes + result.imported.following + result.imported.ratings;
+      const total = result.watchlist + result.watchedMovies + result.watchedEpisodes + result.following + result.ratings;
       toast.success(`Imported ${total} items`);
       onOpenChange(false);
     } catch {
