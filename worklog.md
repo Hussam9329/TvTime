@@ -456,3 +456,37 @@ Task: Wire all client hooks, components, and library API routes to the new serve
 - `mediaToLibraryCompat` is intentionally permissive (falls back across field names: `posterPath ?? poster`, `releaseDate ?? year`, etc.) so it can absorb both raw Media rows and any legacy localStorage-shaped data.
 - The library stats endpoint requires both `Media` and `WatchedEpisode` tables in PostgreSQL — both are present in the current Prisma schema.
 - All client → API calls now carry the user id both as a `userId` query param (via `withUserId`) and as an `x-user-id` header (via `userHeaders`). The server accepts either.
+
+---
+Task ID: FOUNDATION-PATCH-FINAL
+Agent: main
+Task: Apply foundation patch - user-scoped Media, episode tracking via API, useShowProgress, SafeImage, security
+
+## Current Project Status
+- Foundation patch fully applied
+- ALL DATA PRESERVED: 4035 media items (3315 movies + 682 series)
+- PostgreSQL kept (NOT switched to SQLite) to preserve data
+- Episode tracking moved from localStorage to API/Database
+- useShowProgress fetches ALL seasons (not just first 4)
+- SafeImage component prevents broken images
+- Security headers added, ignoreBuildErrors removed
+
+## Changes Applied
+1. **Prisma schema**: Added User, WatchlistItem, WatchedMovie, WatchedEpisode, FollowingShow, Rating models. Added userId to Media with default "cinetrack_default". Kept PostgreSQL with String[] arrays.
+2. **New files**: user-id.ts, client-user.ts, media-normalize.ts, safe-image.tsx
+3. **Updated**: next.config.ts (security headers, no ignoreBuildErrors), db.ts (reduced logging), user.ts (sanitizeUserId), tsconfig.json (exclude scripts/skills)
+4. **API routes**: All media/* and library/* routes now user-scoped with error handling
+5. **Hooks**: Episode tracking via API (not localStorage), useShowProgress for all seasons, userHeaders everywhere, stats from /api/library/stats
+6. **Components**: SafeImage in media-card/library/media views, useShowProgress in continue-watching/calendar/tv-tracking, profile dialog uses API for export/import/clear
+7. **Stats**: Watched = rated (userRating != null), Watchlist = unrated (userRating = null)
+
+## Verification
+- ✅ Lint passes clean
+- ✅ TypeScript: 0 errors in src/
+- ✅ Data: 4035 items preserved (3315 movies, 682 series, 456 watched, 2641 rated)
+- ✅ Home stats: Watchlist 1356, Movies watched 2195, TV Shows rated 446, Following 236
+- ✅ Library Watched Movies: 2195 items
+- ✅ Library Watched TV: 403 items
+- ✅ Library Watched Anime: 5 items
+- ✅ TV Tracking: All 6 tabs working (Watchlist, Finished, Finished Anime, Upcoming, Haven't Watched, Haven't Started)
+- ✅ Continue Watching: Uses useShowProgress (all seasons)
