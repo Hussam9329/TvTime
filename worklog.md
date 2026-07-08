@@ -342,3 +342,31 @@ Task: Switch from localStorage to Neon PostgreSQL, import 3496 media items from 
 - The old localStorage-based library hooks still exist for the app's tracking features (watchlist, following, etc.)
 - New "My Media" view provides access to the full imported collection from Neon
 - Data persists across devices/sessions since it's in the cloud database
+
+---
+Task ID: 19
+Agent: main (unify Home+Library)
+Task: Fix disconnection between Home and Library - all tracking now writes to Neon
+
+## Problem
+- Home/Discover used localStorage for tracking (watchlist, watched, following, ratings)
+- Library used Neon PostgreSQL
+- Adding a movie to watchlist from Home didn't appear in Library
+- Stats were inaccurate (counting from two different sources)
+
+## Solution
+- Added `tmdbId` column to Media model for linking TMDB items to DB records
+- Created `/api/media/find-or-create` API endpoint: finds existing Media by tmdbId or title, creates new if not found
+- Rewrote all library hooks in use-tmdb.ts to write directly to Neon:
+  - `useWatchlistToggle` → find-or-create + set status="planned"
+  - `useWatchedMovieToggle` → find-or-create + set watched=true, status="watched"
+  - `useFollowingToggle` → find-or-create (type="series") + set status="planned"
+  - `useRatingMutate` → find-or-create + set userRating + watched=true
+- All reads (useWatchlist, useWatchedMovies, useFollowing, useRatings, useStats) now query Neon API
+- Episode tracking stays in localStorage (no episode model in DB)
+- Updated stats API to return Home-compatible field aliases (watchlist=planned, watchedMovies=rated, etc.)
+
+## Verification
+- ✅ Added "Obsession" to watchlist from Home → appears in Library Watchlist Movies (search finds it: "Showing 1 of 1 items")
+- ✅ Home stats now show: Watchlist=50, Movies watched=2196, Following=21 (all from Neon)
+- ✅ All data unified in single Neon PostgreSQL database
