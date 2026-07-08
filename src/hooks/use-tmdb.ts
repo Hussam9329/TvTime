@@ -163,21 +163,72 @@ export function usePersonDetail(id: number | null) {
   });
 }
 
-// ---------- Library (localStorage-based, works on serverless) ----------
-// Re-export types from local-storage for backwards compatibility
-export type WatchlistItemDB = import("@/lib/local-storage").WatchlistItem;
-export type WatchedMovieDB = import("@/lib/local-storage").WatchedMovie;
-export type WatchedEpisodeDB = import("@/lib/local-storage").WatchedEpisode;
-export type FollowingShowDB = import("@/lib/local-storage").FollowingShow;
-export type RatingDB = import("@/lib/local-storage").Rating;
+// ---------- Library (Neon PostgreSQL backend) ----------
+// All tracking actions write directly to the Neon database via API routes.
+// This unifies the Home/Discover browsing with the Library view.
 
+// Re-export types for backwards compatibility
+export type WatchlistItemDB = MediaItemDB;
+export type WatchedMovieDB = MediaItemDB;
+export type WatchedEpisodeDB = import("@/lib/local-storage").WatchedEpisode;
+export type FollowingShowDB = MediaItemDB;
+export type RatingDB = MediaItemDB;
+
+// Episode tracking stays in localStorage (no episode model in DB)
 import { libStorage } from "@/lib/local-storage";
 
-// Watchlist
+// Helper: find-or-create a Media item from TMDB data
+async function findOrCreateMedia(args: {
+  tmdbId: number;
+  title: string;
+  type: "movie" | "tv";
+  poster?: string | null;
+  year?: string;
+  overview?: string;
+  rating?: number;
+  runtime?: number | null;
+  genres?: string[];
+}): Promise<string> {
+  const posterUrl = args.poster
+    ? (args.poster.startsWith("http")
+      ? args.poster
+      : `https://image.tmdb.org/t/p/w500${args.poster}`)
+    : null;
+  const res = await fetch("/api/media/find-or-create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      tmdbId: args.tmdbId,
+      title: args.title,
+      type: args.type === "tv" ? "series" : "movie",
+      poster: posterUrl,
+      year: args.year,
+      overview: args.overview,
+      rating: args.rating,
+      runtime: args.runtime,
+      genres: args.genres,
+    }),
+  });
+  if (!res.ok) throw new Error("Failed to find-or-create media");
+  const data = await res.json();
+  return data.item.id;
+}
+
+// Watchlist - reads from Neon (status="planned", userRating=null)
 export function useWatchlist(mediaType?: "movie" | "tv") {
+  const type = mediaType === "tv" ? "series" : mediaType || undefined;
   return useQuery({
-    queryKey: ["lib", "watchlist", mediaType],
-    queryFn: () => ({ items: libStorage.getWatchlist(mediaType) as any[] }),
+    queryKey: ["media", "watchlist", type],
+    queryFn: async () => {
+      const params: any = { status: "planned", rated: "false" };
+      if (type) params.type = type;
+      const url = new URL("/api/media", window.location.origin);
+      for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+      const res = await fetch(url);
+      if (!res.ok) return { items: [] };
+      const data = await res.json();
+      return { items: data.items || [] };
+    },
     staleTime: 0,
   });
 }
@@ -195,33 +246,63 @@ export function useWatchlistToggle() {
       overview?: string;
       releaseDate?: string;
       voteAverage?: number;
+      runtime?: number | null;
     }) => {
       if (args.action === "add") {
-        return libStorage.addToWatchlist({
-          mediaType: args.mediaType,
+        // Find-or-create, then set status to "planned"
+        const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title,
-          posterPath: args.posterPath || null,
-          backdropPath: args.backdropPath || null,
-          overview: args.overview || null,
-          releaseDate: args.releaseDate || null,
-          voteAverage: args.voteAverage || null,
+          type: args.mediaType,
+          poster: args.posterPath,
+          year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
+          overview: args.overview,
+          rating: args.voteAverage,
+          runtime: args.runtime,
+        });
+        await fetch(`/api/media/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "planned", watched: false, userRating: null, watchedAt: null }),
         });
       } else {
-        return libStorage.removeFromWatchlist(args.mediaType, args.tmdbId);
+        // Remove from watchlist: find by tmdbId and clear status
+        const url = new URL("/api/media", window.location.origin);
+        url.searchParams.set("type", args.mediaType === "tv" ? "series" : "movie");
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+          if (item) {
+            await fetch(`/api/media/${item.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: null, watched: false, userRating: null, watchedAt: null }),
+            });
+          }
+        }
       }
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
-// Watched Movies
+// Watched Movies - reads from Neon (userRating != null)
 export function useWatchedMovies() {
   return useQuery({
-    queryKey: ["lib", "watched-movies"],
-    queryFn: () => ({ items: libStorage.getWatchedMovies() as any[] }),
+    queryKey: ["media", "watched-movies"],
+    queryFn: async () => {
+      const url = new URL("/api/media", window.location.origin);
+      url.searchParams.set("type", "movie");
+      url.searchParams.set("rated", "true");
+      const res = await fetch(url);
+      if (!res.ok) return { items: [] };
+      const data = await res.json();
+      return { items: data.items || [] };
+    },
     staleTime: 0,
   });
 }
@@ -235,25 +316,53 @@ export function useWatchedMovieToggle() {
       title: string;
       posterPath?: string | null;
       runtime?: number | null;
+      releaseDate?: string;
+      voteAverage?: number;
+      overview?: string;
     }) => {
       if (args.action === "add") {
-        return libStorage.addWatchedMovie({
+        // Find-or-create, then mark as watched (without rating - will be rated via rating dialog)
+        const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title,
-          posterPath: args.posterPath || null,
-          runtime: args.runtime || null,
+          type: "movie",
+          poster: args.posterPath,
+          year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
+          overview: args.overview,
+          rating: args.voteAverage,
+          runtime: args.runtime,
+        });
+        await fetch(`/api/media/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ watched: true, watchedAt: new Date().toISOString(), status: "watched" }),
         });
       } else {
-        return libStorage.removeWatchedMovie(args.tmdbId);
+        // Remove from watched: clear rating and watched status
+        const url = new URL("/api/media", window.location.origin);
+        url.searchParams.set("type", "movie");
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+          if (item) {
+            await fetch(`/api/media/${item.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ watched: false, userRating: null, watchedAt: null, status: null }),
+            });
+          }
+        }
       }
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
-// Watched Episodes
+// Watched Episodes - stays in localStorage (episode-level tracking)
 export function useWatchedEpisodes(showId?: number) {
   return useQuery({
     queryKey: ["lib", "watched-episodes", showId],
@@ -284,7 +393,7 @@ export function useEpisodeToggle() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["lib"] });
+      qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
     },
   });
 }
@@ -299,16 +408,26 @@ export function useBulkEpisodeToggle() {
       return libStorage.addWatchedEpisodesBulk(args.showId, args.episodes);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["lib"] });
+      qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
     },
   });
 }
 
-// Following
+// Following - reads from Neon (type="series", status="planned", isAnime=false)
 export function useFollowing() {
   return useQuery({
-    queryKey: ["lib", "following"],
-    queryFn: () => ({ items: libStorage.getFollowing() as any[] }),
+    queryKey: ["media", "following"],
+    queryFn: async () => {
+      const url = new URL("/api/media", window.location.origin);
+      url.searchParams.set("type", "series");
+      url.searchParams.set("isAnime", "false");
+      url.searchParams.set("status", "planned");
+      url.searchParams.set("rated", "false");
+      const res = await fetch(url);
+      if (!res.ok) return { items: [] };
+      const data = await res.json();
+      return { items: data.items || [] };
+    },
     staleTime: 0,
   });
 }
@@ -316,28 +435,60 @@ export function useFollowing() {
 export function useFollowingToggle() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { action: "add" | "remove"; tmdbId: number; title: string; posterPath?: string | null }) => {
+    mutationFn: async (args: { action: "add" | "remove"; tmdbId: number; title: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number }) => {
       if (args.action === "add") {
-        return libStorage.followShow({
+        const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title,
-          posterPath: args.posterPath || null,
+          type: "tv",
+          poster: args.posterPath,
+          year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
+          overview: args.overview,
+          rating: args.voteAverage,
+        });
+        await fetch(`/api/media/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "planned", watched: false, userRating: null }),
         });
       } else {
-        return libStorage.unfollowShow(args.tmdbId);
+        const url = new URL("/api/media", window.location.origin);
+        url.searchParams.set("type", "series");
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+          if (item) {
+            await fetch(`/api/media/${item.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: null, watched: false, userRating: null }),
+            });
+          }
+        }
       }
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
-// Ratings
+// Ratings - reads from Neon (userRating != null)
 export function useRatings(mediaType?: "movie" | "tv") {
+  const type = mediaType === "tv" ? "series" : mediaType || undefined;
   return useQuery({
-    queryKey: ["lib", "ratings", mediaType],
-    queryFn: () => ({ items: libStorage.getRatings(mediaType) as any[] }),
+    queryKey: ["media", "ratings", type],
+    queryFn: async () => {
+      const url = new URL("/api/media", window.location.origin);
+      url.searchParams.set("rated", "true");
+      if (type) url.searchParams.set("type", type);
+      const res = await fetch(url);
+      if (!res.ok) return { items: [] };
+      const data = await res.json();
+      return { items: data.items || [] };
+    },
     staleTime: 0,
   });
 }
@@ -345,30 +496,63 @@ export function useRatings(mediaType?: "movie" | "tv") {
 export function useRatingMutate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null }) => {
+    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null }) => {
       if (args.action === "set") {
-        return libStorage.setRating({
-          mediaType: args.mediaType,
+        // Find-or-create, then set rating + watched
+        const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
-          value: args.value!,
           title: args.title || "Unknown",
-          posterPath: args.posterPath || null,
+          type: args.mediaType,
+          poster: args.posterPath,
+          year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
+          overview: args.overview,
+          rating: args.voteAverage,
+          runtime: args.runtime,
+        });
+        await fetch(`/api/media/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userRating: args.value,
+            watched: true,
+            watchedAt: new Date().toISOString(),
+            status: "watched",
+          }),
         });
       } else {
-        return libStorage.removeRating(args.mediaType, args.tmdbId);
+        // Remove rating: find by tmdbId and clear
+        const url = new URL("/api/media", window.location.origin);
+        url.searchParams.set("type", args.mediaType === "tv" ? "series" : "movie");
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+          if (item) {
+            await fetch(`/api/media/${item.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userRating: null, watched: false, watchedAt: null, status: null }),
+            });
+          }
+        }
       }
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
     },
   });
 }
 
-// Stats
+// Stats - reads from Neon
 export function useStats() {
   return useQuery({
-    queryKey: ["lib", "stats"],
-    queryFn: () => libStorage.getStats(),
+    queryKey: ["media", "stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/media/stats");
+      if (!res.ok) return null;
+      return res.json();
+    },
     staleTime: 0,
   });
 }

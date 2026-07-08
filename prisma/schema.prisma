@@ -14,6 +14,7 @@ datasource db {
 // Matches the HussamVision backup structure
 model Media {
   id           String   @id // keep original ID from backup
+  tmdbId       Int?     // TMDB ID for linking movies/shows from TMDB API
   title        String
   originalTitle String?
   year         String?
@@ -32,7 +33,7 @@ model Media {
   notes        String?  @db.Text
   watched      Boolean  @default(false)
   watchedAt    DateTime?
-  userRating   Int?     // 1-10 user rating
+  userRating   Int?     // 0-100 user rating
   rewatch      Boolean  @default(false)
   runtime      Int?
   ratingStatus String?  // "watched" | "planned" | null
@@ -45,4 +46,5 @@ model Media {
   @@index([watched])
   @@index([userRating])
   @@index([isAnime])
+  @@index([tmdbId])
 }

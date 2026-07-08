@@ -60,6 +60,12 @@ export async function GET(req: NextRequest) {
       rated,
       watched,
       planned,
+      // Aliases for Home view compatibility
+      watchlist: planned,
+      watchedMovies: rated,
+      watchedEpisodes: 0, // episode tracking is in localStorage
+      following: await db.media.count({ where: { type: "series", status: "planned", isAnime: false, userRating: null } }),
+      ratings: rated,
     },
     ratingDist: ratingDist.map((r) => ({ value: r.userRating, count: r._count })),
     typeDist: typeDist.map((t) => ({ type: t.type, count: t._count })),
