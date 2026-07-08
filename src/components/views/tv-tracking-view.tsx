@@ -1,6 +1,6 @@
 "use client";
 
-import { useFollowing, useStats, useTvDetail, useWatchedEpisodes, useSeasonDetail, useEpisodeToggle, useBulkEpisodeToggle, useMedia } from "@/hooks/use-tmdb";
+import { useFollowing, useStats, useShowProgress, useEpisodeToggle, useBulkEpisodeToggle, useMedia } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -304,63 +304,7 @@ function StatCard({ icon, label, value, suffix, color }: { icon: React.ReactNode
 
 /** Fetches show data and returns categorized info for tab filtering */
 function useShowTrackingData(showId: number) {
-  const showDetail = useTvDetail(showId);
-  const watched = useWatchedEpisodes(showId);
-  const s1 = useSeasonDetail(showId, 1);
-  const s2 = useSeasonDetail(showId, 2);
-  const s3 = useSeasonDetail(showId, 3);
-  const s4 = useSeasonDetail(showId, 4);
-
-  const watchedSet = new Set(
-    (watched.data?.items ?? []).map((e: any) => `${e.seasonNumber}-${e.episodeNumber}`)
-  );
-  const watchedItems = watched.data?.items ?? [];
-
-  const seasons = [s1, s2, s3, s4].filter((s) => s.data?.episodes?.length);
-  const totalEpisodes = showDetail.data?.number_of_episodes ?? 0;
-  const watchedCount = watchedSet.size;
-
-  let nextEp: { seasonNumber: number; episode: any; seasonName: string } | null = null;
-  let allEpisodes: { seasonNumber: number; episode: any; seasonName: string }[] = [];
-
-  for (const s of seasons) {
-    if (!s.data) continue;
-    for (const ep of s.data.episodes) {
-      allEpisodes.push({ seasonNumber: s.data.season_number, episode: ep, seasonName: s.data.name });
-    }
-    const unwatched = s.data.episodes.find((e) => !watchedSet.has(`${e.season_number}-${e.episode_number}`));
-    if (unwatched && !nextEp) {
-      nextEp = { seasonNumber: s.data.season_number, episode: unwatched, seasonName: s.data.name };
-    }
-  }
-
-  // Last watched date
-  const lastWatchedDate = watchedItems.length > 0
-    ? new Date(watchedItems.reduce((latest: string, e: any) => e.watchedAt > latest ? e.watchedAt : latest, watchedItems[0].watchedAt))
-    : null;
-  const daysSinceLastWatch = lastWatchedDate ? Math.floor((Date.now() - lastWatchedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
-
-  // Next episode air date
-  const nextEpAirDate = nextEp?.episode?.air_date ? new Date(nextEp.episode.air_date) : null;
-  const isUpcoming = nextEpAirDate && nextEpAirDate > new Date() && watchedCount === 0 ? false : nextEpAirDate && nextEpAirDate > new Date();
-
-  const isLoading = s1.isLoading || s2.isLoading || s3.isLoading || s4.isLoading || watched.isLoading || showDetail.isLoading;
-
-  return {
-    showDetail: showDetail.data,
-    watchedSet,
-    watchedItems,
-    totalEpisodes,
-    watchedCount,
-    nextEp,
-    allEpisodes,
-    seasons: seasons.map(s => ({ seasonNumber: s.data!.season_number, episodes: s.data!.episodes, seasonName: s.data!.name })),
-    lastWatchedDate,
-    daysSinceLastWatch,
-    nextEpAirDate,
-    isUpcoming,
-    isLoading,
-  };
+  return useShowProgress(showId);
 }
 
 // ============ NEXT EPISODE CARD (with Make Previous Episodes dialog) ============
@@ -600,16 +544,15 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
 // ============ SHOW PROGRESS CARD ============
 
 function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; title: string; poster: string | null; onGo: () => void }) {
-  const showDetail = useTvDetail(showId);
-  const watched = useWatchedEpisodes(showId);
+  const progress = useShowProgress(showId);
 
-  const totalEpisodes = showDetail.data?.number_of_episodes ?? 0;
-  const watchedCount = watched.data?.items.length ?? 0;
-  const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
+  const totalEpisodes = progress.totalEpisodes ?? 0;
+  const watchedCount = progress.watchedCount ?? 0;
+  const progressPct = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
   const remaining = totalEpisodes > 0 ? totalEpisodes - watchedCount : 0;
-  const seasons = showDetail.data?.number_of_seasons;
-  const status = showDetail.data?.status;
-  const isLoading = showDetail.isLoading || watched.isLoading;
+  const seasons = progress.showDetail?.number_of_seasons;
+  const status = progress.showDetail?.status;
+  const isLoading = progress.isLoading;
 
   // Status badge logic
   const statusBadge = getStatusBadge(status);
@@ -647,10 +590,10 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
             <div className="mt-2">
               <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-0.5">
                 <span>{watchedCount} / {totalEpisodes} eps</span>
-                <span className="font-bold text-primary">{progress}%</span>
+                <span className="font-bold text-primary">{progressPct}%</span>
               </div>
               <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500" style={{ width: `${progressPct}%` }} />
               </div>
               <p className="text-[10px] text-muted-foreground mt-0.5">{remaining} remaining</p>
             </div>

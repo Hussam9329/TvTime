@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNav } from "@/lib/store";
 import type { MediaItem, MovieDetail, TvDetail, PaginatedResponse, SeasonDetail, Genre } from "@/lib/tmdb";
+import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
 
 // ---------- TMDB fetchers ----------
 async function tmdbGet<T>(path: string, params?: Record<string, string | number | boolean>): Promise<T> {
@@ -170,12 +171,19 @@ export function usePersonDetail(id: number | null) {
 // Re-export types for backwards compatibility
 export type WatchlistItemDB = MediaItemDB;
 export type WatchedMovieDB = MediaItemDB;
-export type WatchedEpisodeDB = import("@/lib/local-storage").WatchedEpisode;
+export type WatchedEpisodeDB = {
+  id: string;
+  showId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  episodeName: string | null;
+  runtime: number | null;
+  watchedAt: string;
+};
 export type FollowingShowDB = MediaItemDB;
 export type RatingDB = MediaItemDB;
 
-// Episode tracking stays in localStorage (no episode model in DB)
-import { libStorage } from "@/lib/local-storage";
+// Episode tracking is now server-backed via API
 
 // Helper: find-or-create a Media item from TMDB data
 async function findOrCreateMedia(args: {
@@ -194,9 +202,9 @@ async function findOrCreateMedia(args: {
       ? args.poster
       : `https://image.tmdb.org/t/p/w500${args.poster}`)
     : null;
-  const res = await fetch("/api/media/find-or-create", {
+  const res = await fetch(withUserId(new URL("/api/media/find-or-create", window.location.origin)), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...userHeaders() },
     body: JSON.stringify({
       tmdbId: args.tmdbId,
       title: args.title,
@@ -214,20 +222,38 @@ async function findOrCreateMedia(args: {
   return data.item.id;
 }
 
-// Watchlist - reads from Neon (userRating=null = unrated items)
+// Compatibility mapper: converts a Media DB item to the shape that the
+// TMDB-style library hooks (useWatchlist, useWatchedMovies, etc.) used to
+// return when backed by localStorage. This keeps existing consumers working
+// without having to rewrite every call site.
+function mediaToLibraryCompat(m: any) {
+  const mediaType = m.type === "series" ? "tv" : m.type;
+  return {
+    ...m,
+    mediaType,
+    posterPath: m.posterPath ?? m.poster ?? null,
+    backdropPath: m.backdropPath ?? null,
+    releaseDate: m.releaseDate ?? (m.year ? `${m.year}-01-01` : null),
+    voteAverage: m.voteAverage ?? (m.rating ? Number(m.rating) : null),
+    followedAt: m.followedAt ?? m.addedAt ?? m.updatedAt,
+    watchedAt: m.watchedAt ?? m.updatedAt,
+    value: m.value ?? (m.userRating == null ? undefined : (m.userRating > 10 ? Math.round(m.userRating / 10) : m.userRating)),
+  };
+}
+
+// Watchlist - reads from Neon (status="planned")
 export function useWatchlist(mediaType?: "movie" | "tv") {
   const type = mediaType === "tv" ? "series" : mediaType || undefined;
   return useQuery({
     queryKey: ["media", "watchlist", type],
     queryFn: async () => {
-      const params: any = { rated: "false" };
-      if (type) params.type = type;
-      const url = new URL("/api/media", window.location.origin);
-      for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
-      const res = await fetch(url);
+      const url = withUserId(new URL("/api/media", window.location.origin));
+      url.searchParams.set("status", "planned");
+      if (type) url.searchParams.set("type", type);
+      const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
       const data = await res.json();
-      return { items: data.items || [] };
+      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
     staleTime: 0,
   });
@@ -260,23 +286,23 @@ export function useWatchlistToggle() {
           rating: args.voteAverage,
           runtime: args.runtime,
         });
-        await fetch(`/api/media/${id}`, {
+        await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({ status: "planned", watched: false, userRating: null, watchedAt: null }),
         });
       } else {
         // Remove from watchlist: find by tmdbId and clear status
-        const url = new URL("/api/media", window.location.origin);
+        const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", args.mediaType === "tv" ? "series" : "movie");
-        const res = await fetch(url);
+        const res = await fetch(url, { headers: userHeaders() });
         if (res.ok) {
           const data = await res.json();
           const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
           if (item) {
-            await fetch(`/api/media/${item.id}`, {
+            await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
               method: "PATCH",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...userHeaders() },
               body: JSON.stringify({ status: null, watched: false, userRating: null, watchedAt: null }),
             });
           }
@@ -290,18 +316,18 @@ export function useWatchlistToggle() {
   });
 }
 
-// Watched Movies - reads from Neon (userRating != null)
+// Watched Movies - reads from Neon (watched=true)
 export function useWatchedMovies() {
   return useQuery({
     queryKey: ["media", "watched-movies"],
     queryFn: async () => {
-      const url = new URL("/api/media", window.location.origin);
+      const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "movie");
-      url.searchParams.set("rated", "true");
-      const res = await fetch(url);
+      url.searchParams.set("watched", "true");
+      const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
       const data = await res.json();
-      return { items: data.items || [] };
+      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
     staleTime: 0,
   });
@@ -332,23 +358,23 @@ export function useWatchedMovieToggle() {
           rating: args.voteAverage,
           runtime: args.runtime,
         });
-        await fetch(`/api/media/${id}`, {
+        await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({ watched: true, watchedAt: new Date().toISOString(), status: "watched" }),
         });
       } else {
         // Remove from watched: clear rating and watched status
-        const url = new URL("/api/media", window.location.origin);
+        const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", "movie");
-        const res = await fetch(url);
+        const res = await fetch(url, { headers: userHeaders() });
         if (res.ok) {
           const data = await res.json();
           const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
           if (item) {
-            await fetch(`/api/media/${item.id}`, {
+            await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
               method: "PATCH",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...userHeaders() },
               body: JSON.stringify({ watched: false, userRating: null, watchedAt: null, status: null }),
             });
           }
@@ -362,11 +388,18 @@ export function useWatchedMovieToggle() {
   });
 }
 
-// Watched Episodes - stays in localStorage (episode-level tracking)
+// Watched Episodes - server-backed via /api/library/watched-episodes
 export function useWatchedEpisodes(showId?: number) {
+  const userId = useNav((s) => s.userId);
   return useQuery({
-    queryKey: ["lib", "watched-episodes", showId],
-    queryFn: () => ({ items: libStorage.getWatchedEpisodes(showId) as any[] }),
+    queryKey: ["lib", "watched-episodes", userId || getClientUserId(), showId],
+    queryFn: async () => {
+      const url = withUserId(new URL("/api/library/watched-episodes", window.location.origin));
+      if (showId != null) url.searchParams.set("showId", String(showId));
+      const res = await fetch(url, { headers: userHeaders() });
+      if (!res.ok) return { items: [] };
+      return res.json();
+    },
     staleTime: 0,
   });
 }
@@ -382,18 +415,31 @@ export function useEpisodeToggle() {
       episodeName?: string;
     }) => {
       if (args.action === "add") {
-        return libStorage.addWatchedEpisode({
-          showId: args.showId,
-          seasonNumber: args.seasonNumber,
-          episodeNumber: args.episodeNumber,
-          episodeName: args.episodeName,
+        const res = await fetch("/api/library/watched-episodes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...userHeaders() },
+          body: JSON.stringify({
+            showId: args.showId,
+            seasonNumber: args.seasonNumber,
+            episodeNumber: args.episodeNumber,
+            episodeName: args.episodeName,
+          }),
         });
+        if (!res.ok) throw new Error("Failed to mark episode watched");
+        return res.json();
       } else {
-        return libStorage.removeWatchedEpisode(args.showId, args.seasonNumber, args.episodeNumber);
+        const url = withUserId(new URL("/api/library/watched-episodes", window.location.origin));
+        url.searchParams.set("showId", String(args.showId));
+        url.searchParams.set("seasonNumber", String(args.seasonNumber));
+        url.searchParams.set("episodeNumber", String(args.episodeNumber));
+        const res = await fetch(url, { method: "DELETE", headers: userHeaders() });
+        if (!res.ok) throw new Error("Failed to unmark episode");
+        return res.json();
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
+      qc.invalidateQueries({ queryKey: ["lib", "stats"] });
     },
   });
 }
@@ -405,27 +451,33 @@ export function useBulkEpisodeToggle() {
       showId: number;
       episodes: { seasonNumber: number; episodeNumber: number; episodeName?: string }[];
     }) => {
-      return libStorage.addWatchedEpisodesBulk(args.showId, args.episodes);
+      const res = await fetch("/api/library/watched-episodes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...userHeaders() },
+        body: JSON.stringify({ showId: args.showId, episodes: args.episodes }),
+      });
+      if (!res.ok) throw new Error("Failed to mark episodes watched");
+      return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
+      qc.invalidateQueries({ queryKey: ["lib", "stats"] });
     },
   });
 }
 
-// Following - reads from Neon (type="series", isAnime=false, userRating=null = unrated TV)
+// Following - reads from Neon (type="series", status="planned")
 export function useFollowing() {
   return useQuery({
     queryKey: ["media", "following"],
     queryFn: async () => {
-      const url = new URL("/api/media", window.location.origin);
+      const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "series");
-      url.searchParams.set("isAnime", "false");
-      url.searchParams.set("rated", "false");
-      const res = await fetch(url);
+      url.searchParams.set("status", "planned");
+      const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
       const data = await res.json();
-      return { items: data.items || [] };
+      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
     staleTime: 0,
   });
@@ -437,13 +489,13 @@ export function useTrackedShows() {
   return useQuery({
     queryKey: ["media", "tracked-shows"],
     queryFn: async () => {
-      const url = new URL("/api/media", window.location.origin);
+      const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "series");
       url.searchParams.set("limit", "500");
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
       const data = await res.json();
-      return { items: data.items || [] };
+      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
     staleTime: 0,
   });
@@ -466,36 +518,36 @@ export function useFollowingToggle() {
           rating: args.voteAverage,
         });
         // Only set status to "planned" if not already watched
-        const url = new URL("/api/media", window.location.origin);
+        const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", "series");
         url.searchParams.set("limit", "500");
-        const res = await fetch(url);
+        const res = await fetch(url, { headers: userHeaders() });
         if (res.ok) {
           const data = await res.json();
           const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
           if (item && !item.watched && !item.userRating) {
-            await fetch(`/api/media/${item.id}`, {
+            await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
               method: "PATCH",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...userHeaders() },
               body: JSON.stringify({ status: "planned" }),
             });
           }
         }
       } else {
         // Unfollow: only clear status if not watched, keep watched/rating intact
-        const url = new URL("/api/media", window.location.origin);
+        const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", "series");
         url.searchParams.set("limit", "500");
-        const res = await fetch(url);
+        const res = await fetch(url, { headers: userHeaders() });
         if (res.ok) {
           const data = await res.json();
           const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
           if (item) {
             // Only clear status if the show is not watched
             if (!item.watched) {
-              await fetch(`/api/media/${item.id}`, {
+              await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...userHeaders() },
                 body: JSON.stringify({ status: null }),
               });
             }
@@ -516,13 +568,13 @@ export function useRatings(mediaType?: "movie" | "tv") {
   return useQuery({
     queryKey: ["media", "ratings", type],
     queryFn: async () => {
-      const url = new URL("/api/media", window.location.origin);
+      const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("rated", "true");
       if (type) url.searchParams.set("type", type);
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
       const data = await res.json();
-      return { items: data.items || [] };
+      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
     staleTime: 0,
   });
@@ -544,11 +596,11 @@ export function useRatingMutate() {
           rating: args.voteAverage,
           runtime: args.runtime,
         });
-        await fetch(`/api/media/${id}`, {
+        await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({
-            userRating: args.value,
+            userRating: args.value == null ? null : args.value * 10,
             watched: true,
             watchedAt: new Date().toISOString(),
             status: "watched",
@@ -556,16 +608,16 @@ export function useRatingMutate() {
         });
       } else {
         // Remove rating: find by tmdbId and clear
-        const url = new URL("/api/media", window.location.origin);
+        const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", args.mediaType === "tv" ? "series" : "movie");
-        const res = await fetch(url);
+        const res = await fetch(url, { headers: userHeaders() });
         if (res.ok) {
           const data = await res.json();
           const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
           if (item) {
-            await fetch(`/api/media/${item.id}`, {
+            await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
               method: "PATCH",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...userHeaders() },
               body: JSON.stringify({ userRating: null, watched: false, watchedAt: null, status: null }),
             });
           }
@@ -579,17 +631,95 @@ export function useRatingMutate() {
   });
 }
 
-// Stats - reads from Neon
+// Stats - reads from Neon via library/stats endpoint (includes Media + watched episodes)
 export function useStats() {
+  const userId = useNav((s) => s.userId);
   return useQuery({
-    queryKey: ["media", "stats"],
+    queryKey: ["lib", "stats", userId || getClientUserId()],
     queryFn: async () => {
-      const res = await fetch("/api/media/stats");
+      const res = await fetch(withUserId(new URL("/api/library/stats", window.location.origin)), { headers: userHeaders() });
       if (!res.ok) return null;
       return res.json();
     },
     staleTime: 0,
   });
+}
+
+// Show progress - fetches ALL seasons of a show (not just first 4) and combines
+// with watched-episodes data to produce a complete progress picture.
+export function useShowProgress(showId: number | null | undefined) {
+  const detail = useTvDetail(showId ?? null);
+  const watched = useWatchedEpisodes(showId ?? undefined);
+  const watchedItems = watched.data?.items ?? [];
+  const watchedSignature = watchedItems
+    .map((e: any) => `${e.showId}-${e.seasonNumber}-${e.episodeNumber}-${e.watchedAt || ""}`)
+    .sort()
+    .join("|");
+
+  const seasonsQuery = useQuery({
+    queryKey: ["tmdb", "show-progress-seasons", showId, detail.data?.number_of_seasons ?? 0, watchedSignature],
+    enabled: showId != null && !!detail.data,
+    queryFn: async () => {
+      const show = detail.data!;
+      const regularSeasons = (show.seasons ?? [])
+        .filter((s) => s.season_number >= 1 && (s.episode_count ?? 0) > 0)
+        .sort((a, b) => a.season_number - b.season_number);
+
+      const seasonDetails = await Promise.all(
+        regularSeasons.map((s) => tmdbGet<SeasonDetail>(`tv/${showId}/season/${s.season_number}`))
+      );
+
+      const watchedSet = new Set(watchedItems.map((e: any) => `${e.seasonNumber}-${e.episodeNumber}`));
+      const allEpisodes = seasonDetails.flatMap((season) =>
+        (season.episodes ?? [])
+          .filter((episode) => episode.season_number >= 1)
+          .map((episode) => ({ seasonNumber: season.season_number, episode, seasonName: season.name }))
+      );
+
+      const nextEp = allEpisodes.find(({ episode }) => !watchedSet.has(`${episode.season_number}-${episode.episode_number}`)) ?? null;
+      const lastWatchedDate = watchedItems.length > 0
+        ? new Date(watchedItems.reduce((latest: string, e: any) => e.watchedAt > latest ? e.watchedAt : latest, watchedItems[0].watchedAt))
+        : null;
+      const daysSinceLastWatch = lastWatchedDate ? Math.floor((Date.now() - lastWatchedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
+      const nextEpAirDate = nextEp?.episode?.air_date ? new Date(nextEp.episode.air_date) : null;
+      const totalEpisodes = show.number_of_episodes || allEpisodes.length;
+      const watchedCount = watchedSet.size;
+
+      return {
+        showDetail: show,
+        watchedSet,
+        watchedItems,
+        totalEpisodes,
+        watchedCount,
+        nextEp,
+        allEpisodes,
+        seasons: seasonDetails.map((s) => ({ seasonNumber: s.season_number, episodes: s.episodes ?? [], seasonName: s.name })),
+        lastWatchedDate,
+        daysSinceLastWatch,
+        nextEpAirDate,
+        isUpcoming: Boolean(nextEpAirDate && nextEpAirDate > new Date() && watchedCount > 0),
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    showDetail: detail.data,
+    watchedSet: new Set(watchedItems.map((e: any) => `${e.seasonNumber}-${e.episodeNumber}`)),
+    watchedItems,
+    totalEpisodes: detail.data?.number_of_episodes ?? 0,
+    watchedCount: watchedItems.length,
+    nextEp: null,
+    allEpisodes: [],
+    seasons: [],
+    lastWatchedDate: null,
+    daysSinceLastWatch: null,
+    nextEpAirDate: null,
+    isUpcoming: false,
+    ...(seasonsQuery.data ?? {}),
+    isLoading: detail.isLoading || watched.isLoading || seasonsQuery.isLoading,
+    isError: detail.isError || watched.isError || seasonsQuery.isError,
+  };
 }
 
 // ---------- Media (Neon PostgreSQL backend) ----------
@@ -619,6 +749,7 @@ export interface MediaItemDB {
   ratingStatus: string | null;
   addedAt: string;
   updatedAt: string;
+  isAnime: boolean;
 }
 
 export interface MediaStats {
@@ -631,6 +762,16 @@ export interface MediaStats {
     rated: number;
     watched: number;
     planned: number;
+    watchlist?: number;
+    watchlistMovies?: number;
+    watchlistShows?: number;
+    watchlistAnime?: number;
+    watchedMovies?: number;
+    watchedShows?: number;
+    watchedAnime?: number;
+    watchedEpisodes?: number;
+    following?: number;
+    ratings?: number;
   };
   ratingDist: { value: number; count: number }[];
   typeDist: { type: string; count: number }[];
@@ -640,7 +781,7 @@ export interface MediaStats {
 }
 
 async function mediaGet<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
-  const url = new URL("/api/media/" + path, window.location.origin);
+  const url = withUserId(new URL("/api/media/" + path, window.location.origin));
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       if (v != null && v !== undefined && String(v) !== "undefined" && String(v) !== "") {
@@ -648,7 +789,7 @@ async function mediaGet<T>(path: string, params?: Record<string, string | number
       }
     }
   }
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { headers: userHeaders() });
   if (!res.ok) throw new Error(`Media API ${res.status}`);
   return res.json();
 }
@@ -658,6 +799,7 @@ export function useMedia(params: {
   status?: string;
   watched?: string;
   rated?: string;
+  isAnime?: string;
   search?: string;
   sortBy?: string;
   order?: string;
@@ -689,9 +831,9 @@ export function useMediaUpdate() {
       isAnime?: boolean;
       status?: string | null;
     }) => {
-      const res = await fetch(`/api/media/${args.id}`, {
+      const res = await fetch(withUserId(new URL(`/api/media/${args.id}`, window.location.origin)), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...userHeaders() },
         body: JSON.stringify(args),
       });
       if (!res.ok) throw new Error("Failed to update");

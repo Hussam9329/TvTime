@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useStats } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { useQueryClient } from "@tanstack/react-query";
-import { libStorage } from "@/lib/local-storage";
+import { userHeaders, withUserId } from "@/lib/client-user";
 import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -61,8 +61,13 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const onClearData = async () => {
     setClearing(true);
     try {
-      libStorage.clearAll();
+      const res = await fetch(withUserId(new URL("/api/library/clear", window.location.origin)), {
+        method: "DELETE",
+        headers: userHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to clear");
       qc.invalidateQueries({ queryKey: ["lib"] });
+      qc.invalidateQueries({ queryKey: ["media"] });
       toast.success("All library data cleared");
       onOpenChange(false);
     } catch {
@@ -75,7 +80,11 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const onExport = async () => {
     setExporting(true);
     try {
-      const data = libStorage.exportAll();
+      const res = await fetch(withUserId(new URL("/api/library/export", window.location.origin)), {
+        headers: userHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to export");
+      const data = await res.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -100,9 +109,17 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      const result = libStorage.importAll(data);
+      const res = await fetch(withUserId(new URL("/api/library/import", window.location.origin)), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...userHeaders() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Import failed");
+      const result = await res.json();
       qc.invalidateQueries({ queryKey: ["lib"] });
-      const total = result.watchlist + result.watchedMovies + result.watchedEpisodes + result.following + result.ratings;
+      qc.invalidateQueries({ queryKey: ["media"] });
+      const imported = result?.imported || {};
+      const total = (imported.watchlist || 0) + (imported.watchedMovies || 0) + (imported.watchedEpisodes || 0) + (imported.following || 0) + (imported.ratings || 0) + (imported.media || 0);
       toast.success(`Imported ${total} items`);
       onOpenChange(false);
     } catch {

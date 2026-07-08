@@ -1,6 +1,6 @@
 "use client";
 
-import { useFollowing } from "@/hooks/use-tmdb";
+import { useFollowing, useShowProgress } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,6 @@ import { useState, useMemo } from "react";
 import { img } from "@/lib/tmdb";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useTvDetail } from "@/hooks/use-tmdb";
 
 export function CalendarView() {
   const following = useFollowing();
@@ -26,8 +25,8 @@ export function CalendarView() {
 
   // Fetch details for each followed show to get seasons + episode air dates
   // We only need shows that have recent/upcoming episodes. To keep it efficient,
-  // fetch all followed shows' details (capped at 12).
-  const followedToShow = followed.slice(0, 12);
+  // fetch all followed shows' details (capped at 50).
+  const followedToShow = followed.slice(0, 50);
 
   const days = useMemo(() => {
     const first = new Date(year, month, 1);
@@ -183,7 +182,7 @@ function CalendarDay({ date, isToday, isPast, showIds, showTitles, onShowClick, 
     >
       <span className={cn("font-semibold text-[11px]", isToday && "text-primary")}>{date.getDate()}</span>
       <div className="flex-1 flex flex-col gap-0.5 overflow-hidden">
-        {showIds.slice(0, 8).map((showId) => (
+        {showIds.slice(0, 20).map((showId) => (
           <DayEpisode key={showId} showId={showId} showTitle={showTitles[showId] || `Show ${showId}`} date={date} onShowClick={onShowClick} />
         ))}
       </div>
@@ -192,18 +191,10 @@ function CalendarDay({ date, isToday, isPast, showIds, showTitles, onShowClick, 
 }
 
 function DayEpisode({ showId, showTitle, date, onShowClick }: { showId: number; showTitle: string; date: Date; onShowClick: (id: number) => void }) {
-  const detail = useTvDetail(showId);
-  // Look through seasons for episodes airing on this date.
-  // Since the show detail doesn't include individual episode air dates,
-  // we fetch the most recent 2 seasons' episode lists.
-  const seasons = (detail.data?.seasons ?? []).filter((s) => s.season_number >= 1).slice(-2);
-  const s1 = useSeasonDetail(seasons[0] ? showId : null, seasons[0]?.season_number ?? null);
-  const s2 = useSeasonDetail(seasons[1] ? showId : null, seasons[1]?.season_number ?? null);
+  const progress = useShowProgress(showId);
 
   const dateKey = date.toISOString().slice(0, 10);
-  const matching = [s1, s2]
-    .flatMap((s) => s.data?.episodes ?? [])
-    .find((e) => e.air_date === dateKey);
+  const matching = (progress.allEpisodes ?? []).find((e: any) => e.episode?.air_date === dateKey)?.episode;
 
   if (!matching) return null;
 

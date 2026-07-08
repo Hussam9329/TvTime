@@ -1,6 +1,6 @@
 "use client";
 
-import { useFollowing, useWatchedEpisodes, useSeasonDetail, useTvDetail, useEpisodeToggle } from "@/hooks/use-tmdb";
+import { useFollowing, useShowProgress, useEpisodeToggle, useBulkEpisodeToggle } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,45 +57,13 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
   onGo: () => void;
   featured?: boolean;
 }) {
-  // Fetch show details for total episode count
-  const showDetail = useTvDetail(showId);
-  // Fetch watched episodes for this show (from localStorage)
-  const watched = useWatchedEpisodes(showId);
-  // Fetch seasons 1-4 to find next unwatched episode
-  const s1 = useSeasonDetail(showId, 1);
-  const s2 = useSeasonDetail(showId, 2);
-  const s3 = useSeasonDetail(showId, 3);
-  const s4 = useSeasonDetail(showId, 4);
+  // Fetch full show progress (all seasons + watched episodes via API)
+  const data = useShowProgress(showId);
+  const { watchedSet, watchedCount, totalEpisodes, nextEp, seasons, isLoading } = data;
 
   const episodeToggle = useEpisodeToggle();
+  const bulkToggle = useBulkEpisodeToggle();
 
-  // Build watched set
-  const watchedSet = new Set(
-    (watched.data?.items ?? []).map((e: any) => `${e.seasonNumber}-${e.episodeNumber}`)
-  );
-
-  // Find next unwatched episode across seasons
-  const seasons = [s1, s2, s3, s4].filter((s) => s.data?.episodes?.length);
-  const totalEpisodes = showDetail.data?.number_of_episodes ?? 0;
-  const watchedCount = watchedSet.size;
-
-  let nextEp: { seasonNumber: number; episode: any; seasonName: string } | null = null;
-  let allSeasonsData: { seasonNumber: number; episodes: any[]; seasonName: string }[] = [];
-
-  for (const s of seasons) {
-    if (!s.data) continue;
-    allSeasonsData.push({
-      seasonNumber: s.data.season_number,
-      episodes: s.data.episodes,
-      seasonName: s.data.name,
-    });
-    const unwatched = s.data.episodes.find((e) => !watchedSet.has(`${e.season_number}-${e.episode_number}`));
-    if (unwatched && !nextEp) {
-      nextEp = { seasonNumber: s.data.season_number, episode: unwatched, seasonName: s.data.name };
-    }
-  }
-
-  const isLoading = s1.isLoading || s2.isLoading || s3.isLoading || s4.isLoading || watched.isLoading || showDetail.isLoading;
   const allWatched = !isLoading && seasons.length > 0 && !nextEp;
   const remaining = totalEpisodes > 0 ? totalEpisodes - watchedCount : 0;
   const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
@@ -114,18 +82,16 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
 
   const markAllSeason = () => {
     if (!nextEp) return;
-    const seasonData = allSeasonsData.find((s) => s.seasonNumber === nextEp!.seasonNumber);
+    const seasonData = seasons.find((s) => s.seasonNumber === nextEp!.seasonNumber);
     if (!seasonData) return;
     const unwatched = seasonData.episodes
-      .filter((e) => !watchedSet.has(`${e.season_number}-${e.episode_number}`))
-      .map((e) => ({ seasonNumber: e.season_number, episodeNumber: e.episode_number, episodeName: e.name }));
+      .filter((e: any) => !watchedSet.has(`${e.season_number}-${e.episode_number}`))
+      .map((e: any) => ({ seasonNumber: e.season_number, episodeNumber: e.episode_number, episodeName: e.name }));
     if (unwatched.length === 0) {
       toast.info("All episodes already watched");
       return;
     }
-    unwatched.forEach((ep) => {
-      episodeToggle.mutate({ action: "add", showId, ...ep });
-    });
+    bulkToggle.mutate({ showId, episodes: unwatched });
     toast.success(`Marked ${unwatched.length} episodes as watched`);
   };
 

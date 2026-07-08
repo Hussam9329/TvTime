@@ -78,7 +78,7 @@ export function MovieDetailView() {
       action: inWatchlist ? "remove" : "add",
       mediaType: "movie",
       tmdbId: m.id,
-      title: m.title,
+      title: m.title || "Untitled",
       posterPath: m.poster_path,
       backdropPath: m.backdrop_path,
       overview: m.overview,
@@ -92,7 +92,7 @@ export function MovieDetailView() {
     watchedToggle.mutate({
       action: isWatched ? "remove" : "add",
       tmdbId: m.id,
-      title: m.title,
+      title: m.title || "Untitled",
       posterPath: m.poster_path,
       runtime: m.runtime,
     });

@@ -1,0 +1,373 @@
+     1→     1→# CineTrack - TV Time Clone Project Worklog
+     2→     2→
+     3→     3→## Project Overview
+     4→     4→Building a complete TV Time-like movie & TV show tracking application using:
+     5→     5→- Next.js 16 with App Router
+     6→     6→- TypeScript + Tailwind CSS 4 + shadcn/ui
+     7→     7→- Prisma ORM (SQLite)
+     8→     8→- TMDB API (free) proxied through Next.js API routes
+     9→     9→- Zustand for state, TanStack Query for server state
+    10→    10→
+    11→    11→## Architecture Decisions
+    12→    12→- Single-page application pattern (only `/` route is user-visible)
+    13→    13→- View switching managed via Zustand store (home, discover, search, detail, calendar, library, stats)
+    14→    14→- TMDB API calls proxied through `/api/tmdb/*` routes (caching + no CORS issues)
+    15→    15→- Local "user" concept (client-generated user ID stored in localStorage, synced to DB)
+    16→    16→- Dark theme with rose/red accents (TV Time inspired)
+    17→    17→
+    18→    18→---
+    19→    19→Task ID: 1
+    20→    20→Agent: main
+    21→    21→Task: Set up Prisma database schema and push to DB
+    22→    22→
+    23→    23→Work Log:
+    24→    24→- Designed schema with User, WatchlistItem, WatchedMovie, WatchedEpisode, FollowingShow, Rating models
+    25→    25→- Pushing schema to SQLite database
+    26→    26→
+    27→    27→Stage Summary:
+    28→    28→- Prisma schema with 6 models (User, WatchlistItem, WatchedMovie, WatchedEpisode, FollowingShow, Rating) pushed to SQLite
+    29→    29→- All library API routes working: watchlist, watched-movies, watched-episodes (with bulk), following, ratings, stats, user
+    30→    30→- TMDB API client + proxy route (/api/tmdb/[...path]) - all endpoints return 200
+    31→    31→- Zustand store for navigation (view switching) with localStorage-persisted userId
+    32→    32→
+    33→    33→---
+    34→    34→Task ID: 2-11
+    35→    35→Agent: main
+    36→    36→Task: Build complete frontend (store, hooks, layout, views) and wire into page.tsx
+    37→    37→
+    38→    38→Work Log:
+    39→    39→- Created TanStack Query hooks (src/hooks/use-tmdb.ts) for all TMDB + library operations
+    40→    40→- Created Zustand store (src/lib/store.ts) with view navigation, history, persisted userId
+    41→    41→- Built layout components: Header (nav + search + theme toggle + avatar), Footer (sticky via flex-1 main)
+    42→    42→- Built media components: MediaCard (with watchlist/watched/following status badges), MediaRow (horizontal scroll), RatingStars
+    43→    43→- Built 8 views: HomeView (hero + 8 content rows + quick stats), DiscoverView (filters: genre/year/rating/sort + pagination), SearchView (debounced), MovieDetailView, TvDetailView (with episode tracker - the core TV Time feature), CalendarView (month grid + following shows), LibraryView (4 tabs), StatsView (charts: activity bar, library pie, rating distribution)
+    44→    44→- Built AppShell with view switching + scroll-to-top on view change
+    45→    45→- Configured dark cinema theme (rose/red accents) in globals.css with glass morphism, shimmer skeletons, custom scrollbar
+    46→    46→- Fixed 2 lint errors (rules-of-hooks, set-state-in-effect)
+    47→    47→
+    48→    48→Stage Summary:
+    49→    49→- All 8 views functional and verified via agent-browser
+    50→    50→- Episode tracking confirmed working: marked House of the Dragon S1E1 as watched, progress updated 0/10 -> 1/10
+    51→    51→- Stats page correctly shows "1 episode watched" + watch time + activity chart
+    52→    52→- Search returns 250 results for "batman" with movie cards
+    53→    53→- Discover shows genre filters, sort options, pagination
+    54→    54→- Library shows 4 tabs with empty states
+    55→    55→- No runtime errors in dev.log
+    56→    56→- Lint passes clean
+    57→    57→
+    58→    58→---
+    59→    59→Task ID: 12
+    60→    60→Agent: main (cron review round 1)
+    61→    61→Task: QA testing, fix bugs, and add new features (Continue Watching, Watch Providers, Profile/Settings, enhanced Calendar)
+    62→    62→
+    63→    63→## Current Project Status Assessment
+    64→    64→- Project was functional but had 1 critical runtime bug (missing imports) and 2 UX issues (Ratings tab & Stats Top Shows showing IDs instead of titles)
+    65→    65→- All TMDB API routes returning 200, no server errors
+    66→    66→- Lint was clean
+    67→    67→- Dev server running on port 3000
+    68→    68→
+    69→    69→## Work Log
+    70→    70→- **QA via agent-browser**: Found `useWatchlist is not defined` runtime error in movie-detail-view.tsx (missing imports after a previous edit). Fixed by adding `useWatchlist, useWatchedMovies` to imports.
+    71→    71→- **Enhanced Footer**: Added live mini-stats (movies/episodes count), gradient glow decorations, better icon (Clapperboard), removed dead imports (`Github`, non-existent `TMDB` icon).
+    72→    72→- **Fixed Ratings tab UX**: Updated Prisma `Rating` model to include `title` and `posterPath` columns. Updated ratings API route to accept/save these fields. Updated `useRatingMutate` hook to pass title/poster. Updated movie & TV detail views to pass title/poster when rating. Rebuilt RatingsTab in library view to show poster + real title instead of "Movie #ID".
+    73→    73→- **Fixed Stats Top Shows**: Created `TopShowRow` component that fetches show details via `useTvDetail` to display real poster + title instead of "Show #ID". Added gradient progress bar.
+    74→    74→- **Added Continue Watching feature** (core TV Time feature): New `ContinueWatching` component on home page. For each followed show, fetches seasons 1-3 + watched episodes, finds the next unwatched episode, displays it in a horizontal scroll with poster, episode still, title, and "Mark watched" button. Shows "All caught up!" state when no unwatched episodes.
+    75→    75→- **Enhanced Calendar**: Rebuilt CalendarView to fetch actual episode air dates from TMDB. Each calendar day now queries followed shows' recent seasons for episodes airing on that date, displaying them as clickable pills inside the day cell.
+    76→    76→- **Added Watch Providers (Where to Watch)**: Added `watch/providers` to TMDB detail append_to_response. New `WatchProviders` component shows streaming/rent/buy options with provider logos, region badge, and JustWatch link. Added to both movie and TV detail pages.
+    77→    77→- **Added Profile/Settings dialog**: New `ProfileDialog` component accessible via avatar button. Features: edit display name (with save), view user ID + member since date, library stats summary (4 metric cards), danger zone with AlertDialog confirmation to clear all library data. New `/api/library/clear` DELETE endpoint.
+    78→    78→- **Added personalized greeting** on home page: "Good morning/afternoon/evening, {userName} 👋" with time-based logic.
+    79→    79→- **Added content rating badges**: Movie detail shows MPAA rating (from release_dates), TV detail shows TV rating (from content_ratings) as highlighted badges.
+    80→    80→
+    81→    81→## Verification Results
+    82→    82→- ✅ Lint passes clean
+    83→    83→- ✅ No runtime errors in dev.log (all routes 200)
+    84→    84→- ✅ Movie detail page loads without errors (was crashing before)
+    85→    85→- ✅ Ratings tab shows real title "Obsession" + poster (was "Movie #1339713")
+    86→    86→- ✅ Stats Top Shows shows "House of the Dragon" + poster (was "Show #2022")
+    87→    87→- ✅ Continue Watching shows next episode (House of the Dragon S1E2 "The Rogue Prince") with Mark watched button
+    88→    88→- ✅ Profile dialog opens, name editing works (changed to "Test User", avatar updated to "TE")
+    89→    89→- ✅ Watch Providers section shows on detail pages with rent/buy options
+    90→    90→- ✅ Greeting displays "Good morning, Test User 👋"
+    91→    91→- ✅ Content rating badges appear (TV-MA, R, etc.)
+    92→    92→
+    93→    93→## Unresolved Issues / Risks
+    94→    94→- Calendar makes many parallel API calls (one per followed show per day) which could be slow with many followed shows. Capped at 12 shows. Could optimize with a dedicated "upcoming episodes" TMDB endpoint in the future.
+    95→    95→- Continue Watching fetches 3 seasons per followed show in parallel — works well for typical use but could be optimized.
+    96→    96→- No person/cast detail view yet (clicking cast members doesn't navigate) — low priority.
+    97→    97→
+    98→    98→## Priority Recommendations for Next Phase
+    99→    99→1. Add person/cast detail view (click cast member → see their filmography)
+   100→   100→2. Add "Recently watched" quick-access on home
+   101→   101→3. Add keyboard shortcuts (e.g., "/" to focus search, Esc to go back)
+   102→   102→4. Add export/import library data (JSON backup)
+   103→   103→5. Optimize Calendar API calls with batching
+   104→   104→6. Add genre-based recommendations on home
+   105→   105→
+   106→   106→---
+   107→   107→Task ID: 13
+   108→   108→Agent: main (cron review round 2)
+   109→   109→Task: QA testing, fix calendar bug, add Person detail view, keyboard shortcuts, export/import, Recently Watched
+   110→   110→
+   111→   111→## Current Project Status Assessment
+   112→   112→- Project was stable after round 1 with all features working
+   113→   113→- Lint was clean, no server errors
+   114→   114→- Dev server running on port 3000
+   115→   115→
+   116→   116→## Work Log
+   117→   117→- **QA via agent-browser**: Found critical runtime error `today is not defined` in calendar-view.tsx line 156. The `CalendarGrid` component used `today` variable but it was never defined in scope. Fixed by adding `const today = new Date(); today.setHours(0,0,0,0);` at the top of CalendarGrid.
+   118→   118→- **Added Person/Cast detail view**: New `PersonDetailView` component showing actor's profile photo, name, department, birthday/age, birthplace, biography, stats (movie/TV credits + popularity), "Known For" carousel, and full filmography tabs (Movies/TV). Added `person-detail` view + `goPerson` action + `personId` to Zustand store. Added `usePersonDetail` hook. Made cast cards clickable in both movie-detail-view and tv-detail-view (with hover effects).
+   119→   119→- **Added keyboard shortcuts**: New `KeyboardShortcuts` component (invisible, global keydown listener). Shortcuts: `/` or `s` to focus search, `Esc` to go back/blur, `g h` home, `g d` discover, `g s` stats, `g l` library, `g c` calendar. Respects typing context (doesn't trigger when in input fields, except Esc).
+   120→   120→- **Added export/import library data**: New `/api/library/export` GET endpoint returns all library data as JSON. New `/api/library/import` POST endpoint merges imported data (upserts). Added Backup & Restore section to ProfileDialog with Export (downloads JSON file) and Import (file picker) buttons.
+   121→   121→- **Added Recently Watched section on home**: New `RecentlyWatched` component shows recently watched movies (from watchedMovies library data) with posters, green checkmark badges, and watch dates. Appears between Continue Watching and Trending Now.
+   122→   122→
+   123→   123→## Verification Results
+   124→   124→- ✅ Lint passes clean
+   125→   125→- ✅ No runtime errors in dev.log
+   126→   126→- ✅ Calendar view loads without "today is not defined" error (was crashing before)
+   127→   127→- ✅ Person detail view loads with full biography, stats, Known For, filmography
+   128→   128→- ✅ Cast cards are clickable and navigate to person detail (tested Michael Johnston from Obsession)
+   129→   129→- ✅ Keyboard shortcuts work: `g d` navigated to Discover, `/` focused search input
+   130→   130→- ✅ Profile dialog shows Backup & Restore section with Export/Import buttons
+   131→   131→- ✅ Recently Watched section appears on home after marking movie as watched (shows Obsession poster with green checkmark)
+   132→   132→- ✅ VLM confirmed visual quality of all new features
+   133→   133→
+   134→   134→## Unresolved Issues / Risks
+   135→   135→- Person detail view makes multiple API calls for filmography (could be optimized)
+   136→   136→- Calendar still makes parallel calls per followed show (capped at 12) - acceptable for typical use
+   137→   137→- No keyboard shortcut hint UI yet (users may not discover shortcuts)
+   138→   138→
+   139→   139→## Priority Recommendations for Next Phase
+   140→   140→1. Add keyboard shortcuts help overlay (press `?` to show)
+   141→   141→2. Add genre-based recommendations on home (based on most-watched genres)
+   142→   142→3. Add "watch progress" percentage indicator on followed show cards
+   143→   143→4. Optimize calendar with a batch endpoint or TMDB's TV schedule endpoint
+   144→   144→5. Add dark/light theme persistence improvements
+   145→   145→6. Add social features: share watchlist link (read-only public view)
+   146→   146→
+   147→   147→---
+   148→   148→Task ID: 14
+   149→   149→Agent: main (cron review round 3)
+   150→   150→Task: QA testing, add keyboard shortcuts help overlay, watch progress cards, genre recommendations, improved empty states
+   151→   151→
+   152→   152→## Current Project Status Assessment
+   153→   153→- Project was stable after round 2 with all features working
+   154→   154→- Lint was clean, no server errors
+   155→   155→- Dev server running on port 3000
+   156→   156→- All previously added features (Person detail, keyboard shortcuts, export/import, Recently Watched, Continue Watching, Watch Providers, Profile dialog) verified working
+   157→   157→
+   158→   158→## Work Log
+   159→   159→- **QA via agent-browser**: Tested home, discover (with Action genre filter + pagination), movie detail (Shawshank Redemption), stats views. All working correctly, no errors found.
+   160→   160→- **Added keyboard shortcuts help overlay**: New `ShortcutsHelpDialog` component (exported from keyboard-shortcuts.tsx) shows all shortcuts in a beautiful dialog with grouped sections (Navigation, Search & Back, Help). Each shortcut displays key combinations in styled `<kbd>` elements. Opens via `?` key or a new keyboard icon button in the header. Closes with Esc.
+   161→   161→- **Added watch progress on followed show cards**: New `FollowedShowCard` component in home view's FollowingSection. Fetches show detail (total episodes) + watched episodes, computes progress percentage, displays a progress bar overlay at the bottom of each poster with "X/Y" count and "Z%" label. Progress updates live when episodes are marked watched.
+   162→   162→- **Re-enabled FollowingSection on home**: The "Your Shows" section with progress cards now renders on home between Continue Watching and Recently Watched (was previously defined but not rendered).
+   163→   163→- **Added genre-based recommendations**: New `GenreRecommendations` component on home. Rotates through TMDB genres daily to show 3 varied recommendation rows: "Top {Genre} Movies" (sorted by rating, 7+), "Popular {Genre} Shows", and "Trending {Genre} Movies". Always visible for discovery.
+   164→   164→- **Improved empty states**: Enhanced `EmptyState` component in library view with gradient icon backgrounds (primary/20 to primary/5), larger rounded icons, gradient card background, and CTA buttons ("Discover content", "Browse movies", "Discover shows", "Find something to rate") that navigate to the discover view. Updated all 4 library tab empty states (watchlist, watched movies, following, ratings).
+   165→   165→
+   166→   166→## Verification Results
+   167→   167→- ✅ Lint passes clean
+   168→   168→- ✅ No runtime errors in dev.log
+   169→   169→- ✅ Keyboard shortcuts help dialog opens via `?` key and header button (VLM confirmed kbd elements)
+   170→   170→- ✅ Watch progress shows on followed show cards: "0/26 0%" → "1/26 4%" after marking episode watched
+   171→   171→- ✅ Genre recommendations show 3 rows: "Top War Movies", "Popular Talk Shows", "Trending Adventure Movies"
+   172→   172→- ✅ Empty states have gradient icons + CTA buttons (VLM confirmed "Discover content" button)
+   173→   173→- ✅ All previous features still working (calendar, person detail, search, discover filters, pagination)
+   174→   174→
+   175→   175→## Unresolved Issues / Risks
+   176→   176→- Genre recommendations make 3 parallel discover API calls on home load (acceptable, cached)
+   177→   177→- Watch progress cards fetch show detail + watched episodes per followed show (capped by Continue Watching's 12-show limit in practice)
+   178→   178→- No keyboard shortcut hint badge on the keyboard icon button (users may not notice it)
+   179→   179→
+   180→   180→## Priority Recommendations for Next Phase
+   181→   181→1. Add a "shortcuts" tooltip or badge on the keyboard icon to improve discoverability
+   182→   182→2. Add watch progress to the Library > Following tab cards (currently only on home)
+   183→   183→3. Add a "Watch next" quick-action that jumps directly to the next unwatched episode
+   184→   184→4. Add theme toggle animation/transition
+   185→   185→5. Add lazy loading for images (performance optimization)
+   186→   186→6. Add a "random pick" / surprise me button on discover
+   187→   187→
+   188→   188→---
+   189→   189→Task ID: 15
+   190→   190→Agent: main (cron review round 4)
+   191→   191→Task: QA testing, add Following tab watch progress, Surprise Me button, Watch Next featured card, keyboard tooltip
+   192→   192→
+   193→   193→## Current Project Status Assessment
+   194→   194→- Project was stable after round 3 with all features working
+   195→   195→- Lint was clean, no server errors
+   196→   196→- Dev server running on port 3000
+   197→   197→- All previously added features (keyboard shortcuts help, watch progress on home, genre recommendations, improved empty states, person detail, export/import) verified working
+   198→   198→
+   199→   199→## Work Log
+   200→   200→- **QA via agent-browser**: Tested home, discover (with filters + pagination), TV detail (House of the Dragon with episode tracking), stats views. All working correctly, no errors found.
+   201→   201→- **Added watch progress to Library > Following tab**: Created reusable `FollowingCard` component with framer-motion entrance animation. Shows: Following badge, season count, status, watch progress bar (gradient from primary to purple) with "X / Y episodes" and "Z%" label, Track and Unfollow buttons. Fetches show detail + watched episodes to compute progress.
+   202→   202→- **Added "Surprise Me" button on Discover**: New dice icon button next to the Movies/TV tabs. Clicking it randomizes the sort order (from 4 options: popularity, vote_average, release_date, revenue) and jumps to a random page (1-20), showing a toast "🎲 Surprise! Here are some random picks". Styled with primary border and hover effect.
+   203→   203→- **Added "Watch Next" featured card**: The first card in Continue Watching is now larger (320px/380px vs 280px/320px), has a ring-2 primary glow with shadow, and displays a "WATCH NEXT" badge in the bottom-right corner of the episode still. This highlights the single most important next episode to watch.
+   204→   204→- **Added tooltip to keyboard shortcuts button**: Wrapped the keyboard icon button in a TooltipProvider/Tooltip showing "Keyboard shortcuts ?" with a styled kbd element. Added a pulsing primary dot badge on the button to improve discoverability.
+   205→   205→
+   206→   206→## Verification Results
+   207→   207→- ✅ Lint passes clean
+   208→   208→- ✅ No runtime errors in dev.log
+   209→   209→- ✅ Library > Following tab shows watch progress: "0 / 26 episodes" + "0%" with gradient progress bar (VLM confirmed all 5 elements: title, Following badge, season/status, progress, buttons)
+   210→   210→- ✅ Surprise Me button works: changed sort to "Highest Revenue" and jumped to random page
+   211→   211→- ✅ Watch Next featured card shows on home Continue Watching: larger size, ring glow, "WATCH NEXT" badge (VLM confirmed)
+   212→   212→- ✅ Keyboard shortcuts button has tooltip with "?" hint and pulsing dot badge
+   213→   213→- ✅ All previous features still working
+   214→   214→
+   215→   215→## Unresolved Issues / Risks
+   216→   216→- Following card makes 2 API calls per card (show detail + watched episodes) - acceptable for typical library sizes
+   217→   217→- Surprise Me only randomizes within current media type (Movies or TV) - could add cross-type randomization
+   218→   218→- Watch Next badge only appears on the first Continue Watching card
+   219→   219→
+   220→   220→## Priority Recommendations for Next Phase
+   221→   221→1. Add "Watch Next" CTA in the hero/greeting area for even faster access
+   222→   222→2. Add sorting options to Library tabs (e.g., sort watchlist by date added, sort watched by date watched)
+   223→   223→3. Add a "continue watching" badge/count on the Home nav button
+   224→   224→4. Add batch "mark all watched" for a season from the home Continue Watching
+   225→   225→5. Add image lazy-loading with blur-up placeholder effect
+   226→   226→6. Add a "recently added to watchlist" notification/toast
+   227→   227→
+   228→   228→---
+   229→   229→Task ID: 16
+   230→   230→Agent: main (cron review round 5)
+   231→   231→Task: QA testing, add Library sorting, Watch Next CTA in greeting, NEW badge, blur-up images
+   232→   232→
+   233→   233→## Current Project Status Assessment
+   234→   234→- Project was stable after round 4 with all features working
+   235→   235→- Lint was clean, no server errors
+   236→   236→- Dev server running on port 3000
+   237→   237→- All previously added features (Following tab progress, Surprise Me, Watch Next card, keyboard tooltip) verified working
+   238→   238→
+   239→   239→## Work Log
+   240→   240→- **QA via agent-browser**: Tested home, search (inception → 12 results), library views. All working correctly. Found initial empty-page timing issue (resolved by re-opening browser).
+   241→   241→- **Added sorting to Library Watchlist tab**: New `SortControl` with 4 options: Most Recent (by addedAt), Top Rated (by voteAverage), A-Z (by title), Newest First (by releaseDate). Shows item count. Items sorted via `useMemo`. Watchlist cards refactored into reusable `WatchlistCard` component with framer-motion entrance animation.
+   242→   242→- **Added sorting to Library Watched Movies tab**: 3 sort options: Most Recent (by watchedAt), A-Z (by title), Longest (by runtime). Shows movie count. Cards wrapped in motion.div with hover shadow effects.
+   243→   243→- **Added "Watch Next" CTA in greeting area**: New `WatchNextCTA` component - a gradient (primary→purple) pill button with play icon that appears in the home greeting area when user has followed shows. Shows "WATCH NEXT" label + first followed show title. Hover scale effect. Clicking navigates to the show detail page.
+   244→   244→- **Added "NEW" badge on recently added watchlist items**: Watchlist cards now show a green "NEW" badge if the item was added within the last 24 hours (computed via `Date.now() - addedAt < 24h`).
+   245→   245→- **Added blur-up image loading**: MediaCard now loads a tiny w92 image as a blurred background (blur-xl scale-110) behind the full w342 image. This creates a progressive blur-up effect where a blurred version appears instantly while the full image loads.
+   246→   246→- **Polished card hover effects**: All library cards (watchlist, watched movies, following) now have framer-motion entrance animations, hover shadow-lg with primary/5 glow, and image scale-105 on hover.
+   247→   247→
+   248→   248→## Verification Results
+   249→   249→- ✅ Lint passes clean
+   250→   250→- ✅ No runtime errors in dev.log
+   251→   251→- ✅ Library Watchlist shows sort control with 4 options + "1 items" count (VLM confirmed)
+   252→   252→- ✅ Watch Next CTA appears in greeting area: gradient button "WATCH NEXT House of the Dragon" (VLM confirmed)
+   253→   253→- ✅ NEW badge appears on recently added watchlist item (< 24h)
+   254→   254→- ✅ Blur-up image loading works (tiny image as blurred background)
+   255→   255→- ✅ All previous features still working
+   256→   256→
+   257→   257→## Unresolved Issues / Risks
+   258→   258→- Blur-up adds an extra small image request per card (w92 is tiny, ~2-5KB, acceptable)
+   259→   259→- SortControl component is defined but inlined in WatchedMoviesTab (minor code duplication)
+   260→   260→- Watch Next CTA only shows the first followed show (could rotate or show count of unwatched episodes)
+   261→   261→
+   262→   262→## Priority Recommendations for Next Phase
+   263→   263→1. Add sort to Following tab (by progress %, by name, by followed date)
+   264→   264→2. Add sort to Ratings tab (by rating value, by date, by title)
+   265→   265→3. Add a "filter by type" (movie/TV) toggle to watchlist tab
+   266→   266→4. Add skeleton loading states for Continue Watching cards
+   267→   267→5. Add a "back to top" floating button for long pages
+   268→   268→6. Add toast notifications for library actions (added/removed) with undo
+   269→   269→
+   270→   270→---
+   271→   271→Task ID: 17
+   272→   272→Agent: main (deployment round)
+   273→   273→Task: Deploy to GitHub and Vercel
+   274→   274→
+   275→   275→## Current Project Status Assessment
+   276→   276→- Project was stable and feature-complete locally
+   277→   277→- Needed deployment to GitHub (Hussam9329/TvTime) and Vercel
+   278→   278→
+   279→   279→## Work Log
+   280→   280→- **Pushed to GitHub**: Repository https://github.com/Hussam9329/TvTime created and code pushed successfully
+   281→   281→- **Configured for Vercel**: 
+   282→   282→  - Removed `output: "standalone"` from next.config.ts
+   283→   283→  - Updated build script to `prisma generate && next build`
+   284→   284→  - Updated start script to `next start`
+   285→   285→  - Improved db.ts logging for production
+   286→   286→- **Initial Vercel deployment**: Site deployed to https://tvtime-iota.vercel.app but library API failed with PrismaClientInitializationError (SQLite doesn't work on Vercel serverless - read-only filesystem)
+   287→   287→- **Switched library to localStorage**: Created comprehensive `libStorage` module (src/lib/local-storage.ts) that stores all library data (watchlist, watched movies/episodes, following, ratings, stats, export/import) in browser localStorage. Updated all hooks in use-tmdb.ts to use libStorage instead of API calls. Updated ProfileDialog to use libStorage for export/import/clear.
+   288→   288→- **Final Vercel deployment**: Successfully deployed with localStorage backend. Site fully functional.
+   289→   289→
+   290→   290→## Verification Results
+   291→   291→- ✅ GitHub repo: https://github.com/Hussam9329/TvTime (code pushed)
+   292→   292→- ✅ Vercel deployment: https://tvtime-iota.vercel.app (live)
+   293→   293→- ✅ Home page loads (200), TMDB API works (200)
+   294→   294→- ✅ Library features work via localStorage: added movie to watchlist, shows "1 items" in Library
+   295→   295→- ✅ Stats page works with localStorage data
+   296→   296→- ✅ All views functional on production deployment
+   297→   297→
+   298→   298→## Architecture Change
+   299→   299→- Library data moved from Prisma/SQLite (server-side) to localStorage (client-side)
+   300→   300→- This makes the app work on any serverless platform without database configuration
+   301→   301→- TMDB API calls still go through Next.js API routes (server-side proxy)
+   302→   302→- API routes for library still exist but are no longer used (can be removed in future cleanup)
+   303→   303→
+   304→   304→---
+   305→   305→Task ID: 18
+   306→   306→Agent: main (Neon PostgreSQL migration)
+   307→   307→Task: Switch from localStorage to Neon PostgreSQL, import 3496 media items from backup
+   308→   308→
+   309→   309→## Current Project Status Assessment
+   310→   310→- User provided Neon PostgreSQL connection string
+   311→   311→- User provided backup JSON file (hussamvision-backup-2026-07-07.json) with 3496 media items
+   312→   312→- Previous deployment used localStorage (client-side only)
+   313→   313→
+   314→   314→## Work Log
+   315→   315→- **Created Media model in Prisma schema**: Unified model matching backup structure (title, type, poster, rating, overview, genres, watched, userRating, status, etc.) with PostgreSQL provider
+   316→   316→- **Pushed schema to Neon**: `prisma db push` created the Media table in Neon PostgreSQL (removed `channel_binding=require` from connection string for compatibility)
+   317→   317→- **Wrote import script** (scripts/import-backup.ts): Reads backup JSON and batch-inserts all items using `createMany` with `skipDuplicates`
+   318→   318→- **Imported all 3496 items**: Successfully imported 3315 movies, 143 TV series, 23 books, 15 games (with 2197 ratings, 12 watched, 50 planned)
+   319→   319→- **Created Media API routes**: 
+   320→   320→  - `/api/media` - GET with filters (type, status, watched, rated, search), sorting (addedAt, userRating, title, year), and pagination
+   321→   321→  - `/api/media/stats` - GET with aggregate counts, rating distribution, type distribution, top rated, recently added
+   322→   322→- **Added useMedia and useMediaStats hooks** in use-tmdb.ts
+   323→   323→- **Created MediaView component**: Full-featured collection browser with type tabs (All/Movies/TV/Books/Games), search, sort, rated-only filter, pagination, and media cards with type badges, user ratings, watched/planned status indicators
+   324→   324→- **Added "My Media" to navigation**: New nav button with Database icon, added to header nav items
+   325→   325→- **Fixed undefined params bug**: Media API was receiving "undefined" as string params, causing empty results. Fixed by filtering out undefined/empty values in both the hook and API route
+   326→   326→- **Configured Vercel env**: Removed old SQLite DATABASE_URL, added Neon PostgreSQL URL
+   327→   327→- **Deployed to Vercel**: Successfully deployed with Neon backend
+   328→   328→
+   329→   329→## Verification Results
+   330→   330→- ✅ Lint passes clean
+   331→   331→- ✅ Neon PostgreSQL database has 3496 items (verified via Prisma count)
+   332→   332→- ✅ Media API returns items: https://tvtime-iota.vercel.app/api/media?limit=5
+   333→   333→- ✅ Media Stats API returns correct counts: total=3496, movies=3315, series=143, books=23, games=15
+   334→   334→- ✅ "My Media" view on Vercel shows "3496 items from your Neon database"
+   335→   335→- ✅ Grid displays 60 items per page with posters, titles, type badges, user ratings
+   336→   336→- ✅ VLM confirmed: total count, filter tabs, media card grid all working
+   337→   337→- ✅ All data is now server-side in Neon PostgreSQL (not localStorage)
+   338→   338→
+   339→   339→## Architecture Change
+   340→   340→- Library data now stored in Neon PostgreSQL (server-side, persistent)
+   341→   341→- TMDB browsing features still use TMDB API via proxy routes
+   342→   342→- The old localStorage-based library hooks still exist for the app's tracking features (watchlist, following, etc.)
+   343→   343→- New "My Media" view provides access to the full imported collection from Neon
+   344→   344→- Data persists across devices/sessions since it's in the cloud database
+   345→   345→
+   346→   346→---
+   347→   347→Task ID: 19
+   348→   348→Agent: main (unify Home+Library)
+   349→   349→Task: Fix disconnection between Home and Library - all tracking now writes to Neon
+   350→   350→
+   351→   351→## Problem
+   352→   352→- Home/Discover used localStorage for tracking (watchlist, watched, following, ratings)
+   353→   353→- Library used Neon PostgreSQL
+   354→   354→- Adding a movie to watchlist from Home didn't appear in Library
+   355→   355→- Stats were inaccurate (counting from two different sources)
+   356→   356→
+   357→   357→## Solution
+   358→   358→- Added `tmdbId` column to Media model for linking TMDB items to DB records
+   359→   359→- Created `/api/media/find-or-create` API endpoint: finds existing Media by tmdbId or title, creates new if not found
+   360→   360→- Rewrote all library hooks in use-tmdb.ts to write directly to Neon:
+   361→   361→  - `useWatchlistToggle` → find-or-create + set status="planned"
+   362→   362→  - `useWatchedMovieToggle` → find-or-create + set watched=true, status="watched"
+   363→   363→  - `useFollowingToggle` → find-or-create (type="series") + set status="planned"
+   364→   364→  - `useRatingMutate` → find-or-create + set userRating + watched=true
+   365→   365→- All reads (useWatchlist, useWatchedMovies, useFollowing, useRatings, useStats) now query Neon API
+   366→   366→- Episode tracking stays in localStorage (no episode model in DB)
+   367→   367→- Updated stats API to return Home-compatible field aliases (watchlist=planned, watchedMovies=rated, etc.)
+   368→   368→
+   369→   369→## Verification
+   370→   370→- ✅ Added "Obsession" to watchlist from Home → appears in Library Watchlist Movies (search finds it: "Showing 1 of 1 items")
+   371→   371→- ✅ Home stats now show: Watchlist=50, Movies watched=2196, Following=21 (all from Neon)
+   372→   372→- ✅ All data unified in single Neon PostgreSQL database
+   373→   373→

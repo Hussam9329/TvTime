@@ -1,70 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { normalizeMedia } from "@/lib/media-normalize";
 
-// POST - find or create a Media item from TMDB data
-// Used when user adds a movie/show to watchlist or marks as watched from the Home/Discover views
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { tmdbId, title, type, poster, year, overview, rating, runtime, genres } = body;
+  try {
+    const user = await getOrCreateUser(parseUserId(req));
+    const body = await req.json();
+    const { tmdbId, title, type, poster, year, overview, rating, runtime, genres, seasons, episodes, isAnime } = body;
 
-  if (!title) {
-    return NextResponse.json({ error: "title required" }, { status: 400 });
-  }
+    if (!title || typeof title !== "string") {
+      return NextResponse.json({ error: "title required" }, { status: 400 });
+    }
 
-  const mediaType = type === "tv" ? "series" : type || "movie";
+    const mediaType = type === "tv" ? "series" : type || "movie";
+    const numericTmdbId = tmdbId ? Number(tmdbId) : null;
 
-  // Try to find by tmdbId first
-  let item = null;
-  if (tmdbId) {
-    item = await db.media.findFirst({
-      where: { tmdbId: Number(tmdbId) },
-    });
-  }
+    let item = numericTmdbId
+      ? await db.media.findFirst({ where: { userId: user.id, tmdbId: numericTmdbId, type: mediaType } })
+      : null;
 
-  // If not found by tmdbId, try by title + type
-  if (!item) {
-    item = await db.media.findFirst({
-      where: {
-        title: { equals: title, mode: "insensitive" },
-        type: mediaType,
-      },
-    });
-  }
-
-  // If still not found, create a new one
-  if (!item) {
-    const id = `tmdb_${tmdbId || Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    item = await db.media.create({
-      data: {
-        id,
-        tmdbId: tmdbId ? Number(tmdbId) : null,
-        title,
-        type: mediaType,
-        poster: poster || null,
-        year: year || null,
-        overview: overview || null,
-        rating: rating ? String(rating) : null,
-        runtime: runtime || null,
-        genres: genres || [],
-        status: "planned",
-        watched: false,
-      },
-    });
-  } else {
-    // Update tmdbId and poster if they were missing
-    const updates: any = {};
-    if (tmdbId && !item.tmdbId) updates.tmdbId = Number(tmdbId);
-    if (poster && !item.poster) updates.poster = poster;
-    if (overview && !item.overview) updates.overview = overview;
-    if (year && !item.year) updates.year = year;
-    if (rating && !item.rating) updates.rating = String(rating);
-    if (Object.keys(updates).length > 0) {
-      item = await db.media.update({
-        where: { id: item.id },
-        data: updates,
+    if (!item) {
+      item = await db.media.findFirst({
+        where: { userId: user.id, title: { equals: title }, type: mediaType },
       });
     }
-  }
 
-  return NextResponse.json({ item });
+    if (!item) {
+      item = await db.media.create({
+        data: {
+          userId: user.id,
+          tmdbId: numericTmdbId,
+          title: title.trim(),
+          type: mediaType,
+          poster: poster || null,
+          year: year || null,
+          overview: overview || null,
+          rating: rating != null ? String(rating) : null,
+          runtime: runtime != null ? Number(runtime) : null,
+          seasons: seasons != null ? Number(seasons) : null,
+          episodes: episodes != null ? Number(episodes) : null,
+          genres: Array.isArray(genres) ? genres : [],
+          isAnime: Boolean(isAnime),
+          status: "planned",
+          watched: false,
+        },
+      });
+    } else {
+      const updates: any = {};
+      if (numericTmdbId && !item.tmdbId) updates.tmdbId = numericTmdbId;
+      if (poster && !item.poster) updates.poster = poster;
+      if (overview && !item.overview) updates.overview = overview;
+      if (year && !item.year) updates.year = year;
+      if (rating != null && !item.rating) updates.rating = String(rating);
+      if (runtime != null && !item.runtime) updates.runtime = Number(runtime);
+      if (seasons != null && !item.seasons) updates.seasons = Number(seasons);
+      if (episodes != null && !item.episodes) updates.episodes = Number(episodes);
+      if (Array.isArray(genres) && item.genres.length === 0) updates.genres = genres;
+      if (isAnime !== undefined) updates.isAnime = Boolean(isAnime);
+      if (Object.keys(updates).length > 0) {
+        item = await db.media.update({ where: { id: item.id }, data: updates });
+      }
+    }
+
+    return NextResponse.json({ item: normalizeMedia(item) });
+  } catch (error) {
+    console.error("[media:find-or-create]", error);
+    return NextResponse.json({ error: "Failed to save media item" }, { status: 500 });
+  }
 }

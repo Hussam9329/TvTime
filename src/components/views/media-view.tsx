@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Film, Tv, BookOpen, Gamepad2, Star, Clock, Check, Search, ArrowUpDown, Database } from "lucide-react";
 import { motion } from "framer-motion";
+import { SafeImage } from "@/components/media/safe-image";
 
 const TYPE_CONFIG = {
   movie: { label: "Movies", icon: Film, color: "text-rose-400" },
@@ -217,7 +218,7 @@ function MediaCard({ item, index }: { item: MediaItemDB; index: number }) {
       <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card group">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           {item.poster ? (
-            <img src={item.poster} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <SafeImage src={item.poster} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
               <Icon className="w-12 h-12" />

@@ -8,6 +8,7 @@ import { useNav } from "@/lib/store";
 import { useWatchlist, useWatchedMovies, useFollowing } from "@/hooks/use-tmdb";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { SafeImage } from "@/components/media/safe-image";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -62,14 +63,14 @@ export function MediaCard({ item, index = 0, showMediaType = true }: MediaCardPr
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           {/* Blur-up placeholder: tiny image as background */}
           {item.poster_path && (
-            <img
+            <SafeImage
               src={imgOrPlaceholder(item.poster_path, "w92")}
               alt=""
               aria-hidden
               className="absolute inset-0 w-full h-full object-cover blur-xl scale-110"
             />
           )}
-          <img
+          <SafeImage
             src={imgOrPlaceholder(item.poster_path, "w342")}
             alt={title}
             loading="lazy"

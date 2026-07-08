@@ -13,16 +13,17 @@ import { img } from "@/lib/tmdb";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
+import { SafeImage } from "@/components/media/safe-image";
 
 type LibTab = "watchlist-movies" | "watched-movies" | "watchlist-tv" | "watched-tv" | "watchlist-anime" | "watched-anime";
 
-const TAB_CONFIG: { value: LibTab; label: string; icon: React.ElementType; type: string; isAnime: boolean; rated: boolean }[] = [
-  { value: "watchlist-movies", label: "Watchlist Movies", icon: Film, type: "movie", isAnime: false, rated: false },
-  { value: "watched-movies", label: "Watched Movies", icon: Check, type: "movie", isAnime: false, rated: true },
-  { value: "watchlist-tv", label: "Watchlist TV", icon: Tv, type: "series", isAnime: false, rated: false },
-  { value: "watched-tv", label: "Watched TV", icon: Check, type: "series", isAnime: false, rated: true },
-  { value: "watchlist-anime", label: "Watchlist Anime", icon: Sparkles, type: "series", isAnime: true, rated: false },
-  { value: "watched-anime", label: "Watched Anime", icon: Check, type: "series", isAnime: true, rated: true },
+const TAB_CONFIG: { value: LibTab; label: string; icon: React.ElementType; type: string; isAnime: boolean; isWatched: boolean }[] = [
+  { value: "watchlist-movies", label: "Watchlist Movies", icon: Film, type: "movie", isAnime: false, isWatched: false },
+  { value: "watched-movies", label: "Watched Movies", icon: Check, type: "movie", isAnime: false, isWatched: true },
+  { value: "watchlist-tv", label: "Watchlist TV", icon: Tv, type: "series", isAnime: false, isWatched: false },
+  { value: "watched-tv", label: "Watched TV", icon: Check, type: "series", isAnime: false, isWatched: true },
+  { value: "watchlist-anime", label: "Watchlist Anime", icon: Sparkles, type: "series", isAnime: true, isWatched: false },
+  { value: "watched-anime", label: "Watched Anime", icon: Check, type: "series", isAnime: true, isWatched: true },
 ];
 
 export function LibraryView() {
@@ -38,8 +39,9 @@ export function LibraryView() {
 
   const media = useMedia({
     type: config.type,
-    isAnime: config.isAnime ? "true" : "false",
-    rated: config.rated ? "true" : "false",
+    isAnime: config.isAnime ? "true" : undefined,
+    status: config.isWatched ? undefined : "planned",
+    watched: config.isWatched ? "true" : undefined,
     search: debouncedSearch || undefined,
     sortBy,
     order: "desc",
@@ -64,12 +66,12 @@ export function LibraryView() {
       {/* Stats overview */}
       {stats.data && (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          <MiniStat label="Watchlist Movies" value={stats.data.counts.movies - (stats.data.counts.rated)} />
-          <MiniStat label="Watched Movies" value={0} />
-          <MiniStat label="Watchlist TV" value={stats.data.counts.series} />
-          <MiniStat label="Watched TV" value={0} />
-          <MiniStat label="Watchlist Anime" value={0} />
-          <MiniStat label="Watched Anime" value={0} />
+          <MiniStat label="Watchlist Movies" value={stats.data.counts?.watchlistMovies ?? 0} />
+          <MiniStat label="Watched Movies" value={stats.data.counts?.watchedMovies ?? 0} />
+          <MiniStat label="Watchlist TV" value={stats.data.counts?.watchlistShows ?? 0} />
+          <MiniStat label="Watched TV" value={stats.data.counts?.watchedShows ?? 0} />
+          <MiniStat label="Watchlist Anime" value={stats.data.counts?.watchlistAnime ?? 0} />
+          <MiniStat label="Watched Anime" value={stats.data.counts?.watchedAnime ?? 0} />
         </div>
       )}
 
@@ -138,7 +140,7 @@ export function LibraryView() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {items.map((item, i) => (
-            <LibraryMediaCard key={item.id} item={item} index={i} isWatchedTab={config.rated} />
+            <LibraryMediaCard key={item.id} item={item} index={i} isWatchedTab={config.isWatched} />
           ))}
         </div>
       )}
@@ -220,7 +222,7 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
         <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card group">
           <div className="relative aspect-[2/3] overflow-hidden bg-muted">
             {item.poster ? (
-              <img src={item.poster} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <SafeImage src={item.poster} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 {item.type === "movie" ? <Film className="w-12 h-12" /> : <Tv className="w-12 h-12" />}

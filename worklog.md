@@ -370,3 +370,89 @@ Task: Fix disconnection between Home and Library - all tracking now writes to Ne
 - ✅ Added "Obsession" to watchlist from Home → appears in Library Watchlist Movies (search finds it: "Showing 1 of 1 items")
 - ✅ Home stats now show: Watchlist=50, Movies watched=2196, Following=21 (all from Neon)
 - ✅ All data unified in single Neon PostgreSQL database
+
+---
+Task ID: FOUNDATION-PATCH-HOOKS
+Agent: foundation-patch-hooks
+Task: Wire all client hooks, components, and library API routes to the new server-backed library (Media + WatchedEpisode tables in PostgreSQL) via the new client-user helpers
+
+## Problem
+- The foundation patch added `client-user.ts` (with `withUserId`, `userHeaders`, `getClientUserId`) and `safe-image.tsx`, but the hooks/components still talked to localStorage for episode tracking and to the legacy library endpoints for stats/export/import/clear.
+- `continue-watching.tsx`, `calendar-view.tsx`, and `tv-tracking-view.tsx` were each fetching only seasons 1-4 per show, missing next-episode detection for shows with later seasons.
+- `safe-image.tsx` had a `react-hooks/set-state-in-effect` lint error from the foundation patch.
+- `src/lib/db.ts` had been broken by the foundation patch (self-import + missing `PrismaClient` import), which would prevent every API route from instantiating Prisma.
+
+## Solution / Work Log
+
+### `src/hooks/use-tmdb.ts` (full rewrite of library section)
+- Imported `getClientUserId, userHeaders, withUserId` from `@/lib/client-user`.
+- Removed `libStorage` import; replaced with `// Episode tracking is now server-backed via API`.
+- Added `mediaToLibraryCompat(m)` helper after `findOrCreateMedia` to translate Media rows into the legacy library-item shape (`mediaType`, `posterPath`, `releaseDate`, `voteAverage`, `followedAt`, `watchedAt`, `value`).
+- All `/api/media/...` calls now go through `withUserId(new URL(...))` and carry `...userHeaders()`.
+- `useWatchlist` → `status: "planned"` filter; `useWatchedMovies` → `watched: "true"`; `useFollowing` → `status: "planned"` (no more `isAnime`/`rated` combo); all map items through `mediaToLibraryCompat`.
+- `useTrackedShows`, `useRatings` use `withUserId` + `userHeaders` + `mediaToLibraryCompat`.
+- `useWatchlistToggle`, `useWatchedMovieToggle`, `useFollowingToggle`, `useRatingMutate`, `useMediaUpdate` — every PATCH/POST now uses `withUserId` for the URL and adds `...userHeaders()` to the headers.
+- `useRatingMutate` now converts 1-10 input to 0-100 with `userRating: args.value == null ? null : args.value * 10`.
+- `useWatchedEpisodes` rewritten to fetch `/api/library/watched-episodes` (with `userId` in the query key).
+- `useEpisodeToggle` (POST single / DELETE) and `useBulkEpisodeToggle` (POST `{ showId, episodes }`) now hit the API with `userHeaders`, invalidating `["lib", "watched-episodes"]` and `["lib", "stats"]`.
+- `useStats` now hits `/api/library/stats` (was `/api/media/stats`) so it includes watched-episode data.
+- Added `useShowProgress(showId)` — composes `useTvDetail` + `useWatchedEpisodes` + a `useQuery` that fetches **all** regular seasons (not just 1-4) via `tmdbGet<SeasonDetail>(tv/${id}/season/${N})`. Returns a unified shape (`showDetail, watchedSet, watchedItems, totalEpisodes, watchedCount, nextEp, allEpisodes, seasons, lastWatchedDate, daysSinceLastWatch, nextEpAirDate, isUpcoming, isLoading, isError`).
+- Extended `MediaStats.counts` with optional fields (`watchlistMovies`, `watchedMovies`, `watchlistShows`, `watchedShows`, `watchlistAnime`, `watchedAnime`, `watchedEpisodes`, etc.) so `library-view.tsx` can read them.
+- Added `isAnime` to `MediaItemDB`.
+
+### `src/components/media/continue-watching.tsx`
+- Replaced `useTvDetail` + `useWatchedEpisodes` + 4× `useSeasonDetail` with `const data = useShowProgress(showId);`.
+- Destructured `watchedSet, watchedCount, totalEpisodes, nextEp, seasons, isLoading`.
+- `markAllSeason` now calls `bulkToggle.mutate({ showId, episodes: unwatched })` (was a forEach of single `episodeToggle.mutate` calls).
+
+### `src/components/media/media-card.tsx`
+- Imported `SafeImage` and replaced both `<img>` tags (blur-up placeholder + main poster) with `<SafeImage>`.
+
+### `src/components/profile/profile-dialog.tsx`
+- Replaced `libStorage` import with `userHeaders, withUserId` from `@/lib/client-user`.
+- `onClearData` → DELETE `withUserId(/api/library/clear)` with `userHeaders()`; invalidates both `["lib"]` and `["media"]`.
+- `onExport` → GET `withUserId(/api/library/export)` with `userHeaders()`, parses JSON, downloads as blob.
+- `onImport` → POST `withUserId(/api/library/import)` with `Content-Type` + `userHeaders()`, reads `imported` counts, invalidates both query families.
+
+### `src/components/views/calendar-view.tsx`
+- Swapped `useTvDetail` for `useShowProgress`.
+- `followedToShow` cap raised from 12 to 50; per-day show cap raised from 8 to 20.
+- `DayEpisode` now uses `useShowProgress(showId)` and finds the matching episode from `progress.allEpisodes`.
+
+### `src/components/views/tv-tracking-view.tsx`
+- Imports: removed `useTvDetail, useWatchedEpisodes, useSeasonDetail`, added `useShowProgress`.
+- `useShowTrackingData` is now `return useShowProgress(showId);`.
+- `ShowProgressCard` rewritten to read from `useShowProgress` (`progress.totalEpisodes`, `progress.watchedCount`, `progress.showDetail`, `progress.isLoading`), with a local `progressPct` for the bar/label.
+
+### `src/components/views/library-view.tsx`
+- Imported `SafeImage`; poster `<img>` → `<SafeImage>`.
+- `TAB_CONFIG` field `rated: boolean` renamed to `isWatched: boolean`.
+- `useMedia` query now sends `status: "planned"` for watchlist tabs and `watched: "true"` for watched tabs.
+- Mini stats read `counts?.watchlistMovies`, `watchedMovies`, `watchlistShows`, `watchedShows`, `watchlistAnime`, `watchedAnime` (with `?? 0` fallbacks).
+
+### `src/components/views/media-view.tsx`
+- Imported `SafeImage`; poster `<img>` → `<SafeImage>`.
+
+### `src/components/media/safe-image.tsx` (lint fix)
+- Rewrote to use the React "adjust state when prop changes" pattern instead of `useEffect` + `setState`. Tracks `prevSrc` + `usedFallback` in state and computes `currentSrc` from `normalizedSrc`, `retries`, and `usedFallback` on each render. Resolves the `react-hooks/set-state-in-effect` error left by the foundation patch.
+
+### Library API routes
+- **`/api/library/stats`** — rewritten to combine Media + WatchedEpisode tables. Returns the full counts shape needed by Home, Library, Stats, and TV Tracking views (`total, movies, series, books, games, rated, watched, planned, watchlist, watchlistMovies, watchlistShows, watchlistAnime, watchedMovies, watchedShows, watchedAnime, watchedEpisodes, showsWatched, following, ratings`), plus `watchTime`, `episodesByShow`, `episodesByMonth`, `ratingDist`, `avgRating`, `user`.
+- **`/api/library/export`** — exports `library.media` (normalized) + `library.watchedEpisodes` (version 2 format).
+- **`/api/library/import`** — accepts both v2 (`library.media` + `library.watchedEpisodes`) and v1 (legacy `watchlist/watchedMovies/following/ratings`). Legacy sections are converted into Media rows on import (watchlist → `status: "planned"`, watchedMovies → `watched: true`, ratings → `userRating: value * 10`).
+- **`/api/library/clear`** — DELETE now wipes Media + WatchedEpisode + the legacy tables (WatchlistItem, WatchedMovie, FollowingShow, Rating). The User record is preserved.
+- **`/api/library/watched-episodes`** — already used `parseUserId(req)` + `getOrCreateUser(userId)`, so it already works with the new schema. No changes needed.
+
+### `src/lib/db.ts` (incidental fix)
+- The previous foundation patch had broken this file by replacing `import { PrismaClient } from '@prisma/client'` with `import { db } from '@/lib/db'` (self-import) and leaving `PrismaClient` unbound. Restored the correct import so Prisma actually instantiates. This unblocks every API route that uses `db`.
+
+## Verification
+- `bun run lint` — passes clean (exit 0).
+- `bunx tsc --noEmit --skipLibCheck` — only 2 remaining errors, both pre-existing in `src/components/views/movie-detail-view.tsx` (lines 81/95: `m.title` is `string | undefined` per the TMDB type, passed to a hook that wants `string`). These were not introduced by this patch (file unchanged from HEAD) and ESLint does not flag them.
+- No more `libStorage` references in `src/hooks/use-tmdb.ts` or `src/components/profile/profile-dialog.tsx`. The only remaining `libStorage` is the export inside `src/lib/local-storage.ts` (kept for any future legacy consumers).
+
+## Notes for downstream agents
+- `useShowProgress` is the canonical way to get show progress now — it composes TMDB + watched-episodes API and returns everything the old `useShowTrackingData` returned, plus `isError`. Continue-watching, calendar, and TV-tracking views are already migrated.
+- `mediaToLibraryCompat` is intentionally permissive (falls back across field names: `posterPath ?? poster`, `releaseDate ?? year`, etc.) so it can absorb both raw Media rows and any legacy localStorage-shaped data.
+- The library stats endpoint requires both `Media` and `WatchedEpisode` tables in PostgreSQL — both are present in the current Prisma schema.
+- All client → API calls now carry the user id both as a `userId` query param (via `withUserId`) and as an `x-user-id` header (via `userHeaders`). The server accepts either.

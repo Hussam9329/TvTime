@@ -10,41 +10,136 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Unified Media model - tracks all types of media (movies, TV, books, games)
-// Matches the HussamVision backup structure
-model Media {
-  id           String   @id // keep original ID from backup
-  tmdbId       Int?     // TMDB ID for linking movies/shows from TMDB API
-  title        String
-  originalTitle String?
-  year         String?
-  type         String   // "movie" | "series" | "book" | "game"
-  poster       String?
-  rating       String?  // TMDB/public rating as string
-  overview     String?  @db.Text
-  genres       String[] // array of genre names
-  episodes     Int?
-  seasons      Int?
-  duration     String?
-  status       String?  // "planned" | "watched" | "" | null
-  author       String?
-  pages        Int?
-  tags         String[]
-  notes        String?  @db.Text
-  watched      Boolean  @default(false)
-  watchedAt    DateTime?
-  userRating   Int?     // 0-100 user rating
-  rewatch      Boolean  @default(false)
-  runtime      Int?
-  ratingStatus String?  // "watched" | "planned" | null
-  isAnime      Boolean  @default(false)
-  addedAt      DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model User {
+  id              String           @id @default(cuid())
+  name            String           @default("Cinephile")
+  avatar          String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  @@index([type])
-  @@index([status])
-  @@index([watched])
-  @@index([userRating])
-  @@index([isAnime])
+  media           Media[]
+  watchlistItems  WatchlistItem[]
+  watchedMovies   WatchedMovie[]
+  watchedEpisodes WatchedEpisode[]
+  followingShows  FollowingShow[]
+  ratings         Rating[]
+}
+
+/// Canonical media record - tracks all types of media (movies, TV, books, games)
+model Media {
+  id             String   @id @default(cuid())
+  userId         String   @default("cinetrack_default")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tmdbId         Int?
+  title          String
+  originalTitle  String?
+  year           String?
+  type           String   // "movie" | "series" | "book" | "game"
+  poster         String?
+  rating         String?
+  overview       String?
+  genres         String[] @default([])
+  episodes       Int?
+  seasons        Int?
+  duration       String?
+  status         String?  // "planned" | "watched" | null
+  author         String?
+  pages          Int?
+  tags           String[] @default([])
+  notes          String?
+  watched        Boolean  @default(false)
+  watchedAt      DateTime?
+  userRating     Int?     // 0-100
+  rewatch        Boolean  @default(false)
+  runtime        Int?
+  ratingStatus   String?
+  isAnime        Boolean  @default(false)
+  addedAt        DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([userId, status])
+  @@index([userId, watched])
+  @@index([userId, userRating])
+  @@index([userId, isAnime])
   @@index([tmdbId])
+}
+
+model WatchlistItem {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaType    String   // "movie" | "tv"
+  tmdbId       Int
+  title        String
+  posterPath   String?
+  backdropPath String?
+  overview     String?
+  releaseDate  String?
+  voteAverage  Float?
+  addedAt      DateTime @default(now())
+
+  @@unique([userId, mediaType, tmdbId])
+  @@index([userId])
+}
+
+model WatchedMovie {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  title     String
+  posterPath String?
+  runtime   Int?
+  watchedAt DateTime @default(now())
+
+  @@unique([userId, tmdbId])
+  @@index([userId])
+}
+
+model WatchedEpisode {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  showId        Int
+  seasonNumber  Int
+  episodeNumber Int
+  episodeName   String?
+  runtime       Int?
+  watchedAt     DateTime @default(now())
+
+  @@unique([userId, showId, seasonNumber, episodeNumber])
+  @@index([userId])
+  @@index([userId, showId])
+}
+
+model FollowingShow {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId     Int
+  title      String
+  posterPath String?
+  followedAt DateTime @default(now())
+
+  @@unique([userId, tmdbId])
+  @@index([userId])
+}
+
+model Rating {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaType  String   // "movie" | "tv"
+  tmdbId     Int
+  title      String
+  posterPath String?
+  value      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, mediaType, tmdbId])
+  @@index([userId])
 }
