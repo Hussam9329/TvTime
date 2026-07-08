@@ -1,19 +1,19 @@
 "use client";
 
-import { useFollowing, useWatchedEpisodes, useSeasonDetail } from "@/hooks/use-tmdb";
+import { useFollowing, useWatchedEpisodes, useSeasonDetail, useTvDetail, useEpisodeToggle } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, ChevronRight, Tv, Loader2, CheckCircle2 } from "lucide-react";
+import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useEpisodeToggle } from "@/hooks/use-tmdb";
 
 /**
- * Continue Watching section - finds the next unwatched episode for each followed show
- * and lets the user mark it as watched directly.
+ * Continue Watching - the core TV Time feature.
+ * For each followed show, finds the next unwatched episode,
+ * shows progress, remaining episodes, and allows marking as watched.
  */
 export function ContinueWatching() {
   const following = useFollowing();
@@ -30,47 +30,75 @@ export function ContinueWatching() {
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">Continue Watching</h2>
           <span className="text-xs text-muted-foreground ml-1">Next episodes</span>
         </div>
+        <Button variant="ghost" size="sm" className="text-xs hidden sm:flex" onClick={() => goTv((followed[0] as any)?.tmdbId || 0)}>
+          Track all <ChevronRight className="w-3.5 h-3.5 ml-1" />
+        </Button>
       </div>
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
         {followed.slice(0, 10).map((s, i) => (
-          <ContinueCard key={s.id} showId={s.tmdbId} title={s.title} posterPath={(s as any).poster || (s as any).posterPath} onGo={() => goTv(s.tmdbId)} featured={i === 0} />
+          <NextEpisodeCard
+            key={s.id}
+            showId={(s as any).tmdbId || 0}
+            title={s.title}
+            poster={(s as any).poster || (s as any).posterPath}
+            onGo={() => goTv((s as any).tmdbId || 0)}
+            featured={i === 0}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function ContinueCard({ showId, title, posterPath, onGo, featured = false }: { showId: number; title: string; posterPath: string | null; onGo: () => void; featured?: boolean }) {
-  // We need to find the next unwatched episode.
-  // Strategy: fetch watched episodes for this show, then iterate seasons starting from 1,
-  // fetch each season's episodes, find the first unwatched one.
+function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
+  showId: number;
+  title: string;
+  poster: string | null;
+  onGo: () => void;
+  featured?: boolean;
+}) {
+  // Fetch show details for total episode count
+  const showDetail = useTvDetail(showId);
+  // Fetch watched episodes for this show (from localStorage)
   const watched = useWatchedEpisodes(showId);
-  // Start with season 1, incrementally fetch until we find an unwatched episode or run out of seasons.
-  // To keep it simple, we fetch seasons 1, 2, 3 in parallel and pick the first unwatched.
+  // Fetch seasons 1-4 to find next unwatched episode
   const s1 = useSeasonDetail(showId, 1);
   const s2 = useSeasonDetail(showId, 2);
   const s3 = useSeasonDetail(showId, 3);
+  const s4 = useSeasonDetail(showId, 4);
 
   const episodeToggle = useEpisodeToggle();
-  const goTv = useNav((s) => s.goTv);
 
+  // Build watched set
   const watchedSet = new Set(
-    (watched.data?.items ?? []).map((e) => `${e.seasonNumber}-${e.episodeNumber}`)
+    (watched.data?.items ?? []).map((e: any) => `${e.seasonNumber}-${e.episodeNumber}`)
   );
 
-  const seasons = [s1, s2, s3].filter((s) => s.data?.episodes?.length);
+  // Find next unwatched episode across seasons
+  const seasons = [s1, s2, s3, s4].filter((s) => s.data?.episodes?.length);
+  const totalEpisodes = showDetail.data?.number_of_episodes ?? 0;
+  const watchedCount = watchedSet.size;
+
   let nextEp: { seasonNumber: number; episode: any; seasonName: string } | null = null;
+  let allSeasonsData: { seasonNumber: number; episodes: any[]; seasonName: string }[] = [];
+
   for (const s of seasons) {
     if (!s.data) continue;
+    allSeasonsData.push({
+      seasonNumber: s.data.season_number,
+      episodes: s.data.episodes,
+      seasonName: s.data.name,
+    });
     const unwatched = s.data.episodes.find((e) => !watchedSet.has(`${e.season_number}-${e.episode_number}`));
-    if (unwatched) {
+    if (unwatched && !nextEp) {
       nextEp = { seasonNumber: s.data.season_number, episode: unwatched, seasonName: s.data.name };
-      break;
     }
   }
 
-  const isLoading = s1.isLoading || s2.isLoading || s3.isLoading || watched.isLoading;
+  const isLoading = s1.isLoading || s2.isLoading || s3.isLoading || s4.isLoading || watched.isLoading || showDetail.isLoading;
   const allWatched = !isLoading && seasons.length > 0 && !nextEp;
+  const remaining = totalEpisodes > 0 ? totalEpisodes - watchedCount : 0;
+  const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
 
   const markWatched = () => {
     if (!nextEp) return;
@@ -84,92 +112,174 @@ function ContinueCard({ showId, title, posterPath, onGo, featured = false }: { s
     toast.success(`Marked S${nextEp.seasonNumber}E${nextEp.episode.episode_number} as watched`);
   };
 
+  const markAllSeason = () => {
+    if (!nextEp) return;
+    const seasonData = allSeasonsData.find((s) => s.seasonNumber === nextEp!.seasonNumber);
+    if (!seasonData) return;
+    const unwatched = seasonData.episodes
+      .filter((e) => !watchedSet.has(`${e.season_number}-${e.episode_number}`))
+      .map((e) => ({ seasonNumber: e.season_number, episodeNumber: e.episode_number, episodeName: e.name }));
+    if (unwatched.length === 0) {
+      toast.info("All episodes already watched");
+      return;
+    }
+    unwatched.forEach((ep) => {
+      episodeToggle.mutate({ action: "add", showId, ...ep });
+    });
+    toast.success(`Marked ${unwatched.length} episodes as watched`);
+  };
+
+  // Loading state
   if (isLoading) {
     return (
-      <div className="flex-shrink-0 w-[260px]">
-        <Card className="p-3 h-[120px] flex items-center gap-3">
+      <div className={featured ? "flex-shrink-0 w-[340px] sm:w-[400px]" : "flex-shrink-0 w-[280px] sm:w-[320px]"}>
+        <Card className="p-3 h-[140px] flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Loading...</span>
+          <span className="text-sm text-muted-foreground">Loading episodes...</span>
         </Card>
       </div>
     );
   }
 
-  if (!nextEp && !allWatched) {
-    // No season data available
+  // All caught up state
+  if (allWatched) {
     return (
-      <button onClick={onGo} className="flex-shrink-0 w-[260px] text-left">
-        <Card className="p-3 h-[120px] flex items-center gap-3 hover:border-primary/40 transition-colors">
-          <div className="w-12 h-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
-            {posterPath ? <img src={img(posterPath, "w92")} alt={title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
+      <motion.div
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: 1, x: 0 }}
+        className={featured ? "flex-shrink-0 w-[340px] sm:w-[400px]" : "flex-shrink-0 w-[280px] sm:w-[320px]"}
+      >
+        <Card className="overflow-hidden p-0 border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 transition-all group">
+          <div className="flex">
+            <button onClick={onGo} className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-muted">
+              {poster ? (
+                <img src={img(poster, "w185")} alt={title} className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>
+              )}
+              <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+              </div>
+            </button>
+            <div className="flex-1 p-3 flex flex-col">
+              <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wide">All caught up!</p>
+              <p className="text-sm font-semibold line-clamp-1 mt-0.5">{title}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary" className="text-[9px] bg-emerald-500/15 text-emerald-400">
+                  {watchedCount}/{totalEpisodes} eps
+                </Badge>
+              </div>
+              <Button size="sm" variant="outline" className="h-7 text-xs mt-auto w-fit" onClick={onGo}>
+                View details <ChevronRight className="w-3 h-3 ml-1" />
+              </Button>
+            </div>
           </div>
-          <div className="min-w-0">
+        </Card>
+      </motion.div>
+    );
+  }
+
+  // No episode data available
+  if (!nextEp) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="flex-shrink-0 w-[280px] sm:w-[320px]"
+      >
+        <Card className="p-3 h-[140px] flex items-center gap-3 hover:border-primary/40 transition-colors">
+          <button onClick={onGo} className="w-16 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+            {poster ? <img src={img(poster, "w92")} alt={title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
+          </button>
+          <div>
             <p className="text-sm font-semibold line-clamp-1">{title}</p>
             <p className="text-xs text-muted-foreground mt-1">Tap to explore seasons</p>
           </div>
         </Card>
-      </button>
+      </motion.div>
     );
   }
 
-  if (allWatched) {
-    return (
-      <button onClick={onGo} className="flex-shrink-0 w-[260px] text-left">
-        <Card className="p-3 h-[120px] flex items-center gap-3 border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 transition-colors">
-          <div className="w-12 h-16 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
-            {posterPath ? <img src={img(posterPath, "w92")} alt={title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
-            <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-            </div>
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold line-clamp-1">{title}</p>
-            <p className="text-xs text-emerald-400 mt-1 font-medium">All caught up!</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Tap to explore more</p>
-          </div>
-        </Card>
-      </button>
-    );
-  }
+  const ep = nextEp.episode;
+  const epRuntime = ep.runtime ? `${ep.runtime}m` : null;
+  const epAirDate = ep.air_date ? new Date(ep.air_date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
 
-  const ep = nextEp!.episode;
   return (
     <motion.div
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      className={featured ? "flex-shrink-0 w-[320px] sm:w-[380px]" : "flex-shrink-0 w-[280px] sm:w-[320px]"}
+      className={featured ? "flex-shrink-0 w-[340px] sm:w-[400px]" : "flex-shrink-0 w-[280px] sm:w-[320px]"}
     >
       <Card className={`overflow-hidden p-0 hover:border-primary/50 transition-all group ${featured ? "ring-2 ring-primary/30 shadow-lg shadow-primary/10" : ""}`}>
+        {/* Top: episode still + info */}
         <div className="flex">
           <button onClick={onGo} className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-muted">
             {ep.still_path ? (
               <img src={img(ep.still_path, "w300")} alt={ep.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
-            ) : posterPath ? (
-              <img src={img(posterPath, "w185")} alt={title} className="w-full h-full object-cover" loading="lazy" />
+            ) : poster ? (
+              <img src={img(poster, "w185")} alt={title} className="w-full h-full object-cover" loading="lazy" />
             ) : (
               <div className="w-full h-full flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>
             )}
+            {/* SxxExx badge */}
             <span className="absolute top-1 left-1 bg-background/90 backdrop-blur text-[10px] font-bold px-1.5 py-0.5 rounded">
-              S{nextEp!.seasonNumber}E{ep.episode_number}
+              S{nextEp.seasonNumber}E{ep.episode_number}
             </span>
+            {/* Watch Next badge for featured */}
             {featured && (
               <span className="absolute bottom-1 right-1 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
                 Watch Next
               </span>
             )}
           </button>
+
           <div className="flex-1 p-2.5 flex flex-col min-w-0">
             <p className="text-[10px] text-primary font-bold uppercase tracking-wide line-clamp-1">{title}</p>
             <p className="text-sm font-semibold line-clamp-1 mt-0.5">{ep.name || `Episode ${ep.episode_number}`}</p>
-            <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5 flex-1">{ep.overview || "No description."}</p>
-            <div className="flex items-center gap-1 mt-1">
-              <Button size="sm" className="h-7 text-xs flex-1" onClick={markWatched} disabled={episodeToggle.isPending}>
-                <Play className="w-3 h-3 mr-1 fill-current" /> Mark watched
-              </Button>
-              <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={onGo} aria-label="Open show">
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+            <div className="flex items-center gap-2 mt-0.5">
+              {epAirDate && (
+                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                  <Calendar className="w-2.5 h-2.5" /> {epAirDate}
+                </span>
+              )}
+              {epRuntime && (
+                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                  <Clock className="w-2.5 h-2.5" /> {epRuntime}
+                </span>
+              )}
             </div>
+          </div>
+        </div>
+
+        {/* Bottom: progress bar + actions */}
+        <div className="p-2.5 pt-2 border-t border-border/40">
+          {/* Progress */}
+          {totalEpisodes > 0 && (
+            <div className="mb-2">
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-0.5">
+                <span>{watchedCount} watched</span>
+                <span className="font-bold text-primary">{progress}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5">
+                <span>{remaining} remaining of {totalEpisodes}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" className="h-7 text-xs flex-1" onClick={markWatched} disabled={episodeToggle.isPending}>
+              <Play className="w-3 h-3 mr-1 fill-current" /> Mark watched
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={markAllSeason} title="Mark rest of season watched">
+              <SkipForward className="w-3 h-3 mr-1" /> Season
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={onGo} aria-label="Open show">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </Card>

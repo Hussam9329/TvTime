@@ -63,7 +63,7 @@ export function HomeView() {
 
       {/* Quick stats */}
       {stats.data && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <QuickStat
             icon={<BookOpen className="w-4 h-4" />}
             label="Watchlist"
@@ -78,8 +78,8 @@ export function HomeView() {
           />
           <QuickStat
             icon={<Tv className="w-4 h-4" />}
-            label="Episodes watched"
-            value={stats.data.counts.watchedEpisodes}
+            label="TV Shows rated"
+            value={stats.data.counts.watchedMovies > 0 ? stats.data.counts.rated - stats.data.counts.watchedMovies : 0}
             onClick={() => setView("stats")}
           />
           <QuickStat
@@ -87,6 +87,19 @@ export function HomeView() {
             label="Following"
             value={stats.data.counts.following}
             onClick={() => setView("library")}
+          />
+          <QuickStat
+            icon={<Clock className="w-4 h-4" />}
+            label="Watch time"
+            value={stats.data.watchTime?.totalHours || 0}
+            suffix="h"
+            onClick={() => setView("stats")}
+          />
+          <QuickStat
+            icon={<Star className="w-4 h-4" />}
+            label="Avg rating"
+            value={stats.data.avgRating || 0}
+            onClick={() => setView("stats")}
           />
         </div>
       )}
@@ -157,7 +170,7 @@ export function HomeView() {
   );
 }
 
-function QuickStat({ icon, label, value, onClick }: { icon: React.ReactNode; label: string; value: number; onClick?: () => void }) {
+function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactNode; label: string; value: number; suffix?: string; onClick?: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -168,7 +181,7 @@ function QuickStat({ icon, label, value, onClick }: { icon: React.ReactNode; lab
         {label}
       </div>
       <div className="text-2xl sm:text-3xl font-extrabold text-gradient group-hover:scale-105 transition-transform inline-block">
-        {value}
+        {value}{suffix && <span className="text-sm text-muted-foreground font-normal">{suffix}</span>}
       </div>
     </button>
   );
