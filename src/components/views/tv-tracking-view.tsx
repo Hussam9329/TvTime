@@ -1,6 +1,6 @@
 "use client";
 
-import { useFollowing, useStats, useTvDetail, useWatchedEpisodes, useSeasonDetail, useEpisodeToggle, useBulkEpisodeToggle } from "@/hooks/use-tmdb";
+import { useFollowing, useStats, useTvDetail, useWatchedEpisodes, useSeasonDetail, useEpisodeToggle, useBulkEpisodeToggle, useMedia } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward, ListChecks, Clapperboard, BookOpen, AlertCircle, Sparkles } from "lucide-react";
+import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward, ListChecks, Clapperboard, BookOpen, AlertCircle, Sparkles, Trophy } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useState, useMemo } from "react";
 
-type TabValue = "watchlist" | "upcoming" | "havent-watched-while" | "havent-started";
+type TabValue = "watchlist" | "upcoming" | "havent-watched-while" | "havent-started" | "finished";
 
 export function TvTrackingView() {
   const following = useFollowing();
@@ -63,6 +63,9 @@ export function TvTrackingView() {
           <TabsTrigger value="watchlist" className="text-xs h-9">
             <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Watchlist
           </TabsTrigger>
+          <TabsTrigger value="finished" className="text-xs h-9">
+            <Trophy className="w-3.5 h-3.5 mr-1.5" /> Finished
+          </TabsTrigger>
           <TabsTrigger value="upcoming" className="text-xs h-9">
             <Calendar className="w-3.5 h-3.5 mr-1.5" /> Upcoming
           </TabsTrigger>
@@ -76,6 +79,7 @@ export function TvTrackingView() {
 
         <div className="mt-4">
           {tab === "watchlist" && <WatchlistTab shows={followedWithTmdb} onGo={goTv} />}
+          {tab === "finished" && <FinishedTab onGo={goTv} />}
           {tab === "upcoming" && <UpcomingTab shows={followedWithTmdb} onGo={goTv} />}
           {tab === "havent-watched-while" && <HaventWatchedWhileTab shows={followedWithTmdb} onGo={goTv} />}
           {tab === "havent-started" && <HaventStartedTab shows={followedWithTmdb} onGo={goTv} />}
@@ -134,6 +138,104 @@ function WatchlistTab({ shows, onGo }: { shows: any[]; onGo: (id: number) => voi
         </>
       )}
     </div>
+  );
+}
+
+function FinishedTab({ onGo }: { onGo: (id: number) => void }) {
+  const [page, setPage] = useState(0);
+  const limit = 60;
+  const finished = useMedia({ type: "series", watched: "true", sortBy: "title", order: "asc", limit, offset: page * limit });
+
+  const items = finished.data?.items ?? [];
+  const total = finished.data?.total ?? 0;
+  const totalPages = Math.ceil(total / limit);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 px-1">
+        <Trophy className="w-5 h-5 text-amber-400" />
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight">Finished Shows</h2>
+        <span className="text-xs text-muted-foreground ml-1">({total})</span>
+      </div>
+
+      {finished.isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="h-[100px] shimmer rounded-lg" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <EmptyTab icon={<Trophy className="w-10 h-10" />} title="No finished shows yet" subtitle="Shows you've completed will appear here" />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {items.map((s: any) => (
+              <FinishedShowCard key={s.id} show={s} onGo={() => onGo(s.tmdbId)} />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-4">
+              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                Prev
+              </Button>
+              <span className="text-sm text-muted-foreground px-3">
+                Page <span className="font-bold text-foreground">{page + 1}</span> of {totalPages}
+              </span>
+              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
+                Next
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function FinishedShowCard({ show, onGo }: { show: any; onGo: () => void }) {
+  const status = show.status;
+  const statusBadge = getStatusBadge(show.isAnime ? "Returning Series" : status);
+  const userRating = show.userRating;
+  const totalEps = show.episodes;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
+        <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
+          {show.poster ? (
+            <img src={img(show.poster, "w92")} alt={show.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
+          )}
+          <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+          </div>
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{show.title}</h4>
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <Badge className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0">
+              <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> Finished
+            </Badge>
+            {show.isAnime && <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
+            {show.seasons && <Badge variant="secondary" className="text-[10px]">{show.seasons} season{show.seasons > 1 ? "s" : ""}</Badge>}
+            {statusBadge}
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            {totalEps && <span className="text-[10px] text-muted-foreground">{totalEps} episodes</span>}
+            {show.year && <span className="text-[10px] text-muted-foreground">{show.year}</span>}
+          </div>
+          {userRating != null && (
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-[10px] text-amber-400 font-bold">{userRating}/100</span>
+              <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-amber-400" style={{ width: `${userRating}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    </motion.div>
   );
 }
 
