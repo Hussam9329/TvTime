@@ -33,7 +33,7 @@ export function ContinueWatching() {
       </div>
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
         {followed.slice(0, 10).map((s, i) => (
-          <ContinueCard key={s.id} showId={s.tmdbId} title={s.title} posterPath={s.posterPath} onGo={() => goTv(s.tmdbId)} featured={i === 0} />
+          <ContinueCard key={s.id} showId={s.tmdbId} title={s.title} posterPath={(s as any).poster || (s as any).posterPath} onGo={() => goTv(s.tmdbId)} featured={i === 0} />
         ))}
       </div>
     </section>

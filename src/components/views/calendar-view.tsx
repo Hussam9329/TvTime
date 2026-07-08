@@ -100,8 +100,8 @@ export function CalendarView() {
                 onClick={() => goTv(s.tmdbId)}
               >
                 <div className="w-12 h-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                  {s.posterPath ? (
-                    <img src={img(s.posterPath, "w92")} alt={s.title} className="w-full h-full object-cover" loading="lazy" />
+                  {(s as any).poster || s.posterPath ? (
+                    <img src={img((s as any).poster || s.posterPath, "w92")} alt={s.title} className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
                   )}

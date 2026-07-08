@@ -7,11 +7,17 @@ export const TMDB_IMG_BASE = "https://image.tmdb.org/t/p";
 
 export function img(path: string | null | undefined, size: string = "w500"): string {
   if (!path) return "";
+  // If it's already a full URL (e.g. from Neon DB), return it as-is
+  if (path.startsWith("http")) return path;
+  // Otherwise build TMDB URL from path
   return `${TMDB_IMG_BASE}/${size}${path}`;
 }
 
 export function imgOrPlaceholder(path: string | null | undefined, size: string = "w500"): string {
   if (!path) return "/placeholder-poster.svg";
+  // If it's already a full URL (e.g. from Neon DB), return it as-is
+  if (path.startsWith("http")) return path;
+  // Otherwise build TMDB URL from path
   return `${TMDB_IMG_BASE}/${size}${path}`;
 }
 

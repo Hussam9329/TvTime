@@ -248,7 +248,7 @@ function FollowingSection() {
       </div>
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
         {items.map((s) => (
-          <FollowedShowCard key={s.id} tmdbId={s.tmdbId} title={s.title} posterPath={s.posterPath} onClick={() => goTv(s.tmdbId)} />
+          <FollowedShowCard key={s.id} tmdbId={s.tmdbId} title={s.title} posterPath={(s as any).poster || (s as any).posterPath} onClick={() => goTv(s.tmdbId)} />
         ))}
       </div>
     </section>
@@ -311,8 +311,8 @@ function RecentlyWatched() {
             className="flex-shrink-0 w-[110px] sm:w-[130px] group"
           >
             <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
-              {m.posterPath ? (
-                <img src={img(m.posterPath, "w185")} alt={m.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+              {(m as any).poster || (m as any).posterPath ? (
+                <img src={img((m as any).poster || (m as any).posterPath, "w185")} alt={m.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs p-2 text-center">{m.title}</div>
               )}
