@@ -39,9 +39,8 @@ export function LibraryView() {
 
   const media = useMedia({
     type: config.type,
-    isAnime: config.isAnime ? "true" : undefined,
-    status: config.isWatched ? undefined : "planned",
-    watched: config.isWatched ? "true" : undefined,
+    isAnime: config.isAnime ? "true" : "false",
+    rated: config.isWatched ? "true" : "false",
     search: debouncedSearch || undefined,
     sortBy,
     order: "desc",
