@@ -13,7 +13,8 @@ export type ViewName =
   | "calendar"
   | "library"
   | "stats"
-  | "media";
+  | "media"
+  | "tv-tracking";
 
 export type LibraryTab = "watchlist" | "watched-movies" | "following" | "ratings";
 export type DiscoverTab = "movies" | "tv";

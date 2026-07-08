@@ -12,6 +12,7 @@ import { PersonDetailView } from "@/components/views/person-detail-view";
 import { CalendarView } from "@/components/views/calendar-view";
 import { LibraryView } from "@/components/views/library-view";
 import { StatsView } from "@/components/views/stats-view";
+import { TvTrackingView } from "@/components/views/tv-tracking-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 import { useEffect } from "react";
 
@@ -41,6 +42,7 @@ export function AppShell() {
           {view === "calendar" && <CalendarView />}
           {view === "library" && <LibraryView />}
           {view === "stats" && <StatsView />}
+          {view === "tv-tracking" && <TvTrackingView />}
         </div>
       </main>
       <Footer />

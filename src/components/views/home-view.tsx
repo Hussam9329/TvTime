@@ -104,16 +104,6 @@ export function HomeView() {
         </div>
       )}
 
-      {/* Continue watching (followed shows) - only if user has followed shows */}
-      {following.data && following.data.items.length > 0 && (
-        <ContinueWatching />
-      )}
-
-      {/* Your Shows with watch progress */}
-      {following.data && following.data.items.length > 0 && (
-        <FollowingSection />
-      )}
-
       {/* Recently watched movies */}
       {watchedMovies.data && watchedMovies.data.items.length > 0 && (
         <RecentlyWatched />
@@ -344,7 +334,7 @@ function RecentlyWatched() {
 
 function WatchNextCTA() {
   const following = useFollowing();
-  const goTv = useNav((s) => s.goTv);
+  const setView = useNav((s) => s.setView);
   const firstShow = following.data?.items[0];
 
   if (!firstShow) return null;
@@ -353,7 +343,7 @@ function WatchNextCTA() {
     <motion.button
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      onClick={() => goTv(firstShow.tmdbId)}
+      onClick={() => setView("tv-tracking")}
       className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all hover:scale-105"
     >
       <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
