@@ -454,7 +454,9 @@ export function useFollowingToggle() {
   return useMutation({
     mutationFn: async (args: { action: "add" | "remove"; tmdbId: number; title: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number }) => {
       if (args.action === "add") {
-        const id = await findOrCreateMedia({
+        // Just find-or-create, DON'T overwrite watched/rating status
+        // This preserves the "finished" state if the show was already watched
+        await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title,
           type: "tv",
@@ -463,24 +465,40 @@ export function useFollowingToggle() {
           overview: args.overview,
           rating: args.voteAverage,
         });
-        await fetch(`/api/media/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "planned", watched: false, userRating: null }),
-        });
-      } else {
+        // Only set status to "planned" if not already watched
         const url = new URL("/api/media", window.location.origin);
         url.searchParams.set("type", "series");
+        url.searchParams.set("limit", "500");
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+          if (item && !item.watched && !item.userRating) {
+            await fetch(`/api/media/${item.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "planned" }),
+            });
+          }
+        }
+      } else {
+        // Unfollow: only clear status if not watched, keep watched/rating intact
+        const url = new URL("/api/media", window.location.origin);
+        url.searchParams.set("type", "series");
+        url.searchParams.set("limit", "500");
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
           if (item) {
-            await fetch(`/api/media/${item.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: null, watched: false, userRating: null }),
-            });
+            // Only clear status if the show is not watched
+            if (!item.watched) {
+              await fetch(`/api/media/${item.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: null }),
+              });
+            }
           }
         }
       }

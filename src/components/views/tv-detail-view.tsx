@@ -60,8 +60,11 @@ export function TvDetailView() {
 
   const t = detail.data;
   const inWatchlist = watchlist.data?.items.some((w) => w.mediaType === "tv" && w.tmdbId === t.id);
-  const isFollowing = following.data?.items.some((w) => w.tmdbId === t.id);
+  const isFollowing = trackedShows.data?.items.some((w: any) => w.tmdbId === t.id) ?? false;
   const myRating = ratings.data?.items.find((r) => r.mediaType === "tv" && r.tmdbId === t.id)?.value || 0;
+  // Check if this show is marked as fully watched in DB
+  const trackedShow = trackedShows.data?.items.find((w: any) => w.tmdbId === t.id);
+  const isFullyWatched = trackedShow?.watched === true || trackedShow?.status === "watched";
 
   const year = t.first_air_date?.slice(0, 4);
   const runtime = t.episode_run_time?.[0] ? `${t.episode_run_time[0]}m` : null;
@@ -221,6 +224,7 @@ export function TvDetailView() {
             seasons={seasons}
             defaultSeason={selectedSeason ?? defaultSeason}
             onSelectSeason={setSelectedSeason}
+            fullyWatched={isFullyWatched}
           />
         </TabsContent>
 
@@ -309,11 +313,13 @@ function SeasonEpisodes({
   seasons,
   defaultSeason,
   onSelectSeason,
+  fullyWatched = false,
 }: {
   tvId: number;
   seasons: { season_number: number; name: string; episode_count: number; air_date: string | null; poster_path: string | null; overview: string }[];
   defaultSeason: number | null;
   onSelectSeason: (n: number) => void;
+  fullyWatched?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const season = defaultSeason ?? seasons[0]?.season_number ?? 0;
@@ -326,10 +332,15 @@ function SeasonEpisodes({
     (watched.data?.items ?? []).map((e) => `${e.seasonNumber}-${e.episodeNumber}`)
   );
 
+  // If show is fully watched in DB, treat all episodes as watched
+  const isEpisodeWatched = (sn: number, en: number) => {
+    return fullyWatched || watchedSet.has(`${sn}-${en}`);
+  };
+
   const markAllWatched = () => {
     if (!seasonData.data?.episodes) return;
     const unwatched = seasonData.data.episodes
-      .filter((e) => !watchedSet.has(`${e.season_number}-${e.episode_number}`))
+      .filter((e) => !isEpisodeWatched(e.season_number, e.episode_number))
       .map((e) => ({ seasonNumber: e.season_number, episodeNumber: e.episode_number, episodeName: e.name }));
     if (unwatched.length === 0) {
       toast.info("All episodes already watched");
@@ -342,7 +353,7 @@ function SeasonEpisodes({
   };
 
   const toggleEpisode = (sn: number, en: number, name: string) => {
-    const isWatched = watchedSet.has(`${sn}-${en}`);
+    const isWatched = isEpisodeWatched(sn, en);
     episodeToggle.mutate({
       action: isWatched ? "remove" : "add",
       showId: tvId,
@@ -395,11 +406,11 @@ function SeasonEpisodes({
           <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full bg-primary transition-all"
-              style={{ width: `${(watchedSet.size / Math.max(seasonData.data.episodes.length, 1)) * 100}%` }}
+              style={{ width: `${(seasonData.data.episodes.filter((e: any) => isEpisodeWatched(e.season_number, e.episode_number)).length / Math.max(seasonData.data.episodes.length, 1)) * 100}%` }}
             />
           </div>
           <span className="text-muted-foreground whitespace-nowrap">
-            {watchedSet.size} / {seasonData.data.episodes.length} watched
+            {seasonData.data.episodes.filter((e: any) => isEpisodeWatched(e.season_number, e.episode_number)).length} / {seasonData.data.episodes.length} watched
           </span>
         </div>
       )}
@@ -414,7 +425,7 @@ function SeasonEpisodes({
       ) : (
         <div className="space-y-2">
           {seasonData.data?.episodes.map((ep, idx) => {
-            const isWatched = watchedSet.has(`${ep.season_number}-${ep.episode_number}`);
+            const isWatched = isEpisodeWatched(ep.season_number, ep.episode_number);
             return (
               <motion.div
                 key={ep.id}
