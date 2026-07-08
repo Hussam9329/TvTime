@@ -431,6 +431,24 @@ export function useFollowing() {
   });
 }
 
+// Tracked Shows - ALL series in the database (watched + unwatched, anime + non-anime)
+// Used to check if a show is already tracked (for Follow/Following button state)
+export function useTrackedShows() {
+  return useQuery({
+    queryKey: ["media", "tracked-shows"],
+    queryFn: async () => {
+      const url = new URL("/api/media", window.location.origin);
+      url.searchParams.set("type", "series");
+      url.searchParams.set("limit", "500");
+      const res = await fetch(url);
+      if (!res.ok) return { items: [] };
+      const data = await res.json();
+      return { items: data.items || [] };
+    },
+    staleTime: 0,
+  });
+}
+
 export function useFollowingToggle() {
   const qc = useQueryClient();
   return useMutation({

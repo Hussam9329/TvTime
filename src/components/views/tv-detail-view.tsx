@@ -1,7 +1,7 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useFollowing, useRatingMutate, useRatings } from "@/hooks/use-tmdb";
+import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useFollowing, useTrackedShows, useRatingMutate, useRatings } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ export function TvDetailView() {
   const detail = useTvDetail(tvId);
   const watchlist = useWatchlist();
   const following = useFollowing();
+  const trackedShows = useTrackedShows();
   const ratings = useRatings();
   const watchlistToggle = useWatchlistToggle();
   const followingToggle = useFollowingToggle();
