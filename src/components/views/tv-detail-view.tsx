@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingStars } from "@/components/media/rating-stars";
 import { MediaRow } from "@/components/media/media-row";
-import { WatchProviders } from "@/components/media/watch-providers";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
@@ -132,25 +131,9 @@ export function TvDetailView() {
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
           <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent" />
         </div>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-8">
-          <div className="flex items-end gap-2 mb-2 flex-wrap">
-            <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
-            {year && <Badge variant="secondary" className="bg-black/40 backdrop-blur border-0">{year}</Badge>}
-            {t.number_of_seasons > 0 && <Badge variant="secondary" className="bg-black/40 backdrop-blur border-0"><Layers className="w-3 h-3 mr-1" />{t.number_of_seasons} season{t.number_of_seasons > 1 ? "s" : ""}</Badge>}
-            {runtime && <Badge variant="secondary" className="bg-black/40 backdrop-blur border-0"><Clock className="w-3 h-3 mr-1" />{runtime}</Badge>}
-            {t.vote_average > 0 && (
-              <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0"><Star className="w-3 h-3 mr-1 fill-amber-300" />{t.vote_average.toFixed(1)}</Badge>
-            )}
-            {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
-            {t.status && <Badge variant="secondary" className="bg-black/40 backdrop-blur border-0">{t.status}</Badge>}
-          </div>
-          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight drop-shadow-lg">{t.name}</h1>
-          {t.tagline && <p className="text-sm sm:text-base italic text-foreground/70 mt-1">{t.tagline}</p>}
-        </div>
       </div>
 
-      {/* Poster + actions */}
+      {/* Poster + title + actions */}
       <div className="flex flex-col sm:flex-row gap-5 -mt-20 sm:-mt-32 px-2 sm:px-4 relative z-10">
         <div className="w-32 sm:w-48 flex-shrink-0 mx-auto sm:mx-0">
           <Card className="p-0 overflow-hidden border-border/60 shadow-2xl">
@@ -160,7 +143,24 @@ export function TvDetailView() {
           </Card>
         </div>
 
-        <div className="flex-1 space-y-4 sm:pt-32">
+        <div className="flex-1 space-y-4 sm:pt-4">
+          {/* Title and badges */}
+          <div>
+            <div className="flex items-end gap-2 mb-2 flex-wrap">
+              <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />{isFullyWatched ? "Finished" : "TV Show"}</Badge>
+              {year && <Badge variant="secondary" className="border-0">{year}</Badge>}
+              {t.number_of_seasons > 0 && <Badge variant="secondary" className="border-0"><Layers className="w-3 h-3 mr-1" />{t.number_of_seasons} season{t.number_of_seasons > 1 ? "s" : ""}</Badge>}
+              {runtime && <Badge variant="secondary" className="border-0"><Clock className="w-3 h-3 mr-1" />{runtime}</Badge>}
+              {t.vote_average > 0 && (
+                <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0"><Star className="w-3 h-3 mr-1 fill-amber-300" />{t.vote_average.toFixed(1)}</Badge>
+              )}
+              {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
+              {t.status && <Badge variant="secondary" className="border-0">{t.status}</Badge>}
+            </div>
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">{t.name}</h1>
+            {t.tagline && <p className="text-sm sm:text-base italic text-foreground/70 mt-1">{t.tagline}</p>}
+          </div>
+          {/* Action buttons */}
           <div className="flex flex-wrap gap-2">
             <Button variant={isFollowing ? "default" : "secondary"} onClick={onFollow} className="h-10">
               {isFollowing ? <Bell className="w-4 h-4 mr-2" /> : <BellOff className="w-4 h-4 mr-2" />}
@@ -206,9 +206,6 @@ export function TvDetailView() {
           )}
         </div>
       </div>
-
-      {/* Watch providers */}
-      <WatchProviders providersData={(t as any)["watch/providers"]} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">

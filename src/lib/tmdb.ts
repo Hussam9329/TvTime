@@ -206,9 +206,9 @@ export const tmdb = {
 
   // Details
   movieDetail: (id: number) =>
-    tmdbFetch<MovieDetail>(`/movie/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,watch/providers,release_dates" }),
+    tmdbFetch<MovieDetail>(`/movie/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,release_dates" }),
   tvDetail: (id: number) =>
-    tmdbFetch<TvDetail>(`/tv/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,external_ids,watch/providers,content_ratings" }),
+    tmdbFetch<TvDetail>(`/tv/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,external_ids,content_ratings" }),
   seasonDetail: (tvId: number, seasonNumber: number) =>
     tmdbFetch<SeasonDetail>(`/tv/${tvId}/season/${seasonNumber}`),
 
