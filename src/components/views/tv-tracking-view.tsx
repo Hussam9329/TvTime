@@ -499,6 +499,15 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
   const status = showDetail.data?.status;
   const isLoading = showDetail.isLoading || watched.isLoading;
 
+  // Status badge logic
+  const statusBadge = getStatusBadge(status);
+
+  // Not Started badge if 0 watched
+  const notStarted = watchedCount === 0 && !isLoading;
+  const watchBadge = notStarted
+    ? <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">Not Started</Badge>
+    : null;
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
@@ -513,7 +522,8 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{title}</h4>
           <div className="flex items-center gap-1 mt-1 flex-wrap">
             {seasons != null && seasons > 0 && <Badge variant="secondary" className="text-[10px]">{seasons} season{seasons > 1 ? "s" : ""}</Badge>}
-            {status && <Badge variant="secondary" className="text-[10px]">{status}</Badge>}
+            {statusBadge}
+            {watchBadge}
           </div>
           {isLoading ? (
             <div className="mt-2">
@@ -555,7 +565,7 @@ function UpcomingList({ shows, onGo }: { shows: any[]; onGo: (id: number) => voi
 
 function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: string; poster: string | null; onGo: () => void }) {
   const data = useShowTrackingData(showId);
-  const { nextEp, nextEpAirDate, isLoading, watchedCount, totalEpisodes } = data;
+  const { nextEp, nextEpAirDate, isLoading, watchedCount, totalEpisodes, showDetail } = data;
 
   if (isLoading) {
     return <Card className="p-3 h-[100px] flex items-center gap-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /><span className="text-xs text-muted-foreground">Loading...</span></Card>;
@@ -569,6 +579,8 @@ function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: 
 
   const daysUntil = Math.ceil((nextEpAirDate!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   const ep = nextEp!.episode;
+  const status = showDetail?.status;
+  const statusBadge = getStatusBadge(status);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -578,9 +590,12 @@ function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: 
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{title}</h4>
-          <Badge className="text-[9px] w-fit mt-1 bg-amber-500/20 text-amber-400 border-0">
-            <Calendar className="w-2.5 h-2.5 mr-1" /> In {daysUntil} day{daysUntil !== 1 ? "s" : ""}
-          </Badge>
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <Badge className="text-[9px] bg-amber-500/20 text-amber-400 border-0">
+              <Calendar className="w-2.5 h-2.5 mr-1" /> In {daysUntil} day{daysUntil !== 1 ? "s" : ""}
+            </Badge>
+            {statusBadge}
+          </div>
           <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">
             S{nextEp!.seasonNumber}E{ep.episode_number}: {ep.name || `Episode ${ep.episode_number}`}
           </p>
@@ -591,6 +606,19 @@ function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: 
       </Card>
     </motion.div>
   );
+}
+
+// Helper: get status badge
+function getStatusBadge(status?: string | null): React.ReactNode {
+  if (!status) return null;
+  const s = status.toLowerCase();
+  if (s.includes("ended") || s.includes("canceled")) {
+    return <Badge className="text-[9px] bg-rose-500/20 text-rose-400 border-0">Ended</Badge>;
+  }
+  if (s.includes("returning") || s.includes("continuous") || s.includes("production")) {
+    return <Badge className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0">Returning</Badge>;
+  }
+  return <Badge variant="secondary" className="text-[9px]">{status}</Badge>;
 }
 
 // ============ HAVEN'T WATCHED / HAVEN'T STARTED LIST ============
@@ -607,7 +635,7 @@ function HaventWatchedList({ shows, onGo, type }: { shows: any[]; onGo: (id: num
 
 function HaventWatchedCard({ showId, title, poster, onGo, type }: { showId: number; title: string; poster: string | null; onGo: () => void; type: "while" | "started" }) {
   const data = useShowTrackingData(showId);
-  const { watchedCount, daysSinceLastWatch, isLoading, totalEpisodes, lastWatchedDate } = data;
+  const { watchedCount, daysSinceLastWatch, isLoading, totalEpisodes, lastWatchedDate, showDetail } = data;
 
   if (isLoading) {
     return <Card className="p-3 h-[100px] flex items-center gap-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /><span className="text-xs text-muted-foreground">Loading...</span></Card>;
@@ -622,6 +650,8 @@ function HaventWatchedCard({ showId, title, poster, onGo, type }: { showId: numb
     if (daysSinceLastWatch === null || daysSinceLastWatch < 30) return null; // watched recently
   }
 
+  const statusBadge = getStatusBadge(showDetail?.status);
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
@@ -630,18 +660,22 @@ function HaventWatchedCard({ showId, title, poster, onGo, type }: { showId: numb
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{title}</h4>
-          {type === "started" ? (
-            <>
-              <Badge className="text-[9px] w-fit mt-1 bg-purple-500/20 text-purple-400 border-0">
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            {type === "started" ? (
+              <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">
                 <Sparkles className="w-2.5 h-2.5 mr-1" /> Not started
               </Badge>
-              <p className="text-[10px] text-muted-foreground mt-1">{totalEpisodes > 0 ? `${totalEpisodes} episodes available` : "Tap to explore"}</p>
-            </>
-          ) : (
-            <>
-              <Badge className="text-[9px] w-fit mt-1 bg-amber-500/20 text-amber-400 border-0">
+            ) : (
+              <Badge className="text-[9px] bg-amber-500/20 text-amber-400 border-0">
                 <Clock className="w-2.5 h-2.5 mr-1" /> {daysSinceLastWatch} days ago
               </Badge>
+            )}
+            {statusBadge}
+          </div>
+          {type === "started" ? (
+            <p className="text-[10px] text-muted-foreground mt-1">{totalEpisodes > 0 ? `${totalEpisodes} episodes available` : "Tap to explore"}</p>
+          ) : (
+            <>
               <p className="text-[10px] text-muted-foreground mt-1">{watchedCount} / {totalEpisodes} eps watched</p>
               {lastWatchedDate && (
                 <p className="text-[10px] text-muted-foreground">Last: {lastWatchedDate.toLocaleDateString()}</p>
