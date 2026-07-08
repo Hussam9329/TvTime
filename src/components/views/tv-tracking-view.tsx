@@ -22,7 +22,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useState, useMemo } from "react";
 
-type TabValue = "watchlist" | "upcoming" | "havent-watched-while" | "havent-started" | "finished";
+type TabValue = "watchlist" | "finished" | "finished-anime" | "upcoming" | "havent-watched-while" | "havent-started";
 
 export function TvTrackingView() {
   const following = useFollowing();
@@ -66,6 +66,9 @@ export function TvTrackingView() {
           <TabsTrigger value="finished" className="text-xs h-9">
             <Trophy className="w-3.5 h-3.5 mr-1.5" /> Finished
           </TabsTrigger>
+          <TabsTrigger value="finished-anime" className="text-xs h-9">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Finished Anime
+          </TabsTrigger>
           <TabsTrigger value="upcoming" className="text-xs h-9">
             <Calendar className="w-3.5 h-3.5 mr-1.5" /> Upcoming
           </TabsTrigger>
@@ -79,7 +82,8 @@ export function TvTrackingView() {
 
         <div className="mt-4">
           {tab === "watchlist" && <WatchlistTab shows={followedWithTmdb} onGo={goTv} />}
-          {tab === "finished" && <FinishedTab onGo={goTv} />}
+          {tab === "finished" && <FinishedTab onGo={goTv} isAnime="false" />}
+          {tab === "finished-anime" && <FinishedTab onGo={goTv} isAnime="true" />}
           {tab === "upcoming" && <UpcomingTab shows={followedWithTmdb} onGo={goTv} />}
           {tab === "havent-watched-while" && <HaventWatchedWhileTab shows={followedWithTmdb} onGo={goTv} />}
           {tab === "havent-started" && <HaventStartedTab shows={followedWithTmdb} onGo={goTv} />}
@@ -141,10 +145,10 @@ function WatchlistTab({ shows, onGo }: { shows: any[]; onGo: (id: number) => voi
   );
 }
 
-function FinishedTab({ onGo }: { onGo: (id: number) => void }) {
+function FinishedTab({ onGo, isAnime = "false" }: { onGo: (id: number) => void; isAnime?: string }) {
   const [page, setPage] = useState(0);
   const limit = 60;
-  const finished = useMedia({ type: "series", watched: "true", sortBy: "title", order: "asc", limit, offset: page * limit });
+  const finished = useMedia({ type: "series", watched: "true", isAnime, sortBy: "title", order: "asc", limit, offset: page * limit });
 
   const items = finished.data?.items ?? [];
   const total = finished.data?.total ?? 0;
@@ -153,8 +157,14 @@ function FinishedTab({ onGo }: { onGo: (id: number) => void }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 px-1">
-        <Trophy className="w-5 h-5 text-amber-400" />
-        <h2 className="text-lg sm:text-xl font-bold tracking-tight">Finished Shows</h2>
+        {isAnime === "true" ? (
+          <Sparkles className="w-5 h-5 text-purple-400" />
+        ) : (
+          <Trophy className="w-5 h-5 text-amber-400" />
+        )}
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight">
+          {isAnime === "true" ? "Finished Anime" : "Finished Shows"}
+        </h2>
         <span className="text-xs text-muted-foreground ml-1">({total})</span>
       </div>
 
@@ -165,7 +175,7 @@ function FinishedTab({ onGo }: { onGo: (id: number) => void }) {
           ))}
         </div>
       ) : items.length === 0 ? (
-        <EmptyTab icon={<Trophy className="w-10 h-10" />} title="No finished shows yet" subtitle="Shows you've completed will appear here" />
+        <EmptyTab icon={isAnime === "true" ? <Sparkles className="w-10 h-10" /> : <Trophy className="w-10 h-10" />} title={isAnime === "true" ? "No finished anime yet" : "No finished shows yet"} subtitle={isAnime === "true" ? "Anime you've completed will appear here" : "Shows you've completed will appear here"} />
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
