@@ -20,6 +20,10 @@ export async function GET(req: NextRequest) {
   if (watched === "true") where.watched = true;
   if (watched === "false") where.watched = false;
   if (rated === "true") where.userRating = { not: null };
+  if (rated === "false") where.userRating = null;
+  const isAnime = url.searchParams.get("isAnime");
+  if (isAnime === "true") where.isAnime = true;
+  if (isAnime === "false") where.isAnime = false;
   if (search && search !== "undefined") {
     where.title = { contains: search, mode: "insensitive" };
   }

@@ -457,3 +457,29 @@ export function useMediaStats() {
     queryFn: () => mediaGet<MediaStats>("stats"),
   });
 }
+
+// Update media item (rate, mark watched, toggle anime)
+export function useMediaUpdate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      id: string;
+      userRating?: number | null;
+      watched?: boolean;
+      watchedAt?: string | null;
+      isAnime?: boolean;
+      status?: string | null;
+    }) => {
+      const res = await fetch(`/api/media/${args.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(args),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["media"] });
+    },
+  });
+}

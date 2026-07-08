@@ -38,7 +38,6 @@ const navItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
   { view: "home", label: "Home", icon: Home },
   { view: "discover", label: "Discover", icon: Compass },
   { view: "search", label: "Search", icon: Search },
-  { view: "media", label: "My Media", icon: Database },
   { view: "calendar", label: "Calendar", icon: CalendarDays },
   { view: "library", label: "Library", icon: Library },
   { view: "stats", label: "Stats", icon: BarChart3 },

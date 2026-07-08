@@ -36,6 +36,7 @@ model Media {
   rewatch      Boolean  @default(false)
   runtime      Int?
   ratingStatus String?  // "watched" | "planned" | null
+  isAnime      Boolean  @default(false)
   addedAt      DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -43,4 +44,5 @@ model Media {
   @@index([status])
   @@index([watched])
   @@index([userRating])
+  @@index([isAnime])
 }

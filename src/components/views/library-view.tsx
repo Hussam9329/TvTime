@@ -1,512 +1,317 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useNav, type LibraryTab } from "@/lib/store";
-import { useWatchlist, useWatchedMovies, useFollowing, useRatings, useTvDetail, useWatchedEpisodes, type WatchlistItemDB, type WatchedMovieDB, type FollowingShowDB, type RatingDB } from "@/hooks/use-tmdb";
+import { useNav } from "@/lib/store";
+import { useMedia, useMediaUpdate, useMediaStats, type MediaItemDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Film, Bell, Star, Trash2, Play, Tv, Inbox, ArrowUpDown } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Clock, Play, Sparkles, BookOpen } from "lucide-react";
 import { img } from "@/lib/tmdb";
-import { useWatchlistToggle, useWatchedMovieToggle, useFollowingToggle, useRatingMutate } from "@/hooks/use-tmdb";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { RatingStars } from "@/components/media/rating-stars";
+import { RatingDialog } from "@/components/media/rating-dialog";
+
+type LibTab = "watchlist-movies" | "watched-movies" | "watchlist-tv" | "watched-tv" | "watchlist-anime" | "watched-anime";
+
+const TAB_CONFIG: { value: LibTab; label: string; icon: React.ElementType; type: string; isAnime: boolean; rated: boolean }[] = [
+  { value: "watchlist-movies", label: "Watchlist Movies", icon: Film, type: "movie", isAnime: false, rated: false },
+  { value: "watched-movies", label: "Watched Movies", icon: Check, type: "movie", isAnime: false, rated: true },
+  { value: "watchlist-tv", label: "Watchlist TV", icon: Tv, type: "series", isAnime: false, rated: false },
+  { value: "watched-tv", label: "Watched TV", icon: Check, type: "series", isAnime: false, rated: true },
+  { value: "watchlist-anime", label: "Watchlist Anime", icon: Sparkles, type: "series", isAnime: true, rated: false },
+  { value: "watched-anime", label: "Watched Anime", icon: Check, type: "series", isAnime: true, rated: true },
+];
 
 export function LibraryView() {
-  const { libraryTab, setLibraryTab } = useNav();
+  const [tab, setTab] = useState<LibTab>("watchlist-movies");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("addedAt");
+  const [page, setPage] = useState(0);
+  const limit = 60;
+
+  const config = TAB_CONFIG.find((t) => t.value === tab)!;
+
+  const debouncedSearch = useDebounce(search, 400);
+
+  const media = useMedia({
+    type: config.type,
+    isAnime: config.isAnime ? "true" : "false",
+    rated: config.rated ? "true" : "false",
+    search: debouncedSearch || undefined,
+    sortBy,
+    order: "desc",
+    limit,
+    offset: page * limit,
+  });
+
+  const stats = useMediaStats();
+
+  const items = media.data?.items ?? [];
+  const total = media.data?.total ?? 0;
+  const totalPages = Math.ceil(total / limit);
+
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">My Library</h1>
-        <p className="text-sm text-muted-foreground mt-1">Everything you've saved, watched, and rated</p>
+        <p className="text-sm text-muted-foreground mt-1">Your collection from Neon database</p>
       </div>
 
-      <Tabs value={libraryTab} onValueChange={(v) => setLibraryTab(v as LibraryTab)}>
-        <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
-          <TabsTrigger value="watchlist"><BookOpen className="w-4 h-4 mr-1.5" />Watchlist</TabsTrigger>
-          <TabsTrigger value="watched-movies"><Film className="w-4 h-4 mr-1.5" />Watched Movies</TabsTrigger>
-          <TabsTrigger value="following"><Bell className="w-4 h-4 mr-1.5" />Following</TabsTrigger>
-          <TabsTrigger value="ratings"><Star className="w-4 h-4 mr-1.5" />Ratings</TabsTrigger>
+      {/* Stats overview */}
+      {stats.data && (
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          <MiniStat label="Watchlist Movies" value={stats.data.counts.movies - (stats.data.counts.rated)} />
+          <MiniStat label="Watched Movies" value={0} />
+          <MiniStat label="Watchlist TV" value={stats.data.counts.series} />
+          <MiniStat label="Watched TV" value={0} />
+          <MiniStat label="Watchlist Anime" value={0} />
+          <MiniStat label="Watched Anime" value={0} />
+        </div>
+      )}
+
+      {/* Tabs */}
+      <Tabs value={tab} onValueChange={(v) => { setTab(v as LibTab); setPage(0); }}>
+        <TabsList className="w-full justify-start overflow-x-auto no-scrollbar h-auto flex-wrap">
+          {TAB_CONFIG.map((t) => (
+            <TabsTrigger key={t.value} value={t.value} className="text-xs h-9">
+              <t.icon className="w-3.5 h-3.5 mr-1.5" />
+              {t.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
-
-        <div className="mt-4">
-          {libraryTab === "watchlist" && <WatchlistTab />}
-          {libraryTab === "watched-movies" && <WatchedMoviesTab />}
-          {libraryTab === "following" && <FollowingTab />}
-          {libraryTab === "ratings" && <RatingsTab />}
-        </div>
       </Tabs>
-    </div>
-  );
-}
 
-function SortControl<T extends string>({ sortBy, onSortChange, count, label }: { sortBy: T; onSortChange: (v: T) => void; count: number; label: string }) {
-  const options: { value: T; label: string }[] = [
-    { value: "recent" as T, label: "Most Recent" },
-    { value: "rating" as T, label: "Top Rated" },
-    { value: "title" as T, label: "A-Z" },
-    { value: "year" as T, label: "Newest First" },
-  ];
-  return (
-    <div className="flex items-center justify-between gap-3 flex-wrap">
-      <p className="text-sm text-muted-foreground">
-        <span className="font-bold text-foreground">{count}</span> {label}
-      </p>
-      <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
-        <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onSortChange(opt.value)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-              sortBy === opt.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ icon, title, subtitle, ctaLabel, onCta }: { icon: React.ReactNode; title: string; subtitle: string; ctaLabel?: string; onCta?: () => void }) {
-  return (
-    <Card className="p-12 text-center text-muted-foreground relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 pointer-events-none" />
-      <div className="relative">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 mx-auto mb-4 flex items-center justify-center text-primary border border-primary/20">
-          {icon}
+      {/* Search + sort */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            placeholder="Search your collection..."
+            className="pl-9 h-9"
+          />
         </div>
-        <p className="font-semibold text-foreground text-lg">{title}</p>
-        <p className="text-sm mt-1 max-w-sm mx-auto">{subtitle}</p>
-        {ctaLabel && onCta && (
-          <Button onClick={onCta} className="mt-4" size="sm">
-            {ctaLabel}
-          </Button>
-        )}
+        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
+          {[
+            { v: "addedAt", l: "Recent" },
+            { v: "userRating", l: "Rating" },
+            { v: "title", l: "A-Z" },
+            { v: "year", l: "Year" },
+          ].map((opt) => (
+            <button
+              key={opt.v}
+              onClick={() => setSortBy(opt.v)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                sortBy === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {opt.l}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Count */}
+      <p className="text-sm text-muted-foreground">
+        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> items
+      </p>
+
+      {/* Grid */}
+      {media.isLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="aspect-[2/3] shimmer rounded-lg" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <Card className="p-12 text-center text-muted-foreground">
+          <Search className="w-12 h-12 mx-auto mb-3 opacity-40" />
+          <p className="font-medium">No items found</p>
+          <p className="text-sm mt-1">Try adjusting your search or filters</p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+          {items.map((item, i) => (
+            <LibraryMediaCard key={item.id} item={item} index={i} isWatchedTab={config.rated} />
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-4">
+          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+            Prev
+          </Button>
+          <span className="text-sm text-muted-foreground px-3">
+            Page <span className="font-bold text-foreground">{page + 1}</span> of {totalPages}
+          </span>
+          <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
+            Next
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <Card className="p-2 text-center">
+      <p className="text-lg font-bold text-primary">{value}</p>
+      <p className="text-[9px] text-muted-foreground leading-tight">{label}</p>
     </Card>
   );
 }
 
-function WatchlistTab() {
-  const data = useWatchlist();
-  const goMovie = useNav((s) => s.goMovie);
-  const goTv = useNav((s) => s.goTv);
-  const toggle = useWatchlistToggle();
-  const setView = useNav((s) => s.setView);
-  const [sortBy, setSortBy] = useState<"recent" | "rating" | "title" | "year">("recent");
+function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; index: number; isWatchedTab: boolean }) {
+  const update = useMediaUpdate();
+  const [ratingOpen, setRatingOpen] = useState(false);
 
-  const rawItems = data.data?.items ?? [];
+  const publicRating = item.rating ? parseFloat(item.rating) : null;
+  const userRating = item.userRating;
 
-  const items = useMemo(() => {
-    const sorted = [...rawItems];
-    switch (sortBy) {
-      case "recent":
-        return sorted.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
-      case "rating":
-        return sorted.sort((a, b) => (b.voteAverage || 0) - (a.voteAverage || 0));
-      case "title":
-        return sorted.sort((a, b) => a.title.localeCompare(b.title));
-      case "year":
-        return sorted.sort((a, b) => (b.releaseDate || "").localeCompare(a.releaseDate || ""));
-      default:
-        return sorted;
-    }
-  }, [rawItems, sortBy]);
+  const handleMarkWatched = () => {
+    setRatingOpen(true);
+  };
 
-  if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (rawItems.length === 0) return <EmptyState icon={<Inbox className="w-8 h-8" />} title="Your watchlist is empty" subtitle="Add movies and shows you want to watch later" ctaLabel="Discover content" onCta={() => setView("discover")} />;
+  const handleRate = async (rating: number) => {
+    await update.mutateAsync({
+      id: item.id,
+      userRating: rating,
+      watched: true,
+      watchedAt: new Date().toISOString(),
+      status: "watched",
+    });
+  };
 
-  return (
-    <div className="space-y-3">
-      <SortControl sortBy={sortBy} onSortChange={setSortBy} count={rawItems.length} label="items" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {items.map((item: WatchlistItemDB) => (
-          <WatchlistCard key={item.id} item={item} onGo={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)} onRemove={() => { toggle.mutate({ action: "remove", mediaType: item.mediaType as any, tmdbId: item.tmdbId, title: item.title }); toast.success("Removed from watchlist"); }} />
-        ))}
-      </div>
-    </div>
-  );
-}
+  const handleRemoveRating = async () => {
+    await update.mutateAsync({
+      id: item.id,
+      userRating: null,
+      watched: false,
+      watchedAt: null,
+      status: null,
+    });
+    toast.success("Moved back to watchlist");
+  };
 
-function WatchlistCard({ item, onGo, onRemove }: { item: WatchlistItemDB; onGo: () => void; onRemove: () => void }) {
-  const isNew = Date.now() - new Date(item.addedAt).getTime() < 24 * 60 * 60 * 1000;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
-        <button
-          className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
-          onClick={onGo}
-        >
-          {item.posterPath ? (
-            <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Film className="w-5 h-5" /></div>
-          )}
-        </button>
-        <div className="flex-1 min-w-0 flex flex-col">
-          <button onClick={onGo} className="text-left">
-            <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h4>
-          </button>
-          <div className="flex items-center gap-1 mt-1 flex-wrap">
-            <Badge variant="secondary" className="text-[10px]">
-              {item.mediaType === "movie" ? <><Film className="w-2.5 h-2.5 mr-1" />Movie</> : <><Tv className="w-2.5 h-2.5 mr-1" />TV</>}
-            </Badge>
-            {item.releaseDate && <span className="text-xs text-muted-foreground">{item.releaseDate.slice(0, 4)}</span>}
-            {item.voteAverage ? <span className="text-xs text-amber-400 flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-amber-400" />{item.voteAverage.toFixed(1)}</span> : null}
-            {isNew && <Badge className="text-[9px] h-5 px-1.5 bg-emerald-500/20 text-emerald-400 border-0">NEW</Badge>}
-          </div>
-          <p className="text-xs text-muted-foreground/80 line-clamp-2 mt-1 flex-1">{item.overview}</p>
-          <div className="flex items-center justify-between mt-2">
-              <span className="text-[10px] text-muted-foreground">Added {new Date(item.addedAt).toLocaleDateString()}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={onRemove}
-                aria-label="Remove from watchlist"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
-      </Card>
-    </motion.div>
-  );
-}
-
-function WatchedMoviesTab() {
-  const data = useWatchedMovies();
-  const goMovie = useNav((s) => s.goMovie);
-  const toggle = useWatchedMovieToggle();
-  const setView = useNav((s) => s.setView);
-  const [sortBy, setSortBy] = useState<"recent" | "title" | "runtime">("recent");
-
-  const rawItems = data.data?.items ?? [];
-
-  const items = useMemo(() => {
-    const sorted = [...rawItems];
-    switch (sortBy) {
-      case "recent":
-        return sorted.sort((a, b) => new Date(b.watchedAt).getTime() - new Date(a.watchedAt).getTime());
-      case "title":
-        return sorted.sort((a, b) => a.title.localeCompare(b.title));
-      case "runtime":
-        return sorted.sort((a, b) => (b.runtime || 0) - (a.runtime || 0));
-      default:
-        return sorted;
-    }
-  }, [rawItems, sortBy]);
-
-  if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (rawItems.length === 0) return <EmptyState icon={<Film className="w-8 h-8" />} title="No watched movies yet" subtitle="Mark movies as watched to see them here" ctaLabel="Browse movies" onCta={() => setView("discover")} />;
-
-  const sortOptions = [
-    { value: "recent" as const, label: "Most Recent" },
-    { value: "title" as const, label: "A-Z" },
-    { value: "runtime" as const, label: "Longest" },
-  ];
+  const handleToggleAnime = async () => {
+    await update.mutateAsync({
+      id: item.id,
+      isAnime: !item.isAnime,
+    });
+    toast.success(item.isAnime ? "Removed from anime" : "Marked as anime");
+  };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-muted-foreground">
-          <span className="font-bold text-foreground">{rawItems.length}</span> movies
-        </p>
-        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
-          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
-          {sortOptions.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setSortBy(opt.value)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                sortBy === opt.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {items.map((item: WatchedMovieDB) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
-              <button
-                className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
-                onClick={() => goMovie(item.tmdbId)}
-              >
-                {item.posterPath ? (
-                  <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Film className="w-5 h-5" /></div>
-                )}
-              </button>
-              <div className="flex-1 min-w-0 flex flex-col">
-                <button onClick={() => goMovie(item.tmdbId)} className="text-left">
-                  <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h4>
-                </button>
-                <div className="flex items-center gap-1 mt-1 flex-wrap">
-                  <Badge variant="secondary" className="text-[10px] bg-emerald-500/15 text-emerald-400"><Film className="w-2.5 h-2.5 mr-1" />Watched</Badge>
-                  {item.runtime ? <span className="text-xs text-muted-foreground">{Math.floor(item.runtime / 60)}h {item.runtime % 60}m</span> : null}
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-auto pt-2">Watched {new Date(item.watchedAt).toLocaleDateString()}</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-muted-foreground hover:text-destructive justify-start px-0"
-                  onClick={() => { toggle.mutate({ action: "remove", tmdbId: item.tmdbId, title: item.title }); toast.success("Removed from watched"); }}
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
-                </Button>
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
+      >
+        <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card group">
+          <div className="relative aspect-[2/3] overflow-hidden bg-muted">
+            {item.poster ? (
+              <img src={item.poster} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                {item.type === "movie" ? <Film className="w-12 h-12" /> : <Tv className="w-12 h-12" />}
               </div>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-}
+            )}
+            {/* gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-80" />
 
-function FollowingTab() {
-  const data = useFollowing();
-  const goTv = useNav((s) => s.goTv);
-  const setView = useNav((s) => s.setView);
-  const toggle = useFollowingToggle();
-  const [sortBy, setSortBy] = useState<"recent" | "title">("recent");
+            {/* type badge */}
+            <div className="absolute top-2 left-2">
+              <Badge variant="secondary" className="bg-black/60 backdrop-blur border-0 text-[10px] h-6 px-2">
+                {item.isAnime ? (
+                  <><Sparkles className="w-3 h-3 mr-1 text-purple-400" />Anime</>
+                ) : item.type === "movie" ? (
+                  <><Film className="w-3 h-3 mr-1" />Movie</>
+                ) : (
+                  <><Tv className="w-3 h-3 mr-1" />TV</>
+                )}
+              </Badge>
+            </div>
 
-  const rawItems = data.data?.items ?? [];
-
-  const items = useMemo(() => {
-    const sorted = [...rawItems];
-    switch (sortBy) {
-      case "recent":
-        return sorted.sort((a, b) => new Date(b.followedAt).getTime() - new Date(a.followedAt).getTime());
-      case "title":
-        return sorted.sort((a, b) => a.title.localeCompare(b.title));
-      default:
-        return sorted;
-    }
-  }, [rawItems, sortBy]);
-
-  if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (rawItems.length === 0) return <EmptyState icon={<Bell className="w-8 h-8" />} title="Not following any shows" subtitle="Follow TV shows to track their episodes" ctaLabel="Discover shows" onCta={() => setView("discover")} />;
-
-  const sortOptions = [
-    { value: "recent" as const, label: "Most Recent" },
-    { value: "title" as const, label: "A-Z" },
-  ];
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-muted-foreground">
-          <span className="font-bold text-foreground">{rawItems.length}</span> shows
-        </p>
-        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
-          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
-          {sortOptions.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setSortBy(opt.value)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                sortBy === opt.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {items.map((item: FollowingShowDB) => (
-          <FollowingCard key={item.id} item={item} onGo={() => goTv(item.tmdbId)} onUnfollow={() => { toggle.mutate({ action: "remove", tmdbId: item.tmdbId, title: item.title }); toast.success("Unfollowed"); }} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function RatingsTab() {
-  const data = useRatings();
-  const goMovie = useNav((s) => s.goMovie);
-  const goTv = useNav((s) => s.goTv);
-  const setView = useNav((s) => s.setView);
-  const toggle = useRatingMutate();
-  const [sortBy, setSortBy] = useState<"recent" | "rating" | "title">("recent");
-
-  const rawItems = data.data?.items ?? [];
-
-  const items = useMemo(() => {
-    const sorted = [...rawItems];
-    switch (sortBy) {
-      case "recent":
-        return sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-      case "rating":
-        return sorted.sort((a, b) => b.value - a.value);
-      case "title":
-        return sorted.sort((a, b) => a.title.localeCompare(b.title));
-      default:
-        return sorted;
-    }
-  }, [rawItems, sortBy]);
-
-  if (data.isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 shimmer rounded-lg" />)}</div>;
-  if (rawItems.length === 0) return <EmptyState icon={<Star className="w-8 h-8" />} title="No ratings yet" subtitle="Rate movies and shows to see them here" ctaLabel="Find something to rate" onCta={() => setView("discover")} />;
-
-  const sortOptions = [
-    { value: "recent" as const, label: "Most Recent" },
-    { value: "rating" as const, label: "Highest Rated" },
-    { value: "title" as const, label: "A-Z" },
-  ];
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-muted-foreground">
-          <span className="font-bold text-foreground">{rawItems.length}</span> ratings
-        </p>
-        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
-          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
-          {sortOptions.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setSortBy(opt.value)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                sortBy === opt.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {items.map((item: RatingDB) => (
-          <Card key={item.id} className="p-3 flex gap-3 group hover:border-primary/40 transition-colors">
-            <button
-              className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
-              onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)}
-            >
-              {item.posterPath ? (
-                <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  {item.mediaType === "movie" ? <Film className="w-5 h-5" /> : <Tv className="w-5 h-5" />}
-                </div>
-              )}
-            </button>
-            <div className="flex-1 min-w-0 flex flex-col">
-              <button onClick={() => item.mediaType === "movie" ? goMovie(item.tmdbId) : goTv(item.tmdbId)} className="text-left">
-                <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">
-                  {item.title}
-                </h4>
-              </button>
-              <div className="flex items-center gap-1 mt-1">
-                <Badge variant="secondary" className="text-[10px]">
-                  {item.mediaType === "movie" ? <><Film className="w-2.5 h-2.5 mr-1" />Movie</> : <><Tv className="w-2.5 h-2.5 mr-1" />TV</>}
+            {/* rating badge - user rating (watched) or TMDB rating (watchlist) */}
+            {isWatchedTab && userRating != null ? (
+              <div className="absolute top-2 right-2">
+                <Badge className="bg-amber-500/90 text-black border-0 text-[10px] h-6 px-2 font-bold">
+                  <Star className="w-3 h-3 mr-1 fill-black" />
+                  {userRating}
                 </Badge>
               </div>
-              <div className="mt-2">
-              <RatingStars value={item.value} readOnly size="sm" showValue />
+            ) : publicRating != null ? (
+              <div className="absolute top-2 right-2">
+                <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0 text-[10px] h-6 px-2">
+                  <Star className="w-3 h-3 mr-1 fill-amber-300" />
+                  {publicRating.toFixed(1)}
+                </Badge>
+              </div>
+            ) : null}
+
+            {/* bottom title */}
+            <div className="absolute bottom-0 left-0 right-0 p-3">
+              <h3 className="font-semibold text-white text-sm line-clamp-2 leading-tight drop-shadow">{item.title}</h3>
+              <div className="flex items-center gap-2 mt-0.5">
+                {item.year && <p className="text-white/70 text-xs">{item.year}</p>}
+                {isWatchedTab && userRating != null && (
+                  <span className="text-amber-400 text-xs font-bold">{userRating}/100</span>
+                )}
+              </div>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2">Rated {new Date(item.updatedAt).toLocaleDateString()}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-muted-foreground hover:text-destructive justify-start px-0"
-              onClick={() => { toggle.mutate({ action: "remove", mediaType: item.mediaType as any, tmdbId: item.tmdbId }); toast.success("Rating removed"); }}
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove rating
-            </Button>
+
+            {/* hover action buttons */}
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3">
+              {!isWatchedTab ? (
+                <Button size="sm" className="h-8" onClick={handleMarkWatched}>
+                  <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Rate & Watch
+                </Button>
+              ) : (
+                <>
+                  <Button size="sm" variant="secondary" className="h-8" onClick={() => setRatingOpen(true)}>
+                    <Star className="w-3.5 h-3.5 mr-1" /> Re-rate
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleRemoveRating}>
+                    Unwatch
+                  </Button>
+                </>
+              )}
+              {item.type === "series" && (
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleToggleAnime}>
+                  {item.isAnime ? "TV" : "Anime"}
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
-      ))}
-      </div>
-    </div>
+      </motion.div>
+
+      <RatingDialog
+        open={ratingOpen}
+        onOpenChange={setRatingOpen}
+        title={item.title}
+        poster={item.poster}
+        onRate={handleRate}
+      />
+    </>
   );
 }
 
-function FollowingCard({ item, onGo, onUnfollow }: { item: FollowingShowDB; onGo: () => void; onUnfollow: () => void }) {
-  const detail = useTvDetail(item.tmdbId);
-  const watched = useWatchedEpisodes(item.tmdbId);
-  const totalEpisodes = detail.data?.number_of_episodes ?? 0;
-  const watchedCount = watched.data?.items.length ?? 0;
-  const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
-  const status = detail.data?.status;
-  const seasons = detail.data?.number_of_seasons;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
-        <button
-          className="w-16 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0"
-          onClick={onGo}
-        >
-          {item.posterPath ? (
-            <img src={img(item.posterPath, "w185")} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Tv className="w-5 h-5" /></div>
-          )}
-        </button>
-        <div className="flex-1 min-w-0 flex flex-col">
-          <button onClick={onGo} className="text-left">
-            <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h4>
-          </button>
-          <div className="flex items-center gap-1 mt-1 flex-wrap">
-            <Badge variant="secondary" className="text-[10px] bg-amber-500/15 text-amber-400"><Bell className="w-2.5 h-2.5 mr-1" />Following</Badge>
-            {seasons != null && seasons > 0 && (
-              <Badge variant="secondary" className="text-[10px]">{seasons} season{seasons > 1 ? "s" : ""}</Badge>
-            )}
-            {status && <Badge variant="secondary" className="text-[10px]">{status}</Badge>}
-          </div>
-
-          {/* Watch progress */}
-          {totalEpisodes > 0 && (
-            <div className="mt-2">
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-0.5">
-                <span>{watchedCount} / {totalEpisodes} episodes</span>
-                <span className="font-bold text-primary">{progress}%</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
-              </div>
-            </div>
-          )}
-
-          <p className="text-[10px] text-muted-foreground mt-auto pt-2">Followed {new Date(item.followedAt).toLocaleDateString()}</p>
-          <div className="flex gap-1">
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onGo}>
-              <Play className="w-3.5 h-3.5 mr-1" /> Track
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-muted-foreground hover:text-destructive"
-              onClick={onUnfollow}
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1" /> Unfollow
-            </Button>
-          </div>
-        </div>
-      </Card>
-    </motion.div>
-  );
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useMemo(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
 }

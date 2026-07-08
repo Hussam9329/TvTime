@@ -12,7 +12,6 @@ import { PersonDetailView } from "@/components/views/person-detail-view";
 import { CalendarView } from "@/components/views/calendar-view";
 import { LibraryView } from "@/components/views/library-view";
 import { StatsView } from "@/components/views/stats-view";
-import { MediaView } from "@/components/views/media-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 import { useEffect } from "react";
 
@@ -42,7 +41,6 @@ export function AppShell() {
           {view === "calendar" && <CalendarView />}
           {view === "library" && <LibraryView />}
           {view === "stats" && <StatsView />}
-          {view === "media" && <MediaView />}
         </div>
       </main>
       <Footer />
