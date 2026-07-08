@@ -30,12 +30,17 @@ export function HomeView() {
 
   const heroItem = trending.data?.results?.find((m) => m.backdrop_path && (m.overview?.length || 0) > 100) || trending.data?.results?.[0];
 
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
-  })();
+  const [greeting, setGreeting] = useState("Good evening");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const h = new Date().getHours();
+      if (h < 12) setGreeting("Good morning");
+      else if (h < 18) setGreeting("Good afternoon");
+      else setGreeting("Good evening");
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="space-y-6">

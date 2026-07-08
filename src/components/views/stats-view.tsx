@@ -29,7 +29,7 @@ export function StatsView() {
   if (!d) return null;
 
   const counts = d.counts;
-  const wt = d.watchTime;
+  const wt = d.watchTime || { totalMinutes: 0, totalHours: 0, movieMinutes: 0, episodeMinutes: 0 };
 
   // top shows by episode count
   const topShows = (d.episodesByShow ?? []).slice(0, 5);

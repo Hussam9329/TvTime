@@ -214,13 +214,13 @@ async function findOrCreateMedia(args: {
   return data.item.id;
 }
 
-// Watchlist - reads from Neon (status="planned", userRating=null)
+// Watchlist - reads from Neon (userRating=null = unrated items)
 export function useWatchlist(mediaType?: "movie" | "tv") {
   const type = mediaType === "tv" ? "series" : mediaType || undefined;
   return useQuery({
     queryKey: ["media", "watchlist", type],
     queryFn: async () => {
-      const params: any = { status: "planned", rated: "false" };
+      const params: any = { rated: "false" };
       if (type) params.type = type;
       const url = new URL("/api/media", window.location.origin);
       for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
@@ -413,7 +413,7 @@ export function useBulkEpisodeToggle() {
   });
 }
 
-// Following - reads from Neon (type="series", status="planned", isAnime=false)
+// Following - reads from Neon (type="series", isAnime=false, userRating=null = unrated TV)
 export function useFollowing() {
   return useQuery({
     queryKey: ["media", "following"],
@@ -421,7 +421,6 @@ export function useFollowing() {
       const url = new URL("/api/media", window.location.origin);
       url.searchParams.set("type", "series");
       url.searchParams.set("isAnime", "false");
-      url.searchParams.set("status", "planned");
       url.searchParams.set("rated", "false");
       const res = await fetch(url);
       if (!res.ok) return { items: [] };

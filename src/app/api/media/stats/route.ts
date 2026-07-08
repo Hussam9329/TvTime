@@ -3,7 +3,22 @@ import { db } from "@/lib/db";
 
 // GET - aggregate media stats
 export async function GET(req: NextRequest) {
-  const [total, movies, series, books, games, rated, watched, planned] = await Promise.all([
+  const [
+    total,
+    movies,
+    series,
+    books,
+    games,
+    rated,
+    watched,
+    planned,
+    unratedMovies,
+    unratedSeries,
+    unratedAnime,
+    ratedMovies,
+    ratedSeries,
+    ratedAnime,
+  ] = await Promise.all([
     db.media.count(),
     db.media.count({ where: { type: "movie" } }),
     db.media.count({ where: { type: "series" } }),
@@ -12,6 +27,14 @@ export async function GET(req: NextRequest) {
     db.media.count({ where: { userRating: { not: null } } }),
     db.media.count({ where: { watched: true } }),
     db.media.count({ where: { status: "planned" } }),
+    // Watchlist = unrated items (userRating = null)
+    db.media.count({ where: { type: "movie", userRating: null } }),
+    db.media.count({ where: { type: "series", userRating: null, isAnime: false } }),
+    db.media.count({ where: { type: "series", userRating: null, isAnime: true } }),
+    // Watched = rated items (userRating != null)
+    db.media.count({ where: { type: "movie", userRating: { not: null } } }),
+    db.media.count({ where: { type: "series", userRating: { not: null }, isAnime: false } }),
+    db.media.count({ where: { type: "series", userRating: { not: null }, isAnime: true } }),
   ]);
 
   // Rating distribution
@@ -46,9 +69,19 @@ export async function GET(req: NextRequest) {
   // Average rating
   const allRated = await db.media.findMany({
     where: { userRating: { not: null } },
-    select: { userRating: true },
+    select: { userRating: true, runtime: true, type: true },
   });
   const avgRating = allRated.length > 0 ? allRated.reduce((s, m) => s + (m.userRating || 0), 0) / allRated.length : 0;
+
+  // Watch time: movies with runtime + estimated 45min per series episode
+  const movieMinutes = allRated
+    .filter((m) => m.type === "movie")
+    .reduce((s, m) => s + (m.runtime || 120), 0); // default 120min if no runtime
+  const seriesMinutes = allRated
+    .filter((m) => m.type === "series")
+    .reduce((s, m) => s + (m.runtime || 480), 0); // default 480min (8 episodes) per series
+  const totalMinutes = movieMinutes + seriesMinutes;
+  const totalHours = Math.round(totalMinutes / 60);
 
   return NextResponse.json({
     counts: {
@@ -60,12 +93,22 @@ export async function GET(req: NextRequest) {
       rated,
       watched,
       planned,
-      // Aliases for Home view compatibility
-      watchlist: planned,
-      watchedMovies: rated,
+      // Watchlist = unrated items
+      watchlist: unratedMovies + unratedSeries + unratedAnime,
+      watchlistMovies: unratedMovies,
+      watchlistShows: unratedSeries,
+      watchlistAnime: unratedAnime,
+      // Watched = rated items
+      watchedMovies: ratedMovies,
       watchedEpisodes: 0, // episode tracking is in localStorage
-      following: await db.media.count({ where: { type: "series", status: "planned", isAnime: false, userRating: null } }),
+      following: unratedSeries, // TV shows in watchlist
       ratings: rated,
+    },
+    watchTime: {
+      totalMinutes,
+      totalHours,
+      movieMinutes,
+      episodeMinutes: seriesMinutes,
     },
     ratingDist: ratingDist.map((r) => ({ value: r.userRating, count: r._count })),
     typeDist: typeDist.map((t) => ({ type: t.type, count: t._count })),
