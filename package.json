@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "db:sync": "prisma generate && prisma db push",
-    "repair:posters": "node scripts/repair-media-posters.mjs"
+    "repair:posters": "node scripts/repair-media-posters.mjs",
+    "clean:qa": "node scripts/clean-qa-artifacts.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -65,3 +65,19 @@ server.log
 /upload/
 /mini-services/
 /screenshot-*.png
+
+# QA / local test artifacts
+/tool-results/
+/playwright-report/
+/test-results/
+/coverage/
+/.nyc_output/
+/screenshot-*.jpg
+/screenshot-*.jpeg
+/screenshot-*.webp
+/qa*.png
+/qa*.jpg
+/qa*.jpeg
+/qa*.webp
+/worklog.md
+/*.trace.zip
