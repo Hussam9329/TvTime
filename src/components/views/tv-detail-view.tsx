@@ -1,20 +1,19 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useFollowing, useTrackedShows, useRatingMutate, useRatings } from "@/hooks/use-tmdb";
+import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useTrackedShows, useRatingMutate, useMediaUpdate, type EpisodeCompletion } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { RatingStars } from "@/components/media/rating-stars";
+import { RatingDialog } from "@/components/media/rating-dialog";
 import { MediaRow } from "@/components/media/media-row";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
-  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers,
+  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -23,15 +22,46 @@ export function TvDetailView() {
   const { tvId, back, goPerson } = useNav();
   const detail = useTvDetail(tvId);
   const watchlist = useWatchlist();
-  const following = useFollowing();
   const trackedShows = useTrackedShows();
-  const ratings = useRatings();
   const watchlistToggle = useWatchlistToggle();
   const followingToggle = useFollowingToggle();
   const ratingMutate = useRatingMutate();
+  const mediaUpdate = useMediaUpdate();
 
   const [activeTab, setActiveTab] = useState("seasons");
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [lastAutoPromptedShowId, setLastAutoPromptedShowId] = useState<string | null>(null);
+
+  // Derive values needed for effects BEFORE early returns (rules-of-hooks).
+  const tData = detail.data;
+  const trackedShow = tData ? trackedShows.data?.items.find((w: any) => w.tmdbId === tData.id) : undefined;
+  const myRating = trackedShow?.userRating ?? null;
+  const isFullyWatched = trackedShow?.watched === true;
+  const showTrackingStatus = trackedShow?.status ?? null;
+  const tmdbStatus = tData?.status || "";
+  const isEnded = /ended|canceled|cancelled/i.test(tmdbStatus);
+
+  // Auto-prompt rating when an Ended show is fully watched and unrated.
+  // Uses the "adjust state during render" pattern (fires once per show).
+  const shouldAutoPrompt = isFullyWatched && isEnded && myRating == null && !!trackedShow?.id;
+  if (shouldAutoPrompt && trackedShow?.id !== lastAutoPromptedShowId) {
+    setLastAutoPromptedShowId(trackedShow?.id ?? null);
+    setRatingOpen(true);
+  }
+
+  // If show is fully watched AND Ended but DB status is still "uptodate" or legacy "watched",
+  // promote it to "finished" (TMDB may have changed since the show was marked).
+  // Using useEffect because this is a side effect (API call), not a state adjustment.
+  useEffect(() => {
+    if (trackedShow?.id && isFullyWatched && isEnded && showTrackingStatus !== "finished" && showTrackingStatus !== null) {
+      mediaUpdate.mutateAsync({
+        id: trackedShow.id,
+        status: "finished",
+        watched: true,
+      }).catch(() => {});
+    }
+  }, [trackedShow?.id, isFullyWatched, isEnded, showTrackingStatus]);
 
   if (detail.isLoading) {
     return (
@@ -57,13 +87,23 @@ export function TvDetailView() {
     );
   }
 
+  // After early returns, detail.data is guaranteed to be defined.
   const t = detail.data;
   const inWatchlist = watchlist.data?.items.some((w) => w.mediaType === "tv" && w.tmdbId === t.id);
   const isFollowing = trackedShows.data?.items.some((w: any) => w.tmdbId === t.id) ?? false;
-  const myRating = ratings.data?.items.find((r) => r.mediaType === "tv" && r.tmdbId === t.id)?.value || 0;
-  // Check if this show is marked as fully watched in DB
-  const trackedShow = trackedShows.data?.items.find((w: any) => w.tmdbId === t.id);
-  const isFullyWatched = trackedShow?.watched === true || trackedShow?.status === "watched";
+
+  // Derive the "effective" tracking label:
+  //  - If show is Ended AND user watched all -> "Finished"
+  //  - If show is ongoing AND user watched all aired -> "Up To Date"
+  //  - Otherwise -> null
+  const effectiveLabel: "finished" | "uptodate" | null =
+    isFullyWatched
+      ? (isEnded
+          ? "finished"
+          : showTrackingStatus === "finished"
+            ? "finished"  // DB says finished even if TMDB doesn't (legacy data)
+            : "uptodate")
+      : null;
 
   const year = t.first_air_date?.slice(0, 4);
   const runtime = t.episode_run_time?.[0] ? `${t.episode_run_time[0]}m` : null;
@@ -108,15 +148,28 @@ export function TvDetailView() {
     toast.success(isFollowing ? "Unfollowed" : "Following — track episodes!");
   };
 
-  const onRate = (v: number) => {
-    if (v === 0) {
-      ratingMutate.mutate({ action: "remove", mediaType: "tv", tmdbId: t.id });
-      toast.success("Rating removed");
-    } else {
-      ratingMutate.mutate({ action: "set", mediaType: "tv", tmdbId: t.id, value: v, title: t.name || `TV ${t.id}`, posterPath: t.poster_path });
-      toast.success(`Rated ${v}/10`);
-    }
+  const onRateSubmit = async (rating: number) => {
+    await ratingMutate.mutateAsync({
+      action: "set",
+      mediaType: "tv",
+      tmdbId: t.id,
+      value: rating,
+      title: t.name || `TV ${t.id}`,
+      posterPath: t.poster_path,
+    });
   };
+
+  const onRemoveRating = () => {
+    ratingMutate.mutate({ action: "remove", mediaType: "tv", tmdbId: t.id });
+    toast.success("Rating removed");
+  };
+
+  const ratingColor = myRating == null
+    ? "text-muted-foreground"
+    : myRating >= 80 ? "text-emerald-400"
+    : myRating >= 60 ? "text-amber-400"
+    : myRating >= 40 ? "text-orange-400"
+    : "text-rose-400";
 
   return (
     <div className="space-y-6">
@@ -147,7 +200,17 @@ export function TvDetailView() {
           {/* Title and badges */}
           <div>
             <div className="flex items-end gap-2 mb-2 flex-wrap">
-              <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />{isFullyWatched ? "Finished" : "TV Show"}</Badge>
+              <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
+              {effectiveLabel === "finished" && (
+                <Badge className="bg-emerald-500/20 text-emerald-400 border-0">
+                  <Trophy className="w-3 h-3 mr-1" /> Finished
+                </Badge>
+              )}
+              {effectiveLabel === "uptodate" && (
+                <Badge className="bg-cyan-500/20 text-cyan-400 border-0">
+                  <Zap className="w-3 h-3 mr-1" /> Up To Date
+                </Badge>
+              )}
               {year && <Badge variant="secondary" className="border-0">{year}</Badge>}
               {t.number_of_seasons > 0 && <Badge variant="secondary" className="border-0"><Layers className="w-3 h-3 mr-1" />{t.number_of_seasons} season{t.number_of_seasons > 1 ? "s" : ""}</Badge>}
               {runtime && <Badge variant="secondary" className="border-0"><Clock className="w-3 h-3 mr-1" />{runtime}</Badge>}
@@ -179,9 +242,39 @@ export function TvDetailView() {
 
           <Card className="p-4 glass">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Your rating</p>
-                <RatingStars value={myRating} onChange={onRate} size="lg" showValue />
+              <div className="flex items-center gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Your rating</p>
+                  {myRating != null ? (
+                    <div className="flex items-center gap-2">
+                      <div className={`text-4xl font-extrabold ${ratingColor}`}>
+                        {myRating}
+                        <span className="text-lg text-muted-foreground">/100</span>
+                      </div>
+                      <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-amber-400" style={{ width: `${myRating}%` }} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="text-2xl font-bold text-muted-foreground">—</div>
+                      <span className="text-xs text-muted-foreground">
+                        {effectiveLabel === "finished" ? "Rate this finished show" : effectiveLabel === "uptodate" ? "Rate later when show ends" : "Not rated yet"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {myRating != null && (
+                  <Button variant="outline" size="sm" onClick={onRemoveRating}>
+                    Remove rating
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => setRatingOpen(true)}>
+                  <Star className="w-4 h-4 mr-1 fill-current" />
+                  {myRating != null ? "Re-rate" : "Rate out of 100"}
+                </Button>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground mb-1">TMDB score</p>
@@ -222,6 +315,15 @@ export function TvDetailView() {
             defaultSeason={selectedSeason ?? defaultSeason}
             onSelectSeason={setSelectedSeason}
             fullyWatched={isFullyWatched}
+            onCompletion={(c) => {
+              if (!c) return;
+              if (c.newStatus === "finished" && c.needsRating) {
+                setRatingOpen(true);
+                toast.success("Show finished! Please rate it out of 100.");
+              } else if (c.newStatus === "uptodate") {
+                toast.info("You're all caught up! More episodes coming soon.");
+              }
+            }}
           />
         </TabsContent>
 
@@ -301,6 +403,15 @@ export function TvDetailView() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Rating dialog — out of 100. Auto-opens when an Ended show is fully watched and unrated. */}
+      <RatingDialog
+        open={ratingOpen}
+        onOpenChange={setRatingOpen}
+        title={t.name || ""}
+        poster={t.poster_path ? img(t.poster_path, "w185") : null}
+        onRate={onRateSubmit}
+      />
     </div>
   );
 }
@@ -311,12 +422,14 @@ function SeasonEpisodes({
   defaultSeason,
   onSelectSeason,
   fullyWatched = false,
+  onCompletion,
 }: {
   tvId: number;
   seasons: { season_number: number; name: string; episode_count: number; air_date: string | null; poster_path: string | null; overview: string }[];
   defaultSeason: number | null;
   onSelectSeason: (n: number) => void;
   fullyWatched?: boolean;
+  onCompletion?: (c: EpisodeCompletion | null | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
   const season = defaultSeason ?? seasons[0]?.season_number ?? 0;
@@ -334,7 +447,7 @@ function SeasonEpisodes({
     return fullyWatched || watchedSet.has(`${sn}-${en}`);
   };
 
-  const markAllWatched = () => {
+  const markAllWatched = async () => {
     if (!seasonData.data?.episodes) return;
     const unwatched = seasonData.data.episodes
       .filter((e) => !isEpisodeWatched(e.season_number, e.episode_number))
@@ -343,21 +456,32 @@ function SeasonEpisodes({
       toast.info("All episodes already watched");
       return;
     }
-    // Use individual toggles via Promise
-    Promise.all(unwatched.map((e) => episodeToggle.mutateAsync({ action: "add", showId: tvId, ...e })))
-      .then(() => toast.success(`Marked ${unwatched.length} episodes as watched`))
-      .catch(() => toast.error("Failed to mark episodes"));
+    // Use individual toggles via Promise — capture the last completion result
+    try {
+      const results = await Promise.all(unwatched.map((e) => episodeToggle.mutateAsync({ action: "add", showId: tvId, ...e })));
+      toast.success(`Marked ${unwatched.length} episodes as watched`);
+      // The last result's completion reflects the final state of the show
+      const lastCompletion = results[results.length - 1]?.completion;
+      if (onCompletion) onCompletion(lastCompletion);
+    } catch {
+      toast.error("Failed to mark episodes");
+    }
   };
 
-  const toggleEpisode = (sn: number, en: number, name: string) => {
+  const toggleEpisode = async (sn: number, en: number, name: string) => {
     const isWatched = isEpisodeWatched(sn, en);
-    episodeToggle.mutate({
-      action: isWatched ? "remove" : "add",
-      showId: tvId,
-      seasonNumber: sn,
-      episodeNumber: en,
-      episodeName: name,
-    });
+    try {
+      const result = await episodeToggle.mutateAsync({
+        action: isWatched ? "remove" : "add",
+        showId: tvId,
+        seasonNumber: sn,
+        episodeNumber: en,
+        episodeName: name,
+      });
+      if (onCompletion && !isWatched) onCompletion(result?.completion);
+    } catch {
+      toast.error("Failed to update episode");
+    }
   };
 
   return (

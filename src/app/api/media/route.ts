@@ -22,7 +22,17 @@ export async function GET(req: NextRequest) {
 
     const where: any = { userId: user.id };
     if (type && type !== "undefined" && type !== "all") where.type = type;
-    if (status && status !== "all" && status !== "undefined") where.status = status;
+    if (status && status !== "all" && status !== "undefined") {
+      // Support comma-separated statuses (e.g. "finished,watched" for backward compat)
+      if (status.includes(",")) {
+        where.status = { in: status.split(",").map((s) => s.trim()).filter(Boolean) };
+      } else if (status === "finished") {
+        // Backward compat: legacy shows have status="watched" — treat as finished
+        where.status = { in: ["finished", "watched"] };
+      } else {
+        where.status = status;
+      }
+    }
     if (watched === "true") where.watched = true;
     if (watched === "false") where.watched = false;
     if (rated === "true") where.userRating = { not: null };

@@ -490,3 +490,52 @@ Task: Apply foundation patch - user-scoped Media, episode tracking via API, useS
 - ✅ Library Watched Anime: 5 items
 - ✅ TV Tracking: All 6 tabs working (Watchlist, Finished, Finished Anime, Upcoming, Haven't Watched, Haven't Started)
 - ✅ Continue Watching: Uses useShowProgress (all seasons)
+
+---
+Task ID: tv-status-rewrite
+Agent: main
+Task: Implement proper TV show status tracking — Finished (Ended) vs Up To Date (ongoing), with 0-100 rating prompt on completion
+
+Work Log:
+- Rewrote `autoUpdateShowStatus` in `/api/library/watched-episodes/route.ts`:
+  - Fetches fresh TMDB show status + total episodes
+  - If all episodes watched AND show is Ended/Canceled → status = "finished"
+  - If all episodes watched AND show is ongoing (Returning/In Production) → status = "uptodate"
+  - Removed the old behavior of auto-setting userRating=75 (now the user is prompted)
+  - Returns `CompletionInfo` (newStatus, isEnded, needsRating) so the client can open the RatingDialog
+- Updated `/api/media/route.ts` GET to support `status=finished` matching both "finished" and legacy "watched" (backward compat for shows already in the DB)
+- Updated `use-tmdb.ts`:
+  - `useRatingMutate` now accepts 0-100 directly (removed the *10 multiplication)
+  - `useEpisodeToggle` and `useBulkEpisodeToggle` now return the server's `completion` info and invalidate `["media"]` queries so the TV Tracking view refetches
+  - Added `EpisodeCompletion` type export
+  - All episode-toggle requests now include `withUserId` + `userHeaders`
+- Updated `tv-tracking-view.tsx`:
+  - Added new "Up To Date" tab between Watchlist and Finished
+  - FinishedTab now filters by `status=finished` (was `watched=true`)
+  - New `UpToDateTab` + `UpToDateShowCard` with cyan theme, "Waiting for show to end — rate it then" hint when unrated
+  - `FinishedShowCard` now shows prominent "X/100" rating with progress bar, or a "Rate this show" button if unrated
+  - `NextEpisodeCard` now uses `mutateAsync` and propagates `completion` to parent via `onCompletion` callback
+  - Parent `TvTrackingView` opens `RatingDialog` when `completion.newStatus === "finished" && completion.needsRating`
+- Updated `tv-detail-view.tsx`:
+  - Replaced `RatingStars` (0-10) with big "X/100" display + "Rate out of 100" button → opens `RatingDialog`
+  - Shows "Finished" (emerald Trophy) or "Up To Date" (cyan Zap) badge based on TMDB status + watched state
+  - Auto-promotes "uptodate"/"watched" shows to "finished" when TMDB reports the show as Ended
+  - Auto-opens RatingDialog when opening an Ended, fully-watched, unrated show (uses "adjust state during render" pattern)
+  - `SeasonEpisodes` now uses `mutateAsync` and propagates `completion` to parent
+- Updated `movie-detail-view.tsx`:
+  - Replaced `RatingStars` with `RatingDialog` (0-100) for consistency with TV shows
+  - Shows big "X/100" display with colored rating and progress bar
+- All TypeScript checks pass (`tsc --noEmit`)
+- All ESLint checks pass
+- Production build succeeds (`next build`)
+
+Stage Summary:
+- TV shows now correctly distinguish:
+  - **Finished**: Ended/Canceled show + all episodes watched → appears in "Finished" tab, rating prompt appears
+  - **Up To Date**: Ongoing show + all currently-aired episodes watched → appears in "Up To Date" tab, no rating prompt (waits for show to end)
+  - **Watchlist (planned)**: Show is followed but not fully watched yet
+- Ratings are now 0-100 everywhere (TV detail, movie detail, library cards, TV tracking cards)
+- The RatingDialog auto-opens when:
+  1. User marks the last episode of an Ended show as watched (via `completion.needsRating` from server)
+  2. User opens the detail page of an Ended, fully-watched, unrated show
+- Backward compatible: existing shows with `status="watched"` are treated as "finished" in queries

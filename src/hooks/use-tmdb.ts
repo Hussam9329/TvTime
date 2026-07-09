@@ -388,6 +388,17 @@ export function useWatchedMovieToggle() {
   });
 }
 
+// ---------- Episode completion info ----------
+// Returned by /api/library/watched-episodes after marking/unmarking episodes.
+// The client uses this to decide whether to open the RatingDialog.
+export type EpisodeCompletion = {
+  newStatus: "finished" | "uptodate" | "planned" | null;
+  isEnded: boolean;
+  showTmdbId: number;
+  mediaId: string;
+  needsRating: boolean;
+};
+
 // Watched Episodes - server-backed via /api/library/watched-episodes
 export function useWatchedEpisodes(showId?: number) {
   const userId = useNav((s) => s.userId);
@@ -413,9 +424,9 @@ export function useEpisodeToggle() {
       seasonNumber: number;
       episodeNumber: number;
       episodeName?: string;
-    }) => {
+    }): Promise<{ item?: any; ok?: boolean; completion?: EpisodeCompletion | null }> => {
       if (args.action === "add") {
-        const res = await fetch("/api/library/watched-episodes", {
+        const res = await fetch(withUserId(new URL("/api/library/watched-episodes", window.location.origin)), {
           method: "POST",
           headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({
@@ -440,6 +451,8 @@ export function useEpisodeToggle() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
       qc.invalidateQueries({ queryKey: ["lib", "stats"] });
+      // Also invalidate media queries so TV Tracking view reflects new status
+      qc.invalidateQueries({ queryKey: ["media"] });
     },
   });
 }
@@ -450,8 +463,8 @@ export function useBulkEpisodeToggle() {
     mutationFn: async (args: {
       showId: number;
       episodes: { seasonNumber: number; episodeNumber: number; episodeName?: string }[];
-    }) => {
-      const res = await fetch("/api/library/watched-episodes", {
+    }): Promise<{ ok?: boolean; count?: number; completion?: EpisodeCompletion | null }> => {
+      const res = await fetch(withUserId(new URL("/api/library/watched-episodes", window.location.origin)), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...userHeaders() },
         body: JSON.stringify({ showId: args.showId, episodes: args.episodes }),
@@ -462,6 +475,7 @@ export function useBulkEpisodeToggle() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
       qc.invalidateQueries({ queryKey: ["lib", "stats"] });
+      qc.invalidateQueries({ queryKey: ["media"] });
     },
   });
 }
@@ -585,7 +599,7 @@ export function useRatingMutate() {
   return useMutation({
     mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null }) => {
       if (args.action === "set") {
-        // Find-or-create, then set rating + watched
+        // Find-or-create, then set rating (0-100 directly) + watched
         const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title || "Unknown",
@@ -600,10 +614,10 @@ export function useRatingMutate() {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({
-            userRating: args.value == null ? null : args.value * 10,
+            userRating: args.value, // stored as 0-100 directly
             watched: true,
             watchedAt: new Date().toISOString(),
-            status: "watched",
+            // Preserve existing status (finished/uptodate) — don't override
           }),
         });
       } else {
@@ -618,7 +632,7 @@ export function useRatingMutate() {
             await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
               method: "PATCH",
               headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ userRating: null, watched: false, watchedAt: null, status: null }),
+              body: JSON.stringify({ userRating: null }),
             });
           }
         }

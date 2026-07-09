@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { RatingStars } from "@/components/media/rating-stars";
+import { RatingDialog } from "@/components/media/rating-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, ListMinus, CheckCircle2, Circle, ArrowLeft,
@@ -28,6 +28,7 @@ export function MovieDetailView() {
   const ratingMutate = useRatingMutate();
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [ratingOpen, setRatingOpen] = useState(false);
 
   if (detail.isLoading) {
     return (
@@ -57,7 +58,10 @@ export function MovieDetailView() {
   const m = detail.data;
   const inWatchlist = watchlist.data?.items.some((w) => w.mediaType === "movie" && w.tmdbId === m.id);
   const isWatched = watchedMovies.data?.items.some((w) => w.tmdbId === m.id);
-  const myRating = ratings.data?.items.find((r) => r.mediaType === "movie" && r.tmdbId === m.id)?.value || 0;
+  // Rating is stored 0-100; ratings.data returns items with `userRating` and a legacy `value` (0-10).
+  // We display the raw 0-100 userRating directly.
+  const ratedItem = ratings.data?.items.find((r) => r.mediaType === "movie" && r.tmdbId === m.id);
+  const myRating = ratedItem?.userRating ?? null;
 
   const runtime = m.runtime ? `${Math.floor(m.runtime / 60)}h ${m.runtime % 60}m` : null;
   const year = m.release_date?.slice(0, 4);
@@ -99,15 +103,31 @@ export function MovieDetailView() {
     toast.success(isWatched ? "Marked as not watched" : "Marked as watched");
   };
 
-  const onRate = (v: number) => {
-    if (v === 0) {
-      ratingMutate.mutate({ action: "remove", mediaType: "movie", tmdbId: m.id });
-      toast.success("Rating removed");
-    } else {
-      ratingMutate.mutate({ action: "set", mediaType: "movie", tmdbId: m.id, value: v, title: m.title, posterPath: m.poster_path });
-      toast.success(`Rated ${v}/10`);
-    }
+  const onRateSubmit = async (v: number) => {
+    await ratingMutate.mutateAsync({
+      action: "set",
+      mediaType: "movie",
+      tmdbId: m.id,
+      value: v,
+      title: m.title || "Untitled",
+      posterPath: m.poster_path,
+      releaseDate: m.release_date,
+      voteAverage: m.vote_average,
+      runtime: m.runtime,
+    });
   };
+
+  const onRemoveRating = () => {
+    ratingMutate.mutate({ action: "remove", mediaType: "movie", tmdbId: m.id });
+    toast.success("Rating removed");
+  };
+
+  const ratingColor = myRating == null
+    ? "text-muted-foreground"
+    : myRating >= 80 ? "text-emerald-400"
+    : myRating >= 60 ? "text-amber-400"
+    : myRating >= 40 ? "text-orange-400"
+    : "text-rose-400";
 
   return (
     <div className="space-y-6">
@@ -190,7 +210,33 @@ export function MovieDetailView() {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Your rating</p>
-                <RatingStars value={myRating} onChange={onRate} size="lg" showValue />
+                {myRating != null ? (
+                  <div className="flex items-center gap-2">
+                    <div className={`text-4xl font-extrabold ${ratingColor}`}>
+                      {myRating}
+                      <span className="text-lg text-muted-foreground">/100</span>
+                    </div>
+                    <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-amber-400" style={{ width: `${myRating}%` }} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="text-2xl font-bold text-muted-foreground">—</div>
+                    <span className="text-xs text-muted-foreground">Not rated yet</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {myRating != null && (
+                  <Button variant="outline" size="sm" onClick={onRemoveRating}>
+                    Remove rating
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => setRatingOpen(true)}>
+                  <Star className="w-4 h-4 mr-1 fill-current" />
+                  {myRating != null ? "Re-rate" : "Rate out of 100"}
+                </Button>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground mb-1">TMDB score</p>
@@ -314,6 +360,15 @@ export function MovieDetailView() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Rating dialog — out of 100 */}
+      <RatingDialog
+        open={ratingOpen}
+        onOpenChange={setRatingOpen}
+        title={m.title || ""}
+        poster={m.poster_path ? img(m.poster_path, "w185") : null}
+        onRate={onRateSubmit}
+      />
     </div>
   );
 }
