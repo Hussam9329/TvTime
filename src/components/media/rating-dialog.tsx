@@ -17,8 +17,20 @@ interface RatingDialogProps {
 }
 
 export function RatingDialog({ open, onOpenChange, title, poster, onRate }: RatingDialogProps) {
-  const [rating, setRating] = useState(75);
+  // Default to 50 (neutral) instead of 75 — the old default of 75 made it too
+  // easy to accidentally save a high rating by just clicking "Save Rating"
+  // without moving the slider. 50 forces the user to actively choose a rating.
+  const [rating, setRating] = useState(50);
   const [submitting, setSubmitting] = useState(false);
+
+  // Reset to neutral default each time the dialog opens, so a previous rating
+  // doesn't leak into the next session.
+  // (Adjust state when prop changes pattern — fires when `open` toggles true.)
+  const [lastOpen, setLastOpen] = useState(open);
+  if (open !== lastOpen) {
+    setLastOpen(open);
+    if (open) setRating(50);
+  }
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -40,9 +52,11 @@ export function RatingDialog({ open, onOpenChange, title, poster, onRate }: Rati
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> Rate this
+            <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> Mark as watched & rate
           </DialogTitle>
-          <DialogDescription>How would you rate this out of 100?</DialogDescription>
+          <DialogDescription>
+            Saving will mark this as watched and store your rating out of 100. Drag the slider or pick a preset.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center gap-4 py-2">

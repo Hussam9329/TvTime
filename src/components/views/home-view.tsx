@@ -1,16 +1,17 @@
 "use client";
 
-import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useWatchedMovies, useWatchedEpisodes, useFollowing, useStats, useTvDetail, useMovieDetail } from "@/hooks/use-tmdb";
+import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useWatchedMovies, useWatchedEpisodes, useFollowing, useStats, useTvDetail, useMovieDetail, useWatchedMovieToggle } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { ContinueWatching } from "@/components/media/continue-watching";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
-import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check } from "lucide-react";
+import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
 import { SafeImage } from "@/components/media/safe-image";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export function HomeView() {
   const trending = useTrending("week", "all");
@@ -318,6 +319,7 @@ function RecentlyWatched() {
 
 function RecentlyWatchedCard({ movie, onGo }: { movie: any; onGo: () => void }) {
   const detail = useMovieDetail(movie.tmdbId || null);
+  const unwatchToggle = useWatchedMovieToggle();
 
   // TMDB id is the source of truth for posters. Stored poster values can be
   // stale/corrupted from old title-based matching, so prefer live TMDB detail
@@ -326,10 +328,37 @@ function RecentlyWatchedCard({ movie, onGo }: { movie: any; onGo: () => void }) 
   const posterPath = detail.data?.poster_path || movie.posterPath || movie.poster || null;
   const posterSrc = imgOrPlaceholder(posterPath, "w342");
 
+  const handleUnwatch = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!movie.tmdbId) {
+      // Manual movie (no tmdbId) — unwatch by media id via useMediaUpdate instead.
+      // For now, show a hint to use the movie detail page.
+      toast.info("Open movie details to unwatch manual entries");
+      return;
+    }
+    unwatchToggle.mutate(
+      {
+        action: "remove",
+        tmdbId: movie.tmdbId,
+        title: movie.title,
+        posterPath: movie.posterPath || movie.poster,
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Removed "${movie.title}" from watched`);
+        },
+        onError: () => {
+          toast.error("Failed to unwatch");
+        },
+      }
+    );
+  };
+
   return (
-    <button
+    <div
       onClick={onGo}
-      className="flex-shrink-0 w-[110px] sm:w-[130px] group"
+      className="flex-shrink-0 w-[110px] sm:w-[130px] group cursor-pointer relative"
       title={title}
     >
       <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
@@ -339,13 +368,28 @@ function RecentlyWatchedCard({ movie, onGo }: { movie: any; onGo: () => void }) 
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
         />
-        <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center justify-center">
+        <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center justify-center pointer-events-none">
           <Check className="w-3 h-3 text-white" />
         </div>
+        {/* Quick unwatch button — appears on hover. Removes the movie from
+            Recently Watched and moves it back to the watchlist. Useful for
+            movies that were accidentally marked watched (e.g. by clicking
+            "Rate & Watch" in the Library with the default 75 rating). */}
+        <button
+          onClick={handleUnwatch}
+          disabled={unwatchToggle.isPending}
+          aria-label="Remove from watched"
+          title="Remove from watched"
+          className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-black/70 backdrop-blur flex items-center justify-center text-white/90 hover:bg-rose-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
       <p className="mt-1.5 text-xs font-medium line-clamp-1">{title}</p>
-      <p className="text-[10px] text-muted-foreground">{new Date(movie.watchedAt).toLocaleDateString()}</p>
-    </button>
+      <p className="text-[10px] text-muted-foreground">
+        {movie.watchedAt ? new Date(movie.watchedAt).toLocaleDateString() : "—"}
+      </p>
+    </div>
   );
 }
 

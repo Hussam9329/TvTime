@@ -203,6 +203,16 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
     toast.success("Moved back to watchlist");
   };
 
+  // Quick remove from watchlist — clears status only, doesn't touch watched/rating.
+  // Used on watchlist items where the user wants to remove the movie entirely.
+  const handleQuickUnwatch = async () => {
+    await update.mutateAsync({
+      id: item.id,
+      status: null,
+    });
+    toast.success("Removed from watchlist");
+  };
+
   const handleToggleAnime = async () => {
     await update.mutateAsync({
       id: item.id,
@@ -274,9 +284,14 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
             {/* hover action buttons */}
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3">
               {!isWatchedTab ? (
-                <Button size="sm" className="h-8" onClick={handleMarkWatched}>
-                  <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Rate & Watch
-                </Button>
+                <>
+                  <Button size="sm" className="h-8" onClick={handleMarkWatched} title="Mark this movie as watched and rate it out of 100">
+                    <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Mark Watched
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleQuickUnwatch(); }} title="Remove from watchlist">
+                    Remove
+                  </Button>
+                </>
               ) : (
                 <>
                   <Button size="sm" variant="secondary" className="h-8" onClick={() => setRatingOpen(true)}>

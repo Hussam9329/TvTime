@@ -574,3 +574,27 @@ Stage Summary:
   1. **Lazily** as users open movies (find-or-create now overwrites wrong posters with authoritative TMDB data)
   2. **Bulk** via one POST-deploy call to `/api/admin/repair-posters` (this run will happen right after the Vercel deploy below)
 - The bug class (TMDB-backed records matched by title) is eliminated at the source
+
+---
+Task ID: recently-watched-accidental-fix
+Agent: main
+Task: Movies added to watchlist were appearing in Recently Watched — investigate root cause and prevent recurrence
+
+Work Log:
+- Investigated live DB via /api/media — found 10 watched movies total
+- Identified 2 movies ("The Ex", "The General's Daughter") with rating=75 (the OLD RatingDialog default) and status="watched" — these were accidentally saved via the Library view's "Rate & Watch" button, which opened the dialog with a default of 75 and marked the movie as watched when the user clicked Save
+- The other 8 watched movies have non-default ratings (78, 80, 81, 84, 87, 65) — these are intentional user ratings, kept as-is
+- Root cause: combination of (a) "Rate & Watch" button label being ambiguous (user didn't realize clicking it would mark the movie as watched), (b) RatingDialog defaulting to 75 (high rating, easy to save by mistake), and (c) no easy way to unwatch from the Recently Watched section
+
+Fixes applied:
+- home-view RecentlyWatchedCard: added a quick "×" unwatch button (top-left, hover-revealed). Clicking it calls useWatchedMovieToggle({ action: "remove" }) which moves the movie back to the watchlist (watched=false, status=null, rating=null). Wrapped the card in a <div> instead of nested <button> to allow the inner unwatch button.
+- library-view: renamed "Rate & Watch" button to "Mark Watched" with a clearer title tooltip. Added a separate "Remove" button on watchlist items so users can delete a watchlist entry without marking it watched. Also added handleQuickUnwatch helper that clears status only.
+- rating-dialog: changed default rating from 75 → 50 (neutral, forces the user to actively choose). Added "adjust state when prop changes" pattern to reset to 50 each time the dialog opens. Updated DialogTitle to "Mark as watched & rate" and DialogDescription to explicitly say "Saving will mark this as watched and store your rating out of 100."
+- Added /api/admin/reset-accidental-watched endpoint to bulk-reset movies with the suspicious signature (watched=true, userRating=75, status="watched") back to watchlist (watched=false, status="planned", userRating=null). Idempotent, optional ADMIN_REPAIR_SECRET protection.
+
+Stage Summary:
+- Recently Watched section now has a one-click unwatch button on each card (hover to reveal)
+- Library "Rate & Watch" → "Mark Watched" with explicit copy
+- RatingDialog default 75 → 50 (neutral, less accidental)
+- Admin endpoint will bulk-reset the 2 accidental movies (The Ex, The General's Daughter) after deploy
+- All TypeScript + ESLint checks pass; production build succeeds
