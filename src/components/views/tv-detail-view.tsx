@@ -42,26 +42,44 @@ export function TvDetailView() {
   const tmdbStatus = tData?.status || "";
   const isEnded = /ended|canceled|cancelled/i.test(tmdbStatus);
 
-  // Auto-prompt rating when an Ended show is fully watched and unrated.
-  // Uses the "adjust state during render" pattern (fires once per show).
-  const shouldAutoPrompt = isFullyWatched && isEnded && myRating == null && !!trackedShow?.id;
-  if (shouldAutoPrompt && trackedShow?.id !== lastAutoPromptedShowId) {
-    setLastAutoPromptedShowId(trackedShow?.id ?? null);
-    setRatingOpen(true);
-  }
+  const canRateShow = isFullyWatched && isEnded;
 
-  // If show is fully watched AND Ended but DB status is still "uptodate" or legacy "watched",
-  // promote it to "finished" (TMDB may have changed since the show was marked).
-  // Using useEffect because this is a side effect (API call), not a state adjustment.
+  // Auto-prompt rating only when the entire TV show has officially ended and
+  // the user has watched the whole show. Ongoing shows like FROM must never
+  // open the rating dialog just because the user is up to date.
+  const shouldAutoPrompt = canRateShow && myRating == null && !!trackedShow?.id;
   useEffect(() => {
-    if (trackedShow?.id && isFullyWatched && isEnded && showTrackingStatus !== "finished" && showTrackingStatus !== null) {
+    if (shouldAutoPrompt && trackedShow?.id !== lastAutoPromptedShowId) {
+      setLastAutoPromptedShowId(trackedShow?.id ?? null);
+      setRatingOpen(true);
+    }
+  }, [shouldAutoPrompt, trackedShow?.id, lastAutoPromptedShowId]);
+
+  // Repair stale local DB states whenever the detail page opens:
+  // - Ended + fully watched -> Finished
+  // - Ongoing + caught up -> Up To Date, never Finished
+  // - Ongoing TV rating -> cleared because whole-show rating is locked until end
+  useEffect(() => {
+    if (!trackedShow?.id) return;
+
+    if (isFullyWatched && isEnded && showTrackingStatus !== "finished") {
       mediaUpdate.mutateAsync({
         id: trackedShow.id,
         status: "finished",
         watched: true,
       }).catch(() => {});
+      return;
     }
-  }, [trackedShow?.id, isFullyWatched, isEnded, showTrackingStatus]);
+
+    if (isFullyWatched && !isEnded && (showTrackingStatus === "finished" || showTrackingStatus === "watched" || showTrackingStatus !== "uptodate" || myRating != null)) {
+      mediaUpdate.mutateAsync({
+        id: trackedShow.id,
+        status: "uptodate",
+        watched: true,
+        userRating: null,
+      }).catch(() => {});
+    }
+  }, [trackedShow?.id, isFullyWatched, isEnded, showTrackingStatus, myRating]);
 
   if (detail.isLoading) {
     return (
@@ -97,13 +115,7 @@ export function TvDetailView() {
   //  - If show is ongoing AND user watched all aired -> "Up To Date"
   //  - Otherwise -> null
   const effectiveLabel: "finished" | "uptodate" | null =
-    isFullyWatched
-      ? (isEnded
-          ? "finished"
-          : showTrackingStatus === "finished"
-            ? "finished"  // DB says finished even if TMDB doesn't (legacy data)
-            : "uptodate")
-      : null;
+    isFullyWatched ? (isEnded ? "finished" : "uptodate") : null;
 
   const year = t.first_air_date?.slice(0, 4);
   const runtime = t.episode_run_time?.[0] ? `${t.episode_run_time[0]}m` : null;
@@ -149,6 +161,10 @@ export function TvDetailView() {
   };
 
   const onRateSubmit = async (rating: number) => {
+    if (!canRateShow) {
+      toast.error(isEnded ? "Finish all episodes before rating this show." : "Rating unlocks only after the whole show ends.");
+      return;
+    }
     await ratingMutate.mutateAsync({
       action: "set",
       mediaType: "tv",
@@ -271,9 +287,20 @@ export function TvDetailView() {
                     Remove rating
                   </Button>
                 )}
-                <Button size="sm" onClick={() => setRatingOpen(true)}>
+                <Button
+                  size="sm"
+                  disabled={!canRateShow}
+                  onClick={() => {
+                    if (!canRateShow) {
+                      toast.info(isEnded ? "Finish all episodes before rating this show." : "Rating unlocks only after the whole show ends.");
+                      return;
+                    }
+                    setRatingOpen(true);
+                  }}
+                  title={!canRateShow ? (isEnded ? "Finish all episodes first" : "Rating unlocks after the show ends") : undefined}
+                >
                   <Star className="w-4 h-4 mr-1 fill-current" />
-                  {myRating != null ? "Re-rate" : "Rate out of 100"}
+                  {myRating != null ? "Re-rate" : canRateShow ? "Rate out of 100" : "Rating locked"}
                 </Button>
               </div>
               <div className="text-right">

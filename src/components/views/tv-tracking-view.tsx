@@ -1,6 +1,6 @@
 "use client";
 
-import { useStats, useShowProgress, useEpisodeToggle, useBulkEpisodeToggle, useMedia, useRatingMutate, useTvTracking, type EpisodeCompletion, type TvTrackingCategory } from "@/hooks/use-tmdb";
+import { useStats, useShowProgress, useEpisodeToggle, useBulkEpisodeToggle, useMedia, useRatingMutate, useTvTracking, useTvTrackingCounts, type EpisodeCompletion, type TvTrackingCategory } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,15 +28,13 @@ import { useState } from "react";
 type TrackingStatus = "finished" | "uptodate" | "watchlist";
 
 function deriveTrackingStatus(show: any): TrackingStatus {
+  if (show?._trackingStatus === "finished" || show?._trackingStatus === "uptodate" || show?._trackingStatus === "watchlist") {
+    return show._trackingStatus;
+  }
+
   const s = String(show?.status || "").toLowerCase();
-  if (s === "finished") return "finished";
-  // Legacy "watched" rows (created before the finished/uptodate split) are
-  // treated as finished — the autoUpdateShowStatus migration will refine them
-  // to either "finished" or "uptodate" on the next episode toggle.
-  if (s === "watched" && show?.watched) return "finished";
-  if (s === "uptodate") return "uptodate";
-  // Default: anything not explicitly finished/uptodate is in the watchlist
-  // (status === "planned" or null, or watched === false).
+  if (s === "finished" && show?._isEndedByTmdb === true) return "finished";
+  if ((s === "finished" || s === "watched" || s === "uptodate") && show?.watched) return "uptodate";
   return "watchlist";
 }
 
@@ -64,8 +62,8 @@ function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
 
 export function TvTrackingView() {
   const stats = useStats();
-  const trackingOverview = useTvTracking({ category: "all", sortBy: "title", order: "asc", limit: 60, offset: 0 });
-  const counts = trackingOverview.data?.counts;
+  const trackingCounts = useTvTrackingCounts();
+  const counts = trackingCounts.data?.counts;
   const goTv = useNav((s) => s.goTv);
 
   // Rating dialog state — kept for completion flows that open from episode actions.
@@ -104,10 +102,10 @@ export function TvTrackingView() {
 
       {/* Global Stats row — never page-scoped */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard icon={<Layers className="w-5 h-5" />} label="All Shows" value={counts?.all ?? 0} color="from-purple-500/20 to-purple-500/5" />
-        <StatCard icon={<BookOpen className="w-5 h-5" />} label="Watchlist" value={counts?.watchlist ?? 0} color="from-rose-500/20 to-rose-500/5" />
-        <StatCard icon={<Zap className="w-5 h-5" />} label="Up To Date" value={counts?.uptodate ?? 0} color="from-cyan-500/20 to-cyan-500/5" />
-        <StatCard icon={<Trophy className="w-5 h-5" />} label="Finished" value={(counts?.finished ?? 0) + (counts?.finishedAnime ?? 0)} color="from-emerald-500/20 to-emerald-500/5" />
+        <StatCard icon={<Layers className="w-5 h-5" />} label="All Shows" value={counts?.all ?? "…"} color="from-purple-500/20 to-purple-500/5" />
+        <StatCard icon={<BookOpen className="w-5 h-5" />} label="Watchlist" value={counts?.watchlist ?? "…"} color="from-rose-500/20 to-rose-500/5" />
+        <StatCard icon={<Zap className="w-5 h-5" />} label="Up To Date" value={counts?.uptodate ?? "…"} color="from-cyan-500/20 to-cyan-500/5" />
+        <StatCard icon={<Trophy className="w-5 h-5" />} label="Finished" value={counts ? counts.finished + counts.finishedAnime : "…"} color="from-emerald-500/20 to-emerald-500/5" />
       </div>
 
       {stats.data?.watchTime && (
@@ -116,7 +114,7 @@ export function TvTrackingView() {
         </p>
       )}
 
-      <AllShowsTab onGo={goTv} />
+      <AllShowsTab onGo={goTv} globalCounts={counts} />
 
       <RatingDialog
         open={!!ratingTarget}
@@ -134,7 +132,7 @@ export function TvTrackingView() {
 // "All" tab — shows every tracked series, each badged with its current tracking
 // status (Finished / Up To Date / Watchlist). Includes quick filter chips so the
 // user can drill into a specific status without leaving the tab.
-function AllShowsTab({ onGo }: { onGo: (id: number) => void }) {
+function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globalCounts?: any }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<TvTrackingCategory>("all");
   const limit = 60;
@@ -142,7 +140,7 @@ function AllShowsTab({ onGo }: { onGo: (id: number) => void }) {
 
   const items = tracking.data?.items ?? [];
   const total = tracking.data?.total ?? 0;
-  const counts = tracking.data?.counts ?? {
+  const counts = tracking.data?.counts ?? globalCounts ?? {
     all: 0,
     watchlist: 0,
     uptodate: 0,
@@ -630,12 +628,12 @@ function EmptyTab({ icon, title, subtitle }: { icon: React.ReactNode; title: str
 
 // ============ SHARED COMPONENTS ============
 
-function StatCard({ icon, label, value, suffix, color }: { icon: React.ReactNode; label: string; value: number; suffix?: string; color: string }) {
+function StatCard({ icon, label, value, suffix, color }: { icon: React.ReactNode; label: string; value: number | string; suffix?: string; color: string }) {
   return (
     <Card className={`p-4 relative overflow-hidden bg-gradient-to-br ${color}`}>
       <div className="relative">
         <div className="w-9 h-9 rounded-lg bg-background/50 backdrop-blur flex items-center justify-center text-primary mb-2">{icon}</div>
-        <p className="text-2xl font-extrabold">{value}{suffix && <span className="text-sm text-muted-foreground font-normal">{suffix}</span>}</p>
+        <p className="text-2xl font-extrabold">{value}{suffix && value !== "…" && <span className="text-sm text-muted-foreground font-normal">{suffix}</span>}</p>
         <p className="text-xs text-muted-foreground">{label}</p>
       </div>
     </Card>

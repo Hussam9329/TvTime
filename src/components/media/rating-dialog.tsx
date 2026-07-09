@@ -38,8 +38,8 @@ export function RatingDialog({ open, onOpenChange, title, poster, onRate }: Rati
       await onRate(rating);
       toast.success(`Rated ${rating}/100`);
       onOpenChange(false);
-    } catch {
-      toast.error("Failed to save rating");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save rating");
     } finally {
       setSubmitting(false);
     }

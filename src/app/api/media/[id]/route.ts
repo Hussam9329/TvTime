@@ -2,6 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMedia } from "@/lib/media-normalize";
+import { tmdb } from "@/lib/tmdb";
+
+function isEndedTvStatus(status?: string | null) {
+  const normalized = String(status || "").trim().toLowerCase();
+  return normalized === "ended" || normalized === "canceled" || normalized === "cancelled";
+}
+
+async function getTvRatingEligibility(userId: string, tmdbId: number | null | undefined, fallbackTotalEpisodes?: number | null) {
+  if (!tmdbId) return { allowed: false, reason: "missing-tmdb-id", totalEpisodes: 0, watchedEpisodes: 0 };
+
+  try {
+    const detail: any = await tmdb.tvDetail(Number(tmdbId));
+    if (!isEndedTvStatus(detail?.status)) {
+      return { allowed: false, reason: "show-not-ended", totalEpisodes: detail?.number_of_episodes ?? fallbackTotalEpisodes ?? 0, watchedEpisodes: 0 };
+    }
+
+    const totalEpisodes = Number(detail?.number_of_episodes ?? fallbackTotalEpisodes ?? 0);
+    const watchedEpisodes = await db.watchedEpisode.count({ where: { userId, showId: Number(tmdbId) } });
+    if (totalEpisodes > 0 && watchedEpisodes < totalEpisodes) {
+      return { allowed: false, reason: "not-fully-watched", totalEpisodes, watchedEpisodes };
+    }
+
+    return { allowed: true, reason: "ok", totalEpisodes, watchedEpisodes };
+  } catch (error) {
+    console.warn("[media:update] Unable to verify TV rating eligibility", tmdbId, error);
+    return { allowed: false, reason: "tmdb-unverified", totalEpisodes: fallbackTotalEpisodes ?? 0, watchedEpisodes: 0 };
+  }
+}
 
 export async function PATCH(
   req: NextRequest,
@@ -24,6 +52,24 @@ export async function PATCH(
 
     const existing = await db.media.findFirst({ where: { id, userId: user.id } });
     if (!existing) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
+
+    if (existing.type === "series" && data.userRating != null) {
+      const eligibility = await getTvRatingEligibility(user.id, existing.tmdbId, existing.episodes);
+      if (!eligibility.allowed) {
+        const isNotFullyWatched = eligibility.reason === "not-fully-watched";
+        return NextResponse.json(
+          {
+            error: isNotFullyWatched
+              ? "TV series can only be rated after every episode has been watched."
+              : "TV series can only be rated after the whole show has ended on TMDB.",
+            code: isNotFullyWatched ? "TV_RATING_REQUIRES_ALL_EPISODES" : "TV_RATING_LOCKED_UNTIL_ENDED",
+            totalEpisodes: eligibility.totalEpisodes,
+            watchedEpisodes: eligibility.watchedEpisodes,
+          },
+          { status: 409 }
+        );
+      }
+    }
 
     const item = await db.media.update({ where: { id }, data });
     return NextResponse.json({ item: normalizeMedia(item) });

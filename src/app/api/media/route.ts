@@ -23,13 +23,12 @@ export async function GET(req: NextRequest) {
     const where: any = { userId: user.id };
     if (type && type !== "undefined" && type !== "all") where.type = type;
     if (status && status !== "all" && status !== "undefined") {
-      // Support comma-separated statuses (e.g. "finished,watched" for backward compat)
+      // Support comma-separated statuses when callers intentionally request multiple states.
       if (status.includes(",")) {
         where.status = { in: status.split(",").map((s) => s.trim()).filter(Boolean) };
-      } else if (status === "finished") {
-        // Backward compat: legacy shows have status="watched" — treat as finished
-        where.status = { in: ["finished", "watched"] };
       } else {
+        // Do not treat legacy status="watched" as Finished for TV shows.
+        // Finished is now a strict work-level state repaired by /api/tv-tracking.
         where.status = status;
       }
     }

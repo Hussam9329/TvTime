@@ -312,6 +312,8 @@ export function useWatchlistToggle() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },
   });
 }
@@ -388,6 +390,8 @@ export function useWatchedMovieToggle() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },
   });
 }
@@ -455,8 +459,10 @@ export function useEpisodeToggle() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
       qc.invalidateQueries({ queryKey: ["lib", "stats"] });
-      // Also invalidate media queries so TV Tracking view reflects new status
+      // Also invalidate media/TV tracking queries so every counter updates immediately.
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },
   });
 }
@@ -480,6 +486,8 @@ export function useBulkEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
       qc.invalidateQueries({ queryKey: ["lib", "stats"] });
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },
   });
 }
@@ -576,6 +584,8 @@ export function useFollowingToggle() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },
   });
 }
@@ -614,7 +624,7 @@ export function useRatingMutate() {
           rating: args.voteAverage,
           runtime: args.runtime,
         });
-        await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+        const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({
@@ -624,6 +634,10 @@ export function useRatingMutate() {
             // Preserve existing status (finished/uptodate) — don't override
           }),
         });
+        if (!patchRes.ok) {
+          const errorBody = await patchRes.json().catch(() => ({}));
+          throw new Error(errorBody?.error || "Failed to save rating");
+        }
       } else {
         // Remove rating: find by tmdbId and clear
         const url = withUserId(new URL("/api/media", window.location.origin));
@@ -645,6 +659,8 @@ export function useRatingMutate() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },
   });
 }
@@ -706,6 +722,13 @@ export interface TvTrackingResponse {
   category: TvTrackingCategory;
   counts: TvTrackingCounts;
   countsAreGlobal: boolean;
+  repairedOnRead?: boolean;
+}
+
+export interface TvTrackingCountsResponse {
+  counts: TvTrackingCounts;
+  countsAreGlobal: boolean;
+  repairedOnRead?: boolean;
 }
 
 async function tvTrackingGet<T>(params?: Record<string, string | number | boolean | undefined>): Promise<T> {
@@ -722,6 +745,15 @@ async function tvTrackingGet<T>(params?: Record<string, string | number | boolea
   return res.json();
 }
 
+export function useTvTrackingCounts() {
+  const userId = useNav((s) => s.userId);
+  return useQuery({
+    queryKey: ["tv-tracking-counts", userId || getClientUserId()],
+    queryFn: () => tvTrackingGet<TvTrackingCountsResponse>({ countsOnly: true }),
+    staleTime: 30_000,
+  });
+}
+
 export function useTvTracking(params: {
   category?: TvTrackingCategory;
   search?: string;
@@ -734,7 +766,8 @@ export function useTvTracking(params: {
   return useQuery({
     queryKey: ["tv-tracking", userId || getClientUserId(), params],
     queryFn: () => tvTrackingGet<TvTrackingResponse>(params),
-    staleTime: 0,
+    staleTime: 30_000,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -934,6 +967,8 @@ export function useMediaUpdate() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },
   });
 }

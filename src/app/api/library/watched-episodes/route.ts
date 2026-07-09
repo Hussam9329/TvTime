@@ -63,7 +63,9 @@ async function autoUpdateShowStatus(userId: string, showTmdbId: number): Promise
       const statusChanged = media.status !== newStatus;
       const wasNotWatched = !media.watched;
 
-      if (statusChanged || wasNotWatched) {
+      const mustClearOngoingRating = newStatus === "uptodate" && media.userRating != null;
+
+      if (statusChanged || wasNotWatched || mustClearOngoingRating) {
         await db.media.update({
           where: { id: media.id },
           data: {
@@ -71,12 +73,14 @@ async function autoUpdateShowStatus(userId: string, showTmdbId: number): Promise
             watched: true,
             status: newStatus,
             watchedAt: media.watchedAt ?? new Date(),
-            // NOTE: Do NOT touch userRating here — client prompts the user.
+            // Rating is locked until the whole TV show has ended. If the show is only
+            // up to date / still airing, remove accidental legacy ratings.
+            ...(newStatus === "uptodate" ? { userRating: null } : {}),
           },
         });
       }
 
-      // Only prompt for rating if show is finished AND user hasn't rated yet
+      // Only prompt for rating if the whole show is truly ended AND user hasn't rated yet.
       const needsRating = isEnded && media.userRating == null;
 
       return {

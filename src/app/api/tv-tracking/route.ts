@@ -16,8 +16,9 @@ const CATEGORY_VALUES = new Set([
 ]);
 const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
-const FINISHED_STATUSES = new Set(["finished", "watched"]);
 const STALE_WATCH_DAYS = 30;
+const TMDB_META_TTL_MS = 6 * 60 * 60 * 1000;
+const STATUS_REPAIR_CONCURRENCY = 5;
 
 type TvTrackingCategory =
   | "all"
@@ -34,30 +35,47 @@ type EpisodeMeta = {
   lastWatchedAt: Date | null;
 };
 
-type UpcomingMeta = {
-  airDate: string;
-  name: string | null;
-  seasonNumber: number | null;
-  episodeNumber: number | null;
+type TvMeta = {
+  tmdbId: number;
+  status: string | null;
+  isEnded: boolean;
+  inProduction: boolean | null;
+  totalEpisodes: number | null;
+  totalSeasons: number | null;
+  nextEpisode: {
+    airDate: string;
+    name: string | null;
+    seasonNumber: number | null;
+    episodeNumber: number | null;
+  } | null;
+  fetchedAt: number;
 };
 
+type DecoratedShow = any & {
+  _serverTrackingStatus: "finished" | "uptodate" | "watchlist";
+  _serverIsEnded: boolean;
+  _serverTvMeta: TvMeta | null;
+};
+
+const tvMetaCache = new Map<number, TvMeta>();
+
 function normalizeStatus(status?: string | null) {
-  return String(status || "").toLowerCase();
+  return String(status || "").trim().toLowerCase();
 }
 
-function trackingStatusFor(show: any): "finished" | "uptodate" | "watchlist" {
-  const status = normalizeStatus(show.status);
-  if (FINISHED_STATUSES.has(status)) return "finished";
-  if (status === "uptodate") return "uptodate";
-  return "watchlist";
+function isEndedTvStatus(status?: string | null) {
+  const normalized = normalizeStatus(status);
+  // Finished is a strict work-level state. Returning Series / In Production must never be Finished.
+  return normalized === "ended" || normalized === "canceled" || normalized === "cancelled";
 }
 
-function isFinished(show: any) {
-  return trackingStatusFor(show) === "finished";
-}
-
-function isUpToDate(show: any) {
-  return trackingStatusFor(show) === "uptodate";
+function isFutureDate(date?: string | null) {
+  if (!date) return false;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  return parsed >= today;
 }
 
 function watchedMetaFor(show: any, episodeMetaByShowId: Map<number, EpisodeMeta>): EpisodeMeta {
@@ -83,38 +101,99 @@ async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper:
   return results;
 }
 
-async function getUpcomingMeta(shows: any[]) {
-  const meta = new Map<string, UpcomingMeta>();
-  const candidates = shows.filter((show) => Number(show.tmdbId || 0) > 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+async function getTvMeta(tmdbId: number): Promise<TvMeta | null> {
+  if (!tmdbId) return null;
+  const cached = tvMetaCache.get(tmdbId);
+  if (cached && Date.now() - cached.fetchedAt < TMDB_META_TTL_MS) return cached;
 
-  await mapWithConcurrency(candidates, 6, async (show) => {
-    try {
-      const detail: any = await tmdb.tvDetail(Number(show.tmdbId));
-      const nextEpisode = detail?.next_episode_to_air;
-      const airDateRaw = nextEpisode?.air_date;
-      if (!airDateRaw) return;
-
-      const airDate = new Date(`${airDateRaw}T00:00:00Z`);
-      if (Number.isNaN(airDate.getTime()) || airDate < today) return;
-
-      meta.set(show.id, {
-        airDate: airDateRaw,
-        name: typeof nextEpisode?.name === "string" ? nextEpisode.name : null,
-        seasonNumber: typeof nextEpisode?.season_number === "number" ? nextEpisode.season_number : null,
-        episodeNumber: typeof nextEpisode?.episode_number === "number" ? nextEpisode.episode_number : null,
-      });
-    } catch (error) {
-      // TMDB can fail for an individual title. Do not fail the whole tracking page.
-      console.warn("[tv-tracking] Failed to refresh upcoming metadata", show.tmdbId, error);
-    }
-  });
-
-  return meta;
+  try {
+    const detail: any = await tmdb.tvDetail(tmdbId);
+    const nextEpisode = detail?.next_episode_to_air;
+    const nextAirDate = typeof nextEpisode?.air_date === "string" ? nextEpisode.air_date : null;
+    const meta: TvMeta = {
+      tmdbId,
+      status: typeof detail?.status === "string" ? detail.status : null,
+      isEnded: isEndedTvStatus(detail?.status),
+      inProduction: typeof detail?.in_production === "boolean" ? detail.in_production : null,
+      totalEpisodes: typeof detail?.number_of_episodes === "number" ? detail.number_of_episodes : null,
+      totalSeasons: typeof detail?.number_of_seasons === "number" ? detail.number_of_seasons : null,
+      nextEpisode: nextAirDate && isFutureDate(nextAirDate)
+        ? {
+            airDate: nextAirDate,
+            name: typeof nextEpisode?.name === "string" ? nextEpisode.name : null,
+            seasonNumber: typeof nextEpisode?.season_number === "number" ? nextEpisode.season_number : null,
+            episodeNumber: typeof nextEpisode?.episode_number === "number" ? nextEpisode.episode_number : null,
+          }
+        : null,
+      fetchedAt: Date.now(),
+    };
+    tvMetaCache.set(tmdbId, meta);
+    return meta;
+  } catch (error) {
+    console.warn("[tv-tracking] Failed to refresh TMDB status", tmdbId, error);
+    return null;
+  }
 }
 
-function sortShows(items: any[], sortBy: string, order: "asc" | "desc") {
+function deriveTrackingStatus(show: any, meta: TvMeta | null, watched: EpisodeMeta): "finished" | "uptodate" | "watchlist" {
+  const dbStatus = normalizeStatus(show.status);
+  const watchedCount = watched.count;
+  const totalEpisodes = meta?.totalEpisodes ?? show.episodes ?? null;
+  const hasCompletedKnownEpisodeSet = Boolean(totalEpisodes && watchedCount >= Number(totalEpisodes));
+  const isDbCompleted = show.watched === true || dbStatus === "finished" || dbStatus === "watched" || dbStatus === "uptodate";
+
+  // The important rule: a TV show is Finished only when TMDB says the whole work has ended.
+  // Local status="finished" or legacy status="watched" is not enough.
+  if (meta?.isEnded && (hasCompletedKnownEpisodeSet || isDbCompleted)) return "finished";
+
+  // Ongoing shows can only be Up To Date, never Finished, when the local record says the
+  // user has caught up to currently known episodes.
+  if (!meta?.isEnded && (isDbCompleted || hasCompletedKnownEpisodeSet)) return "uptodate";
+
+  return "watchlist";
+}
+
+async function repairShowIfNeeded(userId: string, show: any, meta: TvMeta | null, watched: EpisodeMeta, status: "finished" | "uptodate" | "watchlist") {
+  const update: any = {};
+  const dbStatus = normalizeStatus(show.status);
+
+  if (meta) {
+    if (meta.totalEpisodes != null && show.episodes !== meta.totalEpisodes) update.episodes = meta.totalEpisodes;
+    if (meta.totalSeasons != null && show.seasons !== meta.totalSeasons) update.seasons = meta.totalSeasons;
+  }
+
+  if (status === "finished") {
+    if (dbStatus !== "finished") update.status = "finished";
+    if (!show.watched) update.watched = true;
+    if (!show.watchedAt) update.watchedAt = watched.lastWatchedAt ?? new Date();
+  } else if (status === "uptodate") {
+    // Correct accidental/legacy Finished rows such as FROM: ongoing future season -> Up To Date.
+    if (dbStatus !== "uptodate") update.status = "uptodate";
+    if (!show.watched) update.watched = true;
+    if (!show.watchedAt && watched.lastWatchedAt) update.watchedAt = watched.lastWatchedAt;
+
+    // Rating is locked until the whole show ends. Clear accidental ratings for ongoing shows.
+    if (show.userRating != null && meta && !meta.isEnded) update.userRating = null;
+  } else {
+    if (dbStatus === "finished" || dbStatus === "watched" || dbStatus === "uptodate") update.status = "planned";
+    if (show.watched) update.watched = false;
+    if (show.watchedAt) update.watchedAt = null;
+
+    // A not-completed TV show should not keep a whole-show rating.
+    if (show.userRating != null && meta && !meta.isEnded) update.userRating = null;
+  }
+
+  if (Object.keys(update).length === 0) return show;
+
+  try {
+    return await db.media.update({ where: { id: show.id }, data: update });
+  } catch (error) {
+    console.warn("[tv-tracking] Failed to repair tracking row", { userId, mediaId: show.id, tmdbId: show.tmdbId, update, error });
+    return show;
+  }
+}
+
+function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc") {
   const direction = order === "asc" ? 1 : -1;
   return [...items].sort((a, b) => {
     const av = a?.[sortBy];
@@ -138,6 +217,71 @@ function sortShows(items: any[], sortBy: string, order: "asc" | "desc") {
   });
 }
 
+async function buildTrackingSnapshot(userId: string) {
+  const [series, episodeGroups] = await Promise.all([
+    db.media.findMany({ where: { userId, type: "series" } }),
+    db.watchedEpisode.groupBy({
+      by: ["showId"],
+      where: { userId },
+      _count: { _all: true },
+      _max: { watchedAt: true },
+    }),
+  ]);
+
+  const episodeMetaByShowId = new Map<number, EpisodeMeta>();
+  for (const group of episodeGroups) {
+    episodeMetaByShowId.set(group.showId, {
+      count: group._count._all,
+      lastWatchedAt: group._max.watchedAt ?? null,
+    });
+  }
+
+  const decorated = await mapWithConcurrency(series as any[], STATUS_REPAIR_CONCURRENCY, async (show: any) => {
+    const tmdbId = Number(show.tmdbId || 0);
+    const meta = tmdbId > 0 ? await getTvMeta(tmdbId) : null;
+    const watched = watchedMetaFor(show, episodeMetaByShowId);
+    const status = deriveTrackingStatus(show, meta, watched);
+    const repaired = await repairShowIfNeeded(userId, show, meta, watched, status);
+    return {
+      ...repaired,
+      _serverTrackingStatus: status,
+      _serverIsEnded: Boolean(meta?.isEnded),
+      _serverTvMeta: meta,
+    } as DecoratedShow;
+  });
+
+  const isHaventStarted = (show: DecoratedShow) => watchedMetaFor(show, episodeMetaByShowId).count === 0 && show._serverTrackingStatus === "watchlist";
+  const isHaventWatchedWhile = (show: DecoratedShow) => {
+    if (show._serverTrackingStatus !== "watchlist") return false;
+    const meta = watchedMetaFor(show, episodeMetaByShowId);
+    const since = daysSince(meta.lastWatchedAt);
+    return meta.count > 0 && since != null && since >= STALE_WATCH_DAYS;
+  };
+  const isUpcoming = (show: DecoratedShow) => Boolean(show._serverTvMeta?.nextEpisode);
+
+  const counts = {
+    all: decorated.length,
+    watchlist: decorated.filter((show) => show._serverTrackingStatus === "watchlist").length,
+    uptodate: decorated.filter((show) => show._serverTrackingStatus === "uptodate").length,
+    finished: decorated.filter((show) => show._serverTrackingStatus === "finished" && !show.isAnime).length,
+    finishedAnime: decorated.filter((show) => show._serverTrackingStatus === "finished" && show.isAnime).length,
+    upcoming: decorated.filter(isUpcoming).length,
+    haventWatched: decorated.filter(isHaventWatchedWhile).length,
+    haventStarted: decorated.filter(isHaventStarted).length,
+  };
+
+  return {
+    decorated,
+    episodeMetaByShowId,
+    counts,
+    predicates: {
+      isHaventStarted,
+      isHaventWatchedWhile,
+      isUpcoming,
+    },
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
@@ -151,79 +295,51 @@ export async function GET(req: NextRequest) {
     const order = (ORDERS.has(orderParam) ? orderParam : "asc") as "asc" | "desc";
     const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 60, 1), 500);
     const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
+    const countsOnly = url.searchParams.get("countsOnly") === "true";
 
-    const [series, episodeGroups] = await Promise.all([
-      db.media.findMany({ where: { userId: user.id, type: "series" } }),
-      db.watchedEpisode.groupBy({
-        by: ["showId"],
-        where: { userId: user.id },
-        _count: { _all: true },
-        _max: { watchedAt: true },
-      }),
-    ]);
+    const snapshot = await buildTrackingSnapshot(user.id);
 
-    const episodeMetaByShowId = new Map<number, EpisodeMeta>();
-    for (const group of episodeGroups) {
-      episodeMetaByShowId.set(group.showId, {
-        count: group._count._all,
-        lastWatchedAt: group._max.watchedAt ?? null,
+    if (countsOnly) {
+      return NextResponse.json({
+        counts: snapshot.counts,
+        countsAreGlobal: true,
+        repairedOnRead: true,
       });
     }
 
-    // Upcoming needs current TMDB data because the local DB does not persist next_episode_to_air.
-    // The route still keeps the page stable if one title fails to refresh.
-    const upcomingMetaByMediaId = await getUpcomingMeta(series);
-
     const filteredBySearch = search
-      ? series.filter((show) => String(show.title || "").toLowerCase().includes(search))
-      : series;
+      ? snapshot.decorated.filter((show) => String(show.title || "").toLowerCase().includes(search))
+      : snapshot.decorated;
 
-    const isHaventStarted = (show: any) => watchedMetaFor(show, episodeMetaByShowId).count === 0 && !isFinished(show) && !isUpToDate(show);
-    const isHaventWatchedWhile = (show: any) => {
-      if (isFinished(show) || isUpToDate(show)) return false;
-      const meta = watchedMetaFor(show, episodeMetaByShowId);
-      const since = daysSince(meta.lastWatchedAt);
-      return meta.count > 0 && since != null && since >= STALE_WATCH_DAYS;
-    };
-    const isUpcoming = (show: any) => upcomingMetaByMediaId.has(show.id);
-    const isWatchlist = (show: any) => trackingStatusFor(show) === "watchlist";
-
-    const counts = {
-      all: series.length,
-      watchlist: series.filter(isWatchlist).length,
-      uptodate: series.filter(isUpToDate).length,
-      finished: series.filter((show) => isFinished(show) && !show.isAnime).length,
-      finishedAnime: series.filter((show) => isFinished(show) && show.isAnime).length,
-      upcoming: series.filter(isUpcoming).length,
-      haventWatched: series.filter(isHaventWatchedWhile).length,
-      haventStarted: series.filter(isHaventStarted).length,
-    };
-
-    const categoryPredicates: Record<TvTrackingCategory, (show: any) => boolean> = {
+    const categoryPredicates: Record<TvTrackingCategory, (show: DecoratedShow) => boolean> = {
       all: () => true,
-      watchlist: isWatchlist,
-      uptodate: isUpToDate,
-      finished: (show) => isFinished(show) && !show.isAnime,
-      "finished-anime": (show) => isFinished(show) && show.isAnime,
-      upcoming: isUpcoming,
-      "havent-watched-while": isHaventWatchedWhile,
-      "havent-started": isHaventStarted,
+      watchlist: (show) => show._serverTrackingStatus === "watchlist",
+      uptodate: (show) => show._serverTrackingStatus === "uptodate",
+      finished: (show) => show._serverTrackingStatus === "finished" && !show.isAnime,
+      "finished-anime": (show) => show._serverTrackingStatus === "finished" && show.isAnime,
+      upcoming: snapshot.predicates.isUpcoming,
+      "havent-watched-while": snapshot.predicates.isHaventWatchedWhile,
+      "havent-started": snapshot.predicates.isHaventStarted,
     };
 
     const matching = sortShows(filteredBySearch.filter(categoryPredicates[category]), sortBy, order);
     const pageItems = matching.slice(offset, offset + limit).map((show) => {
-      const meta = watchedMetaFor(show, episodeMetaByShowId);
-      const upcoming = upcomingMetaByMediaId.get(show.id) ?? null;
+      const meta = watchedMetaFor(show, snapshot.episodeMetaByShowId);
+      const nextEpisode = show._serverTvMeta?.nextEpisode ?? null;
+      const { _serverTvMeta, _serverTrackingStatus, _serverIsEnded, ...publicShow } = show;
       return {
-        ...show,
-        _trackingStatus: trackingStatusFor(show),
+        ...publicShow,
+        status: _serverTrackingStatus === "watchlist" ? show.status : _serverTrackingStatus,
+        _trackingStatus: _serverTrackingStatus,
+        _isEndedByTmdb: _serverIsEnded,
+        _tmdbStatus: _serverTvMeta?.status ?? null,
         _watchedEpisodeCount: meta.count,
         _lastWatchedAt: meta.lastWatchedAt,
         _daysSinceLastWatch: daysSince(meta.lastWatchedAt),
-        _nextEpisodeAirDate: upcoming?.airDate ?? null,
-        _nextEpisodeName: upcoming?.name ?? null,
-        _nextEpisodeSeasonNumber: upcoming?.seasonNumber ?? null,
-        _nextEpisodeNumber: upcoming?.episodeNumber ?? null,
+        _nextEpisodeAirDate: nextEpisode?.airDate ?? null,
+        _nextEpisodeName: nextEpisode?.name ?? null,
+        _nextEpisodeSeasonNumber: nextEpisode?.seasonNumber ?? null,
+        _nextEpisodeNumber: nextEpisode?.episodeNumber ?? null,
       };
     });
 
@@ -233,8 +349,9 @@ export async function GET(req: NextRequest) {
       limit,
       offset,
       category,
-      counts,
+      counts: snapshot.counts,
       countsAreGlobal: true,
+      repairedOnRead: true,
     });
   } catch (error) {
     console.error("[tv-tracking]", error);
