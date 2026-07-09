@@ -663,6 +663,81 @@ export function useStats() {
   });
 }
 
+
+// TV Tracking - global counts + filtered lists for the TV Tracking/All view.
+// Counts are calculated server-side across the whole library, never from the current page.
+export type TvTrackingCategory =
+  | "all"
+  | "watchlist"
+  | "uptodate"
+  | "finished"
+  | "finished-anime"
+  | "upcoming"
+  | "havent-watched-while"
+  | "havent-started";
+
+export interface TvTrackingCounts {
+  all: number;
+  watchlist: number;
+  uptodate: number;
+  finished: number;
+  finishedAnime: number;
+  upcoming: number;
+  haventWatched: number;
+  haventStarted: number;
+}
+
+export interface TvTrackingItem extends MediaItemDB {
+  _trackingStatus: "finished" | "uptodate" | "watchlist";
+  _watchedEpisodeCount: number;
+  _lastWatchedAt: string | null;
+  _daysSinceLastWatch: number | null;
+  _nextEpisodeAirDate: string | null;
+  _nextEpisodeName: string | null;
+  _nextEpisodeSeasonNumber: number | null;
+  _nextEpisodeNumber: number | null;
+}
+
+export interface TvTrackingResponse {
+  items: TvTrackingItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  category: TvTrackingCategory;
+  counts: TvTrackingCounts;
+  countsAreGlobal: boolean;
+}
+
+async function tvTrackingGet<T>(params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+  const url = withUserId(new URL("/api/tv-tracking", window.location.origin));
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (v != null && v !== undefined && String(v) !== "undefined" && String(v) !== "") {
+        url.searchParams.set(k, String(v));
+      }
+    }
+  }
+  const res = await fetch(url.toString(), { headers: userHeaders() });
+  if (!res.ok) throw new Error(`TV Tracking API ${res.status}`);
+  return res.json();
+}
+
+export function useTvTracking(params: {
+  category?: TvTrackingCategory;
+  search?: string;
+  sortBy?: string;
+  order?: string;
+  limit?: number;
+  offset?: number;
+} = {}) {
+  const userId = useNav((s) => s.userId);
+  return useQuery({
+    queryKey: ["tv-tracking", userId || getClientUserId(), params],
+    queryFn: () => tvTrackingGet<TvTrackingResponse>(params),
+    staleTime: 0,
+  });
+}
+
 // Show progress - fetches ALL seasons of a show (not just first 4) and combines
 // with watched-episodes data to produce a complete progress picture.
 export function useShowProgress(showId: number | null | undefined) {

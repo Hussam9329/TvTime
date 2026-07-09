@@ -1,11 +1,10 @@
 "use client";
 
-import { useFollowing, useStats, useShowProgress, useEpisodeToggle, useBulkEpisodeToggle, useMedia, useRatingMutate, useTrackedShows, type EpisodeCompletion } from "@/hooks/use-tmdb";
+import { useStats, useShowProgress, useEpisodeToggle, useBulkEpisodeToggle, useMedia, useRatingMutate, useTvTracking, type EpisodeCompletion, type TvTrackingCategory } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import {
   AlertDialog,
@@ -21,9 +20,8 @@ import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipFor
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState } from "react";
 
-type TabValue = "all" | "watchlist" | "uptodate" | "finished" | "finished-anime" | "upcoming" | "havent-watched-while" | "havent-started";
 
 // Tracking status derived from a Media row.
 // Used by the "All" tab to badge each show with its current state.
@@ -65,43 +63,18 @@ function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
 }
 
 export function TvTrackingView() {
-  const following = useFollowing();
   const stats = useStats();
+  const trackingOverview = useTvTracking({ category: "all", sortBy: "title", order: "asc", limit: 60, offset: 0 });
+  const counts = trackingOverview.data?.counts;
   const goTv = useNav((s) => s.goTv);
-  const setView = useNav((s) => s.setView);
-  const [tab, setTab] = useState<TabValue>("all");
 
-  // Rating dialog state — opens automatically when an Ended show is finished
+  // Rating dialog state — kept for completion flows that open from episode actions.
   const [ratingTarget, setRatingTarget] = useState<{
     showId: number;
     title: string;
     poster: string | null;
   } | null>(null);
   const ratingMutate = useRatingMutate();
-
-  const followed = following.data?.items ?? [];
-  const followedWithTmdb = followed.filter((s: any) => s.tmdbId);
-
-  // Global handler for episode completion — passed down via context-like prop drilling.
-  // When a show becomes "finished" (Ended + all eps watched) and needs a rating,
-  // we open the RatingDialog. When it becomes "uptodate", we toast.
-  const handleCompletion = (completion: EpisodeCompletion | null | undefined, showTitle?: string, showPoster?: string | null) => {
-    if (!completion) return;
-    if (completion.newStatus === "finished" && completion.needsRating) {
-      setRatingTarget({
-        showId: completion.showTmdbId,
-        title: showTitle || "Show",
-        poster: showPoster ?? null,
-      });
-      toast.success("Show finished! Rate it to complete your tracking.");
-    } else if (completion.newStatus === "finished") {
-      toast.success("Show finished!");
-    } else if (completion.newStatus === "uptodate") {
-      toast.info("You're all caught up! More episodes coming soon.");
-    } else if (completion.newStatus === "planned") {
-      // moved back to watchlist — no toast needed
-    }
-  };
 
   const handleRateSubmit = async (rating: number) => {
     if (!ratingTarget) return;
@@ -125,72 +98,26 @@ export function TvTrackingView() {
         </div>
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">TV Tracking</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Track your shows, episodes, and progress</p>
+          <p className="text-sm text-muted-foreground mt-0.5">All TV filters now live inside All, with global counts across your full library</p>
         </div>
       </div>
 
-      {/* Stats row */}
-      {stats.data && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard icon={<Tv className="w-5 h-5" />} label="Following" value={stats.data.counts.following} color="from-purple-500/20 to-purple-500/5" />
-          <StatCard icon={<CheckCircle2 className="w-5 h-5" />} label="Rated Shows" value={Math.max(0, (stats.data.counts.rated || 0) - (stats.data.counts.watchedMovies || 0))} color="from-emerald-500/20 to-emerald-500/5" />
-          <StatCard icon={<Play className="w-5 h-5" />} label="Watchlist TV" value={stats.data.counts.watchlistShows || 0} color="from-rose-500/20 to-rose-500/5" />
-          <StatCard icon={<Clock className="w-5 h-5" />} label="Watch Time" value={stats.data.watchTime?.totalHours || 0} suffix="h" color="from-amber-500/20 to-amber-500/5" />
-        </div>
+      {/* Global Stats row — never page-scoped */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard icon={<Layers className="w-5 h-5" />} label="All Shows" value={counts?.all ?? 0} color="from-purple-500/20 to-purple-500/5" />
+        <StatCard icon={<BookOpen className="w-5 h-5" />} label="Watchlist" value={counts?.watchlist ?? 0} color="from-rose-500/20 to-rose-500/5" />
+        <StatCard icon={<Zap className="w-5 h-5" />} label="Up To Date" value={counts?.uptodate ?? 0} color="from-cyan-500/20 to-cyan-500/5" />
+        <StatCard icon={<Trophy className="w-5 h-5" />} label="Finished" value={(counts?.finished ?? 0) + (counts?.finishedAnime ?? 0)} color="from-emerald-500/20 to-emerald-500/5" />
+      </div>
+
+      {stats.data?.watchTime && (
+        <p className="text-xs text-muted-foreground px-1 -mt-2">
+          Total watch time: <strong>{stats.data.watchTime.totalHours || 0}h</strong>. Filter counters below are full-library counters, not current-page counters.
+        </p>
       )}
 
-      {/* Tabs */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
-        <TabsList className="w-full justify-start overflow-x-auto no-scrollbar h-auto flex-wrap">
-          <TabsTrigger value="all" className="text-xs h-9">
-            <Layers className="w-3.5 h-3.5 mr-1.5" /> All
-          </TabsTrigger>
-          <TabsTrigger value="watchlist" className="text-xs h-9">
-            <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Watchlist
-          </TabsTrigger>
-          <TabsTrigger value="uptodate" className="text-xs h-9">
-            <Zap className="w-3.5 h-3.5 mr-1.5" /> Up To Date
-          </TabsTrigger>
-          <TabsTrigger value="finished" className="text-xs h-9">
-            <Trophy className="w-3.5 h-3.5 mr-1.5" /> Finished
-          </TabsTrigger>
-          <TabsTrigger value="finished-anime" className="text-xs h-9">
-            <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Finished Anime
-          </TabsTrigger>
-          <TabsTrigger value="upcoming" className="text-xs h-9">
-            <Calendar className="w-3.5 h-3.5 mr-1.5" /> Upcoming
-          </TabsTrigger>
-          <TabsTrigger value="havent-watched-while" className="text-xs h-9">
-            <Clock className="w-3.5 h-3.5 mr-1.5" /> Haven't Watched
-          </TabsTrigger>
-          <TabsTrigger value="havent-started" className="text-xs h-9">
-            <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Haven't Started
-          </TabsTrigger>
-        </TabsList>
+      <AllShowsTab onGo={goTv} />
 
-        <div className="mt-4">
-          {tab === "all" && <AllShowsTab onGo={goTv} />}
-          {tab === "watchlist" && <WatchlistTab shows={followedWithTmdb} onGo={goTv} onCompletion={handleCompletion} />}
-          {tab === "uptodate" && <UpToDateTab onGo={goTv} />}
-          {tab === "finished" && <FinishedTab onGo={goTv} isAnime="false" onCompletion={handleCompletion} />}
-          {tab === "finished-anime" && <FinishedTab onGo={goTv} isAnime="true" onCompletion={handleCompletion} />}
-          {tab === "upcoming" && <UpcomingTab shows={followedWithTmdb} onGo={goTv} />}
-          {tab === "havent-watched-while" && <HaventWatchedWhileTab shows={followedWithTmdb} onGo={goTv} />}
-          {tab === "havent-started" && <HaventStartedTab shows={followedWithTmdb} onGo={goTv} />}
-        </div>
-      </Tabs>
-
-      {/* Empty state */}
-      {following.data && followed.length === 0 && (
-        <Card className="p-12 text-center text-muted-foreground">
-          <Tv className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p className="font-medium text-foreground text-lg">Not following any shows</p>
-          <p className="text-sm mt-1">Follow TV shows to track their episodes and progress</p>
-          <Button className="mt-4" onClick={() => setView("discover")}>Discover shows</Button>
-        </Card>
-      )}
-
-      {/* Rating dialog — opens when an Ended show is fully watched */}
       <RatingDialog
         open={!!ratingTarget}
         onOpenChange={(open) => !open && setRatingTarget(null)}
@@ -209,98 +136,90 @@ export function TvTrackingView() {
 // user can drill into a specific status without leaving the tab.
 function AllShowsTab({ onGo }: { onGo: (id: number) => void }) {
   const [page, setPage] = useState(0);
-  const [filter, setFilter] = useState<"all" | TrackingStatus>("all");
+  const [filter, setFilter] = useState<TvTrackingCategory>("all");
   const limit = 60;
-  // Fetch ALL series (no status filter). The API supports up to 500 per page;
-  // we use 60 per page for performance, with pagination.
-  const allShows = useMedia({ type: "series", sortBy: "title", order: "asc", limit, offset: page * limit });
+  const tracking = useTvTracking({ category: filter, sortBy: "title", order: "asc", limit, offset: page * limit });
 
-  const items = allShows.data?.items ?? [];
-  const total = allShows.data?.total ?? 0;
-
-  // Derive tracking status for each show, then apply the active filter.
-  const itemsWithStatus = useMemo(
-    () => items.map((s: any) => ({ ...s, _trackingStatus: deriveTrackingStatus(s) })),
-    [items]
-  );
-  const filteredItems = filter === "all"
-    ? itemsWithStatus
-    : itemsWithStatus.filter((s: any) => s._trackingStatus === filter);
-
-  // Count by status across the current page (used for the filter chip labels).
-  const counts = useMemo(() => {
-    const c = { finished: 0, uptodate: 0, watchlist: 0 };
-    for (const s of itemsWithStatus) {
-      c[s._trackingStatus as TrackingStatus]++;
-    }
-    return c;
-  }, [itemsWithStatus]);
-
+  const items = tracking.data?.items ?? [];
+  const total = tracking.data?.total ?? 0;
+  const counts = tracking.data?.counts ?? {
+    all: 0,
+    watchlist: 0,
+    uptodate: 0,
+    finished: 0,
+    finishedAnime: 0,
+    upcoming: 0,
+    haventWatched: 0,
+    haventStarted: 0,
+  };
   const totalPages = Math.ceil(total / limit);
+
+  const filters: {
+    value: TvTrackingCategory;
+    label: string;
+    count: number;
+    icon?: React.ReactNode;
+    color: string;
+  }[] = [
+    { value: "all", label: "All", count: counts.all, icon: <Layers className="w-3 h-3" />, color: "bg-primary/15 text-primary" },
+    { value: "watchlist", label: "Watchlist", count: counts.watchlist, icon: <BookOpen className="w-3 h-3" />, color: "bg-purple-500/15 text-purple-400" },
+    { value: "uptodate", label: "Up To Date", count: counts.uptodate, icon: <Zap className="w-3 h-3" />, color: "bg-cyan-500/15 text-cyan-400" },
+    { value: "finished", label: "Finished", count: counts.finished, icon: <Trophy className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-400" },
+    { value: "finished-anime", label: "Finished Anime", count: counts.finishedAnime, icon: <Sparkles className="w-3 h-3" />, color: "bg-fuchsia-500/15 text-fuchsia-400" },
+    { value: "upcoming", label: "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-400" },
+    { value: "havent-watched-while", label: "Haven't Watched", count: counts.haventWatched, icon: <Clock className="w-3 h-3" />, color: "bg-orange-500/15 text-orange-400" },
+    { value: "havent-started", label: "Haven't Started", count: counts.haventStarted, icon: <Sparkles className="w-3 h-3" />, color: "bg-sky-500/15 text-sky-400" },
+  ];
+
+  const activeFilterLabel = filters.find((f) => f.value === filter)?.label ?? "All";
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 px-1">
-        <Layers className="w-5 h-5 text-primary" />
-        <h2 className="text-lg sm:text-xl font-bold tracking-tight">All Shows</h2>
-        <span className="text-xs text-muted-foreground ml-1">({total})</span>
+      <div className="flex items-center justify-between gap-3 px-1 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Layers className="w-5 h-5 text-primary" />
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">All TV Tracking</h2>
+          <span className="text-xs text-muted-foreground ml-1">({total})</span>
+        </div>
+        <Badge variant="secondary" className="text-[10px]">
+          Global counters
+        </Badge>
       </div>
       <p className="text-xs text-muted-foreground px-1 -mt-2">
-        Every series you track, each with a badge showing its current state.
+        Use these filters from inside All. Every number is calculated across your complete TV library, not just the visible page.
       </p>
 
-      {/* Filter chips */}
       <div className="flex items-center gap-2 flex-wrap px-1">
-        <FilterChip
-          active={filter === "all"}
-          onClick={() => { setFilter("all"); setPage(0); }}
-          label="All"
-          count={itemsWithStatus.length}
-          color="bg-primary/15 text-primary"
-        />
-        <FilterChip
-          active={filter === "finished"}
-          onClick={() => { setFilter("finished"); setPage(0); }}
-          label="Finished"
-          icon={<Trophy className="w-3 h-3" />}
-          count={counts.finished}
-          color="bg-emerald-500/15 text-emerald-400"
-        />
-        <FilterChip
-          active={filter === "uptodate"}
-          onClick={() => { setFilter("uptodate"); setPage(0); }}
-          label="Up To Date"
-          icon={<Zap className="w-3 h-3" />}
-          count={counts.uptodate}
-          color="bg-cyan-500/15 text-cyan-400"
-        />
-        <FilterChip
-          active={filter === "watchlist"}
-          onClick={() => { setFilter("watchlist"); setPage(0); }}
-          label="Watchlist"
-          icon={<BookOpen className="w-3 h-3" />}
-          count={counts.watchlist}
-          color="bg-purple-500/15 text-purple-400"
-        />
+        {filters.map((item) => (
+          <FilterChip
+            key={item.value}
+            active={filter === item.value}
+            onClick={() => { setFilter(item.value); setPage(0); }}
+            label={item.label}
+            icon={item.icon}
+            count={item.count}
+            color={item.color}
+          />
+        ))}
       </div>
 
-      {allShows.isLoading ? (
+      {tracking.isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from({ length: 12 }).map((_, i) => (
             <div key={i} className="h-[110px] shimmer rounded-lg" />
           ))}
         </div>
-      ) : filteredItems.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyTab
           icon={<Layers className="w-10 h-10" />}
-          title={filter === "all" ? "No tracked shows yet" : `No ${filter} shows on this page`}
-          subtitle={filter === "all" ? "Follow TV shows to start tracking" : "Try a different filter or page"}
+          title={filter === "all" ? "No tracked shows yet" : `No ${activeFilterLabel} shows`}
+          subtitle={filter === "all" ? "Follow TV shows to start tracking" : "This filter is empty across your full library"}
         />
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredItems.map((s: any) => (
-              <AllShowCard key={s.id} show={s} onGo={() => onGo(s.tmdbId)} />
+            {items.map((s: any) => (
+              <AllShowCard key={s.id} show={{ ...s, _trackingStatus: s._trackingStatus ?? deriveTrackingStatus(s) }} onGo={() => s.tmdbId && onGo(s.tmdbId)} />
             ))}
           </div>
           {totalPages > 1 && (
@@ -369,10 +288,20 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
             {show.isAnime && <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
             {seasons != null && seasons > 0 && <Badge variant="secondary" className="text-[10px]">{seasons} season{seasons > 1 ? "s" : ""}</Badge>}
           </div>
-          <div className="flex items-center gap-3 mt-1">
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
             {totalEps != null && <span className="text-[10px] text-muted-foreground">{totalEps} eps</span>}
+            {show._watchedEpisodeCount != null && <span className="text-[10px] text-muted-foreground">{show._watchedEpisodeCount} watched</span>}
             {show.year && <span className="text-[10px] text-muted-foreground">{show.year}</span>}
           </div>
+          {show._nextEpisodeAirDate && (
+            <p className="text-[10px] text-amber-400 mt-1 line-clamp-1">
+              Upcoming: {show._nextEpisodeSeasonNumber ? `S${show._nextEpisodeSeasonNumber}` : ""}{show._nextEpisodeNumber ? `E${show._nextEpisodeNumber}` : ""}
+              {show._nextEpisodeName ? ` · ${show._nextEpisodeName}` : ""} · {new Date(show._nextEpisodeAirDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </p>
+          )}
+          {!show._nextEpisodeAirDate && show._daysSinceLastWatch != null && show._daysSinceLastWatch >= 30 && trackingStatus !== "finished" && (
+            <p className="text-[10px] text-orange-400 mt-1">Last watched {show._daysSinceLastWatch} days ago</p>
+          )}
           {userRating != null && (
             <div className="flex items-center gap-1 mt-1">
               <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
