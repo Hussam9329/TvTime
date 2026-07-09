@@ -99,6 +99,9 @@ export function MovieDetailView() {
       title: m.title || "Untitled",
       posterPath: m.poster_path,
       runtime: m.runtime,
+      releaseDate: m.release_date,
+      voteAverage: m.vote_average,
+      overview: m.overview,
     });
     toast.success(isWatched ? "Marked as not watched" : "Marked as watched");
   };

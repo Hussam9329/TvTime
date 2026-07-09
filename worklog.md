@@ -539,3 +539,38 @@ Stage Summary:
   1. User marks the last episode of an Ended show as watched (via `completion.needsRating` from server)
   2. User opens the detail page of an Ended, fully-watched, unrated show
 - Backward compatible: existing shows with `status="watched"` are treated as "finished" in queries
+
+---
+Task ID: recently-watched-poster-fix
+Agent: main
+Task: Apply PATCH for Recently Watched poster bug — TMDB-backed movies were matched by title, causing wrong posters
+
+Work Log:
+- Read patch contents (DIFF + PATCH_NOTES + AGENT_PROMPT) from uploaded zip
+- Manually merged the patch with my earlier TV-status-rewrite changes (no git conflicts since the patch's hunks for use-tmdb.ts and movie-detail-view.tsx are in different code regions)
+- Applied `src/app/api/media/find-or-create/route.ts`:
+  - Removed title fallback for TMDB-backed media when tmdbId is present (root cause of wrong posters)
+  - Kept title fallback only for manually-created records without tmdbId
+  - When a record is matched by the same tmdbId, incoming TMDB metadata is now authoritative — overwrites stale/wrong poster/title/year/overview/rating/runtime/genres instead of first-write-wins
+- Applied `src/components/views/home-view.tsx`:
+  - Replaced inline Recently Watched button markup with new `RecentlyWatchedCard` component
+  - Card uses `useMovieDetail(tmdbId)` to fetch live TMDB detail and prefers `detail.poster_path` over the stored poster
+  - Stored poster is used only as a fallback while loading or offline
+  - Uses `SafeImage` component (handles retry + placeholder) instead of bare `<img>`
+- Applied `src/components/views/movie-detail-view.tsx`:
+  - `onWatched` now sends `releaseDate`, `voteAverage`, `overview` along with the existing fields, so find-or-create receives full metadata to repair stale rows
+- Applied `src/hooks/use-tmdb.ts`:
+  - `useWatchedMovies` query now sorts by `watchedAt desc` so the Recently Watched row reflects recency (matching the section name)
+- Created `scripts/repair-media-posters.mjs` (the patch's repair script — kept for `npm run repair:posters` in local/dev with a real DATABASE_URL)
+- Added `repair:posters` script to `package.json`
+- Created `src/app/api/admin/repair-posters/route.ts` — a temporary admin endpoint that runs the same repair logic on Vercel's runtime (where the encrypted Neon DATABASE_URL is resolvable), since the local CLI can't decrypt Vercel secrets. Endpoint is idempotent and safe to call multiple times; optional `ADMIN_REPAIR_SECRET` query-param protection.
+- All TypeScript checks pass (`tsc --noEmit`)
+- All ESLint checks pass
+- Production build succeeds (`next build`) — `/api/admin/repair-posters` registered as a serverless route
+
+Stage Summary:
+- Recently Watched row now always uses TMDB id as the source of truth for posters; stored poster is only a fallback
+- Existing corrupted rows will be healed in two ways:
+  1. **Lazily** as users open movies (find-or-create now overwrites wrong posters with authoritative TMDB data)
+  2. **Bulk** via one POST-deploy call to `/api/admin/repair-posters` (this run will happen right after the Vercel deploy below)
+- The bug class (TMDB-backed records matched by title) is eliminated at the source

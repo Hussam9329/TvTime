@@ -20,9 +20,14 @@ export async function POST(req: NextRequest) {
       ? await db.media.findFirst({ where: { userId: user.id, tmdbId: numericTmdbId, type: mediaType } })
       : null;
 
-    if (!item) {
+    // IMPORTANT: never match TMDB-backed movies by title when tmdbId is present.
+    // Many movies share the same title across years/remakes. Matching by title was
+    // the root cause of Recently Watched showing the right title with another
+    // movie's poster. Title fallback is kept only for manually-created items that
+    // genuinely do not have a TMDB id.
+    if (!item && !numericTmdbId) {
       item = await db.media.findFirst({
-        where: { userId: user.id, title: { equals: title }, type: mediaType },
+        where: { userId: user.id, title: { equals: title.trim() }, type: mediaType },
       });
     }
 
@@ -48,16 +53,23 @@ export async function POST(req: NextRequest) {
       });
     } else {
       const updates: any = {};
+      const safeTitle = title.trim();
+
       if (numericTmdbId && !item.tmdbId) updates.tmdbId = numericTmdbId;
-      if (poster && !item.poster) updates.poster = poster;
-      if (overview && !item.overview) updates.overview = overview;
-      if (year && !item.year) updates.year = year;
-      if (rating != null && !item.rating) updates.rating = String(rating);
-      if (runtime != null && !item.runtime) updates.runtime = Number(runtime);
-      if (seasons != null && !item.seasons) updates.seasons = Number(seasons);
-      if (episodes != null && !item.episodes) updates.episodes = Number(episodes);
-      if (Array.isArray(genres) && item.genres.length === 0) updates.genres = genres;
-      if (isAnime !== undefined) updates.isAnime = Boolean(isAnime);
+      if (safeTitle && item.title !== safeTitle) updates.title = safeTitle;
+
+      // When the record is matched by the same TMDB id, incoming TMDB metadata is
+      // authoritative. Update a stale/wrong poster instead of keeping the first
+      // poster forever; this also heals rows created before this fix.
+      if (poster && item.poster !== poster) updates.poster = poster;
+      if (overview && item.overview !== overview) updates.overview = overview;
+      if (year && item.year !== year) updates.year = year;
+      if (rating != null && item.rating !== String(rating)) updates.rating = String(rating);
+      if (runtime != null && item.runtime !== Number(runtime)) updates.runtime = Number(runtime);
+      if (seasons != null && item.seasons !== Number(seasons)) updates.seasons = Number(seasons);
+      if (episodes != null && item.episodes !== Number(episodes)) updates.episodes = Number(episodes);
+      if (Array.isArray(genres) && genres.length > 0 && JSON.stringify(item.genres ?? []) !== JSON.stringify(genres)) updates.genres = genres;
+      if (isAnime !== undefined && item.isAnime !== Boolean(isAnime)) updates.isAnime = Boolean(isAnime);
       if (Object.keys(updates).length > 0) {
         item = await db.media.update({ where: { id: item.id }, data: updates });
       }

@@ -1,13 +1,14 @@
 "use client";
 
-import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useWatchedMovies, useWatchedEpisodes, useFollowing, useStats, useTvDetail } from "@/hooks/use-tmdb";
+import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useWatchedMovies, useWatchedEpisodes, useFollowing, useStats, useTvDetail, useMovieDetail } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { ContinueWatching } from "@/components/media/continue-watching";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
-import { img, getYear, getTitle } from "@/lib/tmdb";
+import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
+import { SafeImage } from "@/components/media/safe-image";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 
@@ -308,27 +309,43 @@ function RecentlyWatched() {
       </div>
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
         {items.map((m) => (
-          <button
-            key={m.id}
-            onClick={() => goMovie(m.tmdbId)}
-            className="flex-shrink-0 w-[110px] sm:w-[130px] group"
-          >
-            <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
-              {(m as any).poster || (m as any).posterPath ? (
-                <img src={img((m as any).poster || (m as any).posterPath, "w185")} alt={m.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs p-2 text-center">{m.title}</div>
-              )}
-              <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center justify-center">
-                <Check className="w-3 h-3 text-white" />
-              </div>
-            </div>
-            <p className="mt-1.5 text-xs font-medium line-clamp-1">{m.title}</p>
-            <p className="text-[10px] text-muted-foreground">{new Date(m.watchedAt).toLocaleDateString()}</p>
-          </button>
+          <RecentlyWatchedCard key={`${m.tmdbId}-${m.id}`} movie={m} onGo={() => goMovie(m.tmdbId)} />
         ))}
       </div>
     </section>
+  );
+}
+
+function RecentlyWatchedCard({ movie, onGo }: { movie: any; onGo: () => void }) {
+  const detail = useMovieDetail(movie.tmdbId || null);
+
+  // TMDB id is the source of truth for posters. Stored poster values can be
+  // stale/corrupted from old title-based matching, so prefer live TMDB detail
+  // whenever it is available and fall back only while loading/offline.
+  const title = detail.data?.title || movie.title;
+  const posterPath = detail.data?.poster_path || movie.posterPath || movie.poster || null;
+  const posterSrc = imgOrPlaceholder(posterPath, "w342");
+
+  return (
+    <button
+      onClick={onGo}
+      className="flex-shrink-0 w-[110px] sm:w-[130px] group"
+      title={title}
+    >
+      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
+        <SafeImage
+          src={posterSrc}
+          alt={title}
+          loading="lazy"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+        />
+        <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center justify-center">
+          <Check className="w-3 h-3 text-white" />
+        </div>
+      </div>
+      <p className="mt-1.5 text-xs font-medium line-clamp-1">{title}</p>
+      <p className="text-[10px] text-muted-foreground">{new Date(movie.watchedAt).toLocaleDateString()}</p>
+    </button>
   );
 }
 

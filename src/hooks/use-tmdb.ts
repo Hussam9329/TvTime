@@ -324,6 +324,10 @@ export function useWatchedMovies() {
       const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "movie");
       url.searchParams.set("watched", "true");
+      // Sort by watchedAt desc so the "Recently Watched" row reflects recency,
+      // matching the section name on the home page.
+      url.searchParams.set("sortBy", "watchedAt");
+      url.searchParams.set("order", "desc");
       const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
       const data = await res.json();
