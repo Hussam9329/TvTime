@@ -17,20 +17,59 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward, ListChecks, Clapperboard, BookOpen, AlertCircle, Sparkles, Trophy, Star, Zap } from "lucide-react";
+import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward, ListChecks, Clapperboard, BookOpen, AlertCircle, Sparkles, Trophy, Star, Zap, Layers } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useState, useMemo, useEffect, useRef } from "react";
 
-type TabValue = "watchlist" | "uptodate" | "finished" | "finished-anime" | "upcoming" | "havent-watched-while" | "havent-started";
+type TabValue = "all" | "watchlist" | "uptodate" | "finished" | "finished-anime" | "upcoming" | "havent-watched-while" | "havent-started";
+
+// Tracking status derived from a Media row.
+// Used by the "All" tab to badge each show with its current state.
+type TrackingStatus = "finished" | "uptodate" | "watchlist";
+
+function deriveTrackingStatus(show: any): TrackingStatus {
+  const s = String(show?.status || "").toLowerCase();
+  if (s === "finished") return "finished";
+  // Legacy "watched" rows (created before the finished/uptodate split) are
+  // treated as finished — the autoUpdateShowStatus migration will refine them
+  // to either "finished" or "uptodate" on the next episode toggle.
+  if (s === "watched" && show?.watched) return "finished";
+  if (s === "uptodate") return "uptodate";
+  // Default: anything not explicitly finished/uptodate is in the watchlist
+  // (status === "planned" or null, or watched === false).
+  return "watchlist";
+}
+
+function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
+  if (status === "finished") {
+    return (
+      <Badge className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0">
+        <Trophy className="w-2.5 h-2.5 mr-1" /> Finished
+      </Badge>
+    );
+  }
+  if (status === "uptodate") {
+    return (
+      <Badge className="text-[9px] bg-cyan-500/20 text-cyan-400 border-0">
+        <Zap className="w-2.5 h-2.5 mr-1" /> Up To Date
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">
+      <BookOpen className="w-2.5 h-2.5 mr-1" /> Watchlist
+    </Badge>
+  );
+}
 
 export function TvTrackingView() {
   const following = useFollowing();
   const stats = useStats();
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
-  const [tab, setTab] = useState<TabValue>("watchlist");
+  const [tab, setTab] = useState<TabValue>("all");
 
   // Rating dialog state — opens automatically when an Ended show is finished
   const [ratingTarget, setRatingTarget] = useState<{
@@ -103,6 +142,9 @@ export function TvTrackingView() {
       {/* Tabs */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
         <TabsList className="w-full justify-start overflow-x-auto no-scrollbar h-auto flex-wrap">
+          <TabsTrigger value="all" className="text-xs h-9">
+            <Layers className="w-3.5 h-3.5 mr-1.5" /> All
+          </TabsTrigger>
           <TabsTrigger value="watchlist" className="text-xs h-9">
             <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Watchlist
           </TabsTrigger>
@@ -127,6 +169,7 @@ export function TvTrackingView() {
         </TabsList>
 
         <div className="mt-4">
+          {tab === "all" && <AllShowsTab onGo={goTv} />}
           {tab === "watchlist" && <WatchlistTab shows={followedWithTmdb} onGo={goTv} onCompletion={handleCompletion} />}
           {tab === "uptodate" && <UpToDateTab onGo={goTv} />}
           {tab === "finished" && <FinishedTab onGo={goTv} isAnime="false" onCompletion={handleCompletion} />}
@@ -160,6 +203,190 @@ export function TvTrackingView() {
 }
 
 // ============ TAB COMPONENTS ============
+
+// "All" tab — shows every tracked series, each badged with its current tracking
+// status (Finished / Up To Date / Watchlist). Includes quick filter chips so the
+// user can drill into a specific status without leaving the tab.
+function AllShowsTab({ onGo }: { onGo: (id: number) => void }) {
+  const [page, setPage] = useState(0);
+  const [filter, setFilter] = useState<"all" | TrackingStatus>("all");
+  const limit = 60;
+  // Fetch ALL series (no status filter). The API supports up to 500 per page;
+  // we use 60 per page for performance, with pagination.
+  const allShows = useMedia({ type: "series", sortBy: "title", order: "asc", limit, offset: page * limit });
+
+  const items = allShows.data?.items ?? [];
+  const total = allShows.data?.total ?? 0;
+
+  // Derive tracking status for each show, then apply the active filter.
+  const itemsWithStatus = useMemo(
+    () => items.map((s: any) => ({ ...s, _trackingStatus: deriveTrackingStatus(s) })),
+    [items]
+  );
+  const filteredItems = filter === "all"
+    ? itemsWithStatus
+    : itemsWithStatus.filter((s: any) => s._trackingStatus === filter);
+
+  // Count by status across the current page (used for the filter chip labels).
+  const counts = useMemo(() => {
+    const c = { finished: 0, uptodate: 0, watchlist: 0 };
+    for (const s of itemsWithStatus) {
+      c[s._trackingStatus as TrackingStatus]++;
+    }
+    return c;
+  }, [itemsWithStatus]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 px-1">
+        <Layers className="w-5 h-5 text-primary" />
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight">All Shows</h2>
+        <span className="text-xs text-muted-foreground ml-1">({total})</span>
+      </div>
+      <p className="text-xs text-muted-foreground px-1 -mt-2">
+        Every series you track, each with a badge showing its current state.
+      </p>
+
+      {/* Filter chips */}
+      <div className="flex items-center gap-2 flex-wrap px-1">
+        <FilterChip
+          active={filter === "all"}
+          onClick={() => { setFilter("all"); setPage(0); }}
+          label="All"
+          count={itemsWithStatus.length}
+          color="bg-primary/15 text-primary"
+        />
+        <FilterChip
+          active={filter === "finished"}
+          onClick={() => { setFilter("finished"); setPage(0); }}
+          label="Finished"
+          icon={<Trophy className="w-3 h-3" />}
+          count={counts.finished}
+          color="bg-emerald-500/15 text-emerald-400"
+        />
+        <FilterChip
+          active={filter === "uptodate"}
+          onClick={() => { setFilter("uptodate"); setPage(0); }}
+          label="Up To Date"
+          icon={<Zap className="w-3 h-3" />}
+          count={counts.uptodate}
+          color="bg-cyan-500/15 text-cyan-400"
+        />
+        <FilterChip
+          active={filter === "watchlist"}
+          onClick={() => { setFilter("watchlist"); setPage(0); }}
+          label="Watchlist"
+          icon={<BookOpen className="w-3 h-3" />}
+          count={counts.watchlist}
+          color="bg-purple-500/15 text-purple-400"
+        />
+      </div>
+
+      {allShows.isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="h-[110px] shimmer rounded-lg" />
+          ))}
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <EmptyTab
+          icon={<Layers className="w-10 h-10" />}
+          title={filter === "all" ? "No tracked shows yet" : `No ${filter} shows on this page`}
+          subtitle={filter === "all" ? "Follow TV shows to start tracking" : "Try a different filter or page"}
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredItems.map((s: any) => (
+              <AllShowCard key={s.id} show={s} onGo={() => onGo(s.tmdbId)} />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-4">
+              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                Prev
+              </Button>
+              <span className="text-sm text-muted-foreground px-3">
+                Page <span className="font-bold text-foreground">{page + 1}</span> of {totalPages}
+              </span>
+              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
+                Next
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, label, icon, count, color }: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  icon?: React.ReactNode;
+  count: number;
+  color: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+        active
+          ? `${color} border-current/30`
+          : "bg-muted/40 text-muted-foreground border-transparent hover:bg-muted hover:text-foreground"
+      }`}
+    >
+      {icon}
+      {label}
+      <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${active ? "bg-background/40" : "bg-muted"}`}>{count}</span>
+    </button>
+  );
+}
+
+function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
+  const trackingStatus = show._trackingStatus as TrackingStatus;
+  const userRating = show.userRating;
+  const totalEps = show.episodes;
+  const seasons = show.seasons;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
+        <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
+          {show.poster ? (
+            <img src={img(show.poster, "w92")} alt={show.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{show.title}</h4>
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <TrackingStatusBadge status={trackingStatus} />
+            {show.isAnime && <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
+            {seasons != null && seasons > 0 && <Badge variant="secondary" className="text-[10px]">{seasons} season{seasons > 1 ? "s" : ""}</Badge>}
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            {totalEps != null && <span className="text-[10px] text-muted-foreground">{totalEps} eps</span>}
+            {show.year && <span className="text-[10px] text-muted-foreground">{show.year}</span>}
+          </div>
+          {userRating != null && (
+            <div className="flex items-center gap-1 mt-1">
+              <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+              <span className="text-[10px] text-amber-400 font-bold">{userRating}/100</span>
+              <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-amber-400" style={{ width: `${userRating}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
 
 function WatchlistTab({ shows, onGo, onCompletion }: { shows: any[]; onGo: (id: number) => void; onCompletion: (c: EpisodeCompletion | null | undefined, title?: string, poster?: string | null) => void }) {
   return (

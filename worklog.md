@@ -598,3 +598,37 @@ Stage Summary:
 - RatingDialog default 75 → 50 (neutral, less accidental)
 - Admin endpoint will bulk-reset the 2 accidental movies (The Ex, The General's Daughter) after deploy
 - All TypeScript + ESLint checks pass; production build succeeds
+
+---
+Task ID: all-tab-with-status-badges
+Agent: main
+Task: Add an "All" tab to TV Tracking that shows every tracked show with a status badge (Finished / Up To Date / Watchlist)
+
+Work Log:
+- Added a new "All" tab as the first (default) tab in TvTrackingView
+- Created `deriveTrackingStatus(show)` helper that maps a Media row's `status` field to one of: "finished" | "uptodate" | "watchlist"
+  - status="finished" → finished
+  - status="watched" + watched=true → finished (legacy compat, will be migrated on next episode toggle)
+  - status="uptodate" → uptodate
+  - everything else (status="planned", null, or watched=false) → watchlist
+- Created `TrackingStatusBadge` component with three color-coded variants:
+  - Finished: emerald Trophy badge
+  - Up To Date: cyan Zap badge
+  - Watchlist: purple BookOpen badge
+- Created `AllShowsTab` that fetches all series (no status filter) with pagination (60/page, sorted A→Z)
+  - Includes 4 filter chips: All / Finished / Up To Date / Watchlist — each shows the count from the current page
+  - Clicking a chip filters the grid in-place (no page navigation)
+- Created `AllShowCard` — poster + title + status badge + anime/seasons badges + episode count + year + user rating with progress bar
+- Added `Layers` icon import from lucide-react for the "All" tab trigger
+- Set the default tab to "all" so users land on the overview first
+- All TypeScript + ESLint checks pass
+- Production build succeeds
+
+Stage Summary:
+- New "All" tab is the default landing view for TV Tracking
+- Each show card displays a colored status badge indicating which tracking state it belongs to:
+  - FROM (ongoing, all aired eps watched) → cyan "Up To Date" badge
+  - LOST (ended, all eps watched) → emerald "Finished" badge
+  - New show just followed → purple "Watchlist" badge
+- Filter chips let users drill into a specific status without leaving the tab
+- Existing tabs (Watchlist / Up To Date / Finished / etc.) remain unchanged
