@@ -189,9 +189,9 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/movie/upcoming`, { page }),
   movieGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`),
-  discoverMovies: (params: { genre?: number; year?: number; sort_by?: string; page?: number; vote_average_gte?: number } = {}) => {
+  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": 100 };
-    if (params.genre) p.with_genres = params.genre;
+    if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.primary_release_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
     return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p);
@@ -208,9 +208,9 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/airing_today`, { page }),
   tvGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
-  discoverTv: (params: { genre?: number; year?: number; sort_by?: string; page?: number; vote_average_gte?: number } = {}) => {
+  discoverTv: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": 100 };
-    if (params.genre) p.with_genres = params.genre;
+    if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.first_air_date_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
     return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p);

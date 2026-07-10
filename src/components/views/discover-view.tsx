@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Filter, SlidersHorizontal, Dices } from "lucide-react";
+import { ChevronLeft, ChevronRight, SlidersHorizontal, Dices, AlertCircle, X } from "lucide-react";
 import { toast } from "sonner";
 
 const SORT_OPTIONS = [
@@ -30,33 +30,46 @@ const SORT_OPTIONS_TV = [
   { value: "first_air_date.asc", label: "Oldest" },
 ];
 
+const DECADE_OPTIONS = [
+  { value: "", label: "Any decade" },
+  { value: "2020", label: "2020s" },
+  { value: "2010", label: "2010s" },
+  { value: "2000", label: "2000s" },
+  { value: "1990", label: "1990s" },
+  { value: "1980", label: "1980s" },
+  { value: "1970", label: "1970s" },
+];
+
 export function DiscoverView() {
   const discoverTab = useNav((s) => s.discoverTab);
   const setDiscoverTab = useNav((s) => s.setDiscoverTab);
-  const discoverGenre = useNav((s) => s.discoverGenre);
-  const setDiscoverGenre = useNav((s) => s.setDiscoverGenre);
 
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("popularity.desc");
-  const [year, setYear] = useState<string>("");
+  const [decade, setDecade] = useState<string>("");
   const [minRating, setMinRating] = useState<string>("");
+  // TVM-33: Multi-genre selection
+  const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
 
   const movieGenres = useMovieGenres();
   const tvGenres = useTvGenres();
   const genres = discoverTab === "movies" ? movieGenres.data : tvGenres.data;
 
+  // Compute year from decade (pick middle year for primary_release_year filter)
+  const year = decade ? Number(decade) + 5 : undefined;
+
   const discover = useDiscoverMovies({
-    genre: discoverGenre,
+    genres: selectedGenres.length > 0 ? selectedGenres : undefined,
     sort_by: sortBy,
     page,
-    year: year ? Number(year) : undefined,
+    year,
     rating: minRating ? Number(minRating) : undefined,
   });
   const discoverTv = useDiscoverTv({
-    genre: discoverGenre,
+    genres: selectedGenres.length > 0 ? selectedGenres : undefined,
     sort_by: sortBy,
     page,
-    year: year ? Number(year) : undefined,
+    year,
     rating: minRating ? Number(minRating) : undefined,
   });
 
@@ -64,8 +77,20 @@ export function DiscoverView() {
   const items = (current.data?.results ?? []).filter((m) => m.poster_path);
   const totalPages = Math.min(current.data?.total_pages ?? 1, 500);
 
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
+  // TVM-33: Toggle genre selection (multi-select)
+  const toggleGenre = (genreId: number) => {
+    setSelectedGenres((prev) =>
+      prev.includes(genreId)
+        ? prev.filter((g) => g !== genreId)
+        : [...prev, genreId]
+    );
+    setPage(1);
+  };
+
+  const clearGenres = () => {
+    setSelectedGenres([]);
+    setPage(1);
+  };
 
   return (
     <div className="space-y-5">
@@ -81,7 +106,6 @@ export function DiscoverView() {
               size="sm"
               className="h-9 border-primary/40 text-primary hover:bg-primary/10"
               onClick={() => {
-                // Pick a random page (1-20) to get varied results
                 const randomPage = Math.floor(Math.random() * 20) + 1;
                 const randomSort = ["popularity.desc", "vote_average.desc", "primary_release_date.desc", "revenue.desc"][
                   Math.floor(Math.random() * 4)
@@ -93,7 +117,7 @@ export function DiscoverView() {
             >
               <Dices className="w-4 h-4 mr-1.5" /> Surprise Me
             </Button>
-            <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); setPage(1); }}>
+            <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); setPage(1); clearGenres(); }}>
               <TabsList>
                 <TabsTrigger value="movies">Movies</TabsTrigger>
                 <TabsTrigger value="tv">TV Shows</TabsTrigger>
@@ -102,34 +126,64 @@ export function DiscoverView() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* TVM-33: Multi-Genre Filters */}
         <div className="glass rounded-xl p-3 sm:p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <SlidersHorizontal className="w-4 h-4" /> Filters
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <SlidersHorizontal className="w-4 h-4" /> Filters
+              {selectedGenres.length > 0 && (
+                <Badge variant="secondary" className="text-[10px] ml-1">{selectedGenres.length} genre{selectedGenres.length > 1 ? "s" : ""}</Badge>
+              )}
+            </div>
+            {selectedGenres.length > 0 && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearGenres}>
+                <X className="w-3 h-3 mr-1" /> Clear genres
+              </Button>
+            )}
           </div>
 
-          {/* Genre chips */}
+          {/* Genre chips — multi-select (TVM-33) */}
           <div className="flex flex-wrap gap-1.5">
             <Button
-              variant={discoverGenre === null ? "default" : "outline"}
+              variant={selectedGenres.length === 0 ? "default" : "outline"}
               size="sm"
               className="h-7 text-xs"
-              onClick={() => { setDiscoverGenre(null); setPage(1); }}
+              onClick={clearGenres}
             >
               All
             </Button>
-            {genres?.map((g) => (
-              <Button
-                key={g.id}
-                variant={discoverGenre === g.id ? "default" : "outline"}
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => { setDiscoverGenre(g.id); setPage(1); }}
-              >
-                {g.name}
-              </Button>
-            ))}
+            {genres?.map((g) => {
+              const isSelected = selectedGenres.includes(g.id);
+              return (
+                <Button
+                  key={g.id}
+                  variant={isSelected ? "default" : "outline"}
+                  size="sm"
+                  className={`h-7 text-xs ${isSelected ? "ring-2 ring-primary/40" : ""}`}
+                  onClick={() => toggleGenre(g.id)}
+                >
+                  {g.name}
+                </Button>
+              );
+            })}
           </div>
+
+          {/* Selected genres summary */}
+          {selectedGenres.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {selectedGenres.map((gid) => {
+                const g = genres?.find((x) => x.id === gid);
+                return (
+                  <Badge key={gid} variant="secondary" className="text-[10px] gap-1">
+                    {g?.name || `Genre ${gid}`}
+                    <button onClick={() => toggleGenre(gid)} className="ml-0.5 hover:text-rose-400">
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(1); }}>
@@ -143,14 +197,13 @@ export function DiscoverView() {
               </SelectContent>
             </Select>
 
-            <Select value={year || "any"} onValueChange={(v) => { setYear(v === "any" ? "" : v); setPage(1); }}>
+            <Select value={decade} onValueChange={(v) => { setDecade(v); setPage(1); }}>
               <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Year" />
+                <SelectValue placeholder="Decade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="any">Any year</SelectItem>
-                {years.map((y) => (
-                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                {DECADE_OPTIONS.map((d) => (
+                  <SelectItem key={d.value || "any"} value={d.value || "any"}>{d.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -170,10 +223,44 @@ export function DiscoverView() {
         </div>
       </div>
 
-      <MediaGrid items={items} loading={current.isLoading} />
+      {/* TVM-30: Error state */}
+      {current.isError && (
+        <div className="text-center py-16">
+          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-rose-400" />
+          <p className="font-medium text-foreground text-lg">Failed to load results</p>
+          <p className="text-sm text-muted-foreground mt-1">Could not reach TMDB. Please try again.</p>
+        </div>
+      )}
+
+      {/* TVM-30: Loading skeleton */}
+      {current.isLoading && <MediaGrid items={[]} loading />}
+
+      {/* TVM-30: Empty state */}
+      {!current.isLoading && !current.isError && items.length === 0 && (
+        <div className="text-center py-16 text-muted-foreground">
+          <SlidersHorizontal className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p className="font-medium">No results match your filters</p>
+          <p className="text-sm mt-1">Try removing some genres or changing the decade/rating.</p>
+          {(selectedGenres.length > 0 || decade || minRating) && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => { clearGenres(); setDecade(""); setMinRating(""); setPage(1); }}
+            >
+              Reset all filters
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Results grid */}
+      {!current.isLoading && !current.isError && items.length > 0 && (
+        <MediaGrid items={items} />
+      )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {totalPages > 1 && items.length > 0 && (
         <div className="flex items-center justify-center gap-2 pt-4">
           <Button
             variant="outline"

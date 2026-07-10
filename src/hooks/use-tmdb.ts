@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useNav } from "@/lib/store";
 import type { MediaItem, MovieDetail, TvDetail, PaginatedResponse, SeasonDetail, Genre } from "@/lib/tmdb";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
@@ -104,12 +105,12 @@ export function useTvGenres() {
   });
 }
 
-export function useDiscoverMovies(params: { genre?: number | null; year?: number; sort_by?: string; page?: number; rating?: number }) {
+export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number }) {
   return useQuery({
     queryKey: ["tmdb", "movies", "discover", params],
     queryFn: () =>
       tmdbGet<PaginatedResponse<MediaItem>>("movies/discover", {
-        ...(params.genre ? { genre: params.genre } : {}),
+        ...(params.genres && params.genres.length > 0 ? { genre: params.genres.join(",") } : {}),
         ...(params.year ? { year: params.year } : {}),
         ...(params.sort_by ? { sort_by: params.sort_by } : {}),
         page: params.page || 1,
@@ -118,12 +119,12 @@ export function useDiscoverMovies(params: { genre?: number | null; year?: number
   });
 }
 
-export function useDiscoverTv(params: { genre?: number | null; year?: number; sort_by?: string; page?: number; rating?: number }) {
+export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number }) {
   return useQuery({
     queryKey: ["tmdb", "tv", "discover", params],
     queryFn: () =>
       tmdbGet<PaginatedResponse<MediaItem>>("tv/discover", {
-        ...(params.genre ? { genre: params.genre } : {}),
+        ...(params.genres && params.genres.length > 0 ? { genre: params.genres.join(",") } : {}),
         ...(params.year ? { year: params.year } : {}),
         ...(params.sort_by ? { sort_by: params.sort_by } : {}),
         page: params.page || 1,
@@ -138,6 +139,69 @@ export function useSearch(query: string, page = 1) {
     queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("search", { q: query, page }),
     enabled: query.trim().length > 0,
   });
+}
+
+// TVM-31/32: Multi-page search with accumulated results + separate People results.
+// Returns accumulated movie/tv results across all loaded pages, plus a separate
+// people array. Supports Load More via nextPage.
+// Uses refs + "adjust state during render" pattern to avoid setState-in-effect.
+export function useSearchAccumulated(query: string) {
+  const [page, setPage] = useState(1);
+  const [accumulated, setAccumulated] = useState<MediaItem[]>([]);
+  const [people, setPeople] = useState<MediaItem[]>([]);
+  const [lastQuery, setLastQuery] = useState(query);
+  const [lastPage, setLastPage] = useState(0);
+
+  const search = useSearch(query.trim().length > 0 ? query : "", page);
+
+  // Reset accumulation when query changes (adjust state during render pattern)
+  if (query !== lastQuery) {
+    setLastQuery(query);
+    setAccumulated([]);
+    setPeople([]);
+    setPage(1);
+    setLastPage(0);
+  }
+
+  // Accumulate results when new page data arrives (adjust state during render)
+  const dataPage = search.data?.results;
+  const currentPage = page;
+  if (search.data && currentPage !== lastPage) {
+    setLastPage(currentPage);
+    const newMedia = (dataPage ?? []).filter((r) => r.media_type !== "person" && (r.poster_path || r.backdrop_path));
+    const newPeople = (dataPage ?? []).filter((r) => r.media_type === "person");
+    setAccumulated((prev) => {
+      const seen = new Set(prev.map((r) => `${r.media_type}-${r.id}`));
+      const unique = newMedia.filter((r) => !seen.has(`${r.media_type}-${r.id}`));
+      return [...prev, ...unique];
+    });
+    setPeople((prev) => {
+      const seen = new Set(prev.map((r) => `person-${r.id}`));
+      const unique = newPeople.filter((r) => !seen.has(`person-${r.id}`));
+      return [...prev, ...unique];
+    });
+  }
+
+  const totalPages = Math.min(search.data?.total_pages ?? 1, 500);
+  const totalResults = search.data?.total_results ?? 0;
+  const hasMore = page < totalPages;
+
+  const loadMore = () => {
+    if (hasMore && !search.isFetching) setPage((p) => p + 1);
+  };
+
+  return {
+    accumulated,
+    people,
+    isLoading: search.isLoading,
+    isFetching: search.isFetching && page > 1,
+    isError: search.isError,
+    hasMore,
+    loadMore,
+    totalResults,
+    currentPage: page,
+    totalPages,
+  };
 }
 
 export function useMovieDetail(id: number | null) {

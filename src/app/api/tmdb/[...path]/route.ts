@@ -37,7 +37,7 @@ const handler = async (
         break;
       case "movies/discover":
         data = await tmdb.discoverMovies({
-          genre: queryParams.genre ? Number(queryParams.genre) : undefined,
+          genres: queryParams.genre ? queryParams.genre.split(",").map(Number).filter(Boolean) : undefined,
           year: queryParams.year ? Number(queryParams.year) : undefined,
           sort_by: queryParams.sort_by,
           page: Number(queryParams.page) || 1,
@@ -61,7 +61,7 @@ const handler = async (
         break;
       case "tv/discover":
         data = await tmdb.discoverTv({
-          genre: queryParams.genre ? Number(queryParams.genre) : undefined,
+          genres: queryParams.genre ? queryParams.genre.split(",").map(Number).filter(Boolean) : undefined,
           year: queryParams.year ? Number(queryParams.year) : undefined,
           sort_by: queryParams.sort_by,
           page: Number(queryParams.page) || 1,

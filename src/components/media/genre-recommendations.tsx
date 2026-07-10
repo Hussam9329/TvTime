@@ -25,9 +25,9 @@ export function GenreRecommendations() {
   const movieGenre2 = movieGenreList[movieGenreIdx2];
   const tvGenre1 = tvGenreList[tvGenreIdx1];
 
-  const rec1 = useDiscoverMovies({ genre: movieGenre1?.id, sort_by: "vote_average.desc", page: 1, rating: 7 });
-  const rec2 = useDiscoverMovies({ genre: movieGenre2?.id, sort_by: "popularity.desc", page: 1 });
-  const rec3 = useDiscoverTv({ genre: tvGenre1?.id, sort_by: "popularity.desc", page: 1 });
+  const rec1 = useDiscoverMovies({ genres: movieGenre1 ? [movieGenre1.id] : undefined, sort_by: "vote_average.desc", page: 1, rating: 7 });
+  const rec2 = useDiscoverMovies({ genres: movieGenre2 ? [movieGenre2.id] : undefined, sort_by: "popularity.desc", page: 1 });
+  const rec3 = useDiscoverTv({ genres: tvGenre1 ? [tvGenre1.id] : undefined, sort_by: "popularity.desc", page: 1 });
 
   // Always show genre recommendations (useful for discovery).
   // When user has a watchlist, we label it "Picked for you", otherwise just genre names.

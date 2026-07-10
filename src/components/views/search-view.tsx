@@ -1,19 +1,21 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useSearch } from "@/hooks/use-tmdb";
+import { useSearchAccumulated } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
 import { Input } from "@/components/ui/input";
-import { Search as SearchIcon, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search as SearchIcon, X, Loader2, AlertCircle, Users, Film, Tv, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { img } from "@/lib/tmdb";
 
 export function SearchView() {
-  const { searchQuery, setSearchQuery } = useNav();
+  const { searchQuery, setSearchQuery, goPerson, goMovie, goTv } = useNav();
   const [local, setLocal] = useState(searchQuery);
-  const [filter, setFilter] = useState<"all" | "movie" | "tv">("all");
+  const [filter, setFilter] = useState<"all" | "movie" | "tv" | "people">("all");
 
-  const search = useSearch(searchQuery);
+  const search = useSearchAccumulated(searchQuery);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -22,14 +24,15 @@ export function SearchView() {
     return () => clearTimeout(t);
   }, [local, searchQuery, setSearchQuery]);
 
-  const allResults = (search.data?.results ?? []).filter((r) => r.media_type !== "person" && (r.poster_path || r.backdrop_path));
+  const allResults = search.accumulated;
   const filtered = filter === "all" ? allResults : allResults.filter((r) => r.media_type === filter);
+  const people = search.people;
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Search</h1>
-        <p className="text-sm text-muted-foreground">Find movies and TV shows from the TMDB database</p>
+        <p className="text-sm text-muted-foreground">Find movies, TV shows, and people from the TMDB database</p>
       </div>
 
       <div className="relative">
@@ -37,7 +40,7 @@ export function SearchView() {
         <Input
           value={local}
           onChange={(e) => setLocal(e.target.value)}
-          placeholder="Type a title..."
+          placeholder="Type a title or person's name..."
           className="pl-9 pr-10 h-11 text-base"
           autoFocus
         />
@@ -55,7 +58,7 @@ export function SearchView() {
       {!searchQuery && (
         <div className="text-center py-16 text-muted-foreground">
           <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>Start typing to search across millions of titles</p>
+          <p>Start typing to search across millions of titles and people</p>
         </div>
       )}
 
@@ -63,30 +66,145 @@ export function SearchView() {
         <>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm text-muted-foreground">
-              {search.isLoading ? "Searching..." : `${search.data?.total_results ?? 0} results for "${searchQuery}"`}
+              {search.isLoading
+                ? "Searching..."
+                : `${search.totalResults} results for "${searchQuery}"`}
             </p>
-            {allResults.length > 0 && (
+            {(allResults.length > 0 || people.length > 0) && (
               <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
                 <TabsList>
-                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="all">All ({allResults.length})</TabsTrigger>
                   <TabsTrigger value="movie">Movies</TabsTrigger>
                   <TabsTrigger value="tv">TV</TabsTrigger>
+                  {people.length > 0 && (
+                    <TabsTrigger value="people">People ({people.length})</TabsTrigger>
+                  )}
                 </TabsList>
               </Tabs>
             )}
           </div>
 
-          {search.isLoading ? (
-            <MediaGrid items={[]} loading />
-          ) : filtered.length > 0 ? (
-            <MediaGrid items={filtered} />
-          ) : (
-            <div className="text-center py-16 text-muted-foreground">
-              <p>No results found. Try a different search.</p>
+          {/* TVM-30: Error state */}
+          {search.isError && (
+            <div className="text-center py-16">
+              <AlertCircle className="w-12 h-12 mx-auto mb-3 text-rose-400" />
+              <p className="font-medium text-foreground text-lg">Search failed</p>
+              <p className="text-sm text-muted-foreground mt-1">Could not reach TMDB. Please try again.</p>
+              <Button variant="outline" className="mt-4" onClick={() => setSearchQuery(searchQuery)}>
+                Retry
+              </Button>
             </div>
+          )}
+
+          {/* TVM-30: Loading state (initial) */}
+          {search.isLoading && <MediaGrid items={[]} loading />}
+
+          {/* People results (TVM-32) */}
+          {filter === "people" && people.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              {people.map((p, i) => (
+                <PersonCard key={`person-${p.id}`} person={p} index={i} onGo={() => goPerson(p.id)} />
+              ))}
+            </div>
+          )}
+
+          {/* Media results */}
+          {filter !== "people" && (
+            <>
+              {filtered.length > 0 ? (
+                <MediaGrid items={filtered} />
+              ) : !search.isLoading && !search.isError ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <SearchIcon className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">No {filter === "all" ? "" : filter + " "}results found</p>
+                  <p className="text-sm mt-1">Try a different search term or filter.</p>
+                </div>
+              ) : null}
+            </>
+          )}
+
+          {/* TVM-31: Load More pagination */}
+          {filter !== "people" && search.hasMore && filtered.length > 0 && (
+            <div className="flex items-center justify-center pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={search.loadMore}
+                disabled={search.isFetching}
+                className="min-w-[160px]"
+              >
+                {search.isFetching ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More <ChevronDown className="w-4 h-4 ml-1" />
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* People Load More */}
+          {filter === "people" && search.hasMore && people.length > 0 && (
+            <div className="flex items-center justify-center pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={search.loadMore}
+                disabled={search.isFetching}
+                className="min-w-[160px]"
+              >
+                {search.isFetching ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More <ChevronDown className="w-4 h-4 ml-1" />
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {!search.hasMore && !search.isLoading && (filtered.length > 0 || people.length > 0) && (
+            <p className="text-center text-xs text-muted-foreground pt-2">— End of results —</p>
           )}
         </>
       )}
     </div>
+  );
+}
+
+// TVM-32: Person card for search results
+function PersonCard({ person, index, onGo }: { person: any; index: number; onGo: () => void }) {
+  const name = person.name || person.original_name || "Unknown";
+  const knownFor = (person.known_for ?? []).slice(0, 2).map((k: any) => k.title || k.name || "").filter(Boolean).join(", ");
+
+  return (
+    <button
+      onClick={onGo}
+      className="group text-left"
+      style={{ animationDelay: `${Math.min(index * 0.02, 0.3)}s` }}
+    >
+      <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
+        {person.profile_path ? (
+          <img
+            src={img(person.profile_path, "w342")}
+            alt={name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+            <Users className="w-10 h-10 opacity-40" />
+          </div>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs font-medium line-clamp-1 group-hover:text-primary transition-colors">{name}</p>
+      {knownFor && <p className="text-[10px] text-muted-foreground line-clamp-1">{knownFor}</p>}
+    </button>
   );
 }
