@@ -7,8 +7,9 @@ import {
   isOfficiallyEndedTvStatus,
 } from "@/lib/tv-status-engine";
 
-const TV_META_TTL_MS = 6 * 60 * 60 * 1000;
-const SEASON_TTL_MS = 6 * 60 * 60 * 1000;
+const ENDED_TV_META_TTL_MS = 6 * 60 * 60 * 1000;
+const ONGOING_TV_META_TTL_MS = 5 * 60 * 1000;
+const SEASON_TTL_MS = 5 * 60 * 1000;
 
 type CacheEntry<T> = { value: T; fetchedAt: number };
 
@@ -52,7 +53,9 @@ function readFresh<T>(entry: CacheEntry<T> | undefined, ttl: number): T | null {
 }
 
 function readFreshTvMetadata(entry: CacheEntry<TvStatusMetadata> | undefined, now: Date): TvStatusMetadata | null {
-  const cached = readFresh(entry, TV_META_TTL_MS);
+  if (!entry) return null;
+  const ttl = entry.value.officiallyEnded ? ENDED_TV_META_TTL_MS : ONGOING_TV_META_TTL_MS;
+  const cached = readFresh(entry, ttl);
   if (!cached) return null;
 
   // Do not let the ordinary metadata TTL hide an episode whose calendar date

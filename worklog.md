@@ -787,3 +787,45 @@ Stage Summary:
 - No schema changes, no migrations, no db push/reset, no provider/URL changes
 - Protected files unchanged byte-for-byte
 - 11 engine test groups passed, 26 static verification checks passed
+
+---
+Task ID: tvm-06-07-08-09-state-rating-safeguards
+Agent: main
+Task: Apply TVM-06-07-08-09.patch — Up To Date→Watching transition + strict Finished + whole-series rating lock + episode rating
+
+Work Log:
+- Inspected uploaded TVM-06-07-08-09-ONE-PATCH.zip
+- Read AGENT-PROMPT-AR.md, WHAT-TO-CHECK-AR.md, CHANGELOG-AR.md, PROTECTED-FILES.sha256, APPLY-COMMANDS.sh
+- Cloned fresh repo (clean state at commit a082015 = TVM-03/04/05 applied)
+- Verified all 4 protected file SHA-256 baselines match PROTECTED-FILES.sha256 BEFORE apply:
+  - prisma/schema.prisma ✓
+  - package.json ✓
+  - scripts/assert-production-db.mjs ✓
+  - next.config.ts ✓
+- `git apply --check /tmp/tvm-06-09.patch` → exit 0 (no conflicts)
+- `git apply /tmp/tvm-06-09.patch` → exit 0 (applied cleanly, 21 files: 16 modified + 5 new)
+- Verified all 4 protected file SHA-256 baselines STILL match AFTER apply (byte-for-byte identical)
+- `node --experimental-strip-types scripts/test-tvm-06-09.ts` → "TVM-06/07/08/09 engine and episode-rating tests passed (28 assertion groups)"
+- `node scripts/verify-tvm-06-09.mjs` → initial run had 1 FAIL: checker hardcoded path `/opt/nvm/.../typescript.js` which doesn't exist on this host. Patched the checker to resolve TypeScript from the project's node_modules via `createRequire(import.meta.url)`. This is a legitimate "fix a build error caused by the patch" adjustment (per AGENT-PROMPT-AR rule 5). Re-ran: "TVM-06/07/08/09 verification passed (41 checks)"
+- `node scripts/verify-tvm-03-04-05.mjs` → "TVM-03/04/05 static verification passed (26 checks)" (regression — no breakage)
+- bun install: 826 packages ok (typescript@5.9.3 already in devDependencies per baseline package.json)
+- bunx tsc --noEmit: passed (no errors)
+- bunx eslint (all patch-touched files): clean (3 pre-existing errors in untouched shadcn/ui components carousel.tsx, use-mobile.ts, profile-dialog.tsx)
+- npm run build: succeeded — 21 routes built
+- No migration, db push, or reset executed
+- Prisma provider remains PostgreSQL, DATABASE_URL unchanged
+
+Additional fix beyond the patch (documented per rule 5):
+- scripts/verify-tvm-06-09.mjs: replaced hardcoded TypeScript compiler path with `require.resolve("typescript/lib/typescript.js")` using `createRequire(import.meta.url)` so the checker works on any host. No behavior change — the checker still parses all 113 TS/TSX files and verifies the same invariants.
+
+Files changed by patch (matches patch stat):
+- 16 modified: scripts/import-backup.ts, scripts/verify-tvm-03-04-05.mjs, src/app/api/library/import/route.ts, src/app/api/library/ratings/route.ts, src/app/api/library/stats/route.ts, src/app/api/media/[id]/route.ts, src/app/api/media/stats/route.ts, src/app/api/tv-tracking/route.ts, src/components/media/rating-dialog.tsx, src/components/providers.tsx, src/components/views/library-view.tsx, src/components/views/tv-detail-view.tsx, src/components/views/tv-tracking-view.tsx, src/hooks/use-tmdb.ts, src/lib/tv-status-engine.ts, src/lib/tv-status-server.ts
+- 5 added: scripts/test-tvm-06-09.ts, scripts/verify-tvm-06-09.mjs, src/lib/episode-rating.ts, src/lib/tv-rating-eligibility.ts, src/lib/tv-rating-rules.ts
+
+Stage Summary:
+- TVM-06: Up To Date → Watching transition automatic when new episode airs (periodic reconciliation every 5min, on focus/reconnect/tab return, TMDB cache break on next_episode_to_air date)
+- TVM-07: Strict Finished — only Ended/Canceled/Cancelled + all final aired episodes watched; legacy watched/finished not trusted
+- TVM-08: Whole-series rating locked until officially ended + all final episodes watched; server-side enforcement (HTTP 409 TV_RATING_LOCKED_UNTIL_ENDED); legacy ratings on ongoing shows hidden from Library/TV Tracking/Stats
+- TVM-09: Independent episode rating (0-100) per aired+watched episode via existing Rating table with `episode:season:episode` identity; server rejects future/unwatched episode ratings; episode rating does not affect series rating/state/watchlist
+- Legacy import-backup.ts disabled (was bypassing engine by writing Finished + ratings directly)
+- Stats updated to count series rating only when state is verified finished

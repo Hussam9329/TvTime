@@ -14,13 +14,28 @@ interface RatingDialogProps {
   title: string;
   poster: string | null;
   onRate: (rating: number) => Promise<void> | void;
+  initialRating?: number | null;
+  description?: string;
+  submitLabel?: string;
 }
 
-export function RatingDialog({ open, onOpenChange, title, poster, onRate }: RatingDialogProps) {
+export function RatingDialog({
+  open,
+  onOpenChange,
+  title,
+  poster,
+  onRate,
+  initialRating = null,
+  description = "This saves only your rating out of 100. It does not change Watchlist or Watched status.",
+  submitLabel = "Save Rating",
+}: RatingDialogProps) {
   // Default to 50 (neutral) instead of 75 — the old default of 75 made it too
   // easy to accidentally save a high rating by just clicking "Save Rating"
   // without moving the slider. 50 forces the user to actively choose a rating.
-  const [rating, setRating] = useState(50);
+  const safeInitialRating = initialRating == null
+    ? 50
+    : Math.max(0, Math.min(100, Math.round(Number(initialRating))));
+  const [rating, setRating] = useState(safeInitialRating);
   const [submitting, setSubmitting] = useState(false);
 
   // Reset to neutral default each time the dialog opens, so a previous rating
@@ -29,7 +44,7 @@ export function RatingDialog({ open, onOpenChange, title, poster, onRate }: Rati
   const [lastOpen, setLastOpen] = useState(open);
   if (open !== lastOpen) {
     setLastOpen(open);
-    if (open) setRating(50);
+    if (open) setRating(safeInitialRating);
   }
 
   const handleSubmit = async () => {
@@ -55,7 +70,7 @@ export function RatingDialog({ open, onOpenChange, title, poster, onRate }: Rati
             <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> Rate this title
           </DialogTitle>
           <DialogDescription>
-            This saves only your rating out of 100. It does not change Watchlist or Watched status.
+            {description}
           </DialogDescription>
         </DialogHeader>
 
@@ -119,7 +134,7 @@ export function RatingDialog({ open, onOpenChange, title, poster, onRate }: Rati
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "Saving..." : "Save Rating"}
+            {submitting ? "Saving..." : submitLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

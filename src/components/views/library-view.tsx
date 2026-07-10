@@ -177,7 +177,9 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
   const [ratingOpen, setRatingOpen] = useState(false);
 
   const publicRating = item.rating ? parseFloat(item.rating) : null;
-  const userRating = item.userRating;
+  const userRating = item.type === "series" && item.status !== "finished"
+    ? null
+    : item.userRating;
 
   const handleMarkWatched = async () => {
     if (item.type === "series") {

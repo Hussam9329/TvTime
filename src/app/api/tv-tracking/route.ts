@@ -105,15 +105,26 @@ function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc"
   });
 }
 
-async function repairShowIfNeeded(show: any, state: TvTrackingState, metadata: TvStatusMetadata | null, lastWatchedAt: Date | null) {
+async function repairShowIfNeeded(
+  show: any,
+  state: TvTrackingState,
+  metadata: TvStatusMetadata | null,
+  lastWatchedAt: Date | null,
+  stateVerified: boolean,
+) {
   const patch = tvStateToMediaPatch(state, lastWatchedAt ?? show.watchedAt);
   const update: Record<string, unknown> = {};
 
-  if (show.status !== patch.status) update.status = patch.status;
-  if (show.watched !== patch.watched) update.watched = patch.watched;
-  const currentWatchedAt = show.watchedAt ? new Date(show.watchedAt).getTime() : null;
-  const targetWatchedAt = patch.watchedAt ? patch.watchedAt.getTime() : null;
-  if (currentWatchedAt !== targetWatchedAt) update.watchedAt = patch.watchedAt;
+  // Never rewrite persistent progress during a temporary TMDB failure. The
+  // response still exposes the safe derived state, but the database is repaired
+  // only after the official status and released boundary are verified.
+  if (stateVerified) {
+    if (show.status !== patch.status) update.status = patch.status;
+    if (show.watched !== patch.watched) update.watched = patch.watched;
+    const currentWatchedAt = show.watchedAt ? new Date(show.watchedAt).getTime() : null;
+    const targetWatchedAt = patch.watchedAt ? patch.watchedAt.getTime() : null;
+    if (currentWatchedAt !== targetWatchedAt) update.watchedAt = patch.watchedAt;
+  }
 
   if (metadata) {
     if (metadata.totalEpisodes != null && show.episodes !== metadata.totalEpisodes) update.episodes = metadata.totalEpisodes;
@@ -204,7 +215,13 @@ async function buildTrackingSnapshot(userId: string) {
       legacyCompleted,
     });
 
-    const repaired = await repairShowIfNeeded(show, derived.state, metadata, watched.lastWatchedAt);
+    const repaired = await repairShowIfNeeded(
+      show,
+      derived.state,
+      metadata,
+      watched.lastWatchedAt,
+      derived.verified,
+    );
     return {
       ...repaired,
       _serverTrackingStatus: derived.state,
@@ -219,8 +236,13 @@ async function buildTrackingSnapshot(userId: string) {
     } as DecoratedShow;
   });
 
-  const isStaleWatching = (show: DecoratedShow) => {
+  const hasUnwatchedReleasedEpisode = (show: DecoratedShow) => {
     if (show._serverTrackingStatus !== "watching") return false;
+    const aired = show._serverAiredEpisodeCount;
+    return aired != null && aired > show._serverWatchedAiredEpisodeCount;
+  };
+  const isStaleWatching = (show: DecoratedShow) => {
+    if (!hasUnwatchedReleasedEpisode(show)) return false;
     const since = daysSince(show._serverWatchedMeta.lastWatchedAt);
     return since != null && since >= STALE_WATCH_DAYS;
   };
@@ -237,10 +259,10 @@ async function buildTrackingSnapshot(userId: string) {
     finished: decorated.filter((show) => show._serverTrackingStatus === "finished" && !show.isAnime).length,
     finishedAnime: decorated.filter((show) => show._serverTrackingStatus === "finished" && show.isAnime).length,
     upcoming: decorated.filter(isUpcoming).length,
-    haventWatched: decorated.filter(isStaleWatching).length,
+    haventWatched: decorated.filter(hasUnwatchedReleasedEpisode).length,
   };
 
-  return { decorated, counts, predicates: { isStaleWatching, isUpcoming } };
+  return { decorated, counts, predicates: { hasUnwatchedReleasedEpisode, isStaleWatching, isUpcoming } };
 }
 
 export async function GET(req: NextRequest) {
@@ -278,7 +300,7 @@ export async function GET(req: NextRequest) {
       finished: (show) => show._serverTrackingStatus === "finished" && !show.isAnime,
       "finished-anime": (show) => show._serverTrackingStatus === "finished" && show.isAnime,
       upcoming: snapshot.predicates.isUpcoming,
-      "havent-watched-while": snapshot.predicates.isStaleWatching,
+      "havent-watched-while": snapshot.predicates.hasUnwatchedReleasedEpisode,
     };
 
     const matching = sortShows(filteredBySearch.filter(categoryPredicates[category]), sortBy, order);
@@ -311,6 +333,9 @@ export async function GET(req: NextRequest) {
         _stateVerified: _serverVerified,
         _lastWatchedAt: _serverWatchedMeta.lastWatchedAt,
         _daysSinceLastWatch: daysSince(_serverWatchedMeta.lastWatchedAt),
+        _hasUnwatchedReleasedEpisode: _serverAiredEpisodeCount != null
+          && _serverAiredEpisodeCount > _serverWatchedAiredEpisodeCount,
+        _isStaleWatching: snapshot.predicates.isStaleWatching(show),
         _nextEpisodeAirDate: nextEpisode?.airDate ?? null,
         _nextEpisodeName: nextEpisode?.name ?? null,
         _nextEpisodeSeasonNumber: nextEpisode?.seasonNumber ?? null,

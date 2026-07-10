@@ -27,44 +27,68 @@ export function Providers({ children }: { children: React.ReactNode }) {
     ensureUserId();
   }, [ensureUserId]);
 
-  // Warm the global counters as soon as the app boots, not only when the user
-  // opens TV Tracking/Stats. This keeps counters visible everywhere and also
-  // runs the server-side repair that demotes ongoing shows from Finished to
-  // Up To Date and clears locked TV ratings.
+  // Keep the server-side TV state engine alive while the app is open. A show
+  // that was Up To Date must be re-evaluated when a new episode reaches its air
+  // date, even if the user leaves the tab open overnight.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const timer = window.setTimeout(() => {
-      const stableUserId = userId || getClientUserId();
+    const stableUserId = userId || getClientUserId();
+    let running = false;
 
-      void (async () => {
-        // Counts endpoint also performs the safe server-side repair. Await it
-        // before stats so rating/watch counters do not briefly show stale data.
-        await client.prefetchQuery({
-          queryKey: ["tv-tracking-counts", stableUserId],
-          queryFn: async () => {
-            const url = withUserId(new URL("/api/tv-tracking", window.location.origin));
-            url.searchParams.set("countsOnly", "true");
-            const res = await fetch(url, { headers: userHeaders() });
-            if (!res.ok) throw new Error(`TV Tracking counts ${res.status}`);
-            return res.json();
-          },
-          staleTime: 30_000,
-        }).catch(() => null);
+    const refreshTrackingState = async () => {
+      if (running) return;
+      running = true;
+      try {
+        const url = withUserId(new URL("/api/tv-tracking", window.location.origin));
+        url.searchParams.set("countsOnly", "true");
+        const res = await fetch(url, {
+          headers: userHeaders(),
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error(`TV Tracking counts ${res.status}`);
+        const payload = await res.json();
+        client.setQueryData(["tv-tracking-counts", stableUserId], payload);
+        await Promise.all([
+          client.invalidateQueries({ queryKey: ["tv-tracking"] }),
+          client.invalidateQueries({ queryKey: ["tmdb", "show-progress-seasons"] }),
+          client.invalidateQueries({ queryKey: ["media"] }),
+          client.invalidateQueries({ queryKey: ["media", "following"] }),
+        ]);
 
-        await client.prefetchQuery({
-          queryKey: ["lib", "stats", stableUserId],
-          queryFn: async () => {
-            const res = await fetch(withUserId(new URL("/api/library/stats", window.location.origin)), { headers: userHeaders() });
-            if (!res.ok) return null;
-            return res.json();
-          },
-          staleTime: 30_000,
-        }).catch(() => null);
-      })();
-    }, 100);
+        const statsRes = await fetch(
+          withUserId(new URL("/api/library/stats", window.location.origin)),
+          { headers: userHeaders(), cache: "no-store" },
+        );
+        if (statsRes.ok) {
+          client.setQueryData(["lib", "stats", stableUserId], await statsRes.json());
+        }
+      } catch {
+        // Background refresh is best effort. Visible queries still surface their
+        // own errors and retry normally.
+      } finally {
+        running = false;
+      }
+    };
 
-    return () => window.clearTimeout(timer);
+    const timer = window.setTimeout(() => void refreshTrackingState(), 100);
+    const interval = window.setInterval(() => void refreshTrackingState(), 5 * 60 * 1000);
+    const onFocus = () => void refreshTrackingState();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refreshTrackingState();
+    };
+
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("online", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("online", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [client, userId]);
 
   return (

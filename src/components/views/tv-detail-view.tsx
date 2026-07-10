@@ -1,7 +1,7 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useTrackedShows, useRatingMutate, useShowProgress, type EpisodeCompletion } from "@/hooks/use-tmdb";
+import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useTrackedShows, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, type EpisodeCompletion } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { RatingDialog } from "@/components/media/rating-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
-  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy,
+  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -43,7 +43,15 @@ export function TvDetailView() {
   const tmdbStatus = tData?.status || "";
   const isEnded = /ended|canceled|cancelled/i.test(tmdbStatus);
 
-  const canRateShow = showTrackingStatus === "finished";
+  const canRateShow = isEnded && showTrackingStatus === "finished" && progress.stateVerified;
+  const displayedShowRating = canRateShow ? myRating : null;
+  const showRatingLockMessage = !isEnded
+    ? "Full-series rating unlocks only after TMDB marks the show Ended or Canceled. Episode ratings stay available separately."
+    : showTrackingStatus !== "finished"
+      ? "Watch every final episode to unlock the full-series rating."
+      : !progress.stateVerified
+        ? "The final episode boundary must be verified before rating the whole show."
+        : null;
 
   // Auto-prompt rating only when the entire TV show has officially ended and
   // the user has watched the whole show. Ongoing shows like FROM must never
@@ -167,11 +175,11 @@ export function TvDetailView() {
     toast.success("Rating removed");
   };
 
-  const ratingColor = myRating == null
+  const ratingColor = displayedShowRating == null
     ? "text-muted-foreground"
-    : myRating >= 80 ? "text-emerald-400"
-    : myRating >= 60 ? "text-amber-400"
-    : myRating >= 40 ? "text-orange-400"
+    : displayedShowRating >= 80 ? "text-emerald-400"
+    : displayedShowRating >= 60 ? "text-amber-400"
+    : displayedShowRating >= 40 ? "text-orange-400"
     : "text-rose-400";
 
   return (
@@ -257,14 +265,14 @@ export function TvDetailView() {
               <div className="flex items-center gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Your rating</p>
-                  {myRating != null ? (
+                  {displayedShowRating != null ? (
                     <div className="flex items-center gap-2">
                       <div className={`text-4xl font-extrabold ${ratingColor}`}>
-                        {myRating}
+                        {displayedShowRating}
                         <span className="text-lg text-muted-foreground">/100</span>
                       </div>
                       <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full bg-amber-400" style={{ width: `${myRating}%` }} />
+                        <div className="h-full bg-amber-400" style={{ width: `${displayedShowRating}%` }} />
                       </div>
                     </div>
                   ) : (
@@ -296,9 +304,15 @@ export function TvDetailView() {
                   title={!canRateShow ? (isEnded ? "Finish all episodes first" : "Rating unlocks after the show ends") : undefined}
                 >
                   <Star className="w-4 h-4 mr-1 fill-current" />
-                  {myRating != null ? "Re-rate" : canRateShow ? "Rate out of 100" : "Rating locked"}
+                  {displayedShowRating != null ? "Re-rate" : canRateShow ? "Rate out of 100" : "Rating locked"}
                 </Button>
               </div>
+              {showRatingLockMessage && (
+                <div className="basis-full flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90">
+                  <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                  <span>{showRatingLockMessage}</span>
+                </div>
+              )}
               <div className="text-right">
                 <p className="text-xs text-muted-foreground mb-1">TMDB score</p>
                 <div className="flex items-center gap-1 text-amber-400 font-bold text-lg">
@@ -337,8 +351,9 @@ export function TvDetailView() {
             seasons={seasons}
             defaultSeason={selectedSeason ?? defaultSeason}
             onSelectSeason={setSelectedSeason}
-            fullyWatched={progress.legacyCompletionAssumed}
             isEnded={isEnded}
+            showTitle={t.name || `TV ${t.id}`}
+            showPoster={t.poster_path}
             onCompletion={(c) => {
               if (!c) return;
               if (c.newStatus === "finished" && c.needsRating) {
@@ -445,16 +460,18 @@ function SeasonEpisodes({
   seasons,
   defaultSeason,
   onSelectSeason,
-  fullyWatched = false,
   isEnded = false,
+  showTitle,
+  showPoster,
   onCompletion,
 }: {
   tvId: number;
   seasons: { season_number: number; name: string; episode_count: number; air_date: string | null; poster_path: string | null; overview: string }[];
   defaultSeason: number | null;
   onSelectSeason: (n: number) => void;
-  fullyWatched?: boolean;
   isEnded?: boolean;
+  showTitle: string;
+  showPoster: string | null;
   onCompletion?: (c: EpisodeCompletion | null | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -463,6 +480,21 @@ function SeasonEpisodes({
   const watched = useWatchedEpisodes(tvId);
   const episodeToggle = useEpisodeToggle();
   const bulkEpisodeToggle = useBulkEpisodeToggle();
+  const episodeRatings = useEpisodeRatings(tvId);
+  const episodeRatingMutate = useEpisodeRatingMutate(tvId);
+  const [ratingTarget, setRatingTarget] = useState<{
+    seasonNumber: number;
+    episodeNumber: number;
+    episodeName: string;
+    currentRating: number | null;
+  } | null>(null);
+
+  const ratingByEpisode = new Map<string, number>(
+    (episodeRatings.data?.items ?? []).map((rating) => [
+      `${rating.seasonNumber}-${rating.episodeNumber}`,
+      rating.value,
+    ] as const),
+  );
 
   const currentSeason = seasons.find((s) => s.season_number === season);
   const watchedSet = new Set(
@@ -472,7 +504,7 @@ function SeasonEpisodes({
   const isReleased = (episode: { air_date?: string | null; season_number: number }) =>
     episode.season_number >= 1 && (isEpisodeReleased(episode.air_date) || (isEnded && !episode.air_date));
   const isEpisodeWatched = (episode: { season_number: number; episode_number: number; air_date?: string | null }) =>
-    isReleased(episode) && (fullyWatched || watchedSet.has(`${episode.season_number}-${episode.episode_number}`));
+    isReleased(episode) && watchedSet.has(`${episode.season_number}-${episode.episode_number}`);
   const releasedEpisodes = (seasonData.data?.episodes ?? []).filter(isReleased);
 
   const markAllWatched = async () => {
@@ -516,6 +548,51 @@ function SeasonEpisodes({
       if (onCompletion && !isWatched) onCompletion(result?.completion);
     } catch {
       toast.error("Failed to update episode");
+    }
+  };
+
+  const openEpisodeRating = (episode: { season_number: number; episode_number: number; name: string; air_date?: string | null }) => {
+    if (!isReleased(episode)) {
+      toast.info("Episode rating unlocks after the episode airs.");
+      return;
+    }
+    if (!isEpisodeWatched(episode)) {
+      toast.info("Mark this episode as watched before rating it.");
+      return;
+    }
+    const key = `${episode.season_number}-${episode.episode_number}`;
+    setRatingTarget({
+      seasonNumber: episode.season_number,
+      episodeNumber: episode.episode_number,
+      episodeName: episode.name || `Episode ${episode.episode_number}`,
+      currentRating: ratingByEpisode.get(key) ?? null,
+    });
+  };
+
+  const saveEpisodeRating = async (value: number) => {
+    if (!ratingTarget) return;
+    await episodeRatingMutate.mutateAsync({
+      action: "set",
+      seasonNumber: ratingTarget.seasonNumber,
+      episodeNumber: ratingTarget.episodeNumber,
+      value,
+      showTitle,
+      episodeName: ratingTarget.episodeName,
+      posterPath: showPoster,
+    });
+    setRatingTarget(null);
+  };
+
+  const removeEpisodeRating = async (episode: { season_number: number; episode_number: number }) => {
+    try {
+      await episodeRatingMutate.mutateAsync({
+        action: "remove",
+        seasonNumber: episode.season_number,
+        episodeNumber: episode.episode_number,
+      });
+      toast.success("Episode rating removed. Show rating was not changed.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove episode rating");
     }
   };
 
@@ -639,9 +716,43 @@ function SeasonEpisodes({
                     <p className="text-xs text-muted-foreground/80 line-clamp-2">{ep.overview || "No description available."}</p>
                     {ep.vote_average > 0 && (
                       <span className="inline-flex items-center gap-1 mt-1 text-xs text-amber-400">
-                        <Star className="w-3 h-3 fill-amber-400" /> {ep.vote_average.toFixed(1)}
+                        <Star className="w-3 h-3 fill-amber-400" /> TMDB {ep.vote_average.toFixed(1)}
                       </span>
                     )}
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      <Button
+                        type="button"
+                        variant={ratingByEpisode.has(`${ep.season_number}-${ep.episode_number}`) ? "secondary" : "outline"}
+                        size="sm"
+                        className="h-7 text-[11px]"
+                        disabled={!released || !isWatched || episodeRatingMutate.isPending}
+                        onClick={() => openEpisodeRating(ep)}
+                        title={!released ? "Rating unlocks after air date" : !isWatched ? "Watch this episode first" : "Rate this episode independently"}
+                      >
+                        {(!released || !isWatched) ? <Lock className="w-3 h-3 mr-1" /> : <Star className="w-3 h-3 mr-1 fill-current" />}
+                        {ratingByEpisode.has(`${ep.season_number}-${ep.episode_number}`)
+                          ? `Your episode rating: ${ratingByEpisode.get(`${ep.season_number}-${ep.episode_number}`)}/100`
+                          : !released
+                            ? "Rating after air date"
+                            : !isWatched
+                              ? "Watch to rate"
+                              : "Rate episode"}
+                      </Button>
+                      {ratingByEpisode.has(`${ep.season_number}-${ep.episode_number}`) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeEpisodeRating(ep)}
+                          disabled={episodeRatingMutate.isPending}
+                          aria-label="Remove episode rating"
+                          title="Remove episode rating only"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </Card>
               </motion.div>
@@ -649,6 +760,17 @@ function SeasonEpisodes({
           })}
         </div>
       )}
+
+      <RatingDialog
+        open={!!ratingTarget}
+        onOpenChange={(open) => !open && setRatingTarget(null)}
+        title={ratingTarget ? `${showTitle} — S${ratingTarget.seasonNumber}E${ratingTarget.episodeNumber}: ${ratingTarget.episodeName}` : showTitle}
+        poster={showPoster ? img(showPoster, "w185") : null}
+        initialRating={ratingTarget?.currentRating ?? null}
+        description="This rating belongs only to this watched episode. It does not rate the whole series or change episode progress."
+        submitLabel={ratingTarget?.currentRating == null ? "Save Episode Rating" : "Update Episode Rating"}
+        onRate={saveEpisodeRating}
+      />
     </div>
   );
 }

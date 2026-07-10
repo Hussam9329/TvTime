@@ -28,10 +28,14 @@ type TrackingStatus = "planned" | "not_started" | "watching" | "uptodate" | "fin
 
 function deriveTrackingStatus(show: any): TrackingStatus {
   const value = String(show?._trackingStatus || show?.status || "not_started").toLowerCase();
-  if (value === "planned" || value === "not_started" || value === "watching" || value === "uptodate" || value === "finished") {
+  if (value === "finished") {
+    if (show?._isEndedByTmdb === true) return "finished";
+    return show?._hasUnwatchedReleasedEpisode ? "watching" : "uptodate";
+  }
+  if (value === "planned" || value === "not_started" || value === "watching" || value === "uptodate") {
     return value;
   }
-  if (value === "watched") return show?._isEndedByTmdb ? "finished" : "uptodate";
+  if (value === "watched") return show?._isEndedByTmdb === true ? "finished" : "uptodate";
   return "not_started";
 }
 
@@ -262,7 +266,9 @@ function FilterChip({ active, onClick, label, icon, count, color }: {
 
 function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
   const trackingStatus = show._trackingStatus as TrackingStatus;
-  const userRating = show.userRating;
+  const userRating = trackingStatus === "finished" && show._isEndedByTmdb === true
+    ? show.userRating
+    : null;
   const totalEps = show._airedEpisodeCount ?? show.episodes;
   const seasons = show.seasons;
 
@@ -288,6 +294,11 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
             {show._watchedAiredEpisodeCount != null && <span className="text-[10px] text-muted-foreground">{show._watchedAiredEpisodeCount}/{show._airedEpisodeCount ?? "?"} released watched</span>}
             {show.year && <span className="text-[10px] text-muted-foreground">{show.year}</span>}
           </div>
+          {show._hasUnwatchedReleasedEpisode && (
+            <p className="text-[10px] text-orange-400 mt-1 font-medium line-clamp-1">
+              Released episode waiting — continue watching
+            </p>
+          )}
           {show._nextEpisodeAirDate && (
             <p className="text-[10px] text-amber-400 mt-1 line-clamp-1">
               Upcoming: {show._nextEpisodeSeasonNumber ? `S${show._nextEpisodeSeasonNumber}` : ""}{show._nextEpisodeNumber ? `E${show._nextEpisodeNumber}` : ""}
@@ -477,7 +488,7 @@ function UpToDateTab({ onGo }: { onGo: (id: number) => void }) {
 }
 
 function UpToDateShowCard({ show, onGo }: { show: any; onGo: () => void }) {
-  const userRating = show.userRating;
+  const userRating = null;
   const totalEps = show.episodes;
 
   return (
@@ -596,7 +607,7 @@ function UpcomingTab({ shows, onGo }: { shows: any[]; onGo: (id: number) => void
 function HaventWatchedWhileTab({ shows, onGo }: { shows: any[]; onGo: (id: number) => void }) {
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground px-1">Shows you started but haven't watched in a while (30+ days)</p>
+      <p className="text-sm text-muted-foreground px-1">Shows with at least one released episode you have not watched yet</p>
       <HaventWatchedList shows={shows} onGo={onGo} type="while" />
     </div>
   );

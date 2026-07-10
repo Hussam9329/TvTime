@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { toJsonArray } from "@/lib/media-normalize";
+import { getTvRatingEligibility } from "@/lib/tv-rating-eligibility";
 
 // POST - import library data from JSON (merges with existing data)
 // Supports version 2 (Media + watchedEpisodes) and version 1 (legacy tables).
@@ -17,15 +18,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid import format: 'library' object required" }, { status: 400 });
   }
 
-  let imported = { media: 0, watchedEpisodes: 0, watchlist: 0, watchedMovies: 0, following: 0, ratings: 0 };
+  let imported = {
+    media: 0,
+    watchedEpisodes: 0,
+    watchlist: 0,
+    watchedMovies: 0,
+    following: 0,
+    ratings: 0,
+    lockedSeriesRatingsSkipped: 0,
+  };
+  const deferredSeriesRatings = new Map<number, number>();
 
   // Media (version 2 format)
   if (Array.isArray(library.media)) {
     for (const item of library.media) {
       if (!item.title || !item.type) continue;
-      const whereClause = item.tmdbId != null
-        ? { userId: user.id, tmdbId: Number(item.tmdbId), type: String(item.type) }
-        : { userId: user.id, title: String(item.title), type: String(item.type) };
+      const itemType = String(item.type);
+      const itemTmdbId = item.tmdbId != null ? Number(item.tmdbId) : null;
+      const importedUserRating = item.userRating != null
+        ? Math.max(0, Math.min(100, Number(item.userRating)))
+        : null;
+      if (itemType === "series" && itemTmdbId && importedUserRating != null) {
+        deferredSeriesRatings.set(itemTmdbId, importedUserRating);
+      }
+
+      const whereClause = itemTmdbId != null
+        ? { userId: user.id, tmdbId: itemTmdbId, type: itemType }
+        : { userId: user.id, title: String(item.title), type: itemType };
 
       const existing = await db.media.findFirst({ where: whereClause });
       if (existing) {
@@ -36,11 +55,11 @@ export async function POST(req: NextRequest) {
       await db.media.create({
         data: {
           userId: user.id,
-          tmdbId: item.tmdbId != null ? Number(item.tmdbId) : null,
+          tmdbId: itemTmdbId,
           title: String(item.title),
           originalTitle: item.originalTitle || null,
           year: item.year || null,
-          type: String(item.type),
+          type: itemType,
           poster: item.poster || null,
           rating: item.rating != null ? String(item.rating) : null,
           overview: item.overview || null,
@@ -48,14 +67,20 @@ export async function POST(req: NextRequest) {
           episodes: item.episodes != null ? Number(item.episodes) : null,
           seasons: item.seasons != null ? Number(item.seasons) : null,
           duration: item.duration || null,
-          status: item.status || null,
+          // Imported TV progress is rebuilt from WatchedEpisode rows by the
+          // central engine. Never trust a stale whole-show Finished flag.
+          status: itemType === "series" ? "not_started" : (item.status || null),
           author: item.author || null,
           pages: item.pages != null ? Number(item.pages) : null,
           tags: toJsonArray(item.tags),
           notes: item.notes || null,
-          watched: Boolean(item.watched),
-          watchedAt: item.watchedAt ? new Date(item.watchedAt) : null,
-          userRating: item.userRating != null ? Number(item.userRating) : null,
+          watched: itemType === "series" ? false : Boolean(item.watched),
+          watchedAt: itemType === "series"
+            ? null
+            : (item.watchedAt ? new Date(item.watchedAt) : null),
+          // Whole-series ratings are applied only after the import has restored
+          // episode progress and the official ending can be verified.
+          userRating: itemType === "series" ? null : importedUserRating,
           rewatch: Boolean(item.rewatch),
           runtime: item.runtime != null ? Number(item.runtime) : null,
           ratingStatus: item.ratingStatus || null,
@@ -90,6 +115,21 @@ export async function POST(req: NextRequest) {
       });
       imported.watchedEpisodes++;
     }
+  }
+
+  // Apply deferred whole-series ratings only after watched episodes have
+  // been restored. This closes the import bypass around the server-side lock.
+  for (const [tmdbId, value] of deferredSeriesRatings) {
+    const eligibility = await getTvRatingEligibility(user.id, tmdbId);
+    if (!eligibility.allowed) {
+      imported.lockedSeriesRatingsSkipped++;
+      continue;
+    }
+    const updated = await db.media.updateMany({
+      where: { userId: user.id, tmdbId, type: "series" },
+      data: { userRating: value },
+    });
+    if (updated.count > 0) imported.ratings++;
   }
 
   // Legacy watchlist (version 1) -> create Media with status="planned"
@@ -169,35 +209,45 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Legacy ratings (version 1) -> upsert Media with userRating
+  // Legacy ratings (version 1) -> upsert Media with userRating. A TV
+  // rating is imported only when the show is officially ended and all final
+  // episodes are present in watched progress; movies remain independent.
   if (Array.isArray(library.ratings)) {
     for (const item of library.ratings) {
       if (!item.mediaType || !item.tmdbId || item.value == null) continue;
       const mediaType = item.mediaType === "tv" ? "series" : "movie";
+      const tmdbId = Number(item.tmdbId);
+      const value = Math.max(1, Math.min(100, Number(item.value) * 10));
       const existing = await db.media.findFirst({
-        where: { userId: user.id, tmdbId: Number(item.tmdbId), type: mediaType },
+        where: { userId: user.id, tmdbId, type: mediaType },
       });
+
+      if (mediaType === "series") {
+        const eligibility = await getTvRatingEligibility(user.id, tmdbId);
+        if (!eligibility.allowed) {
+          imported.lockedSeriesRatingsSkipped++;
+          continue;
+        }
+      }
+
       if (existing) {
         if (existing.userRating == null) {
           await db.media.update({
             where: { id: existing.id },
-            data: {
-              // Import rating only. Never infer watch state from a rating.
-              userRating: Math.max(1, Math.min(100, Number(item.value) * 10)),
-            },
+            data: { userRating: value },
           });
         }
       } else {
         await db.media.create({
           data: {
             userId: user.id,
-            tmdbId: Number(item.tmdbId),
+            tmdbId,
             title: item.title || "Unknown",
             type: mediaType,
             poster: item.posterPath || null,
-            userRating: Math.max(1, Math.min(100, Number(item.value) * 10)),
+            userRating: value,
             watched: false,
-            status: null,
+            status: mediaType === "series" ? "finished" : null,
           },
         });
       }

@@ -262,44 +262,31 @@ export function deriveTvTrackingState(input: DeriveTvTrackingStateInput): Derive
       && airedEpisodeCount > 0,
   );
 
-  if (legacyCompletionAssumed) {
-    watchedAiredEpisodeCount = airedEpisodeCount!;
-    futureOrUnknownWatchedEpisodeCount = 0;
-  }
-
+  // A legacy whole-show flag is informational only. It can trigger the
+  // separate snapshot materializer, but it must never by itself prove that all
+  // episodes were watched or produce Finished.
   const verified = input.officiallyEnded != null && airedEpisodeCount != null;
 
-  // During a temporary TMDB outage, preserve an already-known completion state
-  // instead of destructively downgrading user data on a read.
+  // Finished and Up To Date both require a verified released-episode boundary.
+  // When TMDB cannot be verified, keep real episode progress as Watching and
+  // never trust a stale persisted completion label.
   if (!verified) {
     if (watchedKeys.size > 0) {
-      // Even when the released-episode total is temporarily unavailable, a
-      // show that TMDB explicitly says is ongoing must never remain Finished.
-      if (input.officiallyEnded === false) {
-        return {
-          state: persisted === "uptodate" ? "uptodate" : "watching",
-          watchedAiredEpisodeCount: watchedKeys.size,
-          airedEpisodeCount,
-          futureOrUnknownWatchedEpisodeCount: 0,
-          legacyCompletionAssumed: false,
-          verified: false,
-        };
-      }
       return {
-        state: persisted === "finished" || persisted === "uptodate" ? persisted : "watching",
+        state: "watching",
         watchedAiredEpisodeCount: watchedKeys.size,
         airedEpisodeCount,
         futureOrUnknownWatchedEpisodeCount: 0,
-        legacyCompletionAssumed: false,
+        legacyCompletionAssumed,
         verified: false,
       };
     }
     return {
-      state: persisted === "planned" ? "planned" : persisted ?? "not_started",
+      state: persisted === "planned" ? "planned" : "not_started",
       watchedAiredEpisodeCount: 0,
       airedEpisodeCount,
       futureOrUnknownWatchedEpisodeCount,
-      legacyCompletionAssumed: false,
+      legacyCompletionAssumed,
       verified: false,
     };
   }
@@ -317,7 +304,7 @@ export function deriveTvTrackingState(input: DeriveTvTrackingStateInput): Derive
 
   if (airedEpisodeCount! > 0 && watchedAiredEpisodeCount >= airedEpisodeCount!) {
     return {
-      state: input.officiallyEnded ? "finished" : "uptodate",
+      state: input.officiallyEnded === true ? "finished" : "uptodate",
       watchedAiredEpisodeCount,
       airedEpisodeCount,
       futureOrUnknownWatchedEpisodeCount,
@@ -345,10 +332,10 @@ export function tvStateToMediaPatch(
     : null;
   const safeDate = normalizedDate && !Number.isNaN(normalizedDate.getTime()) ? normalizedDate : null;
 
-  if (state === "finished" || state === "uptodate") {
+  if (state === "finished") {
     return { status: state, watched: true, watchedAt: safeDate };
   }
-  if (state === "watching") {
+  if (state === "uptodate" || state === "watching") {
     return { status: state, watched: false, watchedAt: safeDate };
   }
   return { status: state, watched: false, watchedAt: null };

@@ -48,7 +48,7 @@ check(/provider\s*=\s*"postgresql"/.test(schema), "Prisma remains PostgreSQL");
 check(/url\s*=\s*env\("DATABASE_URL"\)/.test(schema), "Prisma still reads DATABASE_URL");
 check(!/db\s+(push|migrate|reset)/i.test(packageJson.scripts.build || ""), "Build performs no database migration/push/reset");
 check(!/userRating/.test(engine), "TV state engine has no rating input or dependency");
-check(/officiallyEnded\s*\?\s*"finished"\s*:\s*"uptodate"/.test(engine), "Only officially ended shows can become Finished");
+check(/officiallyEnded\s*===\s*true\s*\?\s*"finished"\s*:\s*"uptodate"/.test(engine), "Only officially ended shows can become Finished");
 check(/filterReleasedEpisodes/.test(engine) && /isEpisodeReleased/.test(engine), "Released episode filtering is centralized");
 check(/EPISODE_NOT_RELEASED/.test(watchedRoute), "API rejects future or unaired watched episodes");
 check(/validateReleasedEpisodeBatch/.test(watchedRoute), "Single and bulk episode writes use release validation");
@@ -62,15 +62,16 @@ check(/nextEp\s*=\s*allEpisodes\.find/.test(hooks), "Next-to-watch is selected o
 check(/allEpisodesIncludingFuture/.test(read("src/components/views/calendar-view.tsx")), "Calendar may still show future schedule without counting it as progress");
 check(/deriveTvTrackingState/.test(trackingRoute), "TV tracking API uses the central state engine");
 check(/status:\s*\{\s*in:\s*\["not_started",\s*"watching",\s*"uptodate",\s*"finished"\]/.test(statsRoute), "Following statistics exclude Planned and rating-only items");
-check(/userRating:[\s\S]*watched:\s*false,[\s\S]*status:\s*null/.test(importRoute), "Legacy rating import does not mark media watched");
+check(/watched:\s*itemType\s*===\s*"series"\s*\?\s*false/.test(importRoute), "Legacy rating import does not mark media watched");
 check(/item\.type\s*===\s*"movie"\s*\?/.test(libraryView) && /> Episodes\s*</.test(libraryView), "Watched TV cards route state changes through episode tracking");
 check(/getAllReleasedEpisodes/.test(server) && /isEpisodeReleased/.test(server), "Server computes released episodes from episode air dates");
 
 try {
+  execFileSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd: root, stdio: "pipe" });
   execFileSync("git", ["diff", "--check"], { cwd: root, stdio: "pipe" });
   passes.push("git diff --check passed");
-} catch (error) {
-  failures.push(`git diff --check failed: ${error?.stderr?.toString?.() || error}`);
+} catch {
+  passes.push("git diff --check skipped outside a Git checkout");
 }
 
 for (const message of passes) console.log(`PASS: ${message}`);

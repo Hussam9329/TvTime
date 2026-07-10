@@ -667,6 +667,82 @@ export function useRatings(mediaType?: "movie" | "tv") {
   });
 }
 
+export interface EpisodeRatingDB {
+  id: string;
+  showId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  title: string;
+  posterPath: string | null;
+  value: number;
+  updatedAt: string;
+  scope: "episode";
+}
+
+export function useEpisodeRatings(showId: number | null | undefined) {
+  const numericShowId = Number(showId || 0);
+  return useQuery({
+    queryKey: ["episode-ratings", numericShowId],
+    enabled: numericShowId > 0,
+    queryFn: async () => {
+      const url = withUserId(new URL("/api/library/ratings", window.location.origin));
+      url.searchParams.set("mediaType", "episode");
+      url.searchParams.set("showId", String(numericShowId));
+      const res = await fetch(url, { headers: userHeaders() });
+      await ensureApiOk(res, "Failed to load episode ratings");
+      return res.json() as Promise<{ items: EpisodeRatingDB[] }>;
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useEpisodeRatingMutate(showId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      action: "set" | "remove";
+      seasonNumber: number;
+      episodeNumber: number;
+      value?: number;
+      showTitle?: string;
+      episodeName?: string;
+      posterPath?: string | null;
+    }) => {
+      const url = withUserId(new URL("/api/library/ratings", window.location.origin));
+      if (args.action === "remove") {
+        url.searchParams.set("mediaType", "episode");
+        url.searchParams.set("showId", String(showId));
+        url.searchParams.set("seasonNumber", String(args.seasonNumber));
+        url.searchParams.set("episodeNumber", String(args.episodeNumber));
+        const res = await fetch(url, { method: "DELETE", headers: userHeaders() });
+        await ensureApiOk(res, "Failed to remove episode rating");
+        return res.json();
+      }
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...userHeaders() },
+        body: JSON.stringify({
+          mediaType: "episode",
+          showId,
+          seasonNumber: args.seasonNumber,
+          episodeNumber: args.episodeNumber,
+          value: args.value,
+          showTitle: args.showTitle,
+          episodeName: args.episodeName,
+          posterPath: args.posterPath,
+        }),
+      });
+      await ensureApiOk(res, "Failed to save episode rating");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["episode-ratings", showId] });
+    },
+  });
+}
+
 export function useRatingMutate() {
   const qc = useQueryClient();
   return useMutation({
@@ -776,6 +852,8 @@ export interface TvTrackingItem extends MediaItemDB {
   _stateVerified: boolean;
   _lastWatchedAt: string | null;
   _daysSinceLastWatch: number | null;
+  _hasUnwatchedReleasedEpisode: boolean;
+  _isStaleWatching: boolean;
   _nextEpisodeAirDate: string | null;
   _nextEpisodeName: string | null;
   _nextEpisodeSeasonNumber: number | null;
@@ -818,7 +896,10 @@ export function useTvTrackingCounts() {
   return useQuery({
     queryKey: ["tv-tracking-counts", userId || getClientUserId()],
     queryFn: () => tvTrackingGet<TvTrackingCountsResponse>({ countsOnly: true }),
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }
 
@@ -834,7 +915,10 @@ export function useTvTracking(params: {
   return useQuery({
     queryKey: ["tv-tracking", userId || getClientUserId(), params],
     queryFn: () => tvTrackingGet<TvTrackingResponse>(params),
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     placeholderData: (previousData) => previousData,
   });
 }
@@ -892,9 +976,6 @@ export function useShowProgress(showId: number | null | undefined) {
         legacyCompleted,
       });
       const watchedSet = new Set(actualWatchedSet);
-      if (derived.legacyCompletionAssumed) {
-        for (const key of airedKeys) watchedSet.add(key);
-      }
 
       const nextEp = allEpisodes.find(({ episode }) => !watchedSet.has(episodeKey(episode.season_number, episode.episode_number))) ?? null;
       const nextUpcomingEpisode = futureEpisodes
@@ -934,7 +1015,10 @@ export function useShowProgress(showId: number | null | undefined) {
         isUpcoming: Boolean(nextUpcomingEpisode && nextEp == null),
       };
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   return {

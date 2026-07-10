@@ -2,44 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMedia } from "@/lib/media-normalize";
-import { episodeKey, normalizeTvTrackingState } from "@/lib/tv-status-engine";
-import { getTvStatusMetadata } from "@/lib/tv-status-server";
-
-async function getTvRatingEligibility(userId: string, tmdbId: number | null | undefined) {
-  if (!tmdbId) return { allowed: false, reason: "missing-tmdb-id", totalEpisodes: 0, watchedEpisodes: 0 };
-
-  try {
-    const metadata = await getTvStatusMetadata(Number(tmdbId));
-    if (!metadata.officiallyEnded) {
-      return {
-        allowed: false,
-        reason: "show-not-ended",
-        totalEpisodes: metadata.airedEpisodeCount ?? 0,
-        watchedEpisodes: 0,
-      };
-    }
-
-    const watchedRows = await db.watchedEpisode.findMany({
-      where: { userId, showId: Number(tmdbId) },
-      select: { seasonNumber: true, episodeNumber: true },
-    });
-    const watchedKeys = new Set(
-      watchedRows.map((row) => episodeKey(row.seasonNumber, row.episodeNumber)),
-    );
-    const watchedAired = metadata.airedEpisodeKeys.size > 0
-      ? [...metadata.airedEpisodeKeys].filter((key) => watchedKeys.has(key)).length
-      : Math.min(watchedKeys.size, metadata.airedEpisodeCount ?? 0);
-    const totalAired = metadata.airedEpisodeCount ?? 0;
-
-    if (totalAired > 0 && watchedAired < totalAired) {
-      return { allowed: false, reason: "not-fully-watched", totalEpisodes: totalAired, watchedEpisodes: watchedAired };
-    }
-    return { allowed: true, reason: "ok", totalEpisodes: totalAired, watchedEpisodes: watchedAired };
-  } catch (error) {
-    console.warn("[media:update] Unable to verify TV rating eligibility", tmdbId, error);
-    return { allowed: false, reason: "tmdb-unverified", totalEpisodes: 0, watchedEpisodes: 0 };
-  }
-}
+import { normalizeTvTrackingState } from "@/lib/tv-status-engine";
+import { getTvRatingEligibility, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
 
 export async function PATCH(
   req: NextRequest,
@@ -135,15 +99,14 @@ export async function PATCH(
     if (existing.type === "series" && data.userRating != null) {
       const eligibility = await getTvRatingEligibility(user.id, existing.tmdbId);
       if (!eligibility.allowed) {
-        const isNotFullyWatched = eligibility.reason === "not-fully-watched";
+        const failure = tvRatingEligibilityError(eligibility);
         return NextResponse.json(
           {
-            error: isNotFullyWatched
-              ? "TV series can only be rated after every released episode has been watched."
-              : "TV series can only be rated after the whole show has officially ended.",
-            code: isNotFullyWatched ? "TV_RATING_REQUIRES_ALL_RELEASED_EPISODES" : "TV_RATING_LOCKED_UNTIL_ENDED",
+            error: failure.message,
+            code: failure.code,
             totalEpisodes: eligibility.totalEpisodes,
             watchedEpisodes: eligibility.watchedEpisodes,
+            tmdbStatus: eligibility.tmdbStatus,
           },
           { status: 409 },
         );
