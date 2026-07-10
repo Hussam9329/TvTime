@@ -2,16 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMedia } from "@/lib/media-normalize";
+import { detectIsAnime } from "@/lib/anime-detect";
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const body = await req.json();
-    const { tmdbId, title, type, poster, year, overview, rating, runtime, genres, seasons, episodes, isAnime } = body;
+    const { tmdbId, title, type, poster, year, overview, rating, runtime, genres, seasons, episodes, isAnime, originCountry, originalLanguage } = body;
 
     if (!title || typeof title !== "string") {
       return NextResponse.json({ error: "title required" }, { status: 400 });
     }
+
+    // Fix #13: Auto-detect anime from TMDB metadata if not explicitly provided
+    const detectedAnime = isAnime !== undefined
+      ? Boolean(isAnime)
+      : detectIsAnime({
+          originCountry: originCountry || (body.origin_country),
+          originalLanguage: originalLanguage || (body.original_language),
+          genres: genres,
+          title: title,
+        });
 
     const mediaType = type === "tv" ? "series" : type || "movie";
     const numericTmdbId = tmdbId ? Number(tmdbId) : null;
@@ -52,7 +63,7 @@ export async function POST(req: NextRequest) {
               seasons: seasons != null ? Number(seasons) : null,
               episodes: episodes != null ? Number(episodes) : null,
               genres: Array.isArray(genres) ? genres : [],
-              isAnime: Boolean(isAnime),
+              isAnime: detectedAnime,
               status: null,
               watched: false,
             },

@@ -367,7 +367,7 @@ export function useWatchlist(mediaType?: "movie" | "tv") {
       url.searchParams.set("status", "planned");
       if (type) url.searchParams.set("type", type);
       const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) return { items: [] };
+      if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
@@ -454,7 +454,7 @@ export function useRecentlyWatched(limit = 12) {
       const url = withUserId(new URL("/api/media/recently", window.location.origin));
       url.searchParams.set("limit", String(limit));
       const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) return { items: [] as RecentlyWatchedItem[], total: 0 };
+      if (!res.ok) throw new Error("Failed to load recently watched");
       const data = await res.json();
       return {
         items: (data.items || []) as RecentlyWatchedItem[],
@@ -479,7 +479,7 @@ export function useWatchedMovies() {
       url.searchParams.set("sortBy", "watchedAt");
       url.searchParams.set("order", "desc");
       const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) return { items: [] };
+      if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
@@ -566,7 +566,7 @@ export function useWatchedEpisodes(showId?: number) {
       const url = withUserId(new URL("/api/library/watched-episodes", window.location.origin));
       if (showId != null) url.searchParams.set("showId", String(showId));
       const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) return { items: [] };
+      if (!res.ok) throw new Error("Failed to load");
       return res.json();
     },
     staleTime: 0,
@@ -660,7 +660,7 @@ export function useFollowing() {
       url.searchParams.set("status", "not_started,watching,uptodate,finished");
       url.searchParams.set("limit", "500");
       const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) return { items: [] };
+      if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
@@ -679,7 +679,7 @@ export function useTrackedShows() {
       url.searchParams.set("tracked", "true");
       url.searchParams.set("limit", "500");
       const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) return { items: [] };
+      if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
@@ -763,7 +763,7 @@ export function useRatings(mediaType?: "movie" | "tv") {
       url.searchParams.set("rated", "true");
       if (type) url.searchParams.set("type", type);
       const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) return { items: [] };
+      if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },

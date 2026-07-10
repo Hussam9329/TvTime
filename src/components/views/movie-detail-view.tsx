@@ -11,7 +11,7 @@ import { RatingDialog } from "@/components/media/rating-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, ListMinus, CheckCircle2, Circle, ArrowLeft,
-  DollarSign, Film, Users, Sparkles, Heart, ChevronRight,
+  DollarSign, Film, Users, Sparkles, Heart, ChevronRight, Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -192,19 +192,26 @@ export function MovieDetailView() {
             {m.tagline && <p className="text-sm sm:text-base italic text-foreground/70 mt-1">{m.tagline}</p>}
           </div>
           {/* Action buttons */}
+          {/* Fix #15: Disable action buttons while library state is loading
+              to prevent false initial state (all false/null) from flashing */}
+          {(() => {
+            const stateLoading = watchlist.isLoading || watchedMovies.isLoading || ratings.isLoading;
+            return (
           <div className="flex flex-wrap gap-2">
             <Button
               variant={isWatched ? "default" : "secondary"}
               onClick={onWatched}
               className="h-10"
+              disabled={stateLoading || watchedToggle.isPending}
             >
-              {isWatched ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Circle className="w-4 h-4 mr-2" />}
+              {stateLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : isWatched ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Circle className="w-4 h-4 mr-2" />}
               {isWatched ? "Watched" : "Mark watched"}
             </Button>
             <Button
               variant={inWatchlist ? "default" : "secondary"}
               onClick={onWatchlist}
               className="h-10"
+              disabled={stateLoading || watchlistToggle.isPending}
             >
               {inWatchlist ? <Check className="w-4 h-4 mr-2" /> : <ListPlus className="w-4 h-4 mr-2" />}
               {inWatchlist ? "In watchlist" : "Add to watchlist"}
@@ -219,6 +226,8 @@ export function MovieDetailView() {
               </Button>
             )}
           </div>
+            );
+          })()}
 
           {/* Rating */}
           <Card className="p-4 glass">

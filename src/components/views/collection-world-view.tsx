@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
@@ -146,12 +146,20 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
         Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : "anime titles"}
       </p>
 
+      {/* Fix #14: Distinguish loading, error, empty, and success states */}
       {media.isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {Array.from({ length: 12 }).map((_, index) => (
             <div key={index} className="aspect-[2/3] shimmer rounded-lg" />
           ))}
         </div>
+      ) : media.isError ? (
+        <Card className="p-12 text-center">
+          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-rose-400" />
+          <p className="font-medium text-foreground text-lg">Failed to load your library</p>
+          <p className="text-sm text-muted-foreground mt-1">Your data was not deleted. This is a connection error.</p>
+          <Button variant="outline" className="mt-4" onClick={() => media.refetch()}>Retry</Button>
+        </Card>
       ) : items.length === 0 ? (
         <Card className="p-12 text-center text-muted-foreground">
           <WorldIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
@@ -343,9 +351,10 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
               </div>
             </div>
 
-            {/* hover action buttons — all buttons stopPropagation to prevent
-                opening the detail page when clicking an action button */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
+            {/* Fix #11: Action buttons visible on touch devices (no hover-only).
+                On desktop: opacity-0 → group-hover:opacity-100
+                On touch devices: always visible via CSS media query in globals.css (.touch-visible) */}
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 touch-visible transition-opacity flex items-center justify-center gap-2 p-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
               {/* Details button — always visible, opens the correct profile */}
               <Button size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); handleOpenDetails(); }}>
                 <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Details
