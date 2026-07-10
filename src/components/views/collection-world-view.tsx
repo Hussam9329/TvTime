@@ -194,6 +194,7 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 
 function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: MediaItemDB; index: number; isWatchedTab: boolean; world: CollectionWorld }) {
   const update = useMediaUpdate();
+  const goMovie = useNav((state) => state.goMovie);
   const goTv = useNav((state) => state.goTv);
   const [ratingOpen, setRatingOpen] = useState(false);
 
@@ -201,6 +202,27 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
   const userRating = item.type === "series" && item.status !== "finished"
     ? null
     : item.userRating;
+
+  // Determine media type explicitly from the item's type field — never guess
+  const isMovie = item.type === "movie";
+
+  // Navigate to the correct detail page based on type
+  const handleOpenDetails = () => {
+    const tmdbId = Number(item.tmdbId);
+    if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
+      toast.info("This item doesn't have a valid TMDB profile to open.");
+      return;
+    }
+    if (isMovie) goMovie(tmdbId);
+    else goTv(tmdbId);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleOpenDetails();
+    }
+  };
 
   const handleMarkWatched = async () => {
     if (item.type === "series") {
@@ -261,6 +283,12 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
+        className="cursor-pointer group"
+        onClick={handleOpenDetails}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label={`${item.title}${item.year ? ` (${item.year})` : ""}`}
       >
         <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card group">
           <div className="relative aspect-[2/3] overflow-hidden bg-muted">
@@ -315,19 +343,24 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
               </div>
             </div>
 
-            {/* hover action buttons */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3">
+            {/* hover action buttons — all buttons stopPropagation to prevent
+                opening the detail page when clicking an action button */}
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
+              {/* Details button — always visible, opens the correct profile */}
+              <Button size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); handleOpenDetails(); }}>
+                <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Details
+              </Button>
               {!isWatchedTab ? (
                 <>
-                  <Button size="sm" className="h-8" onClick={handleMarkWatched} title={item.type === "series" ? "Open episode tracking" : "Mark watched without changing rating"}>
-                    <Play className="w-3.5 h-3.5 mr-1 fill-current" /> {item.type === "series" ? "Track Episodes" : "Mark Watched"}
+                  <Button size="sm" variant="secondary" className="h-8" onClick={(e) => { e.stopPropagation(); void handleMarkWatched(); }} title={item.type === "series" ? "Open episode tracking" : "Mark watched without changing rating"}>
+                    {item.type === "series" ? "Track" : "Watched"}
                   </Button>
                   {item.type === "movie" && (
-                    <Button size="sm" variant="secondary" className="h-8" onClick={() => setRatingOpen(true)}>
+                    <Button size="sm" variant="secondary" className="h-8" onClick={(e) => { e.stopPropagation(); setRatingOpen(true); }}>
                       <Star className="w-3.5 h-3.5 mr-1" /> {userRating != null ? "Re-rate" : "Rate"}
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleQuickUnwatch(); }} title="Remove from watchlist">
+                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); void handleQuickUnwatch(); }} title="Remove from watchlist">
                     Remove
                   </Button>
                 </>
@@ -335,10 +368,10 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
                 <>
                   {item.type === "movie" ? (
                     <>
-                      <Button size="sm" variant="secondary" className="h-8" onClick={() => setRatingOpen(true)}>
+                      <Button size="sm" variant="secondary" className="h-8" onClick={(e) => { e.stopPropagation(); setRatingOpen(true); }}>
                         <Star className="w-3.5 h-3.5 mr-1" /> {userRating != null ? "Re-rate" : "Rate"}
                       </Button>
-                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleUnwatch}>
+                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); void handleUnwatch(); }}>
                         Unwatch
                       </Button>
                     </>
@@ -347,13 +380,13 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
                       size="sm"
                       variant="secondary"
                       className="h-8"
-                      onClick={() => item.tmdbId ? goTv(item.tmdbId) : toast.info("Open the show and change released episodes individually.")}
+                      onClick={(e) => { e.stopPropagation(); if (item.tmdbId) goTv(item.tmdbId); else toast.info("Open the show and change released episodes individually."); }}
                     >
                       <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Episodes
                     </Button>
                   )}
                   {userRating != null && (
-                    <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={handleRemoveRating}>
+                    <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); void handleRemoveRating(); }}>
                       Remove rating
                     </Button>
                   )}
@@ -363,7 +396,7 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
                 size="sm"
                 variant="outline"
                 className="h-8 text-xs"
-                onClick={(event) => { event.stopPropagation(); void handleMoveWorld(); }}
+                onClick={(e) => { e.stopPropagation(); void handleMoveWorld(); }}
                 title={world === "anime" ? "Move out of Anime" : "Move to Anime"}
               >
                 {world === "anime" ? (item.type === "movie" ? "To Movies" : "To TV Shows") : "To Anime"}

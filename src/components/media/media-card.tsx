@@ -20,12 +20,10 @@ export function MediaCard({ item, index = 0, showMediaType = true }: MediaCardPr
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
 
-  const mediaType: "movie" | "tv" =
-    item.media_type === "movie" || item.media_type === "tv"
-      ? item.media_type
-      : item.title
-      ? "movie"
-      : "tv";
+  // NEVER guess media type from title/name. Use the explicit media_type field.
+  // Default to "movie" only when media_type is genuinely absent, but prefer
+  // "tv" when the item has a name (not title) and no explicit media_type.
+  const mediaType: "movie" | "tv" = item.media_type === "tv" ? "tv" : "movie";
 
   // determine library status
   const watchlist = useWatchlist();
@@ -43,8 +41,18 @@ export function MediaCard({ item, index = 0, showMediaType = true }: MediaCardPr
     mediaType === "tv" ? following.data?.items.some((w) => w.tmdbId === item.id) : undefined;
 
   const handleClick = () => {
-    if (mediaType === "movie") goMovie(item.id);
-    else goTv(item.id);
+    // Validate tmdbId before navigating — prevents opening broken profiles
+    const id = Number(item.id);
+    if (!Number.isFinite(id) || id <= 0) return;
+    if (mediaType === "movie") goMovie(id);
+    else goTv(id);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
   };
 
   const rating = item.vote_average ? Math.round(item.vote_average * 10) / 10 : 0;
@@ -58,6 +66,10 @@ export function MediaCard({ item, index = 0, showMediaType = true }: MediaCardPr
       transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3) }}
       className="cursor-pointer group"
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`${title}${year ? ` (${year})` : ""}`}
     >
       <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
