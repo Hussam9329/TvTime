@@ -1,6 +1,6 @@
 "use client";
 
-import { useStats, useShowProgress, useEpisodeToggle, useBulkEpisodeToggle, useMedia, useRatingMutate, useTvTracking, useTvTrackingCounts, type EpisodeCompletion, type TvTrackingCategory } from "@/hooks/use-tmdb";
+import { useStats, useShowProgress, useEpisodeToggle, useBulkEpisodeToggle, useMedia, useMediaUpdate, useRatingMutate, useTvTracking, useTvTrackingCounts, type EpisodeCompletion, type TvTrackingCategory } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
   return <Badge className="text-[9px] bg-slate-500/20 text-slate-300 border-0"><Clock className="w-2.5 h-2.5 mr-1" /> Not Started</Badge>;
 }
 
-export function TvTrackingView() {
+export function TvShowsView() {
   const stats = useStats();
   const trackingCounts = useTvTrackingCounts();
   const counts = trackingCounts.data?.counts;
@@ -90,18 +90,17 @@ export function TvTrackingView() {
           <Clapperboard className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">TV Tracking</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">All TV filters now live inside All, with global counts across your full library</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">TV Shows</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Your complete non-anime TV tracking world, with global counts across every show</p>
         </div>
       </div>
 
-      {/* Exact TVM-13 filters, all backed by full-library counters. */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+      {/* TV Shows filters, all backed by full-collection counters. */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
         <StatCard icon={<Layers className="w-5 h-5" />} label="All" value={counts?.all ?? "…"} color="from-purple-500/20 to-purple-500/5" />
         <StatCard icon={<BookOpen className="w-5 h-5" />} label="Watchlist" value={counts?.watchlist ?? counts?.planned ?? "…"} color="from-violet-500/20 to-violet-500/5" />
         <StatCard icon={<Zap className="w-5 h-5" />} label="Up To Date" value={counts?.uptodate ?? "…"} color="from-cyan-500/20 to-cyan-500/5" />
         <StatCard icon={<Trophy className="w-5 h-5" />} label="Finished" value={counts?.finished ?? "…"} color="from-emerald-500/20 to-emerald-500/5" />
-        <StatCard icon={<Sparkles className="w-5 h-5" />} label="Finished Anime" value={counts?.finishedAnime ?? "…"} color="from-fuchsia-500/20 to-fuchsia-500/5" />
         <StatCard icon={<Calendar className="w-5 h-5" />} label="Upcoming" value={counts?.upcoming ?? "…"} color="from-amber-500/20 to-amber-500/5" />
         <StatCard icon={<Play className="w-5 h-5" />} label="Haven't Watched" value={counts?.haventWatched ?? "…"} color="from-orange-500/20 to-orange-500/5" />
         <StatCard icon={<Clock className="w-5 h-5" />} label="Haven't Started" value={counts?.haventStarted ?? counts?.notStarted ?? "…"} color="from-slate-500/20 to-slate-500/5" />
@@ -109,7 +108,7 @@ export function TvTrackingView() {
 
       {stats.data?.watchTime && (
         <p className="text-xs text-muted-foreground px-1 -mt-2">
-          Total watch time: <strong>{stats.data.watchTime.totalHours || 0}h</strong>. Filter counters below are full-library counters, not current-page counters.
+          Total watch time: <strong>{stats.data.watchTime.totalHours || 0}h</strong>. Filter counters below are full-collection counters, not current-page counters.
         </p>
       )}
 
@@ -147,7 +146,6 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
     watching: 0,
     uptodate: 0,
     finished: 0,
-    finishedAnime: 0,
     upcoming: 0,
     haventWatched: 0,
     haventStarted: 0,
@@ -165,7 +163,6 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
     { value: "watchlist", label: "Watchlist", count: counts.watchlist ?? counts.planned, icon: <BookOpen className="w-3 h-3" />, color: "bg-purple-500/15 text-purple-400" },
     { value: "uptodate", label: "Up To Date", count: counts.uptodate, icon: <Zap className="w-3 h-3" />, color: "bg-cyan-500/15 text-cyan-400" },
     { value: "finished", label: "Finished", count: counts.finished, icon: <Trophy className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-400" },
-    { value: "finished-anime", label: "Finished Anime", count: counts.finishedAnime, icon: <Sparkles className="w-3 h-3" />, color: "bg-fuchsia-500/15 text-fuchsia-400" },
     { value: "upcoming", label: "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-400" },
     { value: "havent-watched", label: "Haven't Watched", count: counts.haventWatched, icon: <Play className="w-3 h-3" />, color: "bg-orange-500/15 text-orange-400" },
     { value: "havent-started", label: "Haven't Started", count: counts.haventStarted ?? counts.notStarted, icon: <Clock className="w-3 h-3" />, color: "bg-slate-500/15 text-slate-300" },
@@ -178,7 +175,7 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
       <div className="flex items-center justify-between gap-3 px-1 flex-wrap">
         <div className="flex items-center gap-2">
           <Layers className="w-5 h-5 text-primary" />
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight">All TV Tracking</h2>
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">All TV Shows</h2>
           <span className="text-xs text-muted-foreground ml-1">({total})</span>
         </div>
         <Badge variant="secondary" className="text-[10px]">
@@ -186,7 +183,7 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
         </Badge>
       </div>
       <p className="text-xs text-muted-foreground px-1 -mt-2">
-        Use these filters from inside All. Every number is calculated across your complete TV library, not just the visible page.
+        Use these filters from inside All. Every number is calculated across your complete TV Shows collection, never from Anime or only the visible page.
       </p>
 
       <div className="flex items-center gap-2 flex-wrap px-1">
@@ -213,7 +210,7 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
         <EmptyTab
           icon={<Layers className="w-10 h-10" />}
           title={filter === "all" ? "No tracked shows yet" : `No ${activeFilterLabel} shows`}
-          subtitle={filter === "all" ? "Follow TV shows to start tracking" : "This filter is empty across your full library"}
+          subtitle={filter === "all" ? "Follow TV shows to start tracking" : "This filter is empty across your full TV Shows collection"}
         />
       ) : (
         <>
@@ -266,6 +263,7 @@ function FilterChip({ active, onClick, label, icon, count, color }: {
 }
 
 function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
+  const update = useMediaUpdate();
   const trackingStatus = show._trackingStatus as TrackingStatus;
   const userRating = trackingStatus === "finished" && show._isEndedByTmdb === true
     ? show.userRating
@@ -318,6 +316,18 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
               </div>
             </div>
           )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-2 h-7 w-fit text-[10px]"
+            onClick={(event) => {
+              event.stopPropagation();
+              void update.mutateAsync({ id: show.id, isAnime: true }).then(() => toast.success("Moved to Anime"));
+            }}
+          >
+            <Sparkles className="w-3 h-3 mr-1" /> Move to Anime
+          </Button>
         </div>
       </Card>
     </motion.div>

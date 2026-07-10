@@ -8,7 +8,6 @@ import {
   Compass,
   Search,
   CalendarDays,
-  Library,
   BarChart3,
   Film,
   Menu,
@@ -17,8 +16,8 @@ import {
   Moon,
   ArrowLeft,
   Keyboard,
-  Database,
   Clapperboard,
+  Sparkles,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -39,9 +38,10 @@ const navItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
   { view: "home", label: "Home", icon: Home },
   { view: "discover", label: "Discover", icon: Compass },
   { view: "search", label: "Search", icon: Search },
-  { view: "tv-tracking", label: "TV Track", icon: Clapperboard },
+  { view: "movies", label: "Movies", icon: Film },
+  { view: "tv-shows", label: "TV Shows", icon: Clapperboard },
+  { view: "anime", label: "Anime", icon: Sparkles },
   { view: "calendar", label: "Calendar", icon: CalendarDays },
-  { view: "library", label: "Library", icon: Library },
   { view: "stats", label: "Stats", icon: BarChart3 },
 ];
 
@@ -79,7 +79,7 @@ export function Header() {
         {/* Mobile menu */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden">
+            <Button variant="ghost" size="icon" className="xl:hidden">
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </SheetTrigger>
@@ -125,7 +125,7 @@ export function Header() {
         </button>
 
         {/* Desktop nav */}
-        <nav className="hidden lg:flex items-center gap-1">
+        <nav className="hidden xl:flex items-center gap-1">
           {navItems.map((item) => (
             <button
               key={item.view}
@@ -150,7 +150,7 @@ export function Header() {
             <Input
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
-              placeholder="Search movies, shows..."
+              placeholder="Search movies, TV shows, anime..."
               className="pl-9 h-9 bg-muted/50 border-border/50 focus-visible:bg-background"
             />
           </div>

@@ -68,7 +68,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       if (!res.ok) throw new Error("Failed to clear");
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["media"] });
-      toast.success("All library data cleared");
+      toast.success("All collection data cleared");
       onOpenChange(false);
     } catch {
       toast.error("Failed to clear data");
@@ -94,7 +94,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("Library exported");
+      toast.success("Collection exported");
     } catch {
       toast.error("Failed to export data");
     } finally {
@@ -139,7 +139,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           <DialogTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5 text-primary" /> Profile & Settings
           </DialogTitle>
-          <DialogDescription>Manage your account and library data</DialogDescription>
+          <DialogDescription>Manage your account and collection data</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
@@ -179,10 +179,10 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             </div>
           </div>
 
-          {/* Library stats summary */}
+          {/* Collection stats summary */}
           {counts && (
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Your library</p>
+              <p className="text-xs text-muted-foreground mb-2">Your collection</p>
               <div className="grid grid-cols-2 gap-2">
                 <StatBox label="Watchlist" value={counts.watchlist} />
                 <StatBox label="Watched movies" value={counts.watchedMovies} />
@@ -198,7 +198,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               <Download className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold">Backup & Restore</p>
-                <p className="text-xs text-muted-foreground">Export your library to a JSON file or import a backup.</p>
+                <p className="text-xs text-muted-foreground">Export your complete collection to a JSON file or import a backup.</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -226,7 +226,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-destructive">Danger zone</p>
-                <p className="text-xs text-muted-foreground">Clear all your library data. This cannot be undone.</p>
+                <p className="text-xs text-muted-foreground">Clear all your collection data. This cannot be undone.</p>
               </div>
             </div>
             <AlertDialog>
@@ -238,7 +238,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Clear all library data?</AlertDialogTitle>
+                  <AlertDialogTitle>Clear all collection data?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This will permanently delete your watchlist, watched movies, watched episodes, followed shows, and ratings. This action cannot be undone.
                   </AlertDialogDescription>

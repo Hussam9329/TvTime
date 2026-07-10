@@ -15,13 +15,22 @@ export function eligibleTitleRatingWhere(userId: string): Prisma.MediaWhereInput
 }
 
 /**
- * Canonical, full-library counters. These predicates are deliberately shared by
- * Library, Stats and the dedicated counts API so pagination can never change a
+ * Canonical, full-collection counters. These predicates are deliberately shared by
+ * Movies, TV Shows, Anime, Stats and the dedicated counts API so pagination can never change a
  * filter badge.
  */
 export async function getCanonicalLibraryCounts(userId: string) {
   const base = { userId };
   const eligibleRating = eligibleTitleRatingWhere(userId);
+  const eligibleAnimeRating: Prisma.MediaWhereInput = {
+    userId,
+    isAnime: true,
+    userRating: { not: null },
+    OR: [
+      { type: { not: "series" } },
+      { type: "series", status: "finished" },
+    ],
+  };
 
   const [
     total,
@@ -45,23 +54,23 @@ export async function getCanonicalLibraryCounts(userId: string) {
     watchedEpisodes,
   ] = await Promise.all([
     db.media.count({ where: base }),
-    db.media.count({ where: { ...base, type: "movie" } }),
-    db.media.count({ where: { ...base, type: "series" } }),
+    db.media.count({ where: { ...base, type: "movie", isAnime: false } }),
+    db.media.count({ where: { ...base, type: "series", isAnime: false } }),
     db.media.count({ where: { ...base, type: "book" } }),
     db.media.count({ where: { ...base, type: "game" } }),
     db.media.count({ where: eligibleRating }),
-    db.media.count({ where: { ...base, type: "movie", userRating: { not: null } } }),
+    db.media.count({ where: { ...base, type: "movie", isAnime: false, userRating: { not: null } } }),
     db.media.count({ where: { ...base, type: "series", status: "finished", isAnime: false, userRating: { not: null } } }),
-    db.media.count({ where: { ...base, type: "series", status: "finished", isAnime: true, userRating: { not: null } } }),
+    db.media.count({ where: eligibleAnimeRating }),
     db.media.count({ where: { ...base, watched: true } }),
     db.media.count({ where: { ...base, status: "planned", watched: false } }),
-    db.media.count({ where: { ...base, type: "movie", status: "planned", watched: false } }),
+    db.media.count({ where: { ...base, type: "movie", status: "planned", watched: false, isAnime: false } }),
     db.media.count({ where: { ...base, type: "series", status: "planned", watched: false, isAnime: false } }),
-    db.media.count({ where: { ...base, type: "series", status: "planned", watched: false, isAnime: true } }),
-    db.media.count({ where: { ...base, type: "movie", watched: true } }),
+    db.media.count({ where: { ...base, status: "planned", watched: false, isAnime: true } }),
+    db.media.count({ where: { ...base, type: "movie", watched: true, isAnime: false } }),
     db.media.count({ where: { ...base, type: "series", watched: true, isAnime: false } }),
-    db.media.count({ where: { ...base, type: "series", watched: true, isAnime: true } }),
-    db.media.count({ where: { ...base, type: "series", status: { in: [...ACTIVE_TV_STATES] } } }),
+    db.media.count({ where: { ...base, watched: true, isAnime: true } }),
+    db.media.count({ where: { ...base, type: "series", isAnime: false, status: { in: [...ACTIVE_TV_STATES] } } }),
     db.watchedEpisode.count({ where: base }),
   ]);
 

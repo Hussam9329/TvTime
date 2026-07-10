@@ -82,9 +82,9 @@ export function StatsView() {
           <ActivityChart movies={d.moviesByMonth ?? []} episodes={d.episodesByMonth ?? []} />
         </Card>
 
-        {/* Library breakdown */}
+        {/* Collection breakdown */}
         <Card className="p-4">
-          <h3 className="font-bold mb-3 flex items-center gap-2"><BookOpen className="w-4 h-4 text-primary" /> Library breakdown</h3>
+          <h3 className="font-bold mb-3 flex items-center gap-2"><BookOpen className="w-4 h-4 text-primary" /> Collection breakdown</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -94,6 +94,8 @@ export function StatsView() {
                     { name: "Shows following", value: counts.following },
                     { name: "Watchlist movies", value: counts.watchlistMovies },
                     { name: "Watchlist shows", value: counts.watchlistShows },
+                    { name: "Anime watched", value: counts.watchedAnime },
+                    { name: "Anime watchlist", value: counts.watchlistAnime },
                   ].filter((x) => x.value > 0)}
                   dataKey="value"
                   nameKey="name"
@@ -101,7 +103,7 @@ export function StatsView() {
                   outerRadius={80}
                   paddingAngle={3}
                 >
-                  {[0, 1, 2, 3].map((i) => (
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
                   ))}
                 </Pie>

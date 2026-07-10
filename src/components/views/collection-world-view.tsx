@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNav } from "@/lib/store";
 import { useMedia, useMediaUpdate, useLibraryCounts, type MediaItemDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
@@ -8,162 +8,173 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Clock, Play, Sparkles, BookOpen } from "lucide-react";
-import { img } from "@/lib/tmdb";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { SafeImage } from "@/components/media/safe-image";
 
-type LibTab = "watchlist-movies" | "watched-movies" | "watchlist-tv" | "watched-tv" | "watchlist-anime" | "watched-anime";
+type CollectionWorld = "movies" | "anime";
+type CollectionTab = "watchlist" | "watched";
 
-const TAB_CONFIG: { value: LibTab; label: string; icon: React.ElementType; type: string; isAnime: boolean; isWatched: boolean }[] = [
-  { value: "watchlist-movies", label: "Watchlist Movies", icon: Film, type: "movie", isAnime: false, isWatched: false },
-  { value: "watched-movies", label: "Watched Movies", icon: Check, type: "movie", isAnime: false, isWatched: true },
-  { value: "watchlist-tv", label: "Watchlist TV", icon: Tv, type: "series", isAnime: false, isWatched: false },
-  { value: "watched-tv", label: "Watched TV", icon: Check, type: "series", isAnime: false, isWatched: true },
-  { value: "watchlist-anime", label: "Watchlist Anime", icon: Sparkles, type: "series", isAnime: true, isWatched: false },
-  { value: "watched-anime", label: "Watched Anime", icon: Check, type: "series", isAnime: true, isWatched: true },
-];
+type WorldConfig = {
+  title: string;
+  subtitle: string;
+  searchPlaceholder: string;
+  icon: React.ElementType;
+  type?: string;
+  isAnime: "true" | "false";
+  watchlistCount: "watchlistMovies" | "watchlistAnime";
+  watchedCount: "watchedMovies" | "watchedAnime";
+};
 
-export function LibraryView() {
-  const [tab, setTab] = useState<LibTab>("watchlist-movies");
+const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
+  movies: {
+    title: "Movies",
+    subtitle: "Your movie watchlist and watched collection",
+    searchPlaceholder: "Search your movies...",
+    icon: Film,
+    type: "movie",
+    isAnime: "false",
+    watchlistCount: "watchlistMovies",
+    watchedCount: "watchedMovies",
+  },
+  anime: {
+    title: "Anime",
+    subtitle: "A separate home for your anime watchlist and watched titles",
+    searchPlaceholder: "Search your anime...",
+    icon: Sparkles,
+    isAnime: "true",
+    watchlistCount: "watchlistAnime",
+    watchedCount: "watchedAnime",
+  },
+};
+
+export function CollectionWorldView({ world }: { world: CollectionWorld }) {
+  const config = WORLD_CONFIG[world];
+  const WorldIcon = config.icon;
+  const [tab, setTab] = useState<CollectionTab>("watchlist");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("addedAt");
   const [page, setPage] = useState(0);
   const limit = 60;
-
-  const config = TAB_CONFIG.find((t) => t.value === tab)!;
-
+  const isWatchedTab = tab === "watched";
   const debouncedSearch = useDebounce(search, 400);
 
   const media = useMedia({
     type: config.type,
-    isAnime: config.isAnime ? "true" : "false",
-    ...(config.isWatched ? { watched: "true" } : { status: "planned" }),
+    isAnime: config.isAnime,
+    ...(isWatchedTab ? { watched: "true" } : { status: "planned", watched: "false" }),
     search: debouncedSearch || undefined,
     sortBy,
     order: "desc",
     limit,
     offset: page * limit,
   });
-
   const globalCounts = useLibraryCounts();
 
   const items = media.data?.items ?? [];
   const total = media.data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
   const counts = globalCounts.data?.counts;
-  const tabCount = (value: LibTab) => ({
-    "watchlist-movies": counts?.watchlistMovies,
-    "watched-movies": counts?.watchedMovies,
-    "watchlist-tv": counts?.watchlistShows,
-    "watched-tv": counts?.watchedShows,
-    "watchlist-anime": counts?.watchlistAnime,
-    "watched-anime": counts?.watchedAnime,
-  }[value] ?? 0);
-
+  const watchlistCount = Number(counts?.[config.watchlistCount] ?? 0);
+  const watchedCount = Number(counts?.[config.watchedCount] ?? 0);
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">My Library</h1>
-        <p className="text-sm text-muted-foreground mt-1">Your collection from Neon database</p>
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
+          <WorldIcon className="w-6 h-6 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{config.title}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{config.subtitle}</p>
+        </div>
       </div>
 
-      {/* Stats overview */}
-      {globalCounts.data && (
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          <MiniStat label="Watchlist Movies" value={globalCounts.data.counts?.watchlistMovies ?? 0} />
-          <MiniStat label="Watched Movies" value={globalCounts.data.counts?.watchedMovies ?? 0} />
-          <MiniStat label="Watchlist TV" value={globalCounts.data.counts?.watchlistShows ?? 0} />
-          <MiniStat label="Watched TV" value={globalCounts.data.counts?.watchedShows ?? 0} />
-          <MiniStat label="Watchlist Anime" value={globalCounts.data.counts?.watchlistAnime ?? 0} />
-          <MiniStat label="Watched Anime" value={globalCounts.data.counts?.watchedAnime ?? 0} />
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-3 max-w-xl">
+        <MiniStat label="Watchlist" value={watchlistCount} />
+        <MiniStat label="Watched" value={watchedCount} />
+      </div>
 
-      {/* Tabs */}
-      <Tabs value={tab} onValueChange={(v) => { setTab(v as LibTab); setPage(0); }}>
-        <TabsList className="w-full justify-start overflow-x-auto no-scrollbar h-auto flex-wrap">
-          {TAB_CONFIG.map((t) => (
-            <TabsTrigger key={t.value} value={t.value} className="text-xs h-9">
-              <t.icon className="w-3.5 h-3.5 mr-1.5" />
-              {t.label}
-              <span className="ml-1 rounded-full bg-background/70 px-1.5 py-0.5 text-[9px] tabular-nums">{tabCount(t.value)}</span>
-            </TabsTrigger>
-          ))}
+      <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
+        <TabsList className="w-full sm:w-auto h-auto">
+          <TabsTrigger value="watchlist" className="min-w-36 h-10">
+            <WorldIcon className="w-4 h-4 mr-2" />
+            Watchlist
+            <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchlistCount}</span>
+          </TabsTrigger>
+          <TabsTrigger value="watched" className="min-w-36 h-10">
+            <Check className="w-4 h-4 mr-2" />
+            Watched
+            <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchedCount}</span>
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      {/* Search + sort */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            placeholder="Search your collection..."
+            onChange={(event) => { setSearch(event.target.value); setPage(0); }}
+            placeholder={config.searchPlaceholder}
             className="pl-9 h-9"
           />
         </div>
         <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
           <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
           {[
-            { v: "addedAt", l: "Recent" },
-            { v: "userRating", l: "Rating" },
-            { v: "title", l: "A-Z" },
-            { v: "year", l: "Year" },
-          ].map((opt) => (
+            { value: "addedAt", label: "Recent" },
+            { value: "userRating", label: "Rating" },
+            { value: "title", label: "A-Z" },
+            { value: "year", label: "Year" },
+          ].map((option) => (
             <button
-              key={opt.v}
-              onClick={() => setSortBy(opt.v)}
+              key={option.value}
+              onClick={() => setSortBy(option.value)}
               className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                sortBy === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                sortBy === option.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {opt.l}
+              {option.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Count */}
       <p className="text-sm text-muted-foreground">
-        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> items
+        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : "anime titles"}
       </p>
 
-      {/* Grid */}
       {media.isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="aspect-[2/3] shimmer rounded-lg" />
+          {Array.from({ length: 12 }).map((_, index) => (
+            <div key={index} className="aspect-[2/3] shimmer rounded-lg" />
           ))}
         </div>
       ) : items.length === 0 ? (
         <Card className="p-12 text-center text-muted-foreground">
-          <Search className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">No items found</p>
-          <p className="text-sm mt-1">Try adjusting your search or filters</p>
+          <WorldIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
+          <p className="font-medium">No {tab === "watchlist" ? "watchlist" : "watched"} {world === "movies" ? "movies" : "anime"} found</p>
+          <p className="text-sm mt-1">Try adjusting your search or add something new</p>
         </Card>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-          {items.map((item, i) => (
-            <LibraryMediaCard key={item.id} item={item} index={i} isWatchedTab={config.isWatched} />
+          {items.map((item, index) => (
+            <CollectionMediaCard key={item.id} item={item} index={index} isWatchedTab={isWatchedTab} world={world} />
           ))}
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
-          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>
             Prev
           </Button>
           <span className="text-sm text-muted-foreground px-3">
             Page <span className="font-bold text-foreground">{page + 1}</span> of {totalPages}
           </span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
+          <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((current) => current + 1)}>
             Next
           </Button>
         </div>
@@ -181,7 +192,7 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; index: number; isWatchedTab: boolean }) {
+function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: MediaItemDB; index: number; isWatchedTab: boolean; world: CollectionWorld }) {
   const update = useMediaUpdate();
   const goTv = useNav((state) => state.goTv);
   const [ratingOpen, setRatingOpen] = useState(false);
@@ -235,13 +246,14 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
     toast.success("Removed from watchlist");
   };
 
-  const handleToggleAnime = async () => {
-    await update.mutateAsync({
-      id: item.id,
-      isAnime: !item.isAnime,
-    });
-    toast.success(item.isAnime ? "Removed from anime" : "Marked as anime");
+  const handleMoveWorld = async () => {
+    await update.mutateAsync({ id: item.id, isAnime: world !== "anime" });
+    const destination = world === "anime"
+      ? (item.type === "movie" ? "Movies" : "TV Shows")
+      : "Anime";
+    toast.success(`Moved to ${destination}`);
   };
+
 
   return (
     <>
@@ -347,11 +359,15 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
                   )}
                 </>
               )}
-              {item.type === "series" && (
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleToggleAnime}>
-                  {item.isAnime ? "TV" : "Anime"}
-                </Button>
-              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={(event) => { event.stopPropagation(); void handleMoveWorld(); }}
+                title={world === "anime" ? "Move out of Anime" : "Move to Anime"}
+              >
+                {world === "anime" ? (item.type === "movie" ? "To Movies" : "To TV Shows") : "To Anime"}
+              </Button>
             </div>
           </div>
         </Card>
@@ -370,7 +386,7 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
-  useMemo(() => {
+  useEffect(() => {
     const timer = setTimeout(() => setDebounced(value), delay);
     return () => clearTimeout(timer);
   }, [value, delay]);

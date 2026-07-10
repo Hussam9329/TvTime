@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const items = await db.media.findMany({
-      where: { userId: user.id, type: "series", status: { in: [...ACTIVE_TV_STATES] } },
+      where: { userId: user.id, type: "series", isAnime: false, status: { in: [...ACTIVE_TV_STATES] } },
       orderBy: { addedAt: "desc" },
     });
     return NextResponse.json({ items: items.map(toCompat), source: "Media" });

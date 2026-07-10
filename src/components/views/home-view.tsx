@@ -1,6 +1,6 @@
 "use client";
 
-import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useFollowing, useStats, useShowProgress, useWatchedMovieToggle, useRecentlyWatched } from "@/hooks/use-tmdb";
+import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useFollowing, useStats, useShowProgress, useWatchedMovieToggle, useRecentlyWatched } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { ContinueWatching } from "@/components/media/continue-watching";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
@@ -22,7 +22,6 @@ export function HomeView() {
   const onAirTv = useOnTheAirTv();
   const topTv = useTopRatedTv();
 
-  const watchlist = useWatchlist();
   const following = useFollowing();
   const stats = useStats();
 
@@ -67,39 +66,39 @@ export function HomeView() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <QuickStat
             icon={<BookOpen className="w-4 h-4" />}
-            label="Watchlist"
-            value={stats.data.counts.watchlist}
-            onClick={() => setView("library")}
+            label="Movie Watchlist"
+            value={stats.data.counts.watchlistMovies ?? 0}
+            onClick={() => setView("movies")}
           />
           <QuickStat
             icon={<Film className="w-4 h-4" />}
-            label="Movies watched"
-            value={stats.data.counts.watchedMovies}
-            onClick={() => setView("stats")}
+            label="Movies Watched"
+            value={stats.data.counts.watchedMovies ?? 0}
+            onClick={() => setView("movies")}
           />
           <QuickStat
             icon={<Tv className="w-4 h-4" />}
-            label="TV Shows rated"
-            value={stats.data.counts.ratedShows ?? 0}
-            onClick={() => setView("stats")}
+            label="TV Shows"
+            value={stats.data.counts.series ?? stats.data.counts.following ?? 0}
+            onClick={() => setView("tv-shows")}
           />
           <QuickStat
-            icon={<Play className="w-4 h-4" />}
-            label="Following"
-            value={stats.data.counts.following}
-            onClick={() => setView("library")}
+            icon={<BookOpen className="w-4 h-4" />}
+            label="Anime Watchlist"
+            value={stats.data.counts.watchlistAnime ?? 0}
+            onClick={() => setView("anime")}
+          />
+          <QuickStat
+            icon={<Check className="w-4 h-4" />}
+            label="Anime Watched"
+            value={stats.data.counts.watchedAnime ?? 0}
+            onClick={() => setView("anime")}
           />
           <QuickStat
             icon={<Clock className="w-4 h-4" />}
             label="Watch time"
             value={stats.data.watchTime?.totalHours || 0}
             suffix="h"
-            onClick={() => setView("stats")}
-          />
-          <QuickStat
-            icon={<Star className="w-4 h-4" />}
-            label="Avg rating"
-            value={stats.data.avgRating || 0}
             onClick={() => setView("stats")}
           />
         </div>
@@ -436,7 +435,7 @@ function WatchNextCTA() {
     <motion.button
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      onClick={() => setView("tv-tracking")}
+      onClick={() => setView("tv-shows")}
       className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all hover:scale-105"
     >
       <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">

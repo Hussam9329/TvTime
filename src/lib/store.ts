@@ -11,12 +11,12 @@ export type ViewName =
   | "tv-detail"
   | "person-detail"
   | "calendar"
-  | "library"
+  | "movies"
+  | "anime"
   | "stats"
   | "media"
-  | "tv-tracking";
+  | "tv-shows";
 
-export type LibraryTab = "watchlist" | "watched-movies" | "following" | "ratings";
 export type DiscoverTab = "movies" | "tv";
 
 interface NavState {
@@ -26,7 +26,6 @@ interface NavState {
   tvId: number | null;
   personId: number | null;
   // tabs
-  libraryTab: LibraryTab;
   discoverTab: DiscoverTab;
   discoverGenre: number | null;
   // search
@@ -42,7 +41,6 @@ interface NavState {
   goTv: (id: number) => void;
   goPerson: (id: number) => void;
   back: () => void;
-  setLibraryTab: (t: LibraryTab) => void;
   setDiscoverTab: (t: DiscoverTab) => void;
   setDiscoverGenre: (g: number | null) => void;
   setSearchQuery: (q: string) => void;
@@ -61,7 +59,6 @@ export const useNav = create<NavState>()(
       movieId: null,
       tvId: null,
       personId: null,
-      libraryTab: "watchlist",
       discoverTab: "movies",
       discoverGenre: null,
       searchQuery: "",
@@ -106,7 +103,6 @@ export const useNav = create<NavState>()(
           return { view: prev, history };
         }),
 
-      setLibraryTab: (t) => set({ libraryTab: t }),
       setDiscoverTab: (t) => set({ discoverTab: t, discoverGenre: null }),
       setDiscoverGenre: (g) => set({ discoverGenre: g }),
       setSearchQuery: (q) => set({ searchQuery: q }),

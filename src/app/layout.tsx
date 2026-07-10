@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CineTrack — Track Movies & TV Shows",
-  description: "Your personal cinema companion. Track movies, follow TV shows, mark watched episodes, and discover new favorites.",
-  keywords: ["movies", "tv shows", "tracking", "cinema", "watchlist", "TMDB"],
+  title: "CineTrack — Movies, TV Shows & Anime",
+  description: "Your personal cinema companion with separate spaces for movies, TV shows, and anime.",
+  keywords: ["movies", "tv shows", "anime", "tracking", "cinema", "watchlist", "TMDB"],
   icons: {
     icon: "/placeholder-poster.svg",
   },

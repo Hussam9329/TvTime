@@ -10,9 +10,10 @@ import { MovieDetailView } from "@/components/views/movie-detail-view";
 import { TvDetailView } from "@/components/views/tv-detail-view";
 import { PersonDetailView } from "@/components/views/person-detail-view";
 import { CalendarView } from "@/components/views/calendar-view";
-import { LibraryView } from "@/components/views/library-view";
+import { MoviesView } from "@/components/views/movies-view";
+import { AnimeView } from "@/components/views/anime-view";
 import { StatsView } from "@/components/views/stats-view";
-import { TvTrackingView } from "@/components/views/tv-tracking-view";
+import { TvShowsView } from "@/components/views/tv-tracking-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 import { useEffect } from "react";
 
@@ -40,9 +41,10 @@ export function AppShell() {
           {view === "tv-detail" && <TvDetailView />}
           {view === "person-detail" && <PersonDetailView />}
           {view === "calendar" && <CalendarView />}
-          {view === "library" && <LibraryView />}
+          {view === "movies" && <MoviesView />}
+          {view === "anime" && <AnimeView />}
           {view === "stats" && <StatsView />}
-          {view === "tv-tracking" && <TvTrackingView />}
+          {view === "tv-shows" && <TvShowsView />}
         </div>
       </main>
       <Footer />

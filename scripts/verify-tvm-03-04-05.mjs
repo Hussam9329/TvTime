@@ -39,9 +39,10 @@ const server = read("src/lib/tv-status-server.ts");
 const watchedRoute = read("src/app/api/library/watched-episodes/route.ts");
 const mediaRoute = read("src/app/api/media/[id]/route.ts");
 const hooks = read("src/hooks/use-tmdb.ts");
-const libraryView = read("src/components/views/library-view.tsx");
+const collectionView = read("src/components/views/collection-world-view.tsx");
 const trackingRoute = read("src/app/api/tv-tracking/route.ts");
 const statsRoute = read("src/app/api/library/stats/route.ts");
+const libraryCounts = read("src/lib/library-counts.ts");
 const importRoute = read("src/app/api/library/import/route.ts");
 
 check(/provider\s*=\s*"postgresql"/.test(schema), "Prisma remains PostgreSQL");
@@ -61,9 +62,9 @@ check(/allEpisodes\s*=\s*allEpisodesIncludingFuture\.filter/.test(hooks), "Clien
 check(/nextEp\s*=\s*allEpisodes\.find/.test(hooks), "Next-to-watch is selected only from released episodes");
 check(/allEpisodesIncludingFuture/.test(read("src/components/views/calendar-view.tsx")), "Calendar may still show future schedule without counting it as progress");
 check(/deriveTvTrackingState/.test(trackingRoute), "TV tracking API uses the central state engine");
-check(/status:\s*\{\s*in:\s*\["not_started",\s*"watching",\s*"uptodate",\s*"finished"\]/.test(statsRoute), "Following statistics exclude Planned and rating-only items");
+check(/ACTIVE_TV_STATES[\s\S]*not_started[\s\S]*watching[\s\S]*uptodate[\s\S]*finished/.test(libraryCounts) && /status:\s*\{\s*in:\s*\[\.\.\.ACTIVE_TV_STATES\]/.test(libraryCounts), "Following statistics exclude Planned and rating-only items");
 check(/watched:\s*itemType\s*===\s*"series"\s*\?\s*false/.test(importRoute), "Legacy rating import does not mark media watched");
-check(/item\.type\s*===\s*"movie"\s*\?/.test(libraryView) && /> Episodes\s*</.test(libraryView), "Watched TV cards route state changes through episode tracking");
+check(/item\.type\s*===\s*"movie"\s*\?/.test(collectionView) && /> Episodes\s*</.test(collectionView), "Watched TV cards route state changes through episode tracking");
 check(/getAllReleasedEpisodes/.test(server) && /isEpisodeReleased/.test(server), "Server computes released episodes from episode air dates");
 
 try {

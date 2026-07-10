@@ -22,7 +22,9 @@ const SHORTCUTS: { group: string; items: ShortcutItem[] }[] = [
     items: [
       { keys: ["g", "h"], description: "Go to Home" },
       { keys: ["g", "d"], description: "Go to Discover" },
-      { keys: ["g", "l"], description: "Go to Library" },
+      { keys: ["g", "m"], description: "Go to Movies" },
+      { keys: ["g", "t"], description: "Go to TV Shows" },
+      { keys: ["g", "a"], description: "Go to Anime" },
       { keys: ["g", "c"], description: "Go to Calendar" },
       { keys: ["g", "s"], description: "Go to Stats" },
     ],
@@ -93,7 +95,7 @@ export function KeyboardShortcuts() {
         return;
       }
 
-      // "g" prefix for navigation (g h, g d, g s, g l, g c)
+      // "g" prefix for navigation (g h, g d, g m, g t, g a, g s, g c)
       const now = Date.now();
       if (e.key === "g" && now - lastKeyTimeRef.current > 1500) {
         lastKeyRef.current = "g";
@@ -115,9 +117,17 @@ export function KeyboardShortcuts() {
             e.preventDefault();
             setView("stats");
             break;
-          case "l":
+          case "m":
             e.preventDefault();
-            setView("library");
+            setView("movies");
+            break;
+          case "t":
+            e.preventDefault();
+            setView("tv-shows");
+            break;
+          case "a":
+            e.preventDefault();
+            setView("anime");
             break;
           case "c":
             e.preventDefault();

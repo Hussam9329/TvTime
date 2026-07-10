@@ -39,7 +39,7 @@ const mediaStats = read("src/app/api/media/stats/route.ts");
 const libraryStats = read("src/app/api/library/stats/route.ts");
 const trackingApi = read("src/app/api/tv-tracking/route.ts");
 const trackingView = read("src/components/views/tv-tracking-view.tsx");
-const libraryView = read("src/components/views/library-view.tsx");
+const collectionView = read("src/components/views/collection-world-view.tsx");
 const hooks = read("src/hooks/use-tmdb.ts");
 const exportRoute = read("src/app/api/library/export/route.ts");
 const clearRoute = read("src/app/api/library/clear/route.ts");
@@ -104,7 +104,7 @@ check(/getCanonicalLibraryCounts/.test(countsRoute), "Dedicated global counts AP
 check(/countsAreGlobal:\s*true/.test(countsRoute), "Dedicated counts API explicitly marks counters global");
 check(/getCanonicalLibraryCounts/.test(mediaStats) && /countsAreGlobal:\s*true/.test(mediaStats), "Media Stats uses full-library canonical counters");
 check(/getCanonicalLibraryCounts/.test(libraryStats) && /countsAreGlobal:\s*true/.test(libraryStats), "Library Stats uses full-library canonical counters");
-check(/useLibraryCounts/.test(libraryView), "Library tabs display dedicated global counts");
+check(/useLibraryCounts/.test(collectionView), "Movies and Anime tabs display dedicated global counts");
 check(/queryKey:\s*\["library-counts"/.test(hooks), "Global counts have their own React Query cache key");
 check((hooks.match(/invalidateQueries\(\{ queryKey: \["library-counts"\]/g) || []).length >= 5, "Library counters invalidate after all major mutations");
 
@@ -112,7 +112,7 @@ const exactCategories = ["all", "watchlist", "uptodate", "finished", "finished-a
 for (const category of exactCategories) {
   check(trackingApi.includes(`"${category}"`), `TV Tracking API supports ${category}`);
 }
-const expectedLabels = ["All", "Watchlist", "Up To Date", "Finished", "Finished Anime", "Upcoming", "Haven't Watched", "Haven't Started"];
+const expectedLabels = ["All", "Watchlist", "Up To Date", "Finished", "Upcoming", "Haven't Watched", "Haven't Started"];
 let lastLabelAt = -1;
 for (const label of expectedLabels) {
   const index = trackingView.indexOf(`label: "${label}"`);
@@ -123,7 +123,7 @@ check(/const counts = \{[\s\S]*all:[\s\S]*haventWatched:/.test(trackingApi), "TV
 check(/countsOnly[\s\S]*countsAreGlobal:\s*true/.test(trackingApi), "TV Tracking counts-only response is global");
 check(/const matching =[\s\S]*matching\.slice\(offset, offset \+ limit\)/.test(trackingApi), "TV Tracking counts/filtering happen before pagination");
 check(/const snapshot = await buildTrackingSnapshot\(user\.id\)/.test(trackingApi), "TV Tracking list and counters share one canonical snapshot");
-check(/Every number is calculated across your complete TV library/.test(trackingView), "TV Tracking explains that badge counts are global");
+check(/Every number is calculated across your complete TV Shows collection/.test(trackingView), "TV Shows explains that badge counts are global");
 
 check(!/watchedMovie|followingShow|watchlistItem/.test(recently), "Recently Watched reads no legacy title table");
 check(/source:\s*"Media\+WatchedEpisode"/.test(recently), "Recently Watched declares its canonical sources");

@@ -153,6 +153,7 @@ async function buildTrackingSnapshot(userId: string) {
     where: {
       userId,
       type: "series",
+      isAnime: false,
       OR: [
         { status: { not: null } },
         { watched: true },
