@@ -26,7 +26,9 @@ export function CalendarView() {
   // Fetch details for each followed show to get seasons + episode air dates
   // We only need shows that have recent/upcoming episodes. To keep it efficient,
   // fetch all followed shows' details (capped at 50).
-  const followedToShow = followed.slice(0, 50);
+  // TVM-34: Show ALL followed shows (was capped at 50). For large libraries,
+  // useShowProgress batches TMDB calls via the existing caching layer.
+  const followedToShow = followed;
 
   const days = useMemo(() => {
     const first = new Date(year, month, 1);

@@ -105,6 +105,9 @@ function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc"
   });
 }
 
+// TVM-27: GET handlers must NOT write to the database. This function now
+// applies the derived state patch IN MEMORY only (for display), without
+// persisting to DB. A separate sync endpoint can persist repairs if needed.
 async function repairShowIfNeeded(
   show: any,
   state: TvTrackingState,
@@ -113,33 +116,26 @@ async function repairShowIfNeeded(
   stateVerified: boolean,
 ) {
   const patch = tvStateToMediaPatch(state, lastWatchedAt ?? show.watchedAt);
-  const update: Record<string, unknown> = {};
 
-  // Never rewrite persistent progress during a temporary TMDB failure. The
-  // response still exposes the safe derived state, but the database is repaired
-  // only after the official status and released boundary are verified.
+  // Apply patch in-memory only — no db.media.update during GET
+  const patched: any = { ...show };
+
   if (stateVerified) {
-    if (show.status !== patch.status) update.status = patch.status;
-    if (show.watched !== patch.watched) update.watched = patch.watched;
+    if (show.status !== patch.status) patched.status = patch.status;
+    if (show.watched !== patch.watched) patched.watched = patch.watched;
     const currentWatchedAt = show.watchedAt ? new Date(show.watchedAt).getTime() : null;
     const targetWatchedAt = patch.watchedAt ? patch.watchedAt.getTime() : null;
-    if (currentWatchedAt !== targetWatchedAt) update.watchedAt = patch.watchedAt;
+    if (currentWatchedAt !== targetWatchedAt) patched.watchedAt = patch.watchedAt;
   }
 
   if (metadata) {
-    if (metadata.totalEpisodes != null && show.episodes !== metadata.totalEpisodes) update.episodes = metadata.totalEpisodes;
-    if (metadata.totalSeasons != null && show.seasons !== metadata.totalSeasons) update.seasons = metadata.totalSeasons;
+    if (metadata.totalEpisodes != null && show.episodes !== metadata.totalEpisodes) patched.episodes = metadata.totalEpisodes;
+    if (metadata.totalSeasons != null && show.seasons !== metadata.totalSeasons) patched.seasons = metadata.totalSeasons;
   }
 
   // userRating is deliberately absent: tracking state can never add, clear or
   // otherwise mutate a rating.
-  if (Object.keys(update).length === 0) return show;
-  try {
-    return await db.media.update({ where: { id: show.id }, data: update });
-  } catch (error) {
-    console.warn("[tv-tracking] Failed to repair tracking row", { mediaId: show.id, update, error });
-    return show;
-  }
+  return patched;
 }
 
 async function buildTrackingSnapshot(userId: string) {

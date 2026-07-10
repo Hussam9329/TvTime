@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { enforceAdminSecret } from "@/lib/admin-guard";
 
 // One-time data backfill: aligns HISTORICAL watchlist data with the
 // `status=planned` convention that the current app uses.
@@ -23,16 +24,11 @@ import { db } from "@/lib/db";
 //   - Respects existing progressive TV states (watching/uptodate/finished)
 //     — only NULL/empty status is backfilled
 //
-// Optional protection via ADMIN_REPAIR_SECRET.
+// TVM-40: Always enforces ADMIN_REPAIR_SECRET.
 
 export async function GET(req: NextRequest) {
-  const expectedSecret = process.env.ADMIN_REPAIR_SECRET;
-  if (expectedSecret) {
-    const provided = req.nextUrl.searchParams.get("secret");
-    if (provided !== expectedSecret) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-  }
+  const guard = enforceAdminSecret(req);
+  if (guard) return guard;
 
   try {
     // Find all unwatched media with NULL/empty status. These are the

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { enforceAdminSecret } from "@/lib/admin-guard";
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY || "8265bd1679663a7ea12ac168da84d2e8";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
@@ -14,10 +15,9 @@ async function tmdbMovie(tmdbId: number) {
 }
 
 export async function GET(req: NextRequest) {
-  const expectedSecret = process.env.ADMIN_REPAIR_SECRET;
-  if (expectedSecret && req.nextUrl.searchParams.get("secret") !== expectedSecret) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  // TVM-40: Always enforce admin secret
+  const guard = enforceAdminSecret(req);
+  if (guard) return guard;
 
   try {
     let fixed = 0;

@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStats } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { useQueryClient } from "@tanstack/react-query";
 import { userHeaders, withUserId } from "@/lib/client-user";
-import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload } from "lucide-react";
+import { getUserPreferences, setUserPreferences, COUNTRY_OPTIONS, TIMEZONE_OPTIONS } from "@/lib/user-preferences";
+import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Globe, Clock, Star } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -224,6 +226,9 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             />
           </div>
 
+          {/* TVM-35/36/37: Preferences — timezone, country, platform preferences */}
+          <PreferencesSection />
+
           {/* Danger zone */}
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
             <div className="flex items-start gap-2 mb-2">
@@ -267,6 +272,121 @@ function StatBox({ label, value }: { label: string; value: number }) {
     <div className="rounded-md bg-card border border-border/40 p-2.5">
       <p className="text-lg font-bold text-primary">{value}</p>
       <p className="text-[10px] text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+// TVM-35/36/37: User preferences section — timezone, country, platform prefs
+function PreferencesSection() {
+  const [prefs, setPrefs] = useState({ timezone: "Asia/Baghdad", country: "IQ", preferredPlatforms: [] as string[] });
+  const [platformInput, setPlatformInput] = useState("");
+  const [initialized, setInitialized] = useState(false);
+
+  // Load preferences on first render (client-side) using "adjust state during
+  // render" pattern to avoid setState-in-effect lint violation.
+  if (!initialized) {
+    setInitialized(true);
+    setPrefs(getUserPreferences());
+  }
+
+  const updatePref = (key: keyof typeof prefs, value: any) => {
+    const updated = setUserPreferences({ [key]: value });
+    setPrefs(updated);
+    toast.success("Preference saved");
+  };
+
+  const addPlatform = () => {
+    const name = platformInput.trim();
+    if (!name) return;
+    if (prefs.preferredPlatforms.includes(name)) {
+      toast.info("Already in your preferences");
+      return;
+    }
+    const updated = setUserPreferences({ preferredPlatforms: [...prefs.preferredPlatforms, name] });
+    setPrefs(updated);
+    setPlatformInput("");
+    toast.success(`Added "${name}" to preferred platforms`);
+  };
+
+  const removePlatform = (name: string) => {
+    const updated = setUserPreferences({ preferredPlatforms: prefs.preferredPlatforms.filter((p) => p !== name) });
+    setPrefs(updated);
+  };
+
+  if (!initialized) return null;
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-card/50 p-3 space-y-3">
+      <div className="flex items-center gap-2">
+        <Settings className="w-4 h-4 text-primary" />
+        <p className="text-sm font-semibold">Preferences</p>
+      </div>
+
+      {/* TVM-35: Timezone */}
+      <div className="space-y-1.5">
+        <Label className="text-xs flex items-center gap-1">
+          <Clock className="w-3 h-3" /> Timezone
+        </Label>
+        <Select value={prefs.timezone} onValueChange={(v) => updatePref("timezone", v)}>
+          <SelectTrigger className="h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TIMEZONE_OPTIONS.map((tz) => (
+              <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[10px] text-muted-foreground">Episode air dates display in this timezone</p>
+      </div>
+
+      {/* TVM-36: Country for Watch Providers */}
+      <div className="space-y-1.5">
+        <Label className="text-xs flex items-center gap-1">
+          <Globe className="w-3 h-3" /> Country (Where to Watch)
+        </Label>
+        <Select value={prefs.country} onValueChange={(v) => updatePref("country", v)}>
+          <SelectTrigger className="h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {COUNTRY_OPTIONS.map((c) => (
+              <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[10px] text-muted-foreground">Streaming platforms shown for this country</p>
+      </div>
+
+      {/* TVM-37: Preferred platforms */}
+      <div className="space-y-1.5">
+        <Label className="text-xs flex items-center gap-1">
+          <Star className="w-3 h-3" /> Preferred Platforms
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            value={platformInput}
+            onChange={(e) => setPlatformInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPlatform(); } }}
+            placeholder="e.g. Netflix, Shahid, Prime Video"
+            className="h-9 text-sm flex-1"
+          />
+          <Button size="sm" variant="outline" className="h-9" onClick={addPlatform}>Add</Button>
+        </div>
+        {prefs.preferredPlatforms.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {prefs.preferredPlatforms.map((p) => (
+              <Badge key={p} variant="secondary" className="text-[10px] gap-1">
+                <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                {p}
+                <button onClick={() => removePlatform(p)} className="ml-0.5 hover:text-rose-400">✕</button>
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[10px] text-muted-foreground">Add platforms to highlight them in Where to Watch</p>
+        )}
+      </div>
     </div>
   );
 }

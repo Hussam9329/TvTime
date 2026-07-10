@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { enforceAdminSecret } from "@/lib/admin-guard";
 
 // Read-only by default. This legacy repair may use rating=75 only as a search
 // signature, but it never changes the rating. TVM-03 forbids a watch-state
 // repair from adding or removing a rating.
 export async function GET(req: NextRequest) {
-  const expectedSecret = process.env.ADMIN_REPAIR_SECRET;
-  if (expectedSecret) {
-    const provided = req.nextUrl.searchParams.get("secret");
-    if (provided !== expectedSecret) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-  }
+  // TVM-40: Always enforce admin secret
+  const guard = enforceAdminSecret(req);
+  if (guard) return guard;
 
   try {
     const apply = req.nextUrl.searchParams.get("apply") === "true";

@@ -43,12 +43,19 @@ function isLegacyWholeShowCompletion(media: LegacyCompletionMedia, existingEpiso
  * aired at the historical completion time exactly once. After that, a newly
  * aired episode is absent from the snapshot and correctly moves an ongoing show
  * from Up To Date to Watching. This operation is additive and idempotent.
+ *
+ * TVM-27: The `persist` parameter controls whether the snapshot is written to
+ * the database. When called from a GET handler, pass persist=false to avoid
+ * writes during reads. The episodes are still returned for in-memory state
+ * derivation. A separate sync endpoint can call with persist=true.
  */
 export async function materializeLegacyCompletionSnapshot(args: {
   media: LegacyCompletionMedia;
   existingEpisodeCount?: number;
   metadata?: TvStatusMetadata | null;
+  persist?: boolean; // TVM-27: default false (read-only during GET)
 }): Promise<LegacyCompletionMaterialization> {
+  const persist = args.persist ?? false; // TVM-27: default to no-write
   const existingEpisodeCount = args.existingEpisodeCount ?? await db.watchedEpisode.count({
     where: { userId: args.media.userId, showId: Number(args.media.tmdbId || 0) },
   });
@@ -74,22 +81,25 @@ export async function materializeLegacyCompletionSnapshot(args: {
       return { attempted: true, materialized: false, completionAt, episodes: [] };
     }
 
-    await db.watchedEpisode.createMany({
-      data: releasedAtCompletion.map((episode) => ({
-        userId: args.media.userId,
-        showId: Number(args.media.tmdbId),
-        seasonNumber: episode.seasonNumber,
-        episodeNumber: episode.episodeNumber,
-        episodeName: episode.episodeName,
-        runtime: episode.runtime,
-        watchedAt: completionAt,
-      })),
-      skipDuplicates: true,
-    });
+    // TVM-27: Only persist when explicitly requested (not during GET)
+    if (persist) {
+      await db.watchedEpisode.createMany({
+        data: releasedAtCompletion.map((episode) => ({
+          userId: args.media.userId,
+          showId: Number(args.media.tmdbId),
+          seasonNumber: episode.seasonNumber,
+          episodeNumber: episode.episodeNumber,
+          episodeName: episode.episodeName,
+          runtime: episode.runtime,
+          watchedAt: completionAt,
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     return {
       attempted: true,
-      materialized: true,
+      materialized: persist, // only true if we actually wrote
       completionAt,
       episodes: releasedAtCompletion,
     };

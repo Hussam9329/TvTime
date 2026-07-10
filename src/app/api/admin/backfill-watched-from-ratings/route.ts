@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { enforceAdminSecret } from "@/lib/admin-guard";
 
 // One-time data backfill: aligns HISTORICAL movie data with the user's actual
 // intent. Before TVM-03, the app treated "has a rating" as "watched", so users
@@ -15,17 +16,11 @@ import { db } from "@/lib/db";
 //   - Does NOT touch the schema (no migration/db push)
 //   - Sets watchedAt to the existing updatedAt/addedAt (best-effort timestamp)
 //
-// Optional protection via ADMIN_REPAIR_SECRET (same secret as other admin
-// endpoints).
+// TVM-40: Always enforces ADMIN_REPAIR_SECRET.
 
 export async function GET(req: NextRequest) {
-  const expectedSecret = process.env.ADMIN_REPAIR_SECRET;
-  if (expectedSecret) {
-    const provided = req.nextUrl.searchParams.get("secret");
-    if (provided !== expectedSecret) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-  }
+  const guard = enforceAdminSecret(req);
+  if (guard) return guard;
 
   try {
     // Find all movies that have a rating but are NOT marked watched.
