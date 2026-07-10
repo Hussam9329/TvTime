@@ -1,57 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
-import { ensureCanonicalMedia, findCanonicalMedia, updateCanonicalMediaState } from "@/lib/media-repository";
-import { mediaToLegacyLibraryItem } from "@/lib/library-compat";
 
-const ACTIVE_SERIES_STATES = ["planned", "watching", "up_to_date", "completed"];
-
+// GET - list followed shows
 export async function GET(req: NextRequest) {
-  try {
-    const user = await getOrCreateUser(parseUserId(req));
-    const items = await db.media.findMany({
-      where: { userId: user.id, type: "series", libraryState: { in: ACTIVE_SERIES_STATES } },
-      orderBy: { stateChangedAt: "desc" },
-    });
-    return NextResponse.json({ items: items.map(mediaToLegacyLibraryItem) });
-  } catch (error) {
-    console.error("[library:following:GET]", error);
-    return NextResponse.json({ error: "Failed to load following shows" }, { status: 500 });
-  }
+  const userId = parseUserId(req);
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+  const user = await getOrCreateUser(userId);
+  const items = await db.followingShow.findMany({
+    where: { userId: user.id },
+    orderBy: { followedAt: "desc" },
+  });
+  return NextResponse.json({ items });
 }
 
+// POST - follow a show
 export async function POST(req: NextRequest) {
-  try {
-    const user = await getOrCreateUser(parseUserId(req));
-    const body = await req.json();
-    const { tmdbId, title, posterPath } = body;
-    if (!tmdbId || !title) return NextResponse.json({ error: "tmdbId, title required" }, { status: 400 });
+  const userId = parseUserId(req);
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
-    const item = await ensureCanonicalMedia({
+  const body = await req.json();
+  const { tmdbId, title, posterPath } = body;
+  if (!tmdbId || !title) {
+    return NextResponse.json({ error: "tmdbId, title required" }, { status: 400 });
+  }
+
+  const user = await getOrCreateUser(userId);
+  const item = await db.followingShow.upsert({
+    where: {
+      userId_tmdbId: { userId: user.id, tmdbId: Number(tmdbId) },
+    },
+    create: {
       userId: user.id,
       tmdbId: Number(tmdbId),
       title,
-      type: "series",
-      poster: posterPath || null,
-      initialState: "planned",
-    });
-    return NextResponse.json({ item: mediaToLegacyLibraryItem(item) });
-  } catch (error) {
-    console.error("[library:following:POST]", error);
-    return NextResponse.json({ error: "Failed to follow show" }, { status: 500 });
-  }
+      posterPath: posterPath || null,
+    },
+    update: { title },
+  });
+  return NextResponse.json({ item });
 }
 
+// DELETE - unfollow a show
 export async function DELETE(req: NextRequest) {
-  try {
-    const user = await getOrCreateUser(parseUserId(req));
-    const tmdbId = Number(new URL(req.url).searchParams.get("tmdbId"));
-    if (!tmdbId) return NextResponse.json({ error: "tmdbId required" }, { status: 400 });
-    const item = await findCanonicalMedia(user.id, "series", tmdbId);
-    if (item) await updateCanonicalMediaState(item, "none");
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("[library:following:DELETE]", error);
-    return NextResponse.json({ error: "Failed to unfollow show" }, { status: 500 });
-  }
+  const userId = parseUserId(req);
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+  const url = new URL(req.url);
+  const tmdbId = url.searchParams.get("tmdbId");
+  if (!tmdbId) return NextResponse.json({ error: "tmdbId required" }, { status: 400 });
+
+  const user = await getOrCreateUser(userId);
+  await db.followingShow.deleteMany({
+    where: { userId: user.id, tmdbId: Number(tmdbId) },
+  });
+  return NextResponse.json({ ok: true });
 }

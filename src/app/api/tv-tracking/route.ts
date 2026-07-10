@@ -3,8 +3,6 @@ import { db } from "@/lib/db";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import { tmdb } from "@/lib/tmdb";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
-import { availableEpisodeCountFromTmdb, canonicalStateFromLegacy, deriveSeriesProgressState, trackingBucketForState, type CanonicalMediaState } from "@/lib/media-state";
-import { updateCanonicalMediaState } from "@/lib/media-repository";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -43,7 +41,6 @@ type TvMeta = {
   isEnded: boolean;
   inProduction: boolean | null;
   totalEpisodes: number | null;
-  availableEpisodes: number | null;
   totalSeasons: number | null;
   nextEpisode: {
     airDate: string;
@@ -119,7 +116,6 @@ async function getTvMeta(tmdbId: number): Promise<TvMeta | null> {
       isEnded: isEndedTvStatus(detail?.status),
       inProduction: typeof detail?.in_production === "boolean" ? detail.in_production : null,
       totalEpisodes: typeof detail?.number_of_episodes === "number" ? detail.number_of_episodes : null,
-      availableEpisodes: availableEpisodeCountFromTmdb(detail),
       totalSeasons: typeof detail?.number_of_seasons === "number" ? detail.number_of_seasons : null,
       nextEpisode: nextAirDate && isFutureDate(nextAirDate)
         ? {
@@ -139,51 +135,60 @@ async function getTvMeta(tmdbId: number): Promise<TvMeta | null> {
   }
 }
 
-function deriveTrackingState(show: any, meta: TvMeta | null, watched: EpisodeMeta): CanonicalMediaState {
-  return deriveSeriesProgressState({
-    currentState: canonicalStateFromLegacy(show),
-    watchedEpisodes: watched.count,
-    totalEpisodes: meta?.isEnded
-      ? meta.totalEpisodes ?? show.episodes ?? null
-      : meta?.availableEpisodes ?? show.episodes ?? null,
-    isEnded: meta?.isEnded ?? null,
-    preserveManualCompletionWhenNoEpisodeFacts: true,
-  });
+function deriveTrackingStatus(show: any, meta: TvMeta | null, watched: EpisodeMeta): "finished" | "uptodate" | "watchlist" {
+  const dbStatus = normalizeStatus(show.status);
+  const watchedCount = watched.count;
+  const totalEpisodes = meta?.totalEpisodes ?? show.episodes ?? null;
+  const hasCompletedKnownEpisodeSet = Boolean(totalEpisodes && watchedCount >= Number(totalEpisodes));
+  const isDbCompleted = show.watched === true || dbStatus === "finished" || dbStatus === "watched" || dbStatus === "uptodate";
+
+  // The important rule: a TV show is Finished only when TMDB says the whole work has ended.
+  // Local status="finished" or legacy status="watched" is not enough.
+  if (meta?.isEnded && (hasCompletedKnownEpisodeSet || isDbCompleted)) return "finished";
+
+  // Ongoing shows can only be Up To Date, never Finished, when the local record says the
+  // user has caught up to currently known episodes.
+  if (!meta?.isEnded && (isDbCompleted || hasCompletedKnownEpisodeSet)) return "uptodate";
+
+  return "watchlist";
 }
 
-async function repairShowIfNeeded(
-  userId: string,
-  show: any,
-  meta: TvMeta | null,
-  watched: EpisodeMeta,
-  state: CanonicalMediaState,
-) {
-  const metadataUpdate: Record<string, unknown> = {};
-  if (meta?.totalEpisodes != null && show.episodes !== meta.totalEpisodes) metadataUpdate.episodes = meta.totalEpisodes;
-  if (meta?.totalSeasons != null && show.seasons !== meta.totalSeasons) metadataUpdate.seasons = meta.totalSeasons;
+async function repairShowIfNeeded(userId: string, show: any, meta: TvMeta | null, watched: EpisodeMeta, status: "finished" | "uptodate" | "watchlist") {
+  const update: any = {};
+  const dbStatus = normalizeStatus(show.status);
 
-  const currentState = canonicalStateFromLegacy(show);
-  const mirrorsAreStale = show.libraryState !== currentState ||
-    (state === "completed" && (!show.watched || show.status !== "finished")) ||
-    (state === "up_to_date" && (!show.watched || show.status !== "uptodate")) ||
-    (["planned", "watching"].includes(state) && show.watched);
+  if (meta) {
+    if (meta.totalEpisodes != null && show.episodes !== meta.totalEpisodes) update.episodes = meta.totalEpisodes;
+    if (meta.totalSeasons != null && show.seasons !== meta.totalSeasons) update.seasons = meta.totalSeasons;
+  }
 
-  if (state === currentState && !mirrorsAreStale && Object.keys(metadataUpdate).length === 0) return show;
+  if (status === "finished") {
+    if (dbStatus !== "finished") update.status = "finished";
+    if (!show.watched) update.watched = true;
+    if (!show.watchedAt) update.watchedAt = watched.lastWatchedAt ?? new Date();
+  } else if (status === "uptodate") {
+    // Correct accidental/legacy Finished rows such as FROM: ongoing future season -> Up To Date.
+    if (dbStatus !== "uptodate") update.status = "uptodate";
+    if (!show.watched) update.watched = true;
+    if (!show.watchedAt && watched.lastWatchedAt) update.watchedAt = watched.lastWatchedAt;
+
+    // Rating is locked until the whole show ends. Clear accidental ratings for ongoing shows.
+    if (show.userRating != null && meta && !meta.isEnded) update.userRating = null;
+  } else {
+    if (dbStatus === "finished" || dbStatus === "watched" || dbStatus === "uptodate") update.status = "planned";
+    if (show.watched) update.watched = false;
+    if (show.watchedAt) update.watchedAt = null;
+
+    // A not-completed TV show should not keep a whole-show rating.
+    if (show.userRating != null && meta && !meta.isEnded) update.userRating = null;
+  }
+
+  if (Object.keys(update).length === 0) return show;
 
   try {
-    return await updateCanonicalMediaState(show, state, {
-      completedAt: watched.lastWatchedAt,
-      data: metadataUpdate,
-    });
+    return await db.media.update({ where: { id: show.id }, data: update });
   } catch (error) {
-    console.warn("[tv-tracking] Failed to repair canonical tracking row", {
-      userId,
-      mediaId: show.id,
-      tmdbId: show.tmdbId,
-      state,
-      metadataUpdate,
-      error,
-    });
+    console.warn("[tv-tracking] Failed to repair tracking row", { userId, mediaId: show.id, tmdbId: show.tmdbId, update, error });
     return show;
   }
 }
@@ -214,10 +219,10 @@ function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc"
 
 async function buildTrackingSnapshot(userId: string) {
   const [series, episodeGroups] = await Promise.all([
-    db.media.findMany({ where: { userId, type: "series", libraryState: { not: "none" } } }),
+    db.media.findMany({ where: { userId, type: "series" } }),
     db.watchedEpisode.groupBy({
       by: ["showId"],
-      where: { userId, seasonNumber: { gt: 0 } },
+      where: { userId },
       _count: { _all: true },
       _max: { watchedAt: true },
     }),
@@ -235,12 +240,10 @@ async function buildTrackingSnapshot(userId: string) {
     const tmdbId = Number(show.tmdbId || 0);
     const meta = tmdbId > 0 ? await getTvMeta(tmdbId) : null;
     const watched = watchedMetaFor(show, episodeMetaByShowId);
-    const state = deriveTrackingState(show, meta, watched);
-    const repaired = await repairShowIfNeeded(userId, show, meta, watched, state);
-    const status = trackingBucketForState(state);
+    const status = deriveTrackingStatus(show, meta, watched);
+    const repaired = await repairShowIfNeeded(userId, show, meta, watched, status);
     return {
       ...repaired,
-      libraryState: state,
       _serverTrackingStatus: status,
       _serverIsEnded: Boolean(meta?.isEnded),
       _serverTvMeta: meta,

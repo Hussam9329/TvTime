@@ -1,128 +1,98 @@
-// Import a legacy or TVM backup into the canonical SQLite Media table.
-import { PrismaClient } from "@prisma/client";
-import fs from "fs";
-import path from "path";
-import {
-  canonicalStateFromLegacy,
-  compatibilityFieldsForState,
-  mergeCanonicalStates,
-} from "../src/lib/media-state";
+// Import script: reads backup JSON and imports all media into Neon PostgreSQL
+import { db } from '../src/lib/db';
+import fs from 'fs';
+import path from 'path';
 
-const db = new PrismaClient({ log: ["error"] });
-
-type BackupItem = {
-  id?: string;
-  userId?: string;
-  tmdbId?: number | null;
+interface BackupItem {
+  id: string;
   title: string;
-  originalTitle?: string | null;
-  year?: string | null;
+  originalTitle: string | null;
+  year: string | null;
   type: string;
-  poster?: string | null;
-  rating?: string | number | null;
-  overview?: string | null;
-  genres?: string[];
-  genresJson?: string;
-  episodes?: number | null;
-  seasons?: number | null;
-  duration?: string | null;
-  libraryState?: string | null;
-  status?: string | null;
-  author?: string | null;
-  pages?: number | null;
-  tags?: string[];
-  tagsJson?: string;
-  notes?: string | null;
-  watched?: boolean;
-  watchedAt?: string | null;
-  userRating?: number | null;
-  rewatch?: boolean;
-  runtime?: number | null;
-  ratingStatus?: string | null;
-  isAnime?: boolean;
-  addedAt?: string;
-};
-
-function jsonArray(value: unknown, fallback: unknown = []) {
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return JSON.stringify(Array.isArray(parsed) ? parsed : fallback);
-    } catch {
-      return JSON.stringify(fallback);
-    }
-  }
-  return JSON.stringify(Array.isArray(value) ? value : fallback);
+  poster: string | null;
+  rating: string | null;
+  overview: string | null;
+  genres: string[];
+  episodes: number | null;
+  seasons: number | null;
+  duration: string | null;
+  status: string | null;
+  author: string | null;
+  pages: number | null;
+  tags: string[];
+  notes: string;
+  watched: boolean;
+  watchedAt: string | null;
+  userRating: number | null;
+  rewatch: boolean;
+  runtime: number | null;
+  ratingStatus: string | null;
+  addedAt: string;
+  updatedAt: string;
 }
 
 async function main() {
-  const requestedPath = process.argv[2];
-  if (!requestedPath) {
-    throw new Error("Usage: bun scripts/import-backup.ts <backup.json>");
-  }
-  const backupPath = path.resolve(requestedPath);
-  const payload = JSON.parse(fs.readFileSync(backupPath, "utf-8"));
-  const items: BackupItem[] = Array.isArray(payload) ? payload : payload.media || [];
+  const backupPath = path.join(__dirname, '..', 'upload', 'hussamvision-backup-2026-07-07.json');
+  const raw = fs.readFileSync(backupPath, 'utf-8');
+  const items: BackupItem[] = JSON.parse(raw);
+
+  console.log(`Importing ${items.length} items...`);
 
   let imported = 0;
-  let updated = 0;
-  for (const item of items) {
-    const type = item.type === "tv" ? "series" : item.type;
-    const userId = item.userId || "cinetrack_default";
-    const incomingState = canonicalStateFromLegacy({ ...item, type });
-    const tmdbId = item.tmdbId == null ? null : Number(item.tmdbId);
-    const existing = tmdbId == null
-      ? await db.media.findFirst({ where: { userId, type, title: item.title, tmdbId: null } })
-      : await db.media.findFirst({ where: { userId, type, tmdbId } });
+  let errors = 0;
+  const batchSize = 100;
 
-    const state = existing
-      ? mergeCanonicalStates(canonicalStateFromLegacy(existing), incomingState)
-      : incomingState;
-    const compatibility = compatibilityFieldsForState(state, type, {
-      currentWatchedAt: existing?.watchedAt || item.watchedAt || null,
-    });
-    const data = {
-      userId,
-      tmdbId,
-      title: item.title,
-      originalTitle: item.originalTitle || null,
-      year: item.year || null,
-      type,
-      poster: item.poster || null,
-      rating: item.rating == null ? null : String(item.rating),
-      overview: item.overview || null,
-      genresJson: jsonArray(item.genresJson ?? item.genres),
-      episodes: item.episodes ?? null,
-      seasons: item.seasons ?? null,
-      duration: item.duration || null,
-      author: item.author || null,
-      pages: item.pages ?? null,
-      tagsJson: jsonArray(item.tagsJson ?? item.tags),
-      notes: item.notes || null,
-      userRating: item.userRating ?? null,
-      rewatch: Boolean(item.rewatch),
-      runtime: item.runtime ?? null,
-      ratingStatus: item.ratingStatus || null,
-      isAnime: Boolean(item.isAnime),
-      ...(item.addedAt ? { addedAt: new Date(item.addedAt) } : {}),
-      ...compatibility,
-    };
-
-    if (existing) {
-      await db.media.update({ where: { id: existing.id }, data });
-      updated += 1;
-    } else {
-      await db.media.create({ data: { ...(item.id ? { id: item.id } : {}), ...data } });
-      imported += 1;
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    try {
+      await db.media.createMany({
+        data: batch.map((item) => ({
+          id: item.id,
+          title: item.title,
+          originalTitle: item.originalTitle,
+          year: item.year,
+          type: item.type,
+          poster: item.poster,
+          rating: item.rating,
+          overview: item.overview,
+          genres: item.genres || [],
+          episodes: item.episodes,
+          seasons: item.seasons,
+          duration: item.duration,
+          status: item.status,
+          author: item.author,
+          pages: item.pages,
+          tags: item.tags || [],
+          notes: item.notes || '',
+          watched: item.watched || false,
+          watchedAt: item.watchedAt ? new Date(item.watchedAt) : null,
+          userRating: item.userRating,
+          rewatch: item.rewatch || false,
+          runtime: item.runtime,
+          ratingStatus: item.ratingStatus,
+          addedAt: new Date(item.addedAt),
+          updatedAt: new Date(item.updatedAt),
+        })),
+        skipDuplicates: true,
+      });
+      imported += batch.length;
+      if (imported % 500 === 0 || i + batchSize >= items.length) {
+        console.log(`  Imported ${imported}/${items.length}`);
+      }
+    } catch (e) {
+      console.error(`Error at batch ${i}:`, e instanceof Error ? e.message : e);
+      errors += batch.length;
     }
   }
 
-  console.log(`[TVM] import complete: created=${imported}, updated=${updated}, source=${backupPath}`);
+  console.log(`\nDone! Imported: ${imported}, Errors: ${errors}`);
 }
 
 main()
-  .catch((error) => {
-    console.error("[TVM] import failed", error);
+  .catch((e) => {
+    console.error('Import failed:', e);
     process.exit(1);
   })
-  .finally(async () => db.$disconnect());
+  .finally(async () => {
+    await db.$disconnect();
+  });

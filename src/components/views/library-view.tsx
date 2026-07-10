@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNav } from "@/lib/store";
 import { useMedia, useMediaUpdate, useMediaStats, type MediaItemDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Clock, Play, Sparkles, BookOpen } from "lucide-react";
+import { img } from "@/lib/tmdb";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
@@ -16,13 +17,13 @@ import { SafeImage } from "@/components/media/safe-image";
 
 type LibTab = "watchlist-movies" | "watched-movies" | "watchlist-tv" | "watched-tv" | "watchlist-anime" | "watched-anime";
 
-const TAB_CONFIG: { value: LibTab; label: string; icon: React.ElementType; type: string; isAnime: boolean; isWatched: boolean; states: string }[] = [
-  { value: "watchlist-movies", label: "Watchlist Movies", icon: Film, type: "movie", isAnime: false, isWatched: false, states: "planned" },
-  { value: "watched-movies", label: "Watched Movies", icon: Check, type: "movie", isAnime: false, isWatched: true, states: "completed" },
-  { value: "watchlist-tv", label: "Active TV", icon: Tv, type: "series", isAnime: false, isWatched: false, states: "planned,watching,up_to_date" },
-  { value: "watched-tv", label: "Watched TV", icon: Check, type: "series", isAnime: false, isWatched: true, states: "completed" },
-  { value: "watchlist-anime", label: "Active Anime", icon: Sparkles, type: "series", isAnime: true, isWatched: false, states: "planned,watching,up_to_date" },
-  { value: "watched-anime", label: "Watched Anime", icon: Check, type: "series", isAnime: true, isWatched: true, states: "completed" },
+const TAB_CONFIG: { value: LibTab; label: string; icon: React.ElementType; type: string; isAnime: boolean; isWatched: boolean }[] = [
+  { value: "watchlist-movies", label: "Watchlist Movies", icon: Film, type: "movie", isAnime: false, isWatched: false },
+  { value: "watched-movies", label: "Watched Movies", icon: Check, type: "movie", isAnime: false, isWatched: true },
+  { value: "watchlist-tv", label: "Watchlist TV", icon: Tv, type: "series", isAnime: false, isWatched: false },
+  { value: "watched-tv", label: "Watched TV", icon: Check, type: "series", isAnime: false, isWatched: true },
+  { value: "watchlist-anime", label: "Watchlist Anime", icon: Sparkles, type: "series", isAnime: true, isWatched: false },
+  { value: "watched-anime", label: "Watched Anime", icon: Check, type: "series", isAnime: true, isWatched: true },
 ];
 
 export function LibraryView() {
@@ -39,7 +40,7 @@ export function LibraryView() {
   const media = useMedia({
     type: config.type,
     isAnime: config.isAnime ? "true" : "false",
-    state: config.states,
+    rated: config.isWatched ? "true" : "false",
     search: debouncedSearch || undefined,
     sortBy,
     order: "desc",
@@ -58,7 +59,7 @@ export function LibraryView() {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">My Library</h1>
-        <p className="text-sm text-muted-foreground mt-1">Your collection from the canonical SQLite library</p>
+        <p className="text-sm text-muted-foreground mt-1">Your collection from Neon database</p>
       </div>
 
       {/* Stats overview */}
@@ -66,9 +67,9 @@ export function LibraryView() {
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           <MiniStat label="Watchlist Movies" value={stats.data.counts?.watchlistMovies ?? 0} />
           <MiniStat label="Watched Movies" value={stats.data.counts?.watchedMovies ?? 0} />
-          <MiniStat label="Active TV" value={stats.data.counts?.watchlistShows ?? 0} />
+          <MiniStat label="Watchlist TV" value={stats.data.counts?.watchlistShows ?? 0} />
           <MiniStat label="Watched TV" value={stats.data.counts?.watchedShows ?? 0} />
-          <MiniStat label="Active Anime" value={stats.data.counts?.watchlistAnime ?? 0} />
+          <MiniStat label="Watchlist Anime" value={stats.data.counts?.watchlistAnime ?? 0} />
           <MiniStat label="Watched Anime" value={stats.data.counts?.watchedAnime ?? 0} />
         </div>
       )}
@@ -172,19 +173,12 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 
 function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; index: number; isWatchedTab: boolean }) {
   const update = useMediaUpdate();
-  const goTv = useNav((state) => state.goTv);
   const [ratingOpen, setRatingOpen] = useState(false);
 
   const publicRating = item.rating ? parseFloat(item.rating) : null;
   const userRating = item.userRating;
 
-  const handleMarkWatched = async () => {
-    await update.mutateAsync({
-      id: item.id,
-      libraryState: "completed",
-      watchedAt: new Date().toISOString(),
-    });
-    toast.success("Marked as watched");
+  const handleMarkWatched = () => {
     setRatingOpen(true);
   };
 
@@ -192,22 +186,29 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
     await update.mutateAsync({
       id: item.id,
       userRating: rating,
+      watched: true,
+      watchedAt: new Date().toISOString(),
+      status: "watched",
     });
   };
 
-  const handleUnwatch = async () => {
+  const handleRemoveRating = async () => {
     await update.mutateAsync({
       id: item.id,
-      libraryState: "planned",
+      userRating: null,
+      watched: false,
+      watchedAt: null,
+      status: null,
     });
-    toast.success("Moved back to watchlist; rating kept separately");
+    toast.success("Moved back to watchlist");
   };
 
-  // Remove from active tracking without deleting metadata or the independent rating.
+  // Quick remove from watchlist — clears status only, doesn't touch watched/rating.
+  // Used on watchlist items where the user wants to remove the movie entirely.
   const handleQuickUnwatch = async () => {
     await update.mutateAsync({
       id: item.id,
-      libraryState: "none",
+      status: null,
     });
     toast.success("Removed from watchlist");
   };
@@ -284,39 +285,21 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3">
               {!isWatchedTab ? (
                 <>
-                  {item.type === "series" ? (
-                    <Button
-                      size="sm"
-                      className="h-8"
-                      disabled={!item.tmdbId}
-                      onClick={() => item.tmdbId && goTv(item.tmdbId)}
-                      title="Open the episode tracker; series state is derived from episode progress"
-                    >
-                      <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Track Episodes
-                    </Button>
-                  ) : (
-                    <Button size="sm" className="h-8" onClick={handleMarkWatched} title="Mark this movie as watched; rating remains optional">
-                      <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Mark Watched
-                    </Button>
-                  )}
-                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleQuickUnwatch(); }} title="Remove from active tracking">
+                  <Button size="sm" className="h-8" onClick={handleMarkWatched} title="Mark this movie as watched and rate it out of 100">
+                    <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Mark Watched
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleQuickUnwatch(); }} title="Remove from watchlist">
                     Remove
                   </Button>
                 </>
               ) : (
                 <>
                   <Button size="sm" variant="secondary" className="h-8" onClick={() => setRatingOpen(true)}>
-                    <Star className="w-3.5 h-3.5 mr-1" /> {userRating == null ? "Rate" : "Re-rate"}
+                    <Star className="w-3.5 h-3.5 mr-1" /> Re-rate
                   </Button>
-                  {item.type === "series" ? (
-                    <Button size="sm" variant="outline" className="h-8 text-xs" disabled={!item.tmdbId} onClick={() => item.tmdbId && goTv(item.tmdbId)}>
-                      Episodes
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleUnwatch}>
-                      Unwatch
-                    </Button>
-                  )}
+                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleRemoveRating}>
+                    Unwatch
+                  </Button>
                 </>
               )}
               {item.type === "series" && (
@@ -342,7 +325,7 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
+  useMemo(() => {
     const timer = setTimeout(() => setDebounced(value), delay);
     return () => clearTimeout(timer);
   }, [value, delay]);

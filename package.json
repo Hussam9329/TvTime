@@ -1,23 +1,20 @@
 {
   "name": "nextjs_tailwind_shadcn_ts",
-  "version": "0.2.0",
+  "version": "0.2.1-recovery",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "node scripts/backup-sqlite.mjs && prisma generate && node scripts/preflight-canonical-sqlite.mjs && prisma db push && node scripts/migrate-canonical-db.mjs && node scripts/check-canonical-db.mjs && next build",
+    "build": "node scripts/assert-production-db.mjs && prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
-    "db:push": "node scripts/backup-sqlite.mjs && prisma generate && node scripts/preflight-canonical-sqlite.mjs && prisma db push",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset",
-    "db:sync": "node scripts/backup-sqlite.mjs && prisma generate && node scripts/preflight-canonical-sqlite.mjs && prisma db push && node scripts/migrate-canonical-db.mjs && node scripts/check-canonical-db.mjs",
+    "db:push": "node scripts/refuse-destructive-db-command.mjs",
+    "db:generate": "node scripts/assert-production-db.mjs && prisma generate",
+    "db:migrate": "node scripts/refuse-destructive-db-command.mjs",
+    "db:reset": "node scripts/refuse-destructive-db-command.mjs",
+    "db:sync": "node scripts/refuse-destructive-db-command.mjs",
     "repair:posters": "node scripts/repair-media-posters.mjs",
     "clean:qa": "node scripts/clean-qa-artifacts.mjs",
-    "db:canonicalize": "node scripts/migrate-canonical-db.mjs",
-    "db:verify": "node scripts/check-canonical-db.mjs",
-    "db:backup": "node scripts/backup-sqlite.mjs",
-    "db:preflight": "node scripts/preflight-canonical-sqlite.mjs"
+    "db:verify:readonly": "node scripts/verify-production-db-readonly.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

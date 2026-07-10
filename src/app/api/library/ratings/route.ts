@@ -1,65 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
-import { ensureCanonicalMedia, findCanonicalMedia } from "@/lib/media-repository";
-import { mediaToLegacyLibraryItem } from "@/lib/library-compat";
 
+// GET - list user's ratings (optionally filter by mediaType)
 export async function GET(req: NextRequest) {
-  try {
-    const user = await getOrCreateUser(parseUserId(req));
-    const mediaType = new URL(req.url).searchParams.get("mediaType");
-    const type = mediaType === "tv" ? "series" : mediaType || undefined;
-    const items = await db.media.findMany({
-      where: { userId: user.id, userRating: { not: null }, ...(type ? { type } : {}) },
-      orderBy: { updatedAt: "desc" },
-    });
-    return NextResponse.json({ items: items.map(mediaToLegacyLibraryItem) });
-  } catch (error) {
-    console.error("[library:ratings:GET]", error);
-    return NextResponse.json({ error: "Failed to load ratings" }, { status: 500 });
-  }
-}
+  const userId = parseUserId(req);
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getOrCreateUser(parseUserId(req));
-    const body = await req.json();
-    const { mediaType, tmdbId, value, title, posterPath } = body;
-    if (!mediaType || !tmdbId || value == null) {
-      return NextResponse.json({ error: "mediaType, tmdbId, value required" }, { status: 400 });
-    }
+  const url = new URL(req.url);
+  const mediaType = url.searchParams.get("mediaType");
 
-    const item = await ensureCanonicalMedia({
+  const user = await getOrCreateUser(userId);
+  const items = await db.rating.findMany({
+    where: {
       userId: user.id,
-      tmdbId: Number(tmdbId),
-      title: title || "Unknown",
-      type: mediaType,
-      poster: posterPath || null,
-      initialState: "none",
-    });
-    const updated = await db.media.update({
-      where: { id: item.id },
-      data: { userRating: Math.max(0, Math.min(100, Number(value) <= 10 ? Number(value) * 10 : Number(value))) },
-    });
-    return NextResponse.json({ item: mediaToLegacyLibraryItem(updated) });
-  } catch (error) {
-    console.error("[library:ratings:POST]", error);
-    return NextResponse.json({ error: "Failed to save rating" }, { status: 500 });
-  }
+      ...(mediaType ? { mediaType } : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+  return NextResponse.json({ items });
 }
 
-export async function DELETE(req: NextRequest) {
-  try {
-    const user = await getOrCreateUser(parseUserId(req));
-    const url = new URL(req.url);
-    const mediaType = url.searchParams.get("mediaType");
-    const tmdbId = Number(url.searchParams.get("tmdbId"));
-    if (!mediaType || !tmdbId) return NextResponse.json({ error: "mediaType, tmdbId required" }, { status: 400 });
-    const item = await findCanonicalMedia(user.id, mediaType, tmdbId);
-    if (item) await db.media.update({ where: { id: item.id }, data: { userRating: null } });
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("[library:ratings:DELETE]", error);
-    return NextResponse.json({ error: "Failed to remove rating" }, { status: 500 });
+// POST - set a rating (upsert)
+export async function POST(req: NextRequest) {
+  const userId = parseUserId(req);
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+  const body = await req.json();
+  const { mediaType, tmdbId, value, title, posterPath } = body;
+  if (!mediaType || !tmdbId || value == null) {
+    return NextResponse.json({ error: "mediaType, tmdbId, value required" }, { status: 400 });
   }
+
+  const v = Math.max(1, Math.min(10, Number(value)));
+  const user = await getOrCreateUser(userId);
+  const item = await db.rating.upsert({
+    where: {
+      userId_mediaType_tmdbId: { userId: user.id, mediaType, tmdbId: Number(tmdbId) },
+    },
+    create: {
+      userId: user.id,
+      mediaType,
+      tmdbId: Number(tmdbId),
+      title: title || `Unknown`,
+      posterPath: posterPath || null,
+      value: v,
+    },
+    update: {
+      value: v,
+      ...(title ? { title } : {}),
+      ...(posterPath !== undefined ? { posterPath } : {}),
+    },
+  });
+  return NextResponse.json({ item });
+}
+
+// DELETE - remove a rating
+export async function DELETE(req: NextRequest) {
+  const userId = parseUserId(req);
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+  const url = new URL(req.url);
+  const mediaType = url.searchParams.get("mediaType");
+  const tmdbId = url.searchParams.get("tmdbId");
+  if (!mediaType || !tmdbId) {
+    return NextResponse.json({ error: "mediaType, tmdbId required" }, { status: 400 });
+  }
+
+  const user = await getOrCreateUser(userId);
+  await db.rating.deleteMany({
+    where: { userId: user.id, mediaType, tmdbId: Number(tmdbId) },
+  });
+  return NextResponse.json({ ok: true });
 }

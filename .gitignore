@@ -81,3 +81,9 @@ server.log
 /qa*.webp
 /worklog.md
 /*.trace.zip
+
+# Emergency recovery safety
+.env
+.env.local
+db/*.db
+db/backups/

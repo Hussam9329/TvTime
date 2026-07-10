@@ -32,8 +32,9 @@ function deriveTrackingStatus(show: any): TrackingStatus {
     return show._trackingStatus;
   }
 
-  if (show?.libraryState === "completed") return show?._isEndedByTmdb === false ? "uptodate" : "finished";
-  if (show?.libraryState === "up_to_date") return "uptodate";
+  const s = String(show?.status || "").toLowerCase();
+  if (s === "finished" && show?._isEndedByTmdb === true) return "finished";
+  if ((s === "finished" || s === "watched" || s === "uptodate") && show?.watched) return "uptodate";
   return "watchlist";
 }
 
@@ -365,8 +366,8 @@ function WatchlistTab({ shows, onGo, onCompletion }: { shows: any[]; onGo: (id: 
 function FinishedTab({ onGo, isAnime = "false", onCompletion }: { onGo: (id: number) => void; isAnime?: string; onCompletion?: (c: EpisodeCompletion | null | undefined, title?: string, poster?: string | null) => void }) {
   const [page, setPage] = useState(0);
   const limit = 60;
-  // Canonical source of truth: completed.
-  const finished = useMedia({ type: "series", state: "completed", isAnime, sortBy: "title", order: "asc", limit, offset: page * limit });
+  // Filter by status=finished (also matches legacy "watched" via API backward-compat)
+  const finished = useMedia({ type: "series", status: "finished", isAnime, sortBy: "title", order: "asc", limit, offset: page * limit });
 
   const items = finished.data?.items ?? [];
   const total = finished.data?.total ?? 0;
@@ -426,8 +427,8 @@ function FinishedTab({ onGo, isAnime = "false", onCompletion }: { onGo: (id: num
 function UpToDateTab({ onGo }: { onGo: (id: number) => void }) {
   const [page, setPage] = useState(0);
   const limit = 60;
-  // Canonical source of truth: up_to_date.
-  const uptodate = useMedia({ type: "series", state: "up_to_date", sortBy: "title", order: "asc", limit, offset: page * limit });
+  // Filter by status=uptodate — shows where user watched all aired episodes but show is still ongoing
+  const uptodate = useMedia({ type: "series", status: "uptodate", sortBy: "title", order: "asc", limit, offset: page * limit });
 
   const items = uptodate.data?.items ?? [];
   const total = uptodate.data?.total ?? 0;
@@ -527,7 +528,8 @@ function UpToDateShowCard({ show, onGo }: { show: any; onGo: () => void }) {
 }
 
 function FinishedShowCard({ show, onGo }: { show: any; onGo: () => void }) {
-  // For canonically completed shows, we always show "Ended" badge
+  const status = show.status;
+  // For finished shows, we always show "Ended" badge
   const statusBadge = <Badge className="text-[9px] bg-rose-500/20 text-rose-400 border-0">Ended</Badge>;
   const userRating = show.userRating;
   const totalEps = show.episodes;
