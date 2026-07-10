@@ -300,6 +300,44 @@ async function ensureApiOk(res: Response, fallback: string): Promise<Response> {
   throw new Error(errorBody?.error || fallback);
 }
 
+/**
+ * TVM Fix: Direct state lookup by tmdbId + type — NO pagination.
+ * Returns the media item's DB id, or null if not found.
+ * This replaces the old pattern of fetching an entire list and doing .find().
+ */
+async function getMediaIdByTmdbId(tmdbId: number, mediaType: "movie" | "tv"): Promise<string | null> {
+  const url = withUserId(new URL("/api/media/state", window.location.origin));
+  url.searchParams.set("tmdbId", String(tmdbId));
+  url.searchParams.set("type", mediaType);
+  const res = await fetch(url, { headers: userHeaders() });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.item?.id ?? null;
+}
+
+/**
+ * TVM Fix: useMediaState — fetch a single item's state by tmdbId.
+ * Used by detail pages to know if a movie is in watchlist/watched/rated
+ * without paginating through the entire library.
+ */
+export function useMediaState(tmdbId: number | null, mediaType: "movie" | "tv") {
+  return useQuery({
+    queryKey: ["media", "state", mediaType, tmdbId],
+    queryFn: async () => {
+      if (!tmdbId) return null;
+      const url = withUserId(new URL("/api/media/state", window.location.origin));
+      url.searchParams.set("tmdbId", String(tmdbId));
+      url.searchParams.set("type", mediaType);
+      const res = await fetch(url, { headers: userHeaders() });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.item;
+    },
+    enabled: tmdbId != null && tmdbId > 0,
+    staleTime: 0,
+  });
+}
+
 // Compatibility mapper: converts a Media DB item to the shape that the
 // TMDB-style library hooks (useWatchlist, useWatchedMovies, etc.) used to
 // return when backed by localStorage. This keeps existing consumers working
@@ -371,15 +409,10 @@ export function useWatchlistToggle() {
         });
         await ensureApiOk(patchRes, "Failed to add to watchlist");
       } else {
-        // Remove from watchlist: find by tmdbId and clear status
-        const url = withUserId(new URL("/api/media", window.location.origin));
-        url.searchParams.set("type", args.mediaType === "tv" ? "series" : "movie");
-        const res = await fetch(url, { headers: userHeaders() });
-        await ensureApiOk(res, "Failed to find watchlist item");
-        const data = await res.json();
-        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-        if (item) {
-          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
+        // Remove from watchlist: find by tmdbId DIRECTLY (not via paginated list .find())
+        const id = await getMediaIdByTmdbId(args.tmdbId, args.mediaType);
+        if (id) {
+          const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
             method: "PATCH",
             headers: { "Content-Type": "application/json", ...userHeaders() },
             body: JSON.stringify({ status: null }),
@@ -487,14 +520,10 @@ export function useWatchedMovieToggle() {
         await ensureApiOk(patchRes, "Failed to mark movie watched");
       } else {
         // Remove from watched without touching the independent rating
-        const url = withUserId(new URL("/api/media", window.location.origin));
-        url.searchParams.set("type", "movie");
-        const res = await fetch(url, { headers: userHeaders() });
-        await ensureApiOk(res, "Failed to find watched movie");
-        const data = await res.json();
-        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-        if (item) {
-          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
+        // TVM Fix: find by tmdbId DIRECTLY (not via paginated list .find())
+        const id = await getMediaIdByTmdbId(args.tmdbId, "movie");
+        if (id) {
+          const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
             method: "PATCH",
             headers: { "Content-Type": "application/json", ...userHeaders() },
             body: JSON.stringify({ watched: false, watchedAt: null, status: null }),
@@ -673,38 +702,44 @@ export function useFollowingToggle() {
           overview: args.overview,
           rating: args.voteAverage,
         });
-        // Following a fresh title means Not Started; completed/progress states stay intact
-        const url = withUserId(new URL("/api/media", window.location.origin));
-        url.searchParams.set("type", "series");
-        url.searchParams.set("limit", "500");
-        const res = await fetch(url, { headers: userHeaders() });
-        await ensureApiOk(res, "Failed to find TV show");
-        const data = await res.json();
-        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-        if (item && !item.watched && (!item.status || item.status === "planned")) {
-          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", ...userHeaders() },
-            body: JSON.stringify({ status: "not_started" }),
-          });
-          await ensureApiOk(patchRes, "Failed to follow TV show");
+        // TVM Fix: find by tmdbId DIRECTLY (not via paginated list .find())
+        const id = await getMediaIdByTmdbId(args.tmdbId, "tv");
+        if (id) {
+          // Fetch the item to check current state
+          const stateUrl = withUserId(new URL("/api/media/state", window.location.origin));
+          stateUrl.searchParams.set("tmdbId", String(args.tmdbId));
+          stateUrl.searchParams.set("type", "tv");
+          const stateRes = await fetch(stateUrl, { headers: userHeaders() });
+          const stateData = await stateRes.json();
+          const item = stateData.item;
+          if (item && !item.watched && (!item.status || item.status === "planned")) {
+            const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", ...userHeaders() },
+              body: JSON.stringify({ status: "not_started" }),
+            });
+            await ensureApiOk(patchRes, "Failed to follow TV show");
+          }
         }
       } else {
         // Unfollow: only clear status if not watched, keep watched/rating intact
-        const url = withUserId(new URL("/api/media", window.location.origin));
-        url.searchParams.set("type", "series");
-        url.searchParams.set("limit", "500");
-        const res = await fetch(url, { headers: userHeaders() });
-        await ensureApiOk(res, "Failed to find TV show");
-        const data = await res.json();
-        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-        if (item && !item.watched && (!item.status || item.status === "planned" || item.status === "not_started")) {
-          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", ...userHeaders() },
-            body: JSON.stringify({ status: null }),
-          });
-          await ensureApiOk(patchRes, "Failed to unfollow TV show");
+        // TVM Fix: find by tmdbId DIRECTLY (not via paginated list .find())
+        const id = await getMediaIdByTmdbId(args.tmdbId, "tv");
+        if (id) {
+          const stateUrl = withUserId(new URL("/api/media/state", window.location.origin));
+          stateUrl.searchParams.set("tmdbId", String(args.tmdbId));
+          stateUrl.searchParams.set("type", "tv");
+          const stateRes = await fetch(stateUrl, { headers: userHeaders() });
+          const stateData = await stateRes.json();
+          const item = stateData.item;
+          if (item && !item.watched && (!item.status || item.status === "planned" || item.status === "not_started")) {
+            const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", ...userHeaders() },
+              body: JSON.stringify({ status: null }),
+            });
+            await ensureApiOk(patchRes, "Failed to unfollow TV show");
+          }
         }
       }
     },
@@ -840,15 +875,10 @@ export function useRatingMutate() {
           throw new Error(errorBody?.error || "Failed to save rating");
         }
       } else {
-        // Remove rating: find by tmdbId and clear
-        const url = withUserId(new URL("/api/media", window.location.origin));
-        url.searchParams.set("type", args.mediaType === "tv" ? "series" : "movie");
-        const res = await fetch(url, { headers: userHeaders() });
-        await ensureApiOk(res, "Failed to find rated item");
-        const data = await res.json();
-        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-        if (item) {
-          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
+        // Remove rating: find by tmdbId DIRECTLY (not via paginated list .find())
+        const id = await getMediaIdByTmdbId(args.tmdbId, args.mediaType);
+        if (id) {
+          const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
             method: "PATCH",
             headers: { "Content-Type": "application/json", ...userHeaders() },
             body: JSON.stringify({ userRating: null }),

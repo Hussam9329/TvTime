@@ -21,10 +21,6 @@ export async function POST(req: NextRequest) {
       : null;
 
     // IMPORTANT: never match TMDB-backed movies by title when tmdbId is present.
-    // Many movies share the same title across years/remakes. Matching by title was
-    // the root cause of Recently Watched showing the right title with another
-    // movie's poster. Title fallback is kept only for manually-created items that
-    // genuinely do not have a TMDB id.
     if (!item && !numericTmdbId) {
       item = await db.media.findFirst({
         where: { userId: user.id, title: { equals: title.trim() }, type: mediaType },
@@ -32,27 +28,43 @@ export async function POST(req: NextRequest) {
     }
 
     if (!item) {
-      item = await db.media.create({
-        data: {
-          userId: user.id,
-          tmdbId: numericTmdbId,
-          title: title.trim(),
-          type: mediaType,
-          poster: poster || null,
-          year: year || null,
-          overview: overview || null,
-          rating: rating != null ? String(rating) : null,
-          runtime: runtime != null ? Number(runtime) : null,
-          seasons: seasons != null ? Number(seasons) : null,
-          episodes: episodes != null ? Number(episodes) : null,
-          genres: Array.isArray(genres) ? genres : [],
-          isAnime: Boolean(isAnime),
-          // Creating metadata must not silently add the title to Watchlist.
-          // The explicit action (rate / watch / plan / follow) owns its own state.
-          status: null,
-          watched: false,
-        },
-      });
+      // TVM Fix: Use a transaction to prevent race-condition duplicates.
+      // Two concurrent requests could both findFirst → both create.
+      // Serializable isolation ensures only one create succeeds.
+      try {
+        item = await db.$transaction(async (tx) => {
+          // Re-check inside the transaction
+          const existing = numericTmdbId
+            ? await tx.media.findFirst({ where: { userId: user.id, tmdbId: numericTmdbId, type: mediaType } })
+            : await tx.media.findFirst({ where: { userId: user.id, title: { equals: title.trim() }, type: mediaType } });
+          if (existing) return existing;
+          return await tx.media.create({
+            data: {
+              userId: user.id,
+              tmdbId: numericTmdbId,
+              title: title.trim(),
+              type: mediaType,
+              poster: poster || null,
+              year: year || null,
+              overview: overview || null,
+              rating: rating != null ? String(rating) : null,
+              runtime: runtime != null ? Number(runtime) : null,
+              seasons: seasons != null ? Number(seasons) : null,
+              episodes: episodes != null ? Number(episodes) : null,
+              genres: Array.isArray(genres) ? genres : [],
+              isAnime: Boolean(isAnime),
+              status: null,
+              watched: false,
+            },
+          });
+        }, { isolationLevel: "Serializable", maxWait: 5000, timeout: 10000 });
+      } catch {
+        // If the transaction fails (e.g., concurrent create won), try one more findFirst
+        item = numericTmdbId
+          ? await db.media.findFirst({ where: { userId: user.id, tmdbId: numericTmdbId, type: mediaType } })
+          : await db.media.findFirst({ where: { userId: user.id, title: { equals: title.trim() }, type: mediaType } });
+        if (!item) throw new Error("Failed to create media item after retry");
+      }
     } else {
       const updates: any = {};
       const safeTitle = title.trim();
