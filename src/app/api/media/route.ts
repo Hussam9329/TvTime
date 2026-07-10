@@ -28,9 +28,11 @@ export async function GET(req: NextRequest) {
       if (status.includes(",")) {
         where.status = { in: status.split(",").map((s) => s.trim()).filter(Boolean) };
       } else {
-        // Do not treat legacy status="watched" as Finished for TV shows.
-        // Finished is now a strict work-level state repaired by /api/tv-tracking.
+        // Watchlist is a strict state, not "anything unrated". Requiring
+        // watched=false also protects against stale legacy rows that carried
+        // both Planned and Watched at once.
         where.status = status;
+        if (status === "planned") where.watched = false;
       }
     }
     if (watched === "true") where.watched = true;

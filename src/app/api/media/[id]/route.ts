@@ -43,6 +43,21 @@ export async function PATCH(
     const existing = await db.media.findFirst({ where: { id, userId: user.id } });
     if (!existing) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
 
+    if (existing.type !== "series" && body.status === "planned" && existing.watched) {
+      return NextResponse.json(
+        {
+          error: "A watched title cannot also be placed in Watchlist.",
+          code: "WATCHLIST_REQUIRES_UNWATCHED",
+        },
+        { status: 409 },
+      );
+    }
+
+    if (existing.type !== "series" && body.watched === true) {
+      data.status = "watched";
+      if (body.watchedAt === undefined) data.watchedAt = new Date();
+    }
+
     if (existing.type === "series" && hasWatchMutation) {
       const requestedState = body.status === undefined
         ? undefined

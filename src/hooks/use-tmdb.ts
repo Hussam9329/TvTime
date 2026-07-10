@@ -303,7 +303,7 @@ export function useWatchlistToggle() {
         const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
-          body: JSON.stringify({ status: "planned", watched: false, watchedAt: null }),
+          body: JSON.stringify({ status: "planned" }),
         });
         await ensureApiOk(patchRes, "Failed to add to watchlist");
       } else {
@@ -318,7 +318,7 @@ export function useWatchlistToggle() {
           const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
             method: "PATCH",
             headers: { "Content-Type": "application/json", ...userHeaders() },
-            body: JSON.stringify({ status: null, watched: false, watchedAt: null }),
+            body: JSON.stringify({ status: null }),
           });
           await ensureApiOk(patchRes, "Failed to remove from watchlist");
         }
@@ -326,6 +326,7 @@ export function useWatchlistToggle() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
@@ -346,7 +347,7 @@ export type RecentlyWatchedItem = {
   episodeNumber?: number | null;
   episodeName?: string | null;
   hasProfile: boolean;
-  source: "media" | "watched-movie" | "watched-episode";
+  source: "media" | "watched-episode";
 };
 
 export function useRecentlyWatched(limit = 12) {
@@ -440,6 +441,7 @@ export function useWatchedMovieToggle() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
@@ -519,6 +521,7 @@ export function useEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["lib", "stats"] });
       // Also invalidate media/TV tracking queries so every counter updates immediately.
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },
@@ -547,6 +550,7 @@ export function useBulkEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
       qc.invalidateQueries({ queryKey: ["lib", "stats"] });
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },
@@ -642,6 +646,7 @@ export function useFollowingToggle() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
@@ -790,6 +795,7 @@ export function useRatingMutate() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
@@ -816,16 +822,13 @@ export function useStats() {
 // Counts are calculated server-side across the whole library, never from the current page.
 export type TvTrackingCategory =
   | "all"
-  | "planned"
   | "watchlist"
-  | "not-started"
-  | "havent-started"
-  | "watching"
   | "uptodate"
   | "finished"
   | "finished-anime"
   | "upcoming"
-  | "havent-watched-while";
+  | "havent-watched"
+  | "havent-started";
 
 export interface TvTrackingCounts {
   all: number;
@@ -1088,6 +1091,9 @@ export interface MediaStats {
     books: number;
     games: number;
     rated: number;
+    ratedMovies?: number;
+    ratedShows?: number;
+    ratedAnime?: number;
     watched: number;
     planned: number;
     watchlist?: number;
@@ -1147,6 +1153,28 @@ export function useMediaStats() {
   });
 }
 
+
+export interface GlobalLibraryCountsResponse {
+  counts: MediaStats["counts"];
+  countsAreGlobal: true;
+  source: "Media";
+}
+
+export function useLibraryCounts() {
+  const userId = useNav((s) => s.userId);
+  return useQuery({
+    queryKey: ["library-counts", userId || getClientUserId()],
+    queryFn: async () => {
+      const res = await fetch(withUserId(new URL("/api/library/counts", window.location.origin)), { headers: userHeaders() });
+      await ensureApiOk(res, "Failed to load global library counts");
+      return res.json() as Promise<GlobalLibraryCountsResponse>;
+    },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  });
+}
+
 // Update media item (rate, mark watched, toggle anime)
 export function useMediaUpdate() {
   const qc = useQueryClient();
@@ -1172,6 +1200,7 @@ export function useMediaUpdate() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
     },

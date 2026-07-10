@@ -14,17 +14,20 @@ import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 
 const CATEGORY_VALUES = new Set([
   "all",
-  "planned",
   "watchlist",
-  "not-started",
-  "havent-started",
-  "watching",
   "uptodate",
   "finished",
   "finished-anime",
   "upcoming",
-  "havent-watched-while",
+  "havent-watched",
+  "havent-started",
 ]);
+const LEGACY_CATEGORY_ALIASES: Record<string, TvTrackingCategory> = {
+  planned: "watchlist",
+  "not-started": "havent-started",
+  watching: "havent-watched",
+  "havent-watched-while": "havent-watched",
+};
 const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
 const STALE_WATCH_DAYS = 30;
@@ -32,16 +35,13 @@ const STATUS_REPAIR_CONCURRENCY = 5;
 
 type TvTrackingCategory =
   | "all"
-  | "planned"
   | "watchlist"
-  | "not-started"
-  | "havent-started"
-  | "watching"
   | "uptodate"
   | "finished"
   | "finished-anime"
   | "upcoming"
-  | "havent-watched-while";
+  | "havent-watched"
+  | "havent-started";
 
 type WatchedEpisodeMeta = {
   keys: Set<string>;
@@ -270,7 +270,8 @@ export async function GET(req: NextRequest) {
     const user = await getOrCreateUser(parseUserId(req));
     const url = new URL(req.url);
     const rawCategory = url.searchParams.get("category") || "all";
-    const category = (CATEGORY_VALUES.has(rawCategory) ? rawCategory : "all") as TvTrackingCategory;
+    const aliasedCategory = LEGACY_CATEGORY_ALIASES[rawCategory] || rawCategory;
+    const category = (CATEGORY_VALUES.has(aliasedCategory) ? aliasedCategory : "all") as TvTrackingCategory;
     const search = url.searchParams.get("search")?.trim().toLowerCase() || "";
     const sortByParam = url.searchParams.get("sortBy") || "title";
     const orderParam = url.searchParams.get("order") || "asc";
@@ -291,16 +292,13 @@ export async function GET(req: NextRequest) {
 
     const categoryPredicates: Record<TvTrackingCategory, (show: DecoratedShow) => boolean> = {
       all: () => true,
-      planned: (show) => show._serverTrackingStatus === "planned",
       watchlist: (show) => show._serverTrackingStatus === "planned",
-      "not-started": (show) => show._serverTrackingStatus === "not_started",
-      "havent-started": (show) => show._serverTrackingStatus === "not_started",
-      watching: (show) => show._serverTrackingStatus === "watching",
       uptodate: (show) => show._serverTrackingStatus === "uptodate",
       finished: (show) => show._serverTrackingStatus === "finished" && !show.isAnime,
       "finished-anime": (show) => show._serverTrackingStatus === "finished" && show.isAnime,
       upcoming: snapshot.predicates.isUpcoming,
-      "havent-watched-while": snapshot.predicates.hasUnwatchedReleasedEpisode,
+      "havent-watched": snapshot.predicates.hasUnwatchedReleasedEpisode,
+      "havent-started": (show) => show._serverTrackingStatus === "not_started",
     };
 
     const matching = sortShows(filteredBySearch.filter(categoryPredicates[category]), sortBy, order);

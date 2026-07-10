@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     watchedMovies: 0,
     following: 0,
     ratings: 0,
+    episodeRatings: 0,
     lockedSeriesRatingsSkipped: 0,
   };
   const deferredSeriesRatings = new Map<number, number>();
@@ -114,6 +115,47 @@ export async function POST(req: NextRequest) {
         update: {},
       });
       imported.watchedEpisodes++;
+    }
+  }
+
+
+  // Version 3 independent episode ratings. These remain in Rating because they
+  // are episode-level data, not a competing title-library source.
+  if (Array.isArray(library.episodeRatings)) {
+    for (const item of library.episodeRatings) {
+      if (!item?.mediaType?.startsWith?.("episode:") || !item.tmdbId || item.value == null) continue;
+      const match = String(item.mediaType).match(/^episode:(\d+):(\d+)$/);
+      if (!match) continue;
+      const seasonNumber = Number(match[1]);
+      const episodeNumber = Number(match[2]);
+      const watched = await db.watchedEpisode.findFirst({
+        where: { userId: user.id, showId: Number(item.tmdbId), seasonNumber, episodeNumber },
+        select: { id: true },
+      });
+      if (!watched) continue;
+      await db.rating.upsert({
+        where: {
+          userId_mediaType_tmdbId: {
+            userId: user.id,
+            mediaType: String(item.mediaType),
+            tmdbId: Number(item.tmdbId),
+          },
+        },
+        create: {
+          userId: user.id,
+          mediaType: String(item.mediaType),
+          tmdbId: Number(item.tmdbId),
+          title: item.title || `TV Show #${item.tmdbId} — S${seasonNumber}E${episodeNumber}`,
+          posterPath: item.posterPath || null,
+          value: Math.max(0, Math.min(100, Number(item.value))),
+        },
+        update: {
+          value: Math.max(0, Math.min(100, Number(item.value))),
+          title: item.title || `TV Show #${item.tmdbId} — S${seasonNumber}E${episodeNumber}`,
+          posterPath: item.posterPath || null,
+        },
+      });
+      imported.episodeRatings++;
     }
   }
 
@@ -247,7 +289,8 @@ export async function POST(req: NextRequest) {
             poster: item.posterPath || null,
             userRating: value,
             watched: false,
-            status: mediaType === "series" ? "finished" : null,
+            status: null,
+            ratingStatus: mediaType === "series" ? "imported_after_completion_verification" : null,
           },
         });
       }

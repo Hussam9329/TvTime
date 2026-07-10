@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 
-type RecentlyKind = "movie" | "tv";
-
 type RecentlyItem = {
   id: string;
-  kind: RecentlyKind;
+  kind: "movie" | "tv";
   tmdbId: number | null;
   title: string;
   posterPath: string | null;
@@ -16,7 +14,7 @@ type RecentlyItem = {
   episodeNumber?: number | null;
   episodeName?: string | null;
   hasProfile: boolean;
-  source: "media" | "watched-movie" | "watched-episode";
+  source: "media" | "watched-episode";
 };
 
 function toIso(value: Date | string | null | undefined) {
@@ -40,18 +38,12 @@ function addUnique(map: Map<string, RecentlyItem>, item: RecentlyItem) {
 export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
-    const url = new URL(req.url);
-    const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 12, 1), 50);
+    const limit = Math.min(Math.max(Number(new URL(req.url).searchParams.get("limit")) || 12, 1), 50);
 
-    const [mediaMovies, legacyMovies, watchedEpisodes] = await Promise.all([
+    const [mediaMovies, watchedEpisodes] = await Promise.all([
       db.media.findMany({
         where: { userId: user.id, type: "movie", watched: true },
         orderBy: [{ watchedAt: "desc" }, { updatedAt: "desc" }],
-        take: 100,
-      }),
-      db.watchedMovie.findMany({
-        where: { userId: user.id },
-        orderBy: { watchedAt: "desc" },
         take: 100,
       }),
       db.watchedEpisode.findMany({
@@ -62,48 +54,21 @@ export async function GET(req: NextRequest) {
     ]);
 
     const showIds = Array.from(
-      new Set(watchedEpisodes.map((episode) => validTmdbId(episode.showId)).filter((id): id is number => id != null))
+      new Set(watchedEpisodes.map((episode) => validTmdbId(episode.showId)).filter((id): id is number => id != null)),
     );
-
-    const [mediaShows, followingShows] = showIds.length
-      ? await Promise.all([
-          db.media.findMany({
-            where: { userId: user.id, type: "series", tmdbId: { in: showIds } },
-            select: { tmdbId: true, title: true, poster: true },
-          }),
-          db.followingShow.findMany({
-            where: { userId: user.id, tmdbId: { in: showIds } },
-            select: { tmdbId: true, title: true, posterPath: true },
-          }),
-        ])
-      : [[], []];
-
+    const mediaShows = showIds.length
+      ? await db.media.findMany({
+          where: { userId: user.id, type: "series", tmdbId: { in: showIds } },
+          select: { tmdbId: true, title: true, poster: true },
+        })
+      : [];
     const showMeta = new Map<number, { title: string; posterPath: string | null }>();
-    for (const show of followingShows) {
-      const id = validTmdbId(show.tmdbId);
-      if (id) showMeta.set(id, { title: show.title, posterPath: show.posterPath ?? null });
-    }
     for (const show of mediaShows) {
       const id = validTmdbId(show.tmdbId);
-      if (id) showMeta.set(id, { title: show.title, posterPath: show.poster ?? showMeta.get(id)?.posterPath ?? null });
+      if (id) showMeta.set(id, { title: show.title, posterPath: show.poster ?? null });
     }
 
     const items = new Map<string, RecentlyItem>();
-
-    for (const movie of legacyMovies) {
-      const tmdbId = validTmdbId(movie.tmdbId);
-      addUnique(items, {
-        id: movie.id,
-        kind: "movie",
-        tmdbId,
-        title: movie.title,
-        posterPath: movie.posterPath ?? null,
-        watchedAt: toIso(movie.watchedAt),
-        hasProfile: tmdbId != null,
-        source: "watched-movie",
-      });
-    }
-
     for (const movie of mediaMovies) {
       const tmdbId = validTmdbId(movie.tmdbId);
       addUnique(items, {
@@ -141,7 +106,7 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => new Date(b.watchedAt).getTime() - new Date(a.watchedAt).getTime())
       .slice(0, limit);
 
-    return NextResponse.json({ items: sorted, total: sorted.length });
+    return NextResponse.json({ items: sorted, total: sorted.length, source: "Media+WatchedEpisode" });
   } catch (error) {
     console.error("[media:recently]", error);
     return NextResponse.json({ error: "Failed to load recently watched" }, { status: 500 });

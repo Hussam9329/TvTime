@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useNav } from "@/lib/store";
-import { useMedia, useMediaUpdate, useMediaStats, type MediaItemDB } from "@/hooks/use-tmdb";
+import { useMedia, useMediaUpdate, useLibraryCounts, type MediaItemDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,11 +48,20 @@ export function LibraryView() {
     offset: page * limit,
   });
 
-  const stats = useMediaStats();
+  const globalCounts = useLibraryCounts();
 
   const items = media.data?.items ?? [];
   const total = media.data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
+  const counts = globalCounts.data?.counts;
+  const tabCount = (value: LibTab) => ({
+    "watchlist-movies": counts?.watchlistMovies,
+    "watched-movies": counts?.watchedMovies,
+    "watchlist-tv": counts?.watchlistShows,
+    "watched-tv": counts?.watchedShows,
+    "watchlist-anime": counts?.watchlistAnime,
+    "watched-anime": counts?.watchedAnime,
+  }[value] ?? 0);
 
   return (
     <div className="space-y-5">
@@ -63,14 +72,14 @@ export function LibraryView() {
       </div>
 
       {/* Stats overview */}
-      {stats.data && (
+      {globalCounts.data && (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          <MiniStat label="Watchlist Movies" value={stats.data.counts?.watchlistMovies ?? 0} />
-          <MiniStat label="Watched Movies" value={stats.data.counts?.watchedMovies ?? 0} />
-          <MiniStat label="Watchlist TV" value={stats.data.counts?.watchlistShows ?? 0} />
-          <MiniStat label="Watched TV" value={stats.data.counts?.watchedShows ?? 0} />
-          <MiniStat label="Watchlist Anime" value={stats.data.counts?.watchlistAnime ?? 0} />
-          <MiniStat label="Watched Anime" value={stats.data.counts?.watchedAnime ?? 0} />
+          <MiniStat label="Watchlist Movies" value={globalCounts.data.counts?.watchlistMovies ?? 0} />
+          <MiniStat label="Watched Movies" value={globalCounts.data.counts?.watchedMovies ?? 0} />
+          <MiniStat label="Watchlist TV" value={globalCounts.data.counts?.watchlistShows ?? 0} />
+          <MiniStat label="Watched TV" value={globalCounts.data.counts?.watchedShows ?? 0} />
+          <MiniStat label="Watchlist Anime" value={globalCounts.data.counts?.watchlistAnime ?? 0} />
+          <MiniStat label="Watched Anime" value={globalCounts.data.counts?.watchedAnime ?? 0} />
         </div>
       )}
 
@@ -81,6 +90,7 @@ export function LibraryView() {
             <TabsTrigger key={t.value} value={t.value} className="text-xs h-9">
               <t.icon className="w-3.5 h-3.5 mr-1.5" />
               {t.label}
+              <span className="ml-1 rounded-full bg-background/70 px-1.5 py-0.5 text-[9px] tabular-nums">{tabCount(t.value)}</span>
             </TabsTrigger>
           ))}
         </TabsList>

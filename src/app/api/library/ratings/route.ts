@@ -15,42 +15,95 @@ function positiveInteger(value: unknown): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-// GET - list title ratings or independent episode ratings.
+function canonicalType(mediaType: string) {
+  return mediaType === "tv" || mediaType === "series" ? "series" : "movie";
+}
+
+function titleRatingValueOutOf100(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.max(0, Math.min(100, numeric <= 10 ? numeric * 10 : numeric));
+}
+
+function titleRatingCompat(item: any) {
+  return {
+    id: item.id,
+    userId: item.userId,
+    mediaType: item.type === "series" ? "tv" : "movie",
+    tmdbId: item.tmdbId,
+    title: item.title,
+    posterPath: item.poster,
+    value: item.userRating == null ? null : item.userRating / 10,
+    valueOutOf100: item.userRating,
+    createdAt: item.addedAt,
+    updatedAt: item.updatedAt,
+    scope: "title",
+    source: "Media",
+  };
+}
+
+// GET - title ratings come from Media.userRating. Rating is retained only for
+// independent episode ratings.
 export async function GET(req: NextRequest) {
   try {
-    const userId = parseUserId(req);
-    if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
-
+    const user = await getOrCreateUser(parseUserId(req));
     const url = new URL(req.url);
     const mediaType = url.searchParams.get("mediaType");
     const showId = positiveInteger(url.searchParams.get("showId"));
     const seasonNumber = positiveInteger(url.searchParams.get("seasonNumber"));
     const episodeNumber = positiveInteger(url.searchParams.get("episodeNumber"));
-    const user = await getOrCreateUser(userId);
 
-    const where: Prisma.RatingWhereInput = { userId: user.id };
     if (mediaType === "episode") {
       if (!showId) return NextResponse.json({ error: "showId required for episode ratings" }, { status: 400 });
-      where.tmdbId = showId;
-      where.mediaType = seasonNumber && episodeNumber
-        ? episodeRatingMediaType(seasonNumber, episodeNumber)
-        : { startsWith: "episode:" };
-    } else if (mediaType) {
-      where.mediaType = mediaType;
+      const where: Prisma.RatingWhereInput = {
+        userId: user.id,
+        tmdbId: showId,
+        mediaType: seasonNumber && episodeNumber
+          ? episodeRatingMediaType(seasonNumber, episodeNumber)
+          : { startsWith: "episode:" },
+      };
+      const items = await db.rating.findMany({ where, orderBy: { updatedAt: "desc" } });
+      return NextResponse.json({
+        items: items.map((item) => {
+          const identity = parseEpisodeRatingMediaType(item.mediaType);
+          return identity ? { ...item, showId: item.tmdbId, ...identity, scope: "episode" } : item;
+        }),
+        source: "Rating:episode-only",
+      });
     }
 
-    const items = await db.rating.findMany({
-      where,
+    const type = mediaType ? canonicalType(mediaType) : null;
+    const titleItems = await db.media.findMany({
+      where: type === "series"
+        ? { userId: user.id, type: "series", status: "finished", userRating: { not: null } }
+        : type === "movie"
+          ? { userId: user.id, type: "movie", userRating: { not: null } }
+          : {
+              userId: user.id,
+              userRating: { not: null },
+              OR: [
+                { type: "movie" },
+                { type: "series", status: "finished" },
+              ],
+            },
       orderBy: { updatedAt: "desc" },
     });
 
+    if (mediaType) return NextResponse.json({ items: titleItems.map(titleRatingCompat), source: "Media" });
+
+    const episodeItems = await db.rating.findMany({
+      where: { userId: user.id, mediaType: { startsWith: "episode:" } },
+      orderBy: { updatedAt: "desc" },
+    });
     return NextResponse.json({
-      items: items.map((item) => {
-        const identity = parseEpisodeRatingMediaType(item.mediaType);
-        return identity
-          ? { ...item, showId: item.tmdbId, ...identity, scope: "episode" }
-          : item;
-      }),
+      items: [
+        ...titleItems.map(titleRatingCompat),
+        ...episodeItems.map((item) => {
+          const identity = parseEpisodeRatingMediaType(item.mediaType);
+          return identity ? { ...item, showId: item.tmdbId, ...identity, scope: "episode" } : item;
+        }),
+      ],
+      source: "Media+Rating:episode-only",
     });
   } catch (error) {
     console.error("[ratings:GET]", error);
@@ -58,14 +111,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - set a title rating or an independent episode rating.
 export async function POST(req: NextRequest) {
   try {
-    const userId = parseUserId(req);
-    if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
-
+    const user = await getOrCreateUser(parseUserId(req));
     const body = await req.json();
-    const user = await getOrCreateUser(userId);
 
     if (body.mediaType === "episode") {
       const showId = positiveInteger(body.showId ?? body.tmdbId);
@@ -88,19 +137,13 @@ export async function POST(req: NextRequest) {
 
       if (validation.released.length !== 1 || validation.blocked.length > 0) {
         return NextResponse.json(
-          {
-            error: "An episode can only be rated after it has aired.",
-            code: "EPISODE_RATING_REQUIRES_RELEASE",
-          },
+          { error: "An episode can only be rated after it has aired.", code: "EPISODE_RATING_REQUIRES_RELEASE" },
           { status: 409 },
         );
       }
       if (!watchedEpisode) {
         return NextResponse.json(
-          {
-            error: "Mark this episode as watched before rating it.",
-            code: "EPISODE_RATING_REQUIRES_WATCHED",
-          },
+          { error: "Mark this episode as watched before rating it.", code: "EPISODE_RATING_REQUIRES_WATCHED" },
           { status: 409 },
         );
       }
@@ -116,13 +159,7 @@ export async function POST(req: NextRequest) {
         : watchedEpisode.episodeName || released.episodeName || `Episode ${episodeNumber}`;
 
       const item = await db.rating.upsert({
-        where: {
-          userId_mediaType_tmdbId: {
-            userId: user.id,
-            mediaType: encodedMediaType,
-            tmdbId: showId,
-          },
-        },
+        where: { userId_mediaType_tmdbId: { userId: user.id, mediaType: encodedMediaType, tmdbId: showId } },
         create: {
           userId: user.id,
           mediaType: encodedMediaType,
@@ -137,19 +174,18 @@ export async function POST(req: NextRequest) {
           ...(body.posterPath !== undefined ? { posterPath: body.posterPath || null } : {}),
         },
       });
-
-      return NextResponse.json({
-        item: { ...item, showId, seasonNumber, episodeNumber, scope: "episode" },
-      });
+      return NextResponse.json({ item: { ...item, showId, seasonNumber, episodeNumber, scope: "episode" } });
     }
 
     const mediaType = String(body.mediaType || "");
     const tmdbId = positiveInteger(body.tmdbId);
-    if (!mediaType || !tmdbId || body.value == null) {
+    const value = titleRatingValueOutOf100(body.value);
+    if (!mediaType || !tmdbId || value == null) {
       return NextResponse.json({ error: "mediaType, tmdbId, value required" }, { status: 400 });
     }
+    const type = canonicalType(mediaType);
 
-    if (mediaType === "tv") {
+    if (type === "series") {
       const eligibility = await getTvRatingEligibility(user.id, tmdbId);
       if (!eligibility.allowed) {
         const failure = tvRatingEligibilityError(eligibility);
@@ -166,71 +202,66 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Preserve the legacy 1-10 title-rating route for compatibility. The main
-    // application stores movie/show ratings out of 100 on Media.userRating.
-    const value = Math.max(1, Math.min(10, Number(body.value)));
-    const item = await db.rating.upsert({
-      where: {
-        userId_mediaType_tmdbId: { userId: user.id, mediaType, tmdbId },
-      },
-      create: {
-        userId: user.id,
-        mediaType,
-        tmdbId,
-        title: body.title || "Unknown",
-        posterPath: body.posterPath || null,
-        value,
-      },
-      update: {
-        value,
-        ...(body.title ? { title: body.title } : {}),
-        ...(body.posterPath !== undefined ? { posterPath: body.posterPath } : {}),
-      },
-    });
-    return NextResponse.json({ item });
+    let item = await db.media.findFirst({ where: { userId: user.id, type, tmdbId } });
+    if (!item) {
+      item = await db.media.create({
+        data: {
+          userId: user.id,
+          type,
+          tmdbId,
+          title: body.title || "Unknown",
+          poster: body.posterPath || null,
+          userRating: value,
+          watched: false,
+          status: null,
+        },
+      });
+    } else {
+      item = await db.media.update({
+        where: { id: item.id },
+        data: {
+          userRating: value,
+          ...(body.title ? { title: body.title } : {}),
+          ...(body.posterPath !== undefined ? { poster: body.posterPath || null } : {}),
+        },
+      });
+    }
+    return NextResponse.json({ item: titleRatingCompat(item), source: "Media" });
   } catch (error) {
     console.error("[ratings:POST]", error);
     return NextResponse.json({ error: "Failed to save rating" }, { status: 500 });
   }
 }
 
-// DELETE - remove a title rating or one independent episode rating.
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = parseUserId(req);
-    if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
-
+    const user = await getOrCreateUser(parseUserId(req));
     const url = new URL(req.url);
     const mediaType = url.searchParams.get("mediaType");
-    const user = await getOrCreateUser(userId);
 
     if (mediaType === "episode") {
       const showId = positiveInteger(url.searchParams.get("showId") ?? url.searchParams.get("tmdbId"));
       const seasonNumber = positiveInteger(url.searchParams.get("seasonNumber"));
       const episodeNumber = positiveInteger(url.searchParams.get("episodeNumber"));
       if (!showId || !seasonNumber || !episodeNumber) {
-        return NextResponse.json(
-          { error: "showId, seasonNumber and episodeNumber required" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "showId, seasonNumber and episodeNumber required" }, { status: 400 });
       }
       await db.rating.deleteMany({
-        where: {
-          userId: user.id,
-          tmdbId: showId,
-          mediaType: episodeRatingMediaType(seasonNumber, episodeNumber),
-        },
+        where: { userId: user.id, tmdbId: showId, mediaType: episodeRatingMediaType(seasonNumber, episodeNumber) },
       });
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, source: "Rating:episode-only" });
     }
 
     const tmdbId = positiveInteger(url.searchParams.get("tmdbId"));
     if (!mediaType || !tmdbId) {
       return NextResponse.json({ error: "mediaType, tmdbId required" }, { status: 400 });
     }
-
-    await db.rating.deleteMany({ where: { userId: user.id, mediaType, tmdbId } });
-    return NextResponse.json({ ok: true });
+    const type = canonicalType(mediaType);
+    const result = await db.media.updateMany({
+      where: { userId: user.id, type, tmdbId },
+      data: { userRating: null, ratingStatus: null },
+    });
+    return NextResponse.json({ ok: true, updated: result.count, source: "Media" });
   } catch (error) {
     console.error("[ratings:DELETE]", error);
     return NextResponse.json({ error: "Failed to remove rating" }, { status: 500 });

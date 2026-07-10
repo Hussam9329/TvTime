@@ -55,7 +55,7 @@ check(/nextIsDueOrReleased/.test(engine), "Same-day episode release boundary is 
 check(/ON(?:GOING)?_TV_META_TTL_MS\s*=\s*5 \* 60 \* 1000/.test(statusServer), "Ongoing TV metadata refreshes every five minutes");
 check(/cached\.nextEpisode[\s\S]*isEpisodeReleased/.test(statusServer), "Cache is invalidated when the next episode air date arrives");
 check(/hasUnwatchedReleasedEpisode/.test(trackingRoute), "Haven't Watched is based on a released unwatched episode");
-check(/"havent-watched-while": snapshot\.predicates\.hasUnwatchedReleasedEpisode/.test(trackingRoute), "Haven't Watched filter uses the released-episode predicate");
+check(/"havent-watched": snapshot\.predicates\.hasUnwatchedReleasedEpisode/.test(trackingRoute), "Haven't Watched filter uses the released-episode predicate");
 check(/stateVerified[\s\S]*Never rewrite persistent progress during a temporary TMDB failure/.test(trackingRoute), "Background repair writes only verified states");
 check(/refetchInterval:\s*5 \* 60 \* 1000/.test(hooks), "TV tracking/progress refetches while the app is open");
 check(/setInterval\([\s\S]*5 \* 60 \* 1000/.test(providers), "Global provider triggers periodic server reconciliation");
@@ -78,7 +78,8 @@ check(/disabled=\{!released \|\| !isWatched/.test(detailView), "Episode rating u
 check(/disabled=\{!canRateShow\}/.test(detailView) && /Rating locked/.test(detailView), "Ongoing whole-series rating button is visibly locked");
 check(/displayedShowRating = canRateShow \? myRating : null/.test(detailView), "Invalid legacy whole-series ratings are hidden while locked");
 check(/trackingStatus === "finished" && show\._isEndedByTmdb === true/.test(trackingView), "TV Tracking exposes a full-show rating only for verified Finished rows");
-check(/type: "series", status: "finished"/.test(libraryStats) && /type: "series", status: "finished"/.test(mediaStats), "Stats exclude ongoing full-series ratings");
+const libraryCounts = read("src/lib/library-counts.ts");
+check(/eligibleTitleRatingWhere/.test(libraryStats) && /eligibleTitleRatingWhere/.test(mediaStats) && /type: "series", status: "finished"/.test(libraryCounts), "Stats exclude ongoing full-series ratings through the canonical count service");
 
 // Parse every TS/TSX file with the locally-installed TypeScript compiler.
 try {
@@ -90,8 +91,12 @@ try {
   try {
     compiler = require.resolve("typescript/lib/typescript.js");
   } catch {
-    // Fallback: typescript may ship typescript.cjs in newer versions.
-    compiler = require.resolve("typescript/lib/typescript.cjs");
+    try {
+      compiler = require.resolve("typescript/lib/typescript.cjs");
+    } catch {
+      const globalRoot = execFileSync("npm", ["root", "-g"], { encoding: "utf8" }).trim();
+      compiler = resolve(globalRoot, "typescript/lib/typescript.js");
+    }
   }
   const parser = `
     const fs=require('fs'),path=require('path'),ts=require(${JSON.stringify(compiler)});

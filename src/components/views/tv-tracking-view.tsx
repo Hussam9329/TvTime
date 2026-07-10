@@ -95,14 +95,16 @@ export function TvTrackingView() {
         </div>
       </div>
 
-      {/* Global Stats row — never page-scoped */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard icon={<Layers className="w-5 h-5" />} label="All Shows" value={counts?.all ?? "…"} color="from-purple-500/20 to-purple-500/5" />
-        <StatCard icon={<BookOpen className="w-5 h-5" />} label="Planned" value={counts?.planned ?? counts?.watchlist ?? "…"} color="from-violet-500/20 to-violet-500/5" />
-        <StatCard icon={<Clock className="w-5 h-5" />} label="Not Started" value={counts?.notStarted ?? counts?.haventStarted ?? "…"} color="from-slate-500/20 to-slate-500/5" />
-        <StatCard icon={<Play className="w-5 h-5" />} label="Watching" value={counts?.watching ?? "…"} color="from-blue-500/20 to-blue-500/5" />
+      {/* Exact TVM-13 filters, all backed by full-library counters. */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+        <StatCard icon={<Layers className="w-5 h-5" />} label="All" value={counts?.all ?? "…"} color="from-purple-500/20 to-purple-500/5" />
+        <StatCard icon={<BookOpen className="w-5 h-5" />} label="Watchlist" value={counts?.watchlist ?? counts?.planned ?? "…"} color="from-violet-500/20 to-violet-500/5" />
         <StatCard icon={<Zap className="w-5 h-5" />} label="Up To Date" value={counts?.uptodate ?? "…"} color="from-cyan-500/20 to-cyan-500/5" />
-        <StatCard icon={<Trophy className="w-5 h-5" />} label="Finished" value={counts ? counts.finished + counts.finishedAnime : "…"} color="from-emerald-500/20 to-emerald-500/5" />
+        <StatCard icon={<Trophy className="w-5 h-5" />} label="Finished" value={counts?.finished ?? "…"} color="from-emerald-500/20 to-emerald-500/5" />
+        <StatCard icon={<Sparkles className="w-5 h-5" />} label="Finished Anime" value={counts?.finishedAnime ?? "…"} color="from-fuchsia-500/20 to-fuchsia-500/5" />
+        <StatCard icon={<Calendar className="w-5 h-5" />} label="Upcoming" value={counts?.upcoming ?? "…"} color="from-amber-500/20 to-amber-500/5" />
+        <StatCard icon={<Play className="w-5 h-5" />} label="Haven't Watched" value={counts?.haventWatched ?? "…"} color="from-orange-500/20 to-orange-500/5" />
+        <StatCard icon={<Clock className="w-5 h-5" />} label="Haven't Started" value={counts?.haventStarted ?? counts?.notStarted ?? "…"} color="from-slate-500/20 to-slate-500/5" />
       </div>
 
       {stats.data?.watchTime && (
@@ -160,14 +162,13 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
     color: string;
   }[] = [
     { value: "all", label: "All", count: counts.all, icon: <Layers className="w-3 h-3" />, color: "bg-primary/15 text-primary" },
-    { value: "planned", label: "Planned", count: counts.planned ?? counts.watchlist, icon: <BookOpen className="w-3 h-3" />, color: "bg-purple-500/15 text-purple-400" },
-    { value: "not-started", label: "Not Started", count: counts.notStarted ?? counts.haventStarted, icon: <Clock className="w-3 h-3" />, color: "bg-slate-500/15 text-slate-300" },
-    { value: "watching", label: "Watching", count: counts.watching, icon: <Play className="w-3 h-3" />, color: "bg-blue-500/15 text-blue-400" },
+    { value: "watchlist", label: "Watchlist", count: counts.watchlist ?? counts.planned, icon: <BookOpen className="w-3 h-3" />, color: "bg-purple-500/15 text-purple-400" },
     { value: "uptodate", label: "Up To Date", count: counts.uptodate, icon: <Zap className="w-3 h-3" />, color: "bg-cyan-500/15 text-cyan-400" },
     { value: "finished", label: "Finished", count: counts.finished, icon: <Trophy className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-400" },
     { value: "finished-anime", label: "Finished Anime", count: counts.finishedAnime, icon: <Sparkles className="w-3 h-3" />, color: "bg-fuchsia-500/15 text-fuchsia-400" },
     { value: "upcoming", label: "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-400" },
-    { value: "havent-watched-while", label: "Haven't Watched", count: counts.haventWatched, icon: <Clock className="w-3 h-3" />, color: "bg-orange-500/15 text-orange-400" },
+    { value: "havent-watched", label: "Haven't Watched", count: counts.haventWatched, icon: <Play className="w-3 h-3" />, color: "bg-orange-500/15 text-orange-400" },
+    { value: "havent-started", label: "Haven't Started", count: counts.haventStarted ?? counts.notStarted, icon: <Clock className="w-3 h-3" />, color: "bg-slate-500/15 text-slate-300" },
   ];
 
   const activeFilterLabel = filters.find((f) => f.value === filter)?.label ?? "All";

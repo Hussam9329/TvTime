@@ -119,7 +119,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["media"] });
       const imported = result?.imported || {};
-      const total = (imported.watchlist || 0) + (imported.watchedMovies || 0) + (imported.watchedEpisodes || 0) + (imported.following || 0) + (imported.ratings || 0) + (imported.media || 0);
+      const total = (imported.watchlist || 0) + (imported.watchedMovies || 0) + (imported.watchedEpisodes || 0) + (imported.following || 0) + (imported.ratings || 0) + (imported.episodeRatings || 0) + (imported.media || 0);
       toast.success(`Imported ${total} items`);
       onOpenChange(false);
     } catch {

@@ -1,48 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { eligibleTitleRatingWhere, getCanonicalLibraryCounts } from "@/lib/library-counts";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const base = { userId: user.id };
-    // A whole-series rating is statistically valid only after the show is
-    // officially finished by the TV state engine. Episode ratings live in the
-    // separate Rating records and never count as a full-series rating.
-    const eligibleRatingWhere: Prisma.MediaWhereInput = {
-      ...base,
-      userRating: { not: null },
-      OR: [
-        { type: { not: "series" } },
-        { type: "series", status: "finished" },
-      ],
-    };
+    const eligibleRating = eligibleTitleRatingWhere(user.id);
 
-    const [
-      total, movies, series, books, games, rated, watched, planned,
-      watchlistMovies, watchlistSeries, watchlistAnime,
-      watchedMovies, watchedSeries, watchedAnime,
-      watchedEpisodeRows, ratedItems, watchedMovieRows, following,
-    ] = await Promise.all([
-      db.media.count({ where: base }),
-      db.media.count({ where: { ...base, type: "movie" } }),
-      db.media.count({ where: { ...base, type: "series" } }),
-      db.media.count({ where: { ...base, type: "book" } }),
-      db.media.count({ where: { ...base, type: "game" } }),
-      db.media.count({ where: eligibleRatingWhere }),
-      db.media.count({ where: { ...base, watched: true } }),
-      db.media.count({ where: { ...base, status: "planned" } }),
-      db.media.count({ where: { ...base, type: "movie", status: "planned" } }),
-      db.media.count({ where: { ...base, type: "series", status: "planned", isAnime: false } }),
-      db.media.count({ where: { ...base, type: "series", status: "planned", isAnime: true } }),
-      db.media.count({ where: { ...base, type: "movie", watched: true } }),
-      db.media.count({ where: { ...base, type: "series", watched: true, isAnime: false } }),
-      db.media.count({ where: { ...base, type: "series", watched: true, isAnime: true } }),
+    const [counts, watchedEpisodeRows, ratedItems, watchedMovieRows] = await Promise.all([
+      getCanonicalLibraryCounts(user.id),
       db.watchedEpisode.findMany({ where: base, select: { showId: true, runtime: true, watchedAt: true } }),
-      db.media.findMany({ where: eligibleRatingWhere, select: { userRating: true } }),
-      db.media.findMany({ where: { ...base, type: "movie", watched: true }, select: { runtime: true } }),
-      db.media.count({ where: { ...base, type: "series", status: { in: ["not_started", "watching", "uptodate", "finished"] } } }),
+      db.media.findMany({ where: eligibleRating, select: { userRating: true } }),
+      db.media.findMany({ where: { ...base, type: "movie", watched: true }, select: { runtime: true, watchedAt: true } }),
     ]);
 
     const avgRating = ratedItems.length > 0
@@ -55,10 +26,16 @@ export async function GET(req: NextRequest) {
     const showsWatched = new Set(watchedEpisodeRows.map((episode) => episode.showId));
     const episodesByShowMap = new Map<number, number>();
     const episodesByMonthMap = new Map<string, number>();
+    const moviesByMonthMap = new Map<string, number>();
     for (const episode of watchedEpisodeRows) {
       episodesByShowMap.set(episode.showId, (episodesByShowMap.get(episode.showId) || 0) + 1);
       const month = episode.watchedAt.toISOString().slice(0, 7);
       episodesByMonthMap.set(month, (episodesByMonthMap.get(month) || 0) + 1);
+    }
+    for (const movie of watchedMovieRows) {
+      if (!movie.watchedAt) continue;
+      const month = movie.watchedAt.toISOString().slice(0, 7);
+      moviesByMonthMap.set(month, (moviesByMonthMap.get(month) || 0) + 1);
     }
 
     const ratingDistMap = new Map<number, number>();
@@ -69,20 +46,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       user,
-      counts: {
-        total, movies, series, books, games, rated, watched, planned,
-        watchlist: watchlistMovies + watchlistSeries + watchlistAnime,
-        watchlistMovies,
-        watchlistShows: watchlistSeries,
-        watchlistAnime,
-        watchedMovies,
-        watchedShows: watchedSeries,
-        watchedAnime,
-        watchedEpisodes: watchedEpisodeRows.length,
-        showsWatched: showsWatched.size,
-        following,
-        ratings: rated,
-      },
+      counts: { ...counts, showsWatched: showsWatched.size },
+      countsAreGlobal: true,
+      source: "Media+WatchedEpisode",
       watchTime: {
         totalMinutes,
         totalHours: Math.round(totalMinutes / 60),
@@ -90,7 +56,9 @@ export async function GET(req: NextRequest) {
         episodeMinutes,
       },
       episodesByShow: Array.from(episodesByShowMap.entries()).map(([showId, count]) => ({ showId, count })),
-      moviesByMonth: [],
+      moviesByMonth: Array.from(moviesByMonthMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([month, count]) => ({ month, count })),
       episodesByMonth: Array.from(episodesByMonthMap.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([month, count]) => ({ month, count })),

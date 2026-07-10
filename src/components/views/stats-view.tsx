@@ -131,7 +131,7 @@ export function StatsView() {
             <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">No ratings yet</div>
           )}
           <p className="text-center text-sm text-muted-foreground mt-2">
-            Average: <span className="text-amber-400 font-bold">{d.avgRating ? d.avgRating.toFixed(1) : "—"}</span> / 10
+            Average: <span className="text-amber-400 font-bold">{d.avgRating ? d.avgRating.toFixed(1) : "—"}</span> / 100
           </p>
         </Card>
       </div>

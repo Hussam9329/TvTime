@@ -2,80 +2,99 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 
-// GET - list user's watchlist (optionally filter by mediaType)
+function canonicalType(mediaType: string | null) {
+  return mediaType === "tv" || mediaType === "series" ? "series" : mediaType === "movie" ? "movie" : null;
+}
+
+function toCompat(item: any) {
+  return {
+    ...item,
+    mediaType: item.type === "series" ? "tv" : item.type,
+    posterPath: item.poster,
+    releaseDate: item.year ? `${item.year}-01-01` : null,
+    voteAverage: item.rating == null ? null : Number(item.rating),
+  };
+}
+
+// Compatibility endpoint backed only by Media. The legacy WatchlistItem table
+// is migrated/cleaned by TVM-10 and is never read here.
 export async function GET(req: NextRequest) {
-  const userId = parseUserId(req);
-  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
-
-  const url = new URL(req.url);
-  const mediaType = url.searchParams.get("mediaType");
-
-  const user = await getOrCreateUser(userId);
-  const items = await db.watchlistItem.findMany({
-    where: {
-      userId: user.id,
-      ...(mediaType ? { mediaType } : {}),
-    },
-    orderBy: { addedAt: "desc" },
-  });
-  return NextResponse.json({ items });
+  try {
+    const user = await getOrCreateUser(parseUserId(req));
+    const type = canonicalType(new URL(req.url).searchParams.get("mediaType"));
+    const items = await db.media.findMany({
+      where: {
+        userId: user.id,
+        status: "planned",
+        watched: false,
+        ...(type ? { type } : {}),
+      },
+      orderBy: { addedAt: "desc" },
+    });
+    return NextResponse.json({ items: items.map(toCompat), source: "Media" });
+  } catch (error) {
+    console.error("[watchlist:GET]", error);
+    return NextResponse.json({ error: "Failed to load watchlist" }, { status: 500 });
+  }
 }
 
-// POST - add to watchlist
 export async function POST(req: NextRequest) {
-  const userId = parseUserId(req);
-  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+  try {
+    const user = await getOrCreateUser(parseUserId(req));
+    const body = await req.json();
+    const type = canonicalType(body.mediaType);
+    const tmdbId = Number(body.tmdbId);
+    if (!type || !Number.isInteger(tmdbId) || tmdbId <= 0 || !body.title) {
+      return NextResponse.json({ error: "mediaType, tmdbId, title required" }, { status: 400 });
+    }
 
-  const body = await req.json();
-  const { mediaType, tmdbId, title, posterPath, backdropPath, overview, releaseDate, voteAverage } = body;
-  if (!mediaType || !tmdbId || !title) {
-    return NextResponse.json({ error: "mediaType, tmdbId, title required" }, { status: 400 });
+    let item = await db.media.findFirst({ where: { userId: user.id, type, tmdbId } });
+    if (item?.watched || (type === "series" && item?.status && item.status !== "planned")) {
+      return NextResponse.json(
+        { error: "A watched or actively tracked title cannot also be in Watchlist.", code: "WATCHLIST_REQUIRES_PLANNED" },
+        { status: 409 },
+      );
+    }
+
+    const common = {
+      title: String(body.title),
+      poster: body.posterPath || null,
+      overview: body.overview || null,
+      year: body.releaseDate ? String(body.releaseDate).slice(0, 4) : null,
+      rating: body.voteAverage != null ? String(body.voteAverage) : null,
+      status: "planned",
+      watched: false,
+      watchedAt: null,
+    };
+
+    item = item
+      ? await db.media.update({ where: { id: item.id }, data: common })
+      : await db.media.create({ data: { userId: user.id, tmdbId, type, ...common } });
+
+    return NextResponse.json({ item: toCompat(item), source: "Media" });
+  } catch (error) {
+    console.error("[watchlist:POST]", error);
+    return NextResponse.json({ error: "Failed to add to watchlist" }, { status: 500 });
   }
-
-  const user = await getOrCreateUser(userId);
-  const item = await db.watchlistItem.upsert({
-    where: {
-      userId_mediaType_tmdbId: { userId: user.id, mediaType, tmdbId: Number(tmdbId) },
-    },
-    create: {
-      userId: user.id,
-      mediaType,
-      tmdbId: Number(tmdbId),
-      title,
-      posterPath: posterPath || null,
-      backdropPath: backdropPath || null,
-      overview: overview || null,
-      releaseDate: releaseDate || null,
-      voteAverage: voteAverage || null,
-    },
-    update: {
-      title,
-      posterPath: posterPath || null,
-      backdropPath: backdropPath || null,
-    },
-  });
-  return NextResponse.json({ item });
 }
 
-// DELETE - remove from watchlist
 export async function DELETE(req: NextRequest) {
-  const userId = parseUserId(req);
-  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+  try {
+    const user = await getOrCreateUser(parseUserId(req));
+    const url = new URL(req.url);
+    const type = canonicalType(url.searchParams.get("mediaType"));
+    const tmdbId = Number(url.searchParams.get("tmdbId"));
+    if (!type || !Number.isInteger(tmdbId) || tmdbId <= 0) {
+      return NextResponse.json({ error: "mediaType, tmdbId required" }, { status: 400 });
+    }
 
-  const url = new URL(req.url);
-  const mediaType = url.searchParams.get("mediaType");
-  const tmdbId = url.searchParams.get("tmdbId");
-  if (!mediaType || !tmdbId) {
-    return NextResponse.json({ error: "mediaType, tmdbId required" }, { status: 400 });
+    const result = await db.media.updateMany({
+      where: { userId: user.id, type, tmdbId, status: "planned", watched: false },
+      data: { status: null },
+    });
+    return NextResponse.json({ ok: true, updated: result.count, source: "Media" });
+  } catch (error) {
+    console.error("[watchlist:DELETE]", error);
+    return NextResponse.json({ error: "Failed to remove from watchlist" }, { status: 500 });
   }
-
-  const user = await getOrCreateUser(userId);
-  await db.watchlistItem.deleteMany({
-    where: {
-      userId: user.id,
-      mediaType,
-      tmdbId: Number(tmdbId),
-    },
-  });
-  return NextResponse.json({ ok: true });
 }

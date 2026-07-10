@@ -80,7 +80,7 @@ export function HomeView() {
           <QuickStat
             icon={<Tv className="w-4 h-4" />}
             label="TV Shows rated"
-            value={stats.data.counts.watchedMovies > 0 ? stats.data.counts.rated - stats.data.counts.watchedMovies : 0}
+            value={stats.data.counts.ratedShows ?? 0}
             onClick={() => setView("stats")}
           />
           <QuickStat
