@@ -147,7 +147,9 @@ function updatePatch(entry: WorkingMedia): Prisma.MediaUpdateInput {
 
 async function migrateInsideTransaction(tx: Tx, userId: string): Promise<LegacyLibraryMigrationReport> {
   // Prevent two serverless cold starts from migrating the same user together.
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`tvm10:${userId}`}))`;
+  // Cast the void return to text so Prisma can deserialize it (Prisma 6.x
+  // cannot deserialize PostgreSQL void columns from $queryRaw).
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`tvm10:${userId}`}))::text`;
 
   const [watchlist, watchedMovies, following, titleRatings] = await Promise.all([
     tx.watchlistItem.findMany({ where: { userId }, orderBy: { addedAt: "asc" } }),
