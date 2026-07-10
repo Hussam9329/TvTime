@@ -55,7 +55,9 @@ export async function GET(req: NextRequest) {
         movieMinutes,
         episodeMinutes,
       },
-      episodesByShow: Array.from(episodesByShowMap.entries()).map(([showId, count]) => ({ showId, count })),
+      episodesByShow: Array.from(episodesByShowMap.entries())
+        .sort((a, b) => b[1] - a[1])  // TVM-25: sort by episode count descending (most watched first)
+        .map(([showId, count]) => ({ showId, count })),
       moviesByMonth: Array.from(moviesByMonthMap.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([month, count]) => ({ month, count })),

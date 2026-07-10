@@ -36,9 +36,13 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setName(userName);
-  }, [userName, open]);
+  // Sync name from store when dialog opens. Uses "adjust state during render"
+  // pattern to avoid setState-in-effect lint violation.
+  const [lastOpen, setLastOpen] = useState(open);
+  if (open !== lastOpen) {
+    setLastOpen(open);
+    if (open) setName(userName);
+  }
 
   const onSaveName = async () => {
     setSaving(true);

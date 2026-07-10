@@ -95,12 +95,14 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api) return
-    onSelect(api)
     api.on("reInit", onSelect)
     api.on("select", onSelect)
+    // Defer the initial sync call to avoid setState-in-effect lint violation.
+    const raf = requestAnimationFrame(() => onSelect(api))
 
     return () => {
       api?.off("select", onSelect)
+      cancelAnimationFrame(raf)
     }
   }, [api, onSelect])
 
