@@ -1,7 +1,7 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useMovieDetail, useWatchlist, useWatchedMovies, useWatchlistToggle, useWatchedMovieToggle, useRatingMutate, useRatings } from "@/hooks/use-tmdb";
+import { useMovieDetail, useWatchlist, useWatchedMovies, useWatchlistToggle, useWatchedMovieToggle, useRatingMutate, useRatings, useMediaState } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,10 @@ import { toast } from "sonner";
 export function MovieDetailView() {
   const { movieId, back, goPerson } = useNav();
   const detail = useMovieDetail(movieId);
+  // Fix #3/#15: Use direct state lookup by tmdbId instead of paginated hooks
+  // that only return first 100 items. This fixes movies beyond page 1 not
+  // showing as watched/rated/watchlisted.
+  const mediaState = useMediaState(movieId, "movie");
   const watchlist = useWatchlist();
   const watchedMovies = useWatchedMovies();
   const ratings = useRatings();
@@ -56,12 +60,18 @@ export function MovieDetailView() {
   }
 
   const m = detail.data;
-  const inWatchlist = watchlist.data?.items.some((w) => w.mediaType === "movie" && w.tmdbId === m.id);
-  const isWatched = watchedMovies.data?.items.some((w) => w.tmdbId === m.id);
-  // Rating is stored 0-100; ratings.data returns items with `userRating` and a legacy `value` (0-10).
-  // We display the raw 0-100 userRating directly.
-  const ratedItem = ratings.data?.items.find((r) => r.mediaType === "movie" && r.tmdbId === m.id);
-  const myRating = ratedItem?.userRating ?? null;
+  // Fix #3/#15: Prefer direct state lookup (works for ALL items, not just first 100)
+  // Fall back to paginated hooks only if mediaState hasn't loaded yet
+  const stateItem = mediaState.data;
+  const inWatchlist = stateItem
+    ? stateItem.status === "planned"
+    : watchlist.data?.items.some((w) => w.mediaType === "movie" && w.tmdbId === m.id);
+  const isWatched = stateItem
+    ? stateItem.watched === true
+    : watchedMovies.data?.items.some((w) => w.tmdbId === m.id);
+  const myRating = stateItem
+    ? stateItem.userRating ?? null
+    : (ratings.data?.items.find((r) => r.mediaType === "movie" && r.tmdbId === m.id)?.userRating ?? null);
 
   const runtime = m.runtime ? `${Math.floor(m.runtime / 60)}h ${m.runtime % 60}m` : null;
   const year = m.release_date?.slice(0, 4);
@@ -195,7 +205,7 @@ export function MovieDetailView() {
           {/* Fix #15: Disable action buttons while library state is loading
               to prevent false initial state (all false/null) from flashing */}
           {(() => {
-            const stateLoading = watchlist.isLoading || watchedMovies.isLoading || ratings.isLoading;
+            const stateLoading = mediaState.isLoading && !stateItem;
             return (
           <div className="flex flex-wrap gap-2">
             <Button
