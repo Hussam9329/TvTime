@@ -236,9 +236,13 @@ export function TvDetailView() {
     });
   };
 
-  const onRemoveRating = () => {
-    ratingMutate.mutate({ action: "remove", mediaType: "tv", tmdbId: t.id });
-    toast.success("Rating removed");
+  const onRemoveRating = async () => {
+    try {
+      await ratingMutate.mutateAsync({ action: "remove", mediaType: "tv", tmdbId: t.id });
+      toast.success("Rating removed");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove rating");
+    }
   };
 
   const ratingColor = displayedShowRating == null
@@ -544,6 +548,7 @@ export function TvDetailView() {
         title={t.name || ""}
         poster={t.poster_path ? img(t.poster_path, "w185") : null}
         onRate={onRateSubmit}
+        initialRating={myRating ?? null}
       />
 
       {/* Unfollow dialog — shown when user tries to unfollow a show with episode progress.

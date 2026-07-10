@@ -32,20 +32,24 @@ export function RatingDialog({
   // Default to 50 (neutral) instead of 75 — the old default of 75 made it too
   // easy to accidentally save a high rating by just clicking "Save Rating"
   // without moving the slider. 50 forces the user to actively choose a rating.
+  // Fix #9: When initialRating is provided (re-rating), use it as the starting
+  // value so the user sees their current rating, not 50.
   const safeInitialRating = initialRating == null
     ? 50
     : Math.max(0, Math.min(100, Math.round(Number(initialRating))));
   const [rating, setRating] = useState(safeInitialRating);
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset to neutral default each time the dialog opens, so a previous rating
-  // doesn't leak into the next session.
-  // (Adjust state when prop changes pattern — fires when `open` toggles true.)
+  // Fix #9: When dialog opens, reset to the correct initial rating
+  // (either the user's current rating or 50 for new ratings)
   const [lastOpen, setLastOpen] = useState(open);
   if (open !== lastOpen) {
     setLastOpen(open);
     if (open) setRating(safeInitialRating);
   }
+
+  // Fix #8: Show "Current rating: X/100" when re-rating
+  const isRerating = initialRating != null;
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -80,6 +84,10 @@ export function RatingDialog({
           )}
           <div className="min-w-0">
             <h4 className="font-semibold text-sm line-clamp-2">{title}</h4>
+            {/* Fix #8/#9: Show current rating when re-rating */}
+            {isRerating && (
+              <p className="text-xs text-amber-400 mt-1">Current rating: {safeInitialRating}/100</p>
+            )}
           </div>
         </div>
 

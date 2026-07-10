@@ -315,19 +315,19 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
               </Badge>
             </div>
 
-            {/* A rating is independent and may exist on either tab. */}
+            {/* Fix #8: Rating labels — user rating shows /100, TMDB shows /10 */}
             {userRating != null ? (
               <div className="absolute top-2 right-2">
-                <Badge className="bg-amber-500/90 text-black border-0 text-[10px] h-6 px-2 font-bold">
+                <Badge className="bg-amber-500/90 text-black border-0 text-[10px] h-6 px-2 font-bold" title="Your Rating">
                   <Star className="w-3 h-3 mr-1 fill-black" />
-                  {userRating}
+                  {userRating}/100
                 </Badge>
               </div>
             ) : publicRating != null ? (
               <div className="absolute top-2 right-2">
-                <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0 text-[10px] h-6 px-2">
+                <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0 text-[10px] h-6 px-2" title="TMDB Score">
                   <Star className="w-3 h-3 mr-1 fill-amber-300" />
-                  {publicRating.toFixed(1)}
+                  {publicRating.toFixed(1)}/10
                 </Badge>
               </div>
             ) : null}
@@ -412,6 +412,7 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
         title={item.title}
         poster={item.poster}
         onRate={handleRate}
+        initialRating={item.userRating ?? null}
       />
     </>
   );

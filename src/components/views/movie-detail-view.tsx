@@ -77,33 +77,41 @@ export function MovieDetailView() {
   const usRelease = releaseDates.find((r: any) => r.iso_3166_1 === "US");
   const contentRating = usRelease?.release_dates?.find((r: any) => r.certification)?.certification || null;
 
-  const onWatchlist = () => {
-    watchlistToggle.mutate({
-      action: inWatchlist ? "remove" : "add",
-      mediaType: "movie",
-      tmdbId: m.id,
-      title: m.title || "Untitled",
-      posterPath: m.poster_path,
-      backdropPath: m.backdrop_path,
-      overview: m.overview,
-      releaseDate: m.release_date,
-      voteAverage: m.vote_average,
-    });
-    toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
+  const onWatchlist = async () => {
+    try {
+      await watchlistToggle.mutateAsync({
+        action: inWatchlist ? "remove" : "add",
+        mediaType: "movie",
+        tmdbId: m.id,
+        title: m.title || "Untitled",
+        posterPath: m.poster_path,
+        backdropPath: m.backdrop_path,
+        overview: m.overview,
+        releaseDate: m.release_date,
+        voteAverage: m.vote_average,
+      });
+      toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update watchlist");
+    }
   };
 
-  const onWatched = () => {
-    watchedToggle.mutate({
-      action: isWatched ? "remove" : "add",
-      tmdbId: m.id,
-      title: m.title || "Untitled",
-      posterPath: m.poster_path,
-      runtime: m.runtime,
-      releaseDate: m.release_date,
-      voteAverage: m.vote_average,
-      overview: m.overview,
-    });
-    toast.success(isWatched ? "Marked as not watched" : "Marked as watched");
+  const onWatched = async () => {
+    try {
+      await watchedToggle.mutateAsync({
+        action: isWatched ? "remove" : "add",
+        tmdbId: m.id,
+        title: m.title || "Untitled",
+        posterPath: m.poster_path,
+        runtime: m.runtime,
+        releaseDate: m.release_date,
+        voteAverage: m.vote_average,
+        overview: m.overview,
+      });
+      toast.success(isWatched ? "Marked as not watched" : "Marked as watched");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update watch status");
+    }
   };
 
   const onRateSubmit = async (v: number) => {
@@ -120,9 +128,13 @@ export function MovieDetailView() {
     });
   };
 
-  const onRemoveRating = () => {
-    ratingMutate.mutate({ action: "remove", mediaType: "movie", tmdbId: m.id });
-    toast.success("Rating removed");
+  const onRemoveRating = async () => {
+    try {
+      await ratingMutate.mutateAsync({ action: "remove", mediaType: "movie", tmdbId: m.id });
+      toast.success("Rating removed");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove rating");
+    }
   };
 
   const ratingColor = myRating == null
@@ -371,6 +383,7 @@ export function MovieDetailView() {
         title={m.title || ""}
         poster={m.poster_path ? img(m.poster_path, "w185") : null}
         onRate={onRateSubmit}
+        initialRating={myRating ?? null}
       />
     </div>
   );

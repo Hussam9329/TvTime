@@ -3,7 +3,7 @@
 import { imgOrPlaceholder, getYear, getTitle, type MediaItem } from "@/lib/tmdb";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, Film, Tv, Check } from "lucide-react";
+import { Star, Film, Tv, Check, ListPlus, Bell } from "lucide-react";
 import { useNav } from "@/lib/store";
 import { useWatchlist, useWatchedMovies, useFollowing } from "@/hooks/use-tmdb";
 import { cn } from "@/lib/utils";
@@ -102,39 +102,43 @@ export function MediaCard({ item, index = 0, showMediaType = true }: MediaCardPr
                 {mediaType === "movie" ? "Movie" : "TV"}
               </Badge>
             )}
+            {/* Fix #8: TMDB score labeled explicitly as /10 */}
             {rating > 0 && (
-              <Badge className="bg-black/60 backdrop-blur text-amber-300 border-0 text-[10px] h-6 px-2">
+              <Badge className="bg-black/60 backdrop-blur text-amber-300 border-0 text-[10px] h-6 px-2" title="TMDB Score">
                 <Star className="w-3 h-3 mr-1 fill-amber-300" />
-                {rating.toFixed(1)}
+                {rating.toFixed(1)}/10
               </Badge>
             )}
           </div>
 
-          {/* status indicators */}
-          <div className="absolute top-2 right-2 flex flex-col gap-1">
-            {inWatchlist && (
-              <span className="w-6 h-6 rounded-full bg-primary/90 backdrop-blur flex items-center justify-center" title="In watchlist">
-                <Check className="w-3.5 h-3.5 text-primary-foreground" />
-              </span>
-            )}
-            {watched && (
-              <span className="w-6 h-6 rounded-full bg-emerald-600/90 backdrop-blur flex items-center justify-center" title="Watched">
-                <Check className="w-3.5 h-3.5 text-white" />
-              </span>
-            )}
-            {isFollowing && (
-              <span className="w-6 h-6 rounded-full bg-amber-500/90 backdrop-blur flex items-center justify-center text-[10px] font-bold text-black" title="Following">
-                ★
-              </span>
-            )}
-          </div>
-
-          {/* bottom title overlay */}
+          {/* Fix #10: Status indicators moved to bottom-left (next to title)
+              to avoid overlap with TMDB score at top-right.
+              Each has a text label, not just color. */}
           <div className="absolute bottom-0 left-0 right-0 p-3">
+            {/* Status icons row — above the title, with labels */}
+            <div className="flex items-center gap-1.5 mb-1">
+              {inWatchlist && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] text-primary bg-primary/20 rounded px-1 py-0.5" title="In Watchlist">
+                  <ListPlus className="w-2.5 h-2.5" /> Watchlist
+                </span>
+              )}
+              {watched && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] text-emerald-400 bg-emerald-500/20 rounded px-1 py-0.5" title="Watched">
+                  <Check className="w-2.5 h-2.5" /> Watched
+                </span>
+              )}
+              {isFollowing && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] text-amber-400 bg-amber-500/20 rounded px-1 py-0.5" title="Following">
+                  <Bell className="w-2.5 h-2.5" /> Following
+                </span>
+              )}
+            </div>
             <h3 className="font-semibold text-white text-sm line-clamp-2 leading-tight drop-shadow">
               {title}
             </h3>
-            {year && <p className="text-white/70 text-xs mt-0.5">{year}</p>}
+            <div className="flex items-center gap-2 mt-0.5">
+              {year && <p className="text-white/70 text-xs">{year}</p>}
+            </div>
           </div>
         </div>
       </Card>
