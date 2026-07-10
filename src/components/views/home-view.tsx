@@ -1,6 +1,6 @@
 "use client";
 
-import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useWatchedEpisodes, useFollowing, useStats, useTvDetail, useWatchedMovieToggle, useRecentlyWatched } from "@/hooks/use-tmdb";
+import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useWatchlist, useFollowing, useStats, useShowProgress, useWatchedMovieToggle, useRecentlyWatched } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { ContinueWatching } from "@/components/media/continue-watching";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
@@ -258,10 +258,9 @@ function FollowingSection() {
 }
 
 function FollowedShowCard({ tmdbId, title, posterPath, onClick }: { tmdbId: number; title: string; posterPath: string | null; onClick: () => void }) {
-  const detail = useTvDetail(tmdbId);
-  const watched = useWatchedEpisodes(tmdbId);
-  const totalEpisodes = detail.data?.number_of_episodes ?? 0;
-  const watchedCount = watched.data?.items.length ?? 0;
+  const showProgress = useShowProgress(tmdbId);
+  const totalEpisodes = showProgress.totalEpisodes;
+  const watchedCount = showProgress.watchedCount;
   const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
 
   return (

@@ -1,29 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
-import { tmdb } from "@/lib/tmdb";
+import {
+  deriveTvTrackingState,
+  episodeKey,
+  normalizeTvTrackingState,
+  tvStateToMediaPatch,
+  type TvTrackingState,
+} from "@/lib/tv-status-engine";
+import {
+  getTvStatusMetadata,
+  validateReleasedEpisodeBatch,
+  type TvEpisodeRequest,
+} from "@/lib/tv-status-server";
+import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 
 type CompletionInfo = {
-  newStatus: "finished" | "uptodate" | "planned" | null;
-  isEnded: boolean;
+  newStatus: TvTrackingState;
+  isEnded: boolean | null;
   showTmdbId: number;
   mediaId: string;
   needsRating: boolean;
+  airedEpisodeCount: number | null;
+  watchedAiredEpisodeCount: number;
+  ignoredFutureEpisodeCount: number;
+  verified: boolean;
 };
 
+function posterUrl(path: string | null): string | null {
+  if (!path) return null;
+  return path.startsWith("http") ? path : `https://image.tmdb.org/t/p/w500${path}`;
+}
+
+function isLegacyCompleted(media: { watched: boolean; status: string | null }, episodeCount: number): boolean {
+  const state = normalizeTvTrackingState(media.status);
+  return episodeCount === 0 && Boolean(
+    media.watched || state === "finished" || state === "uptodate",
+  );
+}
+
+async function ensureSeriesMedia(userId: string, showTmdbId: number) {
+  const existing = await db.media.findFirst({
+    where: { userId, tmdbId: showTmdbId, type: "series" },
+  });
+  if (existing) return existing;
+
+  const metadata = await getTvStatusMetadata(showTmdbId);
+  return db.media.create({
+    data: {
+      userId,
+      tmdbId: showTmdbId,
+      title: metadata.title,
+      type: "series",
+      poster: posterUrl(metadata.posterPath),
+      overview: metadata.overview,
+      year: metadata.firstAirDate?.slice(0, 4) || null,
+      episodes: metadata.totalEpisodes,
+      seasons: metadata.totalSeasons,
+      status: "not_started",
+      watched: false,
+    },
+  });
+}
+
 /**
- * Auto-update the show's tracking status based on:
- *  - Number of watched episodes vs total available
- *  - TMDB show status (Ended/Canceled vs Returning Series/In Production)
- *
- * Rules:
- *  - All episodes watched AND show is Ended/Canceled  -> status = "finished" (+ prompt rating)
- *  - All episodes watched AND show is still ongoing    -> status = "uptodate"
- *  - Some episodes unwatched                           -> status = "planned" (back to watchlist)
- *  - Legacy "watched" status is migrated to "finished" or "uptodate" based on TMDB
- *
- * IMPORTANT: We never auto-set userRating. The client opens a RatingDialog when
- * needsRating === true so the user can choose a rating out of 100.
+ * The only server-side state transition for TV tracking.
+ * Whole-show ratings are intentionally never read or written here.
  */
 async function autoUpdateShowStatus(userId: string, showTmdbId: number): Promise<CompletionInfo | null> {
   try {
@@ -32,115 +74,95 @@ async function autoUpdateShowStatus(userId: string, showTmdbId: number): Promise
     });
     if (!media) return null;
 
-    const watchedCount = await db.watchedEpisode.count({
+    const watchedEpisodes = await db.watchedEpisode.findMany({
       where: { userId, showId: showTmdbId },
+      select: { seasonNumber: true, episodeNumber: true, watchedAt: true },
+      orderBy: { watchedAt: "desc" },
     });
 
-    // Fetch fresh show data from TMDB (status + total episodes)
-    let tmdbStatus: string | null = null;
-    let tmdbTotalEpisodes: number | null = null;
-    let tmdbSeasons: number | null = null;
+    let metadata: Awaited<ReturnType<typeof getTvStatusMetadata>> | null = null;
     try {
-      const showDetail = await tmdb.tvDetail(showTmdbId);
-      tmdbStatus = showDetail.status || null;
-      tmdbTotalEpisodes = showDetail.number_of_episodes || null;
-      tmdbSeasons = showDetail.number_of_seasons || null;
-    } catch (e) {
-      console.error("[autoUpdateShowStatus] TMDB fetch failed", e);
+      metadata = await getTvStatusMetadata(showTmdbId);
+    } catch (error) {
+      console.warn("[watched-episodes] Unable to verify TV metadata", showTmdbId, error);
     }
 
-    const effectiveTotal = tmdbTotalEpisodes ?? media.episodes ?? 0;
-    const isEnded = Boolean(tmdbStatus && /ended|canceled|cancelled/i.test(tmdbStatus));
+    const watchedKeys = watchedEpisodes.map((episode) =>
+      episodeKey(episode.seasonNumber, episode.episodeNumber),
+    );
+    const derived = deriveTvTrackingState({
+      persistedStatus: media.status,
+      officiallyEnded: metadata ? metadata.officiallyEnded : null,
+      airedEpisodeCount: metadata?.airedEpisodeCount ?? null,
+      airedEpisodeKeys: metadata?.airedEpisodeKeys,
+      watchedEpisodeKeys: watchedKeys,
+      legacyCompleted: isLegacyCompleted(media, watchedEpisodes.length),
+    });
 
-    const baseUpdate: any = {
-      episodes: tmdbTotalEpisodes ?? media.episodes,
-      seasons: tmdbSeasons ?? media.seasons,
+    const lastWatchedAt = watchedEpisodes[0]?.watchedAt ?? media.watchedAt;
+    const statePatch = tvStateToMediaPatch(derived.state, lastWatchedAt);
+    const update: Record<string, unknown> = {
+      ...statePatch,
     };
 
-    // Case 1: All episodes watched
-    if (effectiveTotal > 0 && watchedCount >= effectiveTotal) {
-      const newStatus = isEnded ? "finished" : "uptodate";
-      const statusChanged = media.status !== newStatus;
-      const wasNotWatched = !media.watched;
-
-      const mustClearOngoingRating = newStatus === "uptodate" && media.userRating != null;
-
-      if (statusChanged || wasNotWatched || mustClearOngoingRating) {
-        await db.media.update({
-          where: { id: media.id },
-          data: {
-            ...baseUpdate,
-            watched: true,
-            status: newStatus,
-            watchedAt: media.watchedAt ?? new Date(),
-            // Rating is locked until the whole TV show has ended. If the show is only
-            // up to date / still airing, remove accidental legacy ratings.
-            ...(newStatus === "uptodate" ? { userRating: null } : {}),
-          },
-        });
-      }
-
-      // Only prompt for rating if the whole show is truly ended AND user hasn't rated yet.
-      const needsRating = isEnded && media.userRating == null;
-
-      return {
-        newStatus,
-        isEnded,
-        showTmdbId,
-        mediaId: media.id,
-        needsRating,
-      };
+    if (metadata) {
+      if (metadata.totalEpisodes != null) update.episodes = metadata.totalEpisodes;
+      if (metadata.totalSeasons != null) update.seasons = metadata.totalSeasons;
+      if (!media.poster && metadata.posterPath) update.poster = posterUrl(metadata.posterPath);
+      if (!media.overview && metadata.overview) update.overview = metadata.overview;
     }
 
-    // Case 2: Some episodes unwatched — move back to watchlist (planned)
-    if (watchedCount === 0 && (media.watched || media.status === "finished" || media.status === "uptodate" || media.status === "watched")) {
-      await db.media.update({
-        where: { id: media.id },
-        data: {
-          ...baseUpdate,
-          watched: false,
-          status: "planned",
-          watchedAt: null,
-          // Keep existing rating — user might re-watch
-        },
-      });
-      return { newStatus: "planned", isEnded, showTmdbId, mediaId: media.id, needsRating: false };
-    }
+    const updated = await db.media.update({ where: { id: media.id }, data: update });
 
-    // Case 3: Partially watched — make sure it's in watchlist (planned), not stuck in finished/uptodate
-    if (watchedCount > 0 && watchedCount < effectiveTotal &&
-        (media.status === "finished" || media.status === "uptodate" || media.status === "watched")) {
-      await db.media.update({
-        where: { id: media.id },
-        data: {
-          ...baseUpdate,
-          watched: false,
-          status: "planned",
-          watchedAt: null,
-        },
-      });
-      return { newStatus: "planned", isEnded, showTmdbId, mediaId: media.id, needsRating: false };
-    }
-
-    // No status change needed
-    return { newStatus: (media.status as any) ?? null, isEnded, showTmdbId, mediaId: media.id, needsRating: false };
+    return {
+      newStatus: derived.state,
+      isEnded: metadata ? metadata.officiallyEnded : null,
+      showTmdbId,
+      mediaId: updated.id,
+      needsRating: derived.state === "finished" && updated.userRating == null,
+      airedEpisodeCount: derived.airedEpisodeCount,
+      watchedAiredEpisodeCount: derived.watchedAiredEpisodeCount,
+      ignoredFutureEpisodeCount: derived.futureOrUnknownWatchedEpisodeCount,
+      verified: derived.verified,
+    };
   } catch (error) {
     console.error("[autoUpdateShowStatus]", error);
     return null;
   }
 }
 
-// GET - list watched episodes (optionally filter by showId)
+function parseRequestedEpisode(value: any): TvEpisodeRequest | null {
+  const seasonNumber = Number(value?.seasonNumber);
+  const episodeNumber = Number(value?.episodeNumber);
+  if (!Number.isInteger(seasonNumber) || seasonNumber < 1) return null;
+  if (!Number.isInteger(episodeNumber) || episodeNumber < 1) return null;
+  return {
+    seasonNumber,
+    episodeNumber,
+    episodeName: typeof value?.episodeName === "string" ? value.episodeName : null,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const url = new URL(req.url);
     const showId = url.searchParams.get("showId");
 
+    const numericShowId = showId ? Number(showId) : null;
+    if (numericShowId && Number.isInteger(numericShowId) && numericShowId > 0) {
+      const media = await db.media.findFirst({
+        where: { userId: user.id, tmdbId: numericShowId, type: "series" },
+      });
+      if (media) {
+        await materializeLegacyCompletionSnapshot({ media });
+      }
+    }
+
     const items = await db.watchedEpisode.findMany({
       where: {
         userId: user.id,
-        ...(showId ? { showId: Number(showId) } : {}),
+        ...(numericShowId ? { showId: numericShowId } : {}),
       },
       orderBy: { watchedAt: "desc" },
     });
@@ -151,109 +173,119 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - mark episode as watched (supports bulk via episodes array)
 export async function POST(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const body = await req.json();
+    const showId = Number(body.showId);
+    if (!Number.isInteger(showId) || showId <= 0) {
+      return NextResponse.json({ error: "A valid showId is required" }, { status: 400 });
+    }
 
-    // Bulk mode
-    if (Array.isArray(body.episodes)) {
-      const showId = Number(body.showId);
-      if (!showId) return NextResponse.json({ error: "showId required for bulk" }, { status: 400 });
+    const requested = Array.isArray(body.episodes)
+      ? body.episodes.map(parseRequestedEpisode).filter(Boolean) as TvEpisodeRequest[]
+      : [parseRequestedEpisode(body)].filter(Boolean) as TvEpisodeRequest[];
 
-      const data = body.episodes.map((e: { seasonNumber: number; episodeNumber: number; episodeName?: string }) => ({
-        userId: user.id,
-        showId,
-        seasonNumber: Number(e.seasonNumber),
-        episodeNumber: Number(e.episodeNumber),
-        episodeName: e.episodeName || null,
-      }));
-
-      // Upsert each
-      await Promise.all(
-        data.map((d: any) =>
-          db.watchedEpisode.upsert({
-            where: {
-              userId_showId_seasonNumber_episodeNumber: {
-                userId: d.userId,
-                showId: d.showId,
-                seasonNumber: d.seasonNumber,
-                episodeNumber: d.episodeNumber,
-              },
-            },
-            create: d,
-            update: { episodeName: d.episodeName },
-          })
-        )
+    if (requested.length === 0) {
+      return NextResponse.json(
+        { error: "seasonNumber and episodeNumber are required" },
+        { status: 400 },
       );
-
-      // Auto-update show status (check if fully watched)
-      const completion = await autoUpdateShowStatus(user.id, showId);
-
-      return NextResponse.json({ ok: true, count: data.length, completion });
     }
 
-    // Single mode
-    const { showId, seasonNumber, episodeNumber, episodeName } = body;
-    if (!showId || seasonNumber == null || episodeNumber == null) {
-      return NextResponse.json({ error: "showId, seasonNumber, episodeNumber required" }, { status: 400 });
-    }
-
-    const item = await db.watchedEpisode.upsert({
-      where: {
-        userId_showId_seasonNumber_episodeNumber: {
-          userId: user.id,
-          showId: Number(showId),
-          seasonNumber: Number(seasonNumber),
-          episodeNumber: Number(episodeNumber),
+    const validation = await validateReleasedEpisodeBatch(showId, requested);
+    if (validation.blocked.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Future or unaired episodes cannot be marked as watched.",
+          code: "EPISODE_NOT_RELEASED",
+          blockedEpisodes: validation.blocked,
         },
-      },
-      create: {
-        userId: user.id,
-        showId: Number(showId),
-        seasonNumber: Number(seasonNumber),
-        episodeNumber: Number(episodeNumber),
-        episodeName: episodeName || null,
-      },
-      update: {},
+        { status: 409 },
+      );
+    }
+
+    await ensureSeriesMedia(user.id, showId);
+
+    const requestedNames = new Map(
+      requested.map((episode) => [
+        episodeKey(episode.seasonNumber, episode.episodeNumber),
+        episode.episodeName || null,
+      ]),
+    );
+
+    await db.$transaction(
+      validation.released.map((episode) =>
+        db.watchedEpisode.upsert({
+          where: {
+            userId_showId_seasonNumber_episodeNumber: {
+              userId: user.id,
+              showId,
+              seasonNumber: episode.seasonNumber,
+              episodeNumber: episode.episodeNumber,
+            },
+          },
+          create: {
+            userId: user.id,
+            showId,
+            seasonNumber: episode.seasonNumber,
+            episodeNumber: episode.episodeNumber,
+            episodeName: requestedNames.get(episodeKey(episode.seasonNumber, episode.episodeNumber))
+              || episode.episodeName,
+            runtime: episode.runtime,
+          },
+          update: {
+            episodeName: requestedNames.get(episodeKey(episode.seasonNumber, episode.episodeNumber))
+              || episode.episodeName,
+            runtime: episode.runtime,
+          },
+        }),
+      ),
+    );
+
+    const completion = await autoUpdateShowStatus(user.id, showId);
+    return NextResponse.json({
+      ok: true,
+      count: validation.released.length,
+      completion,
     });
-
-    // Auto-update show status (check if fully watched)
-    const completion = await autoUpdateShowStatus(user.id, Number(showId));
-
-    return NextResponse.json({ item, completion });
   } catch (error) {
     console.error("[watched-episodes:POST]", error);
-    return NextResponse.json({ error: "Failed to mark episode" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to mark episode watched" }, { status: 500 });
   }
 }
 
-// DELETE - remove watched episode
 export async function DELETE(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const url = new URL(req.url);
-    const showId = url.searchParams.get("showId");
-    const seasonNumber = url.searchParams.get("seasonNumber");
-    const episodeNumber = url.searchParams.get("episodeNumber");
+    const showId = Number(url.searchParams.get("showId"));
+    const seasonNumber = Number(url.searchParams.get("seasonNumber"));
+    const episodeNumber = Number(url.searchParams.get("episodeNumber"));
 
-    if (!showId || seasonNumber == null || episodeNumber == null) {
-      return NextResponse.json({ error: "showId, seasonNumber, episodeNumber required" }, { status: 400 });
+    if (!Number.isInteger(showId) || showId <= 0
+      || !Number.isInteger(seasonNumber) || seasonNumber < 1
+      || !Number.isInteger(episodeNumber) || episodeNumber < 1) {
+      return NextResponse.json({ error: "showId, seasonNumber and episodeNumber are required" }, { status: 400 });
+    }
+
+    const [media, existingCount] = await Promise.all([
+      db.media.findFirst({ where: { userId: user.id, tmdbId: showId, type: "series" } }),
+      db.watchedEpisode.count({ where: { userId: user.id, showId } }),
+    ]);
+
+    // Older versions stored whole-show completion without individual episode rows.
+    // Snapshot only episodes released at the historic completion time, then remove
+    // the explicitly selected episode. Newly aired episodes remain unwatched.
+    if (media && isLegacyCompleted(media, existingCount)) {
+      await materializeLegacyCompletionSnapshot({ media, existingEpisodeCount: existingCount });
     }
 
     await db.watchedEpisode.deleteMany({
-      where: {
-        userId: user.id,
-        showId: Number(showId),
-        seasonNumber: Number(seasonNumber),
-        episodeNumber: Number(episodeNumber),
-      },
+      where: { userId: user.id, showId, seasonNumber, episodeNumber },
     });
 
-    // Auto-update show status (might need to move back to watchlist)
-    const completion = await autoUpdateShowStatus(user.id, Number(showId));
-
+    const completion = await autoUpdateShowStatus(user.id, showId);
     return NextResponse.json({ ok: true, completion });
   } catch (error) {
     console.error("[watched-episodes:DELETE]", error);

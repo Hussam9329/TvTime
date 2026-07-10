@@ -4,6 +4,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNav } from "@/lib/store";
 import type { MediaItem, MovieDetail, TvDetail, PaginatedResponse, SeasonDetail, Genre } from "@/lib/tmdb";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
+import {
+  deriveTvTrackingState,
+  episodeKey,
+  isEpisodeReleased,
+  isFutureEpisode,
+  isOfficiallyEndedTvStatus,
+  type TvTrackingState,
+} from "@/lib/tv-status-engine";
 
 // ---------- TMDB fetchers ----------
 async function tmdbGet<T>(path: string, params?: Record<string, string | number | boolean>): Promise<T> {
@@ -222,6 +230,12 @@ async function findOrCreateMedia(args: {
   return data.item.id;
 }
 
+async function ensureApiOk(res: Response, fallback: string): Promise<Response> {
+  if (res.ok) return res;
+  const errorBody = await res.json().catch(() => ({}));
+  throw new Error(errorBody?.error || fallback);
+}
+
 // Compatibility mapper: converts a Media DB item to the shape that the
 // TMDB-style library hooks (useWatchlist, useWatchedMovies, etc.) used to
 // return when backed by localStorage. This keeps existing consumers working
@@ -236,7 +250,7 @@ function mediaToLibraryCompat(m: any) {
     releaseDate: m.releaseDate ?? (m.year ? `${m.year}-01-01` : null),
     voteAverage: m.voteAverage ?? (m.rating ? Number(m.rating) : null),
     followedAt: m.followedAt ?? m.addedAt ?? m.updatedAt,
-    watchedAt: m.watchedAt ?? m.updatedAt,
+    watchedAt: m.watchedAt ?? null,
     value: m.value ?? (m.userRating == null ? undefined : (m.userRating > 10 ? Math.round(m.userRating / 10) : m.userRating)),
   };
 }
@@ -286,26 +300,27 @@ export function useWatchlistToggle() {
           rating: args.voteAverage,
           runtime: args.runtime,
         });
-        await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+        const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
-          body: JSON.stringify({ status: "planned", watched: false, userRating: null, watchedAt: null }),
+          body: JSON.stringify({ status: "planned", watched: false, watchedAt: null }),
         });
+        await ensureApiOk(patchRes, "Failed to add to watchlist");
       } else {
         // Remove from watchlist: find by tmdbId and clear status
         const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", args.mediaType === "tv" ? "series" : "movie");
         const res = await fetch(url, { headers: userHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-          if (item) {
-            await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ status: null, watched: false, userRating: null, watchedAt: null }),
-            });
-          }
+        await ensureApiOk(res, "Failed to find watchlist item");
+        const data = await res.json();
+        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+        if (item) {
+          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...userHeaders() },
+            body: JSON.stringify({ status: null, watched: false, watchedAt: null }),
+          });
+          await ensureApiOk(patchRes, "Failed to remove from watchlist");
         }
       }
     },
@@ -399,26 +414,27 @@ export function useWatchedMovieToggle() {
           rating: args.voteAverage,
           runtime: args.runtime,
         });
-        await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+        const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({ watched: true, watchedAt: new Date().toISOString(), status: "watched" }),
         });
+        await ensureApiOk(patchRes, "Failed to mark movie watched");
       } else {
-        // Remove from watched: clear rating and watched status
+        // Remove from watched without touching the independent rating
         const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", "movie");
         const res = await fetch(url, { headers: userHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-          if (item) {
-            await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ watched: false, userRating: null, watchedAt: null, status: null }),
-            });
-          }
+        await ensureApiOk(res, "Failed to find watched movie");
+        const data = await res.json();
+        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+        if (item) {
+          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...userHeaders() },
+            body: JSON.stringify({ watched: false, watchedAt: null, status: null }),
+          });
+          await ensureApiOk(patchRes, "Failed to remove movie from watched");
         }
       }
     },
@@ -435,11 +451,15 @@ export function useWatchedMovieToggle() {
 // Returned by /api/library/watched-episodes after marking/unmarking episodes.
 // The client uses this to decide whether to open the RatingDialog.
 export type EpisodeCompletion = {
-  newStatus: "finished" | "uptodate" | "planned" | null;
-  isEnded: boolean;
+  newStatus: TvTrackingState;
+  isEnded: boolean | null;
   showTmdbId: number;
   mediaId: string;
   needsRating: boolean;
+  airedEpisodeCount: number | null;
+  watchedAiredEpisodeCount: number;
+  ignoredFutureEpisodeCount: number;
+  verified: boolean;
 };
 
 // Watched Episodes - server-backed via /api/library/watched-episodes
@@ -479,7 +499,10 @@ export function useEpisodeToggle() {
             episodeName: args.episodeName,
           }),
         });
-        if (!res.ok) throw new Error("Failed to mark episode watched");
+        if (!res.ok) {
+          const errorBody = await res.json().catch(() => ({}));
+          throw new Error(errorBody?.error || "Failed to mark episode watched");
+        }
         return res.json();
       } else {
         const url = withUserId(new URL("/api/library/watched-episodes", window.location.origin));
@@ -514,7 +537,10 @@ export function useBulkEpisodeToggle() {
         headers: { "Content-Type": "application/json", ...userHeaders() },
         body: JSON.stringify({ showId: args.showId, episodes: args.episodes }),
       });
-      if (!res.ok) throw new Error("Failed to mark episodes watched");
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        throw new Error(errorBody?.error || "Failed to mark episodes watched");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -527,14 +553,15 @@ export function useBulkEpisodeToggle() {
   });
 }
 
-// Following - reads from Neon (type="series", status="planned")
+// Following - active TV tracking only; Planned remains a list-only state
 export function useFollowing() {
   return useQuery({
     queryKey: ["media", "following"],
     queryFn: async () => {
       const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "series");
-      url.searchParams.set("status", "planned");
+      url.searchParams.set("status", "not_started,watching,uptodate,finished");
+      url.searchParams.set("limit", "500");
       const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
       const data = await res.json();
@@ -552,6 +579,7 @@ export function useTrackedShows() {
     queryFn: async () => {
       const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "series");
+      url.searchParams.set("tracked", "true");
       url.searchParams.set("limit", "500");
       const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
@@ -567,8 +595,7 @@ export function useFollowingToggle() {
   return useMutation({
     mutationFn: async (args: { action: "add" | "remove"; tmdbId: number; title: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number }) => {
       if (args.action === "add") {
-        // Just find-or-create, DON'T overwrite watched/rating status
-        // This preserves the "finished" state if the show was already watched
+        // Find-or-create without changing rating or existing progress
         await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title,
@@ -578,21 +605,21 @@ export function useFollowingToggle() {
           overview: args.overview,
           rating: args.voteAverage,
         });
-        // Only set status to "planned" if not already watched
+        // Following a fresh title means Not Started; completed/progress states stay intact
         const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", "series");
         url.searchParams.set("limit", "500");
         const res = await fetch(url, { headers: userHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-          if (item && !item.watched && !item.userRating) {
-            await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ status: "planned" }),
-            });
-          }
+        await ensureApiOk(res, "Failed to find TV show");
+        const data = await res.json();
+        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+        if (item && !item.watched && (!item.status || item.status === "planned")) {
+          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...userHeaders() },
+            body: JSON.stringify({ status: "not_started" }),
+          });
+          await ensureApiOk(patchRes, "Failed to follow TV show");
         }
       } else {
         // Unfollow: only clear status if not watched, keep watched/rating intact
@@ -600,19 +627,16 @@ export function useFollowingToggle() {
         url.searchParams.set("type", "series");
         url.searchParams.set("limit", "500");
         const res = await fetch(url, { headers: userHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-          if (item) {
-            // Only clear status if the show is not watched
-            if (!item.watched) {
-              await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json", ...userHeaders() },
-                body: JSON.stringify({ status: null }),
-              });
-            }
-          }
+        await ensureApiOk(res, "Failed to find TV show");
+        const data = await res.json();
+        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+        if (item && !item.watched && (!item.status || item.status === "planned" || item.status === "not_started")) {
+          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...userHeaders() },
+            body: JSON.stringify({ status: null }),
+          });
+          await ensureApiOk(patchRes, "Failed to unfollow TV show");
         }
       }
     },
@@ -648,7 +672,7 @@ export function useRatingMutate() {
   return useMutation({
     mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null }) => {
       if (args.action === "set") {
-        // Find-or-create, then set rating (0-100 directly) + watched
+        // Find-or-create, then save only the independent rating
         const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title || "Unknown",
@@ -664,9 +688,6 @@ export function useRatingMutate() {
           headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({
             userRating: args.value, // stored as 0-100 directly
-            watched: true,
-            watchedAt: new Date().toISOString(),
-            // Preserve existing status (finished/uptodate) — don't override
           }),
         });
         if (!patchRes.ok) {
@@ -678,16 +699,16 @@ export function useRatingMutate() {
         const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", args.mediaType === "tv" ? "series" : "movie");
         const res = await fetch(url, { headers: userHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-          if (item) {
-            await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ userRating: null }),
-            });
-          }
+        await ensureApiOk(res, "Failed to find rated item");
+        const data = await res.json();
+        const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
+        if (item) {
+          const patchRes = await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...userHeaders() },
+            body: JSON.stringify({ userRating: null }),
+          });
+          await ensureApiOk(patchRes, "Failed to remove rating");
         }
       }
     },
@@ -719,28 +740,40 @@ export function useStats() {
 // Counts are calculated server-side across the whole library, never from the current page.
 export type TvTrackingCategory =
   | "all"
+  | "planned"
   | "watchlist"
+  | "not-started"
+  | "havent-started"
+  | "watching"
   | "uptodate"
   | "finished"
   | "finished-anime"
   | "upcoming"
-  | "havent-watched-while"
-  | "havent-started";
+  | "havent-watched-while";
 
 export interface TvTrackingCounts {
   all: number;
+  planned: number;
   watchlist: number;
+  notStarted: number;
+  haventStarted: number;
+  watching: number;
   uptodate: number;
   finished: number;
   finishedAnime: number;
   upcoming: number;
   haventWatched: number;
-  haventStarted: number;
 }
 
 export interface TvTrackingItem extends MediaItemDB {
-  _trackingStatus: "finished" | "uptodate" | "watchlist";
+  _trackingStatus: TvTrackingState;
   _watchedEpisodeCount: number;
+  _watchedAiredEpisodeCount: number;
+  _airedEpisodeCount: number | null;
+  _ignoredFutureEpisodeCount: number;
+  _legacyCompletionAssumed: boolean;
+  _legacySnapshotMaterialized?: boolean;
+  _stateVerified: boolean;
   _lastWatchedAt: string | null;
   _daysSinceLastWatch: number | null;
   _nextEpisodeAirDate: string | null;
@@ -806,59 +839,99 @@ export function useTvTracking(params: {
   });
 }
 
-// Show progress - fetches ALL seasons of a show (not just first 4) and combines
-// with watched-episodes data to produce a complete progress picture.
+// Show progress fetches every regular season, then separates released episodes
+// from future episodes. Only released episodes can affect completion or "next".
 export function useShowProgress(showId: number | null | undefined) {
   const detail = useTvDetail(showId ?? null);
   const watched = useWatchedEpisodes(showId ?? undefined);
+  const trackedShows = useTrackedShows();
   const watchedItems = watched.data?.items ?? [];
   const watchedSignature = watchedItems
-    .map((e: any) => `${e.showId}-${e.seasonNumber}-${e.episodeNumber}-${e.watchedAt || ""}`)
+    .map((episode: any) => `${episode.showId}-${episode.seasonNumber}-${episode.episodeNumber}-${episode.watchedAt || ""}`)
     .sort()
     .join("|");
+  const trackedShow = showId == null
+    ? undefined
+    : trackedShows.data?.items.find((item: any) => Number(item.tmdbId) === Number(showId));
 
   const seasonsQuery = useQuery({
-    queryKey: ["tmdb", "show-progress-seasons", showId, detail.data?.number_of_seasons ?? 0, watchedSignature],
+    queryKey: ["tmdb", "show-progress-seasons", showId, detail.data?.number_of_seasons ?? 0, watchedSignature, trackedShow?.status, trackedShow?.watched],
     enabled: showId != null && !!detail.data,
     queryFn: async () => {
       const show = detail.data!;
       const regularSeasons = (show.seasons ?? [])
-        .filter((s) => s.season_number >= 1 && (s.episode_count ?? 0) > 0)
+        .filter((season) => season.season_number >= 1 && (season.episode_count ?? 0) > 0)
         .sort((a, b) => a.season_number - b.season_number);
-
       const seasonDetails = await Promise.all(
-        regularSeasons.map((s) => tmdbGet<SeasonDetail>(`tv/${showId}/season/${s.season_number}`))
+        regularSeasons.map((season) => tmdbGet<SeasonDetail>(`tv/${showId}/season/${season.season_number}`)),
       );
 
-      const watchedSet = new Set(watchedItems.map((e: any) => `${e.seasonNumber}-${e.episodeNumber}`));
-      const allEpisodes = seasonDetails.flatMap((season) =>
+      const now = new Date();
+      const officiallyEnded = isOfficiallyEndedTvStatus(show.status);
+      const allEpisodesIncludingFuture = seasonDetails.flatMap((season) =>
         (season.episodes ?? [])
           .filter((episode) => episode.season_number >= 1)
-          .map((episode) => ({ seasonNumber: season.season_number, episode, seasonName: season.name }))
+          .map((episode) => ({ seasonNumber: season.season_number, episode, seasonName: season.name })),
       );
+      const allEpisodes = allEpisodesIncludingFuture.filter(({ episode }) =>
+        isEpisodeReleased(episode.air_date, now) || (officiallyEnded && !episode.air_date),
+      );
+      const futureEpisodes = allEpisodesIncludingFuture.filter(({ episode }) => isFutureEpisode(episode.air_date, now));
+      const airedKeys = new Set<string>(allEpisodes.map(({ episode }) => episodeKey(episode.season_number, episode.episode_number)));
+      const actualWatchedSet = new Set<string>(watchedItems.map((episode: any) => episodeKey(episode.seasonNumber, episode.episodeNumber)));
+      const persistedState = String(trackedShow?.status || "");
+      const legacyCompleted = actualWatchedSet.size === 0 && Boolean(
+        trackedShow?.watched || persistedState === "finished" || persistedState === "uptodate" || persistedState === "watched",
+      );
+      const derived = deriveTvTrackingState({
+        persistedStatus: trackedShow?.status,
+        officiallyEnded,
+        airedEpisodeCount: allEpisodes.length,
+        airedEpisodeKeys: airedKeys,
+        watchedEpisodeKeys: actualWatchedSet,
+        legacyCompleted,
+      });
+      const watchedSet = new Set(actualWatchedSet);
+      if (derived.legacyCompletionAssumed) {
+        for (const key of airedKeys) watchedSet.add(key);
+      }
 
-      const nextEp = allEpisodes.find(({ episode }) => !watchedSet.has(`${episode.season_number}-${episode.episode_number}`)) ?? null;
+      const nextEp = allEpisodes.find(({ episode }) => !watchedSet.has(episodeKey(episode.season_number, episode.episode_number))) ?? null;
+      const nextUpcomingEpisode = futureEpisodes
+        .sort((a, b) => Date.parse(a.episode.air_date || "") - Date.parse(b.episode.air_date || ""))[0] ?? null;
       const lastWatchedDate = watchedItems.length > 0
-        ? new Date(watchedItems.reduce((latest: string, e: any) => e.watchedAt > latest ? e.watchedAt : latest, watchedItems[0].watchedAt))
+        ? new Date(watchedItems.reduce((latest: string, episode: any) => episode.watchedAt > latest ? episode.watchedAt : latest, watchedItems[0].watchedAt))
         : null;
-      const daysSinceLastWatch = lastWatchedDate ? Math.floor((Date.now() - lastWatchedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
-      const nextEpAirDate = nextEp?.episode?.air_date ? new Date(nextEp.episode.air_date) : null;
-      const totalEpisodes = show.number_of_episodes || allEpisodes.length;
-      const watchedCount = watchedSet.size;
+      const daysSinceLastWatch = lastWatchedDate
+        ? Math.floor((Date.now() - lastWatchedDate.getTime()) / (1000 * 60 * 60 * 24))
+        : null;
 
       return {
         showDetail: show,
         watchedSet,
+        actualWatchedSet,
         watchedItems,
-        totalEpisodes,
-        watchedCount,
+        totalEpisodes: allEpisodes.length,
+        totalKnownEpisodes: allEpisodesIncludingFuture.length,
+        watchedCount: derived.watchedAiredEpisodeCount,
+        ignoredFutureWatchedCount: derived.futureOrUnknownWatchedEpisodeCount,
+        trackingState: derived.state,
+        stateVerified: derived.verified,
+        legacyCompletionAssumed: derived.legacyCompletionAssumed,
         nextEp,
+        nextUpcomingEpisode,
         allEpisodes,
-        seasons: seasonDetails.map((s) => ({ seasonNumber: s.season_number, episodes: s.episodes ?? [], seasonName: s.name })),
+        allEpisodesIncludingFuture,
+        futureEpisodes,
+        seasons: seasonDetails.map((season) => ({
+          seasonNumber: season.season_number,
+          episodes: season.episodes ?? [],
+          seasonName: season.name,
+        })),
         lastWatchedDate,
         daysSinceLastWatch,
-        nextEpAirDate,
-        isUpcoming: Boolean(nextEpAirDate && nextEpAirDate > new Date() && watchedCount > 0),
+        nextEpAirDate: nextEp?.episode?.air_date ? new Date(nextEp.episode.air_date) : null,
+        isUpcoming: Boolean(nextUpcomingEpisode && nextEp == null),
       };
     },
     staleTime: 5 * 60 * 1000,
@@ -866,26 +939,36 @@ export function useShowProgress(showId: number | null | undefined) {
 
   return {
     showDetail: detail.data,
-    watchedSet: new Set(watchedItems.map((e: any) => `${e.seasonNumber}-${e.episodeNumber}`)),
+    watchedSet: new Set<string>(watchedItems.map((episode: any) => episodeKey(episode.seasonNumber, episode.episodeNumber))),
+    actualWatchedSet: new Set<string>(watchedItems.map((episode: any) => episodeKey(episode.seasonNumber, episode.episodeNumber))),
     watchedItems,
-    totalEpisodes: detail.data?.number_of_episodes ?? 0,
-    watchedCount: watchedItems.length,
+    totalEpisodes: 0,
+    totalKnownEpisodes: detail.data?.number_of_episodes ?? 0,
+    watchedCount: 0,
+    ignoredFutureWatchedCount: 0,
+    trackingState: (trackedShow?.status || "not_started") as TvTrackingState,
+    stateVerified: false,
+    legacyCompletionAssumed: false,
     nextEp: null,
+    nextUpcomingEpisode: null,
     allEpisodes: [],
+    allEpisodesIncludingFuture: [],
+    futureEpisodes: [],
     seasons: [],
     lastWatchedDate: null,
     daysSinceLastWatch: null,
     nextEpAirDate: null,
     isUpcoming: false,
     ...(seasonsQuery.data ?? {}),
-    isLoading: detail.isLoading || watched.isLoading || seasonsQuery.isLoading,
-    isError: detail.isError || watched.isError || seasonsQuery.isError,
+    isLoading: detail.isLoading || watched.isLoading || trackedShows.isLoading || seasonsQuery.isLoading,
+    isError: detail.isError || watched.isError || trackedShows.isError || seasonsQuery.isError,
   };
 }
 
 // ---------- Media (Neon PostgreSQL backend) ----------
 export interface MediaItemDB {
   id: string;
+  tmdbId: number | null;
   title: string;
   originalTitle: string | null;
   year: string | null;
@@ -997,7 +1080,10 @@ export function useMediaUpdate() {
         headers: { "Content-Type": "application/json", ...userHeaders() },
         body: JSON.stringify(args),
       });
-      if (!res.ok) throw new Error("Failed to update");
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        throw new Error(errorBody?.error || "Failed to update");
+      }
       return res.json();
     },
     onSuccess: () => {

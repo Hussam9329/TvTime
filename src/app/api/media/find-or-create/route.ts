@@ -47,7 +47,9 @@ export async function POST(req: NextRequest) {
           episodes: episodes != null ? Number(episodes) : null,
           genres: Array.isArray(genres) ? genres : [],
           isAnime: Boolean(isAnime),
-          status: "planned",
+          // Creating metadata must not silently add the title to Watchlist.
+          // The explicit action (rate / watch / plan / follow) owns its own state.
+          status: null,
           watched: false,
         },
       });

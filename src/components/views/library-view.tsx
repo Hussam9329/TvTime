@@ -40,7 +40,7 @@ export function LibraryView() {
   const media = useMedia({
     type: config.type,
     isAnime: config.isAnime ? "true" : "false",
-    rated: config.isWatched ? "true" : "false",
+    ...(config.isWatched ? { watched: "true" } : { status: "planned" }),
     search: debouncedSearch || undefined,
     sortBy,
     order: "desc",
@@ -173,34 +173,44 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 
 function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; index: number; isWatchedTab: boolean }) {
   const update = useMediaUpdate();
+  const goTv = useNav((state) => state.goTv);
   const [ratingOpen, setRatingOpen] = useState(false);
 
   const publicRating = item.rating ? parseFloat(item.rating) : null;
   const userRating = item.userRating;
 
-  const handleMarkWatched = () => {
-    setRatingOpen(true);
-  };
-
-  const handleRate = async (rating: number) => {
+  const handleMarkWatched = async () => {
+    if (item.type === "series") {
+      if (item.tmdbId) goTv(item.tmdbId);
+      else toast.info("Open the show and track released episodes individually.");
+      return;
+    }
     await update.mutateAsync({
       id: item.id,
-      userRating: rating,
       watched: true,
       watchedAt: new Date().toISOString(),
       status: "watched",
     });
+    toast.success("Marked as watched. Rating was not changed.");
+  };
+
+  const handleRate = async (rating: number) => {
+    await update.mutateAsync({ id: item.id, userRating: rating });
   };
 
   const handleRemoveRating = async () => {
+    await update.mutateAsync({ id: item.id, userRating: null });
+    toast.success("Rating removed. Watch status was not changed.");
+  };
+
+  const handleUnwatch = async () => {
     await update.mutateAsync({
       id: item.id,
-      userRating: null,
       watched: false,
       watchedAt: null,
       status: null,
     });
-    toast.success("Moved back to watchlist");
+    toast.success("Removed from Watched. Rating was preserved.");
   };
 
   // Quick remove from watchlist — clears status only, doesn't touch watched/rating.
@@ -253,8 +263,8 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
               </Badge>
             </div>
 
-            {/* rating badge - user rating (watched) or TMDB rating (watchlist) */}
-            {isWatchedTab && userRating != null ? (
+            {/* A rating is independent and may exist on either tab. */}
+            {userRating != null ? (
               <div className="absolute top-2 right-2">
                 <Badge className="bg-amber-500/90 text-black border-0 text-[10px] h-6 px-2 font-bold">
                   <Star className="w-3 h-3 mr-1 fill-black" />
@@ -275,7 +285,7 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
               <h3 className="font-semibold text-white text-sm line-clamp-2 leading-tight drop-shadow">{item.title}</h3>
               <div className="flex items-center gap-2 mt-0.5">
                 {item.year && <p className="text-white/70 text-xs">{item.year}</p>}
-                {isWatchedTab && userRating != null && (
+                {userRating != null && (
                   <span className="text-amber-400 text-xs font-bold">{userRating}/100</span>
                 )}
               </div>
@@ -285,21 +295,44 @@ function LibraryMediaCard({ item, index, isWatchedTab }: { item: MediaItemDB; in
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3">
               {!isWatchedTab ? (
                 <>
-                  <Button size="sm" className="h-8" onClick={handleMarkWatched} title="Mark this movie as watched and rate it out of 100">
-                    <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Mark Watched
+                  <Button size="sm" className="h-8" onClick={handleMarkWatched} title={item.type === "series" ? "Open episode tracking" : "Mark watched without changing rating"}>
+                    <Play className="w-3.5 h-3.5 mr-1 fill-current" /> {item.type === "series" ? "Track Episodes" : "Mark Watched"}
                   </Button>
+                  {item.type === "movie" && (
+                    <Button size="sm" variant="secondary" className="h-8" onClick={() => setRatingOpen(true)}>
+                      <Star className="w-3.5 h-3.5 mr-1" /> {userRating != null ? "Re-rate" : "Rate"}
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleQuickUnwatch(); }} title="Remove from watchlist">
                     Remove
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button size="sm" variant="secondary" className="h-8" onClick={() => setRatingOpen(true)}>
-                    <Star className="w-3.5 h-3.5 mr-1" /> Re-rate
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleRemoveRating}>
-                    Unwatch
-                  </Button>
+                  {item.type === "movie" ? (
+                    <>
+                      <Button size="sm" variant="secondary" className="h-8" onClick={() => setRatingOpen(true)}>
+                        <Star className="w-3.5 h-3.5 mr-1" /> {userRating != null ? "Re-rate" : "Rate"}
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleUnwatch}>
+                        Unwatch
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-8"
+                      onClick={() => item.tmdbId ? goTv(item.tmdbId) : toast.info("Open the show and change released episodes individually.")}
+                    >
+                      <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Episodes
+                    </Button>
+                  )}
+                  {userRating != null && (
+                    <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={handleRemoveRating}>
+                      Remove rating
+                    </Button>
+                  )}
                 </>
               )}
               {item.type === "series" && (

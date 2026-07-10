@@ -59,13 +59,13 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
 }) {
   // Fetch full show progress (all seasons + watched episodes via API)
   const data = useShowProgress(showId);
-  const { watchedSet, watchedCount, totalEpisodes, nextEp, seasons, isLoading } = data;
+  const { watchedSet, watchedCount, totalEpisodes, nextEp, allEpisodes, isLoading } = data;
 
   const episodeToggle = useEpisodeToggle();
   const bulkToggle = useBulkEpisodeToggle();
 
-  const allWatched = !isLoading && seasons.length > 0 && !nextEp;
-  const remaining = totalEpisodes > 0 ? totalEpisodes - watchedCount : 0;
+  const allWatched = !isLoading && totalEpisodes > 0 && !nextEp;
+  const remaining = Math.max(0, totalEpisodes - watchedCount);
   const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
 
   const markWatched = () => {
@@ -82,11 +82,16 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
 
   const markAllSeason = () => {
     if (!nextEp) return;
-    const seasonData = seasons.find((s) => s.seasonNumber === nextEp!.seasonNumber);
-    if (!seasonData) return;
-    const unwatched = seasonData.episodes
-      .filter((e: any) => !watchedSet.has(`${e.season_number}-${e.episode_number}`))
-      .map((e: any) => ({ seasonNumber: e.season_number, episodeNumber: e.episode_number, episodeName: e.name }));
+    const unwatched = allEpisodes
+      .filter(({ seasonNumber, episode }) =>
+        seasonNumber === nextEp.seasonNumber
+        && !watchedSet.has(`${episode.season_number}-${episode.episode_number}`),
+      )
+      .map(({ episode }) => ({
+        seasonNumber: episode.season_number,
+        episodeNumber: episode.episode_number,
+        episodeName: episode.name,
+      }));
     if (unwatched.length === 0) {
       toast.info("All episodes already watched");
       return;

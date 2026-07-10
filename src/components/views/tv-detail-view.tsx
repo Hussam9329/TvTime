@@ -1,7 +1,7 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useTrackedShows, useRatingMutate, useMediaUpdate, type EpisodeCompletion } from "@/hooks/use-tmdb";
+import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useTrackedShows, useRatingMutate, useShowProgress, type EpisodeCompletion } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +13,11 @@ import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
   Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { isEpisodeReleased, isFutureEpisode, type TvTrackingState } from "@/lib/tv-status-engine";
 
 export function TvDetailView() {
   const { tvId, back, goPerson } = useNav();
@@ -26,7 +27,7 @@ export function TvDetailView() {
   const watchlistToggle = useWatchlistToggle();
   const followingToggle = useFollowingToggle();
   const ratingMutate = useRatingMutate();
-  const mediaUpdate = useMediaUpdate();
+  const progress = useShowProgress(tvId);
 
   const [activeTab, setActiveTab] = useState("seasons");
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
@@ -37,12 +38,12 @@ export function TvDetailView() {
   const tData = detail.data;
   const trackedShow = tData ? trackedShows.data?.items.find((w: any) => w.tmdbId === tData.id) : undefined;
   const myRating = trackedShow?.userRating ?? null;
-  const isFullyWatched = trackedShow?.watched === true;
-  const showTrackingStatus = trackedShow?.status ?? null;
+  const showTrackingStatus = (progress.trackingState || trackedShow?.status || "not_started") as TvTrackingState;
+  const isFullyWatched = showTrackingStatus === "finished" || showTrackingStatus === "uptodate";
   const tmdbStatus = tData?.status || "";
   const isEnded = /ended|canceled|cancelled/i.test(tmdbStatus);
 
-  const canRateShow = isFullyWatched && isEnded;
+  const canRateShow = showTrackingStatus === "finished";
 
   // Auto-prompt rating only when the entire TV show has officially ended and
   // the user has watched the whole show. Ongoing shows like FROM must never
@@ -55,31 +56,8 @@ export function TvDetailView() {
     setRatingOpen(true);
   }
 
-  // Repair stale local DB states whenever the detail page opens:
-  // - Ended + fully watched -> Finished
-  // - Ongoing + caught up -> Up To Date, never Finished
-  // - Ongoing TV rating -> cleared because whole-show rating is locked until end
-  useEffect(() => {
-    if (!trackedShow?.id) return;
-
-    if (isFullyWatched && isEnded && showTrackingStatus !== "finished") {
-      mediaUpdate.mutateAsync({
-        id: trackedShow.id,
-        status: "finished",
-        watched: true,
-      }).catch(() => {});
-      return;
-    }
-
-    if (isFullyWatched && !isEnded && (showTrackingStatus === "finished" || showTrackingStatus === "watched" || showTrackingStatus !== "uptodate" || myRating != null)) {
-      mediaUpdate.mutateAsync({
-        id: trackedShow.id,
-        status: "uptodate",
-        watched: true,
-        userRating: null,
-      }).catch(() => {});
-    }
-  }, [trackedShow?.id, isFullyWatched, isEnded, showTrackingStatus, myRating]);
+  // The server TV-state engine owns status repair. This page never mutates
+  // tracking state or ratings just because it rendered.
 
   if (detail.isLoading) {
     return (
@@ -108,14 +86,15 @@ export function TvDetailView() {
   // After early returns, detail.data is guaranteed to be defined.
   const t = detail.data;
   const inWatchlist = watchlist.data?.items.some((w) => w.mediaType === "tv" && w.tmdbId === t.id);
-  const isFollowing = trackedShows.data?.items.some((w: any) => w.tmdbId === t.id) ?? false;
+  const isFollowing = Boolean(
+    trackedShow && trackedShow.status !== "planned",
+  );
 
   // Derive the "effective" tracking label:
   //  - If show is Ended AND user watched all -> "Finished"
   //  - If show is ongoing AND user watched all aired -> "Up To Date"
   //  - Otherwise -> null
-  const effectiveLabel: "finished" | "uptodate" | null =
-    isFullyWatched ? (isEnded ? "finished" : "uptodate") : null;
+  const effectiveLabel = showTrackingStatus;
 
   const year = t.first_air_date?.slice(0, 4);
   const runtime = t.episode_run_time?.[0] ? `${t.episode_run_time[0]}m` : null;
@@ -135,29 +114,37 @@ export function TvDetailView() {
   const seasons = t.seasons?.filter((s) => s.season_number >= 0) ?? [];
   const defaultSeason = seasons.find((s) => s.season_number === 1)?.season_number ?? seasons[0]?.season_number ?? null;
 
-  const onWatchlist = () => {
-    watchlistToggle.mutate({
-      action: inWatchlist ? "remove" : "add",
-      mediaType: "tv",
-      tmdbId: t.id,
-      title: t.name || "",
-      posterPath: t.poster_path,
-      backdropPath: t.backdrop_path,
-      overview: t.overview,
-      releaseDate: t.first_air_date,
-      voteAverage: t.vote_average,
-    });
-    toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
+  const onWatchlist = async () => {
+    try {
+      await watchlistToggle.mutateAsync({
+        action: inWatchlist ? "remove" : "add",
+        mediaType: "tv",
+        tmdbId: t.id,
+        title: t.name || "",
+        posterPath: t.poster_path,
+        backdropPath: t.backdrop_path,
+        overview: t.overview,
+        releaseDate: t.first_air_date,
+        voteAverage: t.vote_average,
+      });
+      toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update watchlist");
+    }
   };
 
-  const onFollow = () => {
-    followingToggle.mutate({
-      action: isFollowing ? "remove" : "add",
-      tmdbId: t.id,
-      title: t.name || "",
-      posterPath: t.poster_path,
-    });
-    toast.success(isFollowing ? "Unfollowed" : "Following — track episodes!");
+  const onFollow = async () => {
+    try {
+      await followingToggle.mutateAsync({
+        action: isFollowing ? "remove" : "add",
+        tmdbId: t.id,
+        title: t.name || "",
+        posterPath: t.poster_path,
+      });
+      toast.success(isFollowing ? "Unfollowed" : "Following — track episodes!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update tracking");
+    }
   };
 
   const onRateSubmit = async (rating: number) => {
@@ -226,6 +213,15 @@ export function TvDetailView() {
                 <Badge className="bg-cyan-500/20 text-cyan-400 border-0">
                   <Zap className="w-3 h-3 mr-1" /> Up To Date
                 </Badge>
+              )}
+              {effectiveLabel === "watching" && (
+                <Badge className="bg-blue-500/20 text-blue-400 border-0">Watching</Badge>
+              )}
+              {effectiveLabel === "not_started" && (
+                <Badge className="bg-slate-500/20 text-slate-300 border-0">Not Started</Badge>
+              )}
+              {effectiveLabel === "planned" && (
+                <Badge className="bg-violet-500/20 text-violet-300 border-0">Planned</Badge>
               )}
               {year && <Badge variant="secondary" className="border-0">{year}</Badge>}
               {t.number_of_seasons > 0 && <Badge variant="secondary" className="border-0"><Layers className="w-3 h-3 mr-1" />{t.number_of_seasons} season{t.number_of_seasons > 1 ? "s" : ""}</Badge>}
@@ -341,7 +337,8 @@ export function TvDetailView() {
             seasons={seasons}
             defaultSeason={selectedSeason ?? defaultSeason}
             onSelectSeason={setSelectedSeason}
-            fullyWatched={isFullyWatched}
+            fullyWatched={progress.legacyCompletionAssumed}
+            isEnded={isEnded}
             onCompletion={(c) => {
               if (!c) return;
               if (c.newStatus === "finished" && c.needsRating) {
@@ -449,6 +446,7 @@ function SeasonEpisodes({
   defaultSeason,
   onSelectSeason,
   fullyWatched = false,
+  isEnded = false,
   onCompletion,
 }: {
   tvId: number;
@@ -456,6 +454,7 @@ function SeasonEpisodes({
   defaultSeason: number | null;
   onSelectSeason: (n: number) => void;
   fullyWatched?: boolean;
+  isEnded?: boolean;
   onCompletion?: (c: EpisodeCompletion | null | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -463,40 +462,49 @@ function SeasonEpisodes({
   const seasonData = useSeasonDetail(tvId, season);
   const watched = useWatchedEpisodes(tvId);
   const episodeToggle = useEpisodeToggle();
+  const bulkEpisodeToggle = useBulkEpisodeToggle();
 
   const currentSeason = seasons.find((s) => s.season_number === season);
   const watchedSet = new Set(
     (watched.data?.items ?? []).map((e) => `${e.seasonNumber}-${e.episodeNumber}`)
   );
 
-  // If show is fully watched in DB, treat all episodes as watched
-  const isEpisodeWatched = (sn: number, en: number) => {
-    return fullyWatched || watchedSet.has(`${sn}-${en}`);
-  };
+  const isReleased = (episode: { air_date?: string | null; season_number: number }) =>
+    episode.season_number >= 1 && (isEpisodeReleased(episode.air_date) || (isEnded && !episode.air_date));
+  const isEpisodeWatched = (episode: { season_number: number; episode_number: number; air_date?: string | null }) =>
+    isReleased(episode) && (fullyWatched || watchedSet.has(`${episode.season_number}-${episode.episode_number}`));
+  const releasedEpisodes = (seasonData.data?.episodes ?? []).filter(isReleased);
 
   const markAllWatched = async () => {
-    if (!seasonData.data?.episodes) return;
-    const unwatched = seasonData.data.episodes
-      .filter((e) => !isEpisodeWatched(e.season_number, e.episode_number))
-      .map((e) => ({ seasonNumber: e.season_number, episodeNumber: e.episode_number, episodeName: e.name }));
+    const unwatched = releasedEpisodes
+      .filter((episode) => !isEpisodeWatched(episode))
+      .map((episode) => ({
+        seasonNumber: episode.season_number,
+        episodeNumber: episode.episode_number,
+        episodeName: episode.name,
+      }));
     if (unwatched.length === 0) {
-      toast.info("All episodes already watched");
+      toast.info(releasedEpisodes.length === 0 ? "No released episodes in this season yet" : "All released episodes already watched");
       return;
     }
-    // Use individual toggles via Promise — capture the last completion result
     try {
-      const results = await Promise.all(unwatched.map((e) => episodeToggle.mutateAsync({ action: "add", showId: tvId, ...e })));
-      toast.success(`Marked ${unwatched.length} episodes as watched`);
-      // The last result's completion reflects the final state of the show
-      const lastCompletion = results[results.length - 1]?.completion;
-      if (onCompletion) onCompletion(lastCompletion);
-    } catch {
-      toast.error("Failed to mark episodes");
+      const result = await bulkEpisodeToggle.mutateAsync({ showId: tvId, episodes: unwatched });
+      toast.success(`Marked ${unwatched.length} released episode${unwatched.length === 1 ? "" : "s"} as watched`);
+      if (onCompletion) onCompletion(result?.completion);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to mark episodes");
     }
   };
 
-  const toggleEpisode = async (sn: number, en: number, name: string) => {
-    const isWatched = isEpisodeWatched(sn, en);
+  const toggleEpisode = async (episode: { season_number: number; episode_number: number; name: string; air_date?: string | null }) => {
+    if (!isReleased(episode)) {
+      toast.info("This episode has not aired yet.");
+      return;
+    }
+    const sn = episode.season_number;
+    const en = episode.episode_number;
+    const name = episode.name;
+    const isWatched = isEpisodeWatched(episode);
     try {
       const result = await episodeToggle.mutateAsync({
         action: isWatched ? "remove" : "add",
@@ -543,7 +551,7 @@ function SeasonEpisodes({
           )}
         </div>
 
-        <Button variant="outline" size="sm" onClick={markAllWatched} disabled={seasonData.isLoading}>
+        <Button variant="outline" size="sm" onClick={markAllWatched} disabled={seasonData.isLoading || bulkEpisodeToggle.isPending || releasedEpisodes.length === 0}>
           <CheckCheck className="w-4 h-4 mr-1.5" /> Mark season watched
         </Button>
       </div>
@@ -554,11 +562,11 @@ function SeasonEpisodes({
           <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full bg-primary transition-all"
-              style={{ width: `${(seasonData.data.episodes.filter((e: any) => isEpisodeWatched(e.season_number, e.episode_number)).length / Math.max(seasonData.data.episodes.length, 1)) * 100}%` }}
+              style={{ width: `${(releasedEpisodes.filter((episode: any) => isEpisodeWatched(episode)).length / Math.max(releasedEpisodes.length, 1)) * 100}%` }}
             />
           </div>
           <span className="text-muted-foreground whitespace-nowrap">
-            {seasonData.data.episodes.filter((e: any) => isEpisodeWatched(e.season_number, e.episode_number)).length} / {seasonData.data.episodes.length} watched
+            {releasedEpisodes.filter((episode: any) => isEpisodeWatched(episode)).length} / {releasedEpisodes.length} released watched
           </span>
         </div>
       )}
@@ -573,7 +581,9 @@ function SeasonEpisodes({
       ) : (
         <div className="space-y-2">
           {seasonData.data?.episodes.map((ep, idx) => {
-            const isWatched = isEpisodeWatched(ep.season_number, ep.episode_number);
+            const futureEpisode = isFutureEpisode(ep.air_date);
+            const released = isReleased(ep);
+            const isWatched = isEpisodeWatched(ep);
             return (
               <motion.div
                 key={ep.id}
@@ -583,17 +593,18 @@ function SeasonEpisodes({
               >
                 <Card className={cn(
                   "p-3 flex gap-3 items-start transition-colors",
-                  isWatched ? "border-primary/40 bg-primary/5" : "hover:border-border/80"
+                  isWatched ? "border-primary/40 bg-primary/5" : futureEpisode ? "opacity-65 border-dashed" : "hover:border-border/80"
                 )}>
                   <button
-                    onClick={() => toggleEpisode(ep.season_number, ep.episode_number, ep.name)}
-                    className="flex-shrink-0 mt-0.5"
-                    aria-label={isWatched ? "Mark as not watched" : "Mark as watched"}
+                    onClick={() => toggleEpisode(ep)}
+                    disabled={!released}
+                    className="flex-shrink-0 mt-0.5 disabled:cursor-not-allowed"
+                    aria-label={!released ? "Episode not released" : isWatched ? "Mark as not watched" : "Mark as watched"}
                   >
                     {isWatched ? (
                       <CheckCircle2 className="w-6 h-6 text-primary" />
                     ) : (
-                      <Circle className="w-6 h-6 text-muted-foreground hover:text-primary transition-colors" />
+                      <Circle className={cn("w-6 h-6 transition-colors", released ? "text-muted-foreground hover:text-primary" : "text-muted-foreground/40")} />
                     )}
                   </button>
 
@@ -612,7 +623,10 @@ function SeasonEpisodes({
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-semibold text-sm line-clamp-1">{ep.name || `Episode ${ep.episode_number}`}</h4>
+                      <h4 className="font-semibold text-sm line-clamp-1">
+                        {ep.name || `Episode ${ep.episode_number}`}
+                        {futureEpisode && <Badge variant="outline" className="ml-2 text-[9px]">Upcoming</Badge>}
+                      </h4>
                       {ep.air_date && (
                         <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                           {new Date(ep.air_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}

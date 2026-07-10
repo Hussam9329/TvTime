@@ -52,10 +52,10 @@ export function RatingDialog({ open, onOpenChange, title, poster, onRate }: Rati
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> Mark as watched & rate
+            <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> Rate this title
           </DialogTitle>
           <DialogDescription>
-            Saving will mark this as watched and store your rating out of 100. Drag the slider or pick a preset.
+            This saves only your rating out of 100. It does not change Watchlist or Watched status.
           </DialogDescription>
         </DialogHeader>
 

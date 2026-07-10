@@ -194,7 +194,7 @@ function DayEpisode({ showId, showTitle, date, onShowClick }: { showId: number; 
   const progress = useShowProgress(showId);
 
   const dateKey = date.toISOString().slice(0, 10);
-  const matching = (progress.allEpisodes ?? []).find((e: any) => e.episode?.air_date === dateKey)?.episode;
+  const matching = (progress.allEpisodesIncludingFuture ?? []).find((e: any) => e.episode?.air_date === dateKey)?.episode;
 
   if (!matching) return null;
 

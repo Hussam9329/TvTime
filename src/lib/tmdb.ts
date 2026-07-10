@@ -137,6 +137,18 @@ export interface TvDetail extends MediaItem {
   homepage: string | null;
   in_production: boolean;
   last_air_date: string | null;
+  last_episode_to_air?: {
+    season_number: number;
+    episode_number: number;
+    air_date: string | null;
+    name: string | null;
+  } | null;
+  next_episode_to_air?: {
+    season_number: number;
+    episode_number: number;
+    air_date: string | null;
+    name: string | null;
+  } | null;
   networks: { id: number; name: string; logo_path: string | null }[];
   created_by: { id: number; name: string; profile_path: string | null }[];
 }

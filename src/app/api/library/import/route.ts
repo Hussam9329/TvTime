@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Legacy following (version 1) -> create Media (series) with status="planned"
+  // Legacy following (version 1) -> create Media (series) with status="not_started"
   if (Array.isArray(library.following)) {
     for (const item of library.following) {
       if (!item.tmdbId || !item.title) continue;
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
             title: String(item.title),
             type: "series",
             poster: item.posterPath || null,
-            status: "planned",
+            status: "not_started",
             watched: false,
           },
         });
@@ -182,9 +182,8 @@ export async function POST(req: NextRequest) {
           await db.media.update({
             where: { id: existing.id },
             data: {
+              // Import rating only. Never infer watch state from a rating.
               userRating: Math.max(1, Math.min(100, Number(item.value) * 10)),
-              watched: true,
-              status: "watched",
             },
           });
         }
@@ -197,8 +196,8 @@ export async function POST(req: NextRequest) {
             type: mediaType,
             poster: item.posterPath || null,
             userRating: Math.max(1, Math.min(100, Number(item.value) * 10)),
-            watched: true,
-            status: "watched",
+            watched: false,
+            status: null,
           },
         });
       }

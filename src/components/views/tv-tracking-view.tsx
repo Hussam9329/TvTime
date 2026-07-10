@@ -23,41 +23,32 @@ import { toast } from "sonner";
 import { useState } from "react";
 
 
-// Tracking status derived from a Media row.
-// Used by the "All" tab to badge each show with its current state.
-type TrackingStatus = "finished" | "uptodate" | "watchlist";
+// Tracking status is calculated by the shared server engine.
+type TrackingStatus = "planned" | "not_started" | "watching" | "uptodate" | "finished";
 
 function deriveTrackingStatus(show: any): TrackingStatus {
-  if (show?._trackingStatus === "finished" || show?._trackingStatus === "uptodate" || show?._trackingStatus === "watchlist") {
-    return show._trackingStatus;
+  const value = String(show?._trackingStatus || show?.status || "not_started").toLowerCase();
+  if (value === "planned" || value === "not_started" || value === "watching" || value === "uptodate" || value === "finished") {
+    return value;
   }
-
-  const s = String(show?.status || "").toLowerCase();
-  if (s === "finished" && show?._isEndedByTmdb === true) return "finished";
-  if ((s === "finished" || s === "watched" || s === "uptodate") && show?.watched) return "uptodate";
-  return "watchlist";
+  if (value === "watched") return show?._isEndedByTmdb ? "finished" : "uptodate";
+  return "not_started";
 }
 
 function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
   if (status === "finished") {
-    return (
-      <Badge className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0">
-        <Trophy className="w-2.5 h-2.5 mr-1" /> Finished
-      </Badge>
-    );
+    return <Badge className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0"><Trophy className="w-2.5 h-2.5 mr-1" /> Finished</Badge>;
   }
   if (status === "uptodate") {
-    return (
-      <Badge className="text-[9px] bg-cyan-500/20 text-cyan-400 border-0">
-        <Zap className="w-2.5 h-2.5 mr-1" /> Up To Date
-      </Badge>
-    );
+    return <Badge className="text-[9px] bg-cyan-500/20 text-cyan-400 border-0"><Zap className="w-2.5 h-2.5 mr-1" /> Up To Date</Badge>;
   }
-  return (
-    <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">
-      <BookOpen className="w-2.5 h-2.5 mr-1" /> Watchlist
-    </Badge>
-  );
+  if (status === "watching") {
+    return <Badge className="text-[9px] bg-blue-500/20 text-blue-400 border-0"><Play className="w-2.5 h-2.5 mr-1" /> Watching</Badge>;
+  }
+  if (status === "planned") {
+    return <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0"><BookOpen className="w-2.5 h-2.5 mr-1" /> Planned</Badge>;
+  }
+  return <Badge className="text-[9px] bg-slate-500/20 text-slate-300 border-0"><Clock className="w-2.5 h-2.5 mr-1" /> Not Started</Badge>;
 }
 
 export function TvTrackingView() {
@@ -101,9 +92,11 @@ export function TvTrackingView() {
       </div>
 
       {/* Global Stats row — never page-scoped */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard icon={<Layers className="w-5 h-5" />} label="All Shows" value={counts?.all ?? "…"} color="from-purple-500/20 to-purple-500/5" />
-        <StatCard icon={<BookOpen className="w-5 h-5" />} label="Watchlist" value={counts?.watchlist ?? "…"} color="from-rose-500/20 to-rose-500/5" />
+        <StatCard icon={<BookOpen className="w-5 h-5" />} label="Planned" value={counts?.planned ?? counts?.watchlist ?? "…"} color="from-violet-500/20 to-violet-500/5" />
+        <StatCard icon={<Clock className="w-5 h-5" />} label="Not Started" value={counts?.notStarted ?? counts?.haventStarted ?? "…"} color="from-slate-500/20 to-slate-500/5" />
+        <StatCard icon={<Play className="w-5 h-5" />} label="Watching" value={counts?.watching ?? "…"} color="from-blue-500/20 to-blue-500/5" />
         <StatCard icon={<Zap className="w-5 h-5" />} label="Up To Date" value={counts?.uptodate ?? "…"} color="from-cyan-500/20 to-cyan-500/5" />
         <StatCard icon={<Trophy className="w-5 h-5" />} label="Finished" value={counts ? counts.finished + counts.finishedAnime : "…"} color="from-emerald-500/20 to-emerald-500/5" />
       </div>
@@ -130,7 +123,7 @@ export function TvTrackingView() {
 // ============ TAB COMPONENTS ============
 
 // "All" tab — shows every tracked series, each badged with its current tracking
-// status (Finished / Up To Date / Watchlist). Includes quick filter chips so the
+// status (Finished / Up To Date / Watching / Not Started / Planned). Includes quick filter chips so the
 // user can drill into a specific status without leaving the tab.
 function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globalCounts?: any }) {
   const [page, setPage] = useState(0);
@@ -142,7 +135,10 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
   const total = tracking.data?.total ?? 0;
   const counts = tracking.data?.counts ?? globalCounts ?? {
     all: 0,
+    planned: 0,
     watchlist: 0,
+    notStarted: 0,
+    watching: 0,
     uptodate: 0,
     finished: 0,
     finishedAnime: 0,
@@ -160,13 +156,14 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
     color: string;
   }[] = [
     { value: "all", label: "All", count: counts.all, icon: <Layers className="w-3 h-3" />, color: "bg-primary/15 text-primary" },
-    { value: "watchlist", label: "Watchlist", count: counts.watchlist, icon: <BookOpen className="w-3 h-3" />, color: "bg-purple-500/15 text-purple-400" },
+    { value: "planned", label: "Planned", count: counts.planned ?? counts.watchlist, icon: <BookOpen className="w-3 h-3" />, color: "bg-purple-500/15 text-purple-400" },
+    { value: "not-started", label: "Not Started", count: counts.notStarted ?? counts.haventStarted, icon: <Clock className="w-3 h-3" />, color: "bg-slate-500/15 text-slate-300" },
+    { value: "watching", label: "Watching", count: counts.watching, icon: <Play className="w-3 h-3" />, color: "bg-blue-500/15 text-blue-400" },
     { value: "uptodate", label: "Up To Date", count: counts.uptodate, icon: <Zap className="w-3 h-3" />, color: "bg-cyan-500/15 text-cyan-400" },
     { value: "finished", label: "Finished", count: counts.finished, icon: <Trophy className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-400" },
     { value: "finished-anime", label: "Finished Anime", count: counts.finishedAnime, icon: <Sparkles className="w-3 h-3" />, color: "bg-fuchsia-500/15 text-fuchsia-400" },
     { value: "upcoming", label: "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-400" },
     { value: "havent-watched-while", label: "Haven't Watched", count: counts.haventWatched, icon: <Clock className="w-3 h-3" />, color: "bg-orange-500/15 text-orange-400" },
-    { value: "havent-started", label: "Haven't Started", count: counts.haventStarted, icon: <Sparkles className="w-3 h-3" />, color: "bg-sky-500/15 text-sky-400" },
   ];
 
   const activeFilterLabel = filters.find((f) => f.value === filter)?.label ?? "All";
@@ -266,7 +263,7 @@ function FilterChip({ active, onClick, label, icon, count, color }: {
 function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
   const trackingStatus = show._trackingStatus as TrackingStatus;
   const userRating = show.userRating;
-  const totalEps = show.episodes;
+  const totalEps = show._airedEpisodeCount ?? show.episodes;
   const seasons = show.seasons;
 
   return (
@@ -288,7 +285,7 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
           </div>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             {totalEps != null && <span className="text-[10px] text-muted-foreground">{totalEps} eps</span>}
-            {show._watchedEpisodeCount != null && <span className="text-[10px] text-muted-foreground">{show._watchedEpisodeCount} watched</span>}
+            {show._watchedAiredEpisodeCount != null && <span className="text-[10px] text-muted-foreground">{show._watchedAiredEpisodeCount}/{show._airedEpisodeCount ?? "?"} released watched</span>}
             {show.year && <span className="text-[10px] text-muted-foreground">{show.year}</span>}
           </div>
           {show._nextEpisodeAirDate && (
@@ -666,9 +663,9 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
     prevEpisodes: { seasonNumber: number; episodeNumber: number; episodeName?: string }[];
   }>({ open: false, currentEp: null, prevEpisodes: [] });
 
-  const { nextEp, totalEpisodes, watchedCount, watchedSet, seasons, isLoading } = data;
+  const { nextEp, totalEpisodes, watchedCount, watchedSet, seasons, allEpisodes, isLoading } = data;
   const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
-  const remaining = totalEpisodes > 0 ? totalEpisodes - watchedCount : 0;
+  const remaining = Math.max(0, totalEpisodes - watchedCount);
 
   const markWatched = async () => {
     if (!nextEp) return;
@@ -743,11 +740,16 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
 
   const markAllSeason = async () => {
     if (!nextEp) return;
-    const seasonData = seasons.find((s) => s.seasonNumber === nextEp.seasonNumber);
-    if (!seasonData) return;
-    const unwatched = seasonData.episodes
-      .filter((e: any) => !watchedSet.has(`${e.season_number}-${e.episode_number}`))
-      .map((e: any) => ({ seasonNumber: e.season_number, episodeNumber: e.episode_number, episodeName: e.name }));
+    const unwatched = allEpisodes
+      .filter(({ seasonNumber, episode }) =>
+        seasonNumber === nextEp.seasonNumber
+        && !watchedSet.has(`${episode.season_number}-${episode.episode_number}`),
+      )
+      .map(({ episode }) => ({
+        seasonNumber: episode.season_number,
+        episodeNumber: episode.episode_number,
+        episodeName: episode.name,
+      }));
     if (unwatched.length === 0) { toast.info("All episodes already watched"); return; }
     try {
       const result = await bulkToggle.mutateAsync({ showId, episodes: unwatched });
@@ -767,7 +769,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
     );
   }
 
-  const allWatched = seasons.length > 0 && !nextEp;
+  const allWatched = totalEpisodes > 0 && !nextEp;
 
   if (allWatched) {
     return (
@@ -908,7 +910,7 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
   const totalEpisodes = progress.totalEpisodes ?? 0;
   const watchedCount = progress.watchedCount ?? 0;
   const progressPct = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
-  const remaining = totalEpisodes > 0 ? totalEpisodes - watchedCount : 0;
+  const remaining = Math.max(0, totalEpisodes - watchedCount);
   const seasons = progress.showDetail?.number_of_seasons;
   const status = progress.showDetail?.status;
   const isLoading = progress.isLoading;
@@ -979,20 +981,20 @@ function UpcomingList({ shows, onGo }: { shows: any[]; onGo: (id: number) => voi
 
 function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: string; poster: string | null; onGo: () => void }) {
   const data = useShowTrackingData(showId);
-  const { nextEp, nextEpAirDate, isLoading, watchedCount, totalEpisodes, showDetail } = data;
+  const { nextUpcomingEpisode, isLoading, showDetail } = data;
 
   if (isLoading) {
     return <Card className="p-3 h-[100px] flex items-center gap-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /><span className="text-xs text-muted-foreground">Loading...</span></Card>;
   }
 
-  // Only show if there's an upcoming episode (air date in future)
   const now = new Date();
-  const isUpcoming = nextEpAirDate && nextEpAirDate > now;
+  const upcomingAirDate = nextUpcomingEpisode?.episode?.air_date
+    ? new Date(`${nextUpcomingEpisode.episode.air_date}T00:00:00`)
+    : null;
+  if (!nextUpcomingEpisode || !upcomingAirDate || upcomingAirDate <= now) return null;
 
-  if (!isUpcoming) return null;
-
-  const daysUntil = Math.ceil((nextEpAirDate!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  const ep = nextEp!.episode;
+  const daysUntil = Math.ceil((upcomingAirDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const ep = nextUpcomingEpisode.episode;
   const status = showDetail?.status;
   const statusBadge = getStatusBadge(status);
 
@@ -1011,10 +1013,10 @@ function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: 
             {statusBadge}
           </div>
           <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">
-            S{nextEp!.seasonNumber}E{ep.episode_number}: {ep.name || `Episode ${ep.episode_number}`}
+            S{nextUpcomingEpisode.seasonNumber}E{ep.episode_number}: {ep.name || `Episode ${ep.episode_number}`}
           </p>
           <p className="text-[10px] text-muted-foreground">
-            {nextEpAirDate!.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            {upcomingAirDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </p>
         </div>
       </Card>

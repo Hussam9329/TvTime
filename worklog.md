@@ -721,3 +721,69 @@ Stage Summary:
 - .env and db/custom.db are no longer tracked by git (gitignored)
 - TypeScript + ESLint (patch-touched files) clean; production build succeeds
 - Vercel DATABASE_URL must be restored to the original PostgreSQL URL (I had overwritten it with file:../db/custom.db during the TVM-01/02 task — needs to be set back to the original Neon PostgreSQL connection string)
+
+---
+Task ID: tvm-03-04-05-state-engine
+Agent: main
+Task: Apply TVM-03-04-05.patch — separate watch from rating + central TV status engine + future-episode protection
+
+Work Log:
+- Inspected uploaded TVM-03-04-05-ONE-PATCH.zip
+- Read AGENT-PROMPT-AR.md, WHAT-CHANGED-AR.md, CHANGELOG-AR.md, EXPECTED-RESULTS-AR.md, APPLY-COMMANDS.sh, BASELINE-SHA256.txt, FILES-CHANGED.txt
+- Cloned fresh repo (clean state at commit bcfc0f5 = emergency recovery baseline)
+- Verified all 4 protected file SHA-256 baselines match BASELINE-SHA256.txt BEFORE apply:
+  - prisma/schema.prisma ✓
+  - package.json ✓
+  - scripts/assert-production-db.mjs ✓
+  - next.config.ts ✓
+- Copied TVM-03-04-05.patch to delivery/ folder
+- `git apply --check delivery/TVM-03-04-05.patch` → exit 0 (no conflicts)
+- `git apply delivery/TVM-03-04-05.patch` → exit 0 (applied cleanly)
+- Verified all 4 protected file SHA-256 baselines STILL match AFTER apply (byte-for-byte identical)
+- `node --experimental-strip-types scripts/test-tv-status-engine.ts` → "TVM-03/04/05 engine tests passed (11 assertion groups)"
+- `node scripts/verify-tvm-03-04-05.mjs` → "TVM-03/04/05 static verification passed (26 checks)" including:
+  - Prisma remains PostgreSQL
+  - Build performs no database migration/push/reset
+  - TV state engine has no rating input or dependency
+  - Only officially ended shows can become Finished
+  - Released episode filtering is centralized
+  - API rejects future or unaired watched episodes
+  - Single and bulk episode writes use release validation
+  - Direct TV progress writes are blocked
+  - Existing TV episode progress cannot be overwritten by generic media updates
+  - Rating and watch changes cannot be sent in one request
+  - Rating save payload writes only userRating
+  - Rating removal payload clears only userRating
+  - Client progress separates released and future episodes
+  - Next-to-watch is selected only from released episodes
+  - Calendar may still show future schedule without counting it as progress
+  - TV tracking API uses the central state engine
+  - Following statistics exclude Planned and rating-only items
+  - Legacy rating import does not mark media watched
+  - Watched TV cards route state changes through episode tracking
+  - Server computes released episodes from episode air dates
+  - git diff --check passed
+- bun install: 826 packages ok
+- bunx tsc --noEmit: passed (no errors)
+- bunx eslint (all patch-touched files): clean (3 pre-existing lint errors in shadcn/ui components carousel.tsx, use-mobile.ts, profile-dialog.tsx — NOT touched by the patch)
+- npm run build: succeeded — 21 routes built
+
+Files changed by patch (matches FILES-CHANGED.txt exactly):
+- 28 modified files (scripts, APIs, views, hooks, lib)
+- 10 added files:
+  - delivery/ (9 docs + ROLLBACK.sh)
+  - scripts/test-tv-status-engine.ts (unit tests)
+  - scripts/verify-tvm-03-04-05.mjs (static checker)
+  - src/lib/tv-status-engine.ts (central state engine)
+  - src/lib/tv-status-repair.ts (legacy compatibility repair)
+  - src/lib/tv-status-server.ts (server-side episode metadata layer)
+
+Stage Summary:
+- TVM-03: Watch and rating fully separated — saving a rating writes only userRating; removing a rating clears only userRating; adding/removing watched does not touch rating; rating-only items don't enter Watchlist/Watched
+- TVM-04: Central TV status engine — states (finished/uptodate/watching/not_started/planned) derive ONLY from episode records via the engine; direct TV progress writes blocked via API
+- TVM-05: Future episodes excluded — progress and next-to-watch use only aired episodes; API rejects future/unaired watched episodes with EPISODE_NOT_RELEASED; Mark Season Watched sends only aired episodes
+- Legacy compatibility repair: idempotent backfill of episode records for shows marked complete without per-episode records (skipDuplicates, no rating changes)
+- Disabled legacy maintenance scripts that could bypass the engine
+- No schema changes, no migrations, no db push/reset, no provider/URL changes
+- Protected files unchanged byte-for-byte
+- 11 engine test groups passed, 26 static verification checks passed

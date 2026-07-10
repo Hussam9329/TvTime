@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     const status = url.searchParams.get("status");
     const watched = url.searchParams.get("watched");
     const rated = url.searchParams.get("rated");
+    const tracked = url.searchParams.get("tracked");
     const search = url.searchParams.get("search")?.trim();
     const sortByParam = url.searchParams.get("sortBy") || "addedAt";
     const orderParam = url.searchParams.get("order") || "desc";
@@ -36,6 +37,8 @@ export async function GET(req: NextRequest) {
     if (watched === "false") where.watched = false;
     if (rated === "true") where.userRating = { not: null };
     if (rated === "false") where.userRating = null;
+    if (tracked === "true" && where.status === undefined) where.status = { not: null };
+    if (tracked === "false" && where.status === undefined) where.status = null;
 
     const isAnime = url.searchParams.get("isAnime");
     if (isAnime === "true") where.isAnime = true;
