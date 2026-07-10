@@ -2,9 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { tmdb } from "@/lib/tmdb";
+import {
+  availableEpisodeCountFromTmdb,
+  canonicalStateFromLegacy,
+  deriveSeriesProgressState,
+  trackingBucketForState,
+  type CanonicalMediaState,
+} from "@/lib/media-state";
+import { ensureCanonicalMedia, updateCanonicalMediaState } from "@/lib/media-repository";
 
 type CompletionInfo = {
   newStatus: "finished" | "uptodate" | "planned" | null;
+  libraryState: CanonicalMediaState;
   isEnded: boolean;
   showTmdbId: number;
   mediaId: string;
@@ -12,118 +21,78 @@ type CompletionInfo = {
 };
 
 /**
- * Auto-update the show's tracking status based on:
- *  - Number of watched episodes vs total available
- *  - TMDB show status (Ended/Canceled vs Returning Series/In Production)
- *
- * Rules:
- *  - All episodes watched AND show is Ended/Canceled  -> status = "finished" (+ prompt rating)
- *  - All episodes watched AND show is still ongoing    -> status = "uptodate"
- *  - Some episodes unwatched                           -> status = "planned" (back to watchlist)
- *  - Legacy "watched" status is migrated to "finished" or "uptodate" based on TMDB
- *
- * IMPORTANT: We never auto-set userRating. The client opens a RatingDialog when
- * needsRating === true so the user can choose a rating out of 100.
+ * Recomputes a show's canonical state after an episode mutation. Episode rows
+ * are facts; `Media.libraryState` is the single work-level state. A rating is
+ * never created, removed or interpreted as a watched signal here.
  */
 async function autoUpdateShowStatus(userId: string, showTmdbId: number): Promise<CompletionInfo | null> {
   try {
-    const media = await db.media.findFirst({
+    let media = await db.media.findFirst({
       where: { userId, tmdbId: showTmdbId, type: "series" },
     });
-    if (!media) return null;
+
+    let detail: any = null;
+    try {
+      detail = await tmdb.tvDetail(showTmdbId);
+    } catch (error) {
+      console.warn("[autoUpdateShowStatus] TMDB refresh failed; using stored totals", error);
+    }
+
+    // Episode facts must never exist without a canonical work-level row.
+    // This also supports marking an episode before pressing Follow.
+    if (!media) {
+      media = await ensureCanonicalMedia({
+        userId,
+        tmdbId: showTmdbId,
+        title: detail?.name || `TV ${showTmdbId}`,
+        type: "series",
+        poster: detail?.poster_path || null,
+        year: detail?.first_air_date ? String(detail.first_air_date).slice(0, 4) : null,
+        overview: detail?.overview || null,
+        rating: detail?.vote_average ?? null,
+        seasons: detail?.number_of_seasons ?? null,
+        episodes: detail?.number_of_episodes ?? null,
+        genres: Array.isArray(detail?.genres) ? detail.genres.map((genre: any) => genre?.name).filter(Boolean) : [],
+        isAnime: Array.isArray(detail?.origin_country) && detail.origin_country.includes("JP") &&
+          Array.isArray(detail?.genres) && detail.genres.some((genre: any) => Number(genre?.id) === 16),
+        initialState: "planned",
+      });
+    }
 
     const watchedCount = await db.watchedEpisode.count({
-      where: { userId, showId: showTmdbId },
+      where: { userId, showId: showTmdbId, seasonNumber: { gt: 0 } },
     });
 
-    // Fetch fresh show data from TMDB (status + total episodes)
-    let tmdbStatus: string | null = null;
-    let tmdbTotalEpisodes: number | null = null;
-    let tmdbSeasons: number | null = null;
-    try {
-      const showDetail = await tmdb.tvDetail(showTmdbId);
-      tmdbStatus = showDetail.status || null;
-      tmdbTotalEpisodes = showDetail.number_of_episodes || null;
-      tmdbSeasons = showDetail.number_of_seasons || null;
-    } catch (e) {
-      console.error("[autoUpdateShowStatus] TMDB fetch failed", e);
-    }
-
-    const effectiveTotal = tmdbTotalEpisodes ?? media.episodes ?? 0;
+    const tmdbStatus = detail?.status || null;
+    const totalEpisodes = detail?.number_of_episodes ?? media.episodes;
+    const totalSeasons = detail?.number_of_seasons ?? media.seasons;
     const isEnded = Boolean(tmdbStatus && /ended|canceled|cancelled/i.test(tmdbStatus));
+    const availableEpisodes = detail
+      ? availableEpisodeCountFromTmdb(detail)
+      : totalEpisodes;
 
-    const baseUpdate: any = {
-      episodes: tmdbTotalEpisodes ?? media.episodes,
-      seasons: tmdbSeasons ?? media.seasons,
+    const nextState = deriveSeriesProgressState({
+      currentState: canonicalStateFromLegacy(media),
+      watchedEpisodes: watchedCount,
+      totalEpisodes: isEnded ? totalEpisodes : availableEpisodes,
+      isEnded,
+      preserveManualCompletionWhenNoEpisodeFacts: false,
+    });
+
+    const updated = await updateCanonicalMediaState(media, nextState, {
+      completedAt: nextState === "completed" || nextState === "up_to_date" ? new Date() : null,
+      data: { episodes: totalEpisodes, seasons: totalSeasons },
+    });
+
+    const bucket = trackingBucketForState(nextState);
+    return {
+      newStatus: bucket === "finished" ? "finished" : bucket === "uptodate" ? "uptodate" : "planned",
+      libraryState: nextState,
+      isEnded,
+      showTmdbId,
+      mediaId: updated.id,
+      needsRating: nextState === "completed" && updated.userRating == null,
     };
-
-    // Case 1: All episodes watched
-    if (effectiveTotal > 0 && watchedCount >= effectiveTotal) {
-      const newStatus = isEnded ? "finished" : "uptodate";
-      const statusChanged = media.status !== newStatus;
-      const wasNotWatched = !media.watched;
-
-      const mustClearOngoingRating = newStatus === "uptodate" && media.userRating != null;
-
-      if (statusChanged || wasNotWatched || mustClearOngoingRating) {
-        await db.media.update({
-          where: { id: media.id },
-          data: {
-            ...baseUpdate,
-            watched: true,
-            status: newStatus,
-            watchedAt: media.watchedAt ?? new Date(),
-            // Rating is locked until the whole TV show has ended. If the show is only
-            // up to date / still airing, remove accidental legacy ratings.
-            ...(newStatus === "uptodate" ? { userRating: null } : {}),
-          },
-        });
-      }
-
-      // Only prompt for rating if the whole show is truly ended AND user hasn't rated yet.
-      const needsRating = isEnded && media.userRating == null;
-
-      return {
-        newStatus,
-        isEnded,
-        showTmdbId,
-        mediaId: media.id,
-        needsRating,
-      };
-    }
-
-    // Case 2: Some episodes unwatched — move back to watchlist (planned)
-    if (watchedCount === 0 && (media.watched || media.status === "finished" || media.status === "uptodate" || media.status === "watched")) {
-      await db.media.update({
-        where: { id: media.id },
-        data: {
-          ...baseUpdate,
-          watched: false,
-          status: "planned",
-          watchedAt: null,
-          // Keep existing rating — user might re-watch
-        },
-      });
-      return { newStatus: "planned", isEnded, showTmdbId, mediaId: media.id, needsRating: false };
-    }
-
-    // Case 3: Partially watched — make sure it's in watchlist (planned), not stuck in finished/uptodate
-    if (watchedCount > 0 && watchedCount < effectiveTotal &&
-        (media.status === "finished" || media.status === "uptodate" || media.status === "watched")) {
-      await db.media.update({
-        where: { id: media.id },
-        data: {
-          ...baseUpdate,
-          watched: false,
-          status: "planned",
-          watchedAt: null,
-        },
-      });
-      return { newStatus: "planned", isEnded, showTmdbId, mediaId: media.id, needsRating: false };
-    }
-
-    // No status change needed
-    return { newStatus: (media.status as any) ?? null, isEnded, showTmdbId, mediaId: media.id, needsRating: false };
   } catch (error) {
     console.error("[autoUpdateShowStatus]", error);
     return null;

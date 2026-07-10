@@ -48,7 +48,7 @@ async function main() {
   // Get all series with tmdbId
   const series = await db.media.findMany({
     where: { type: "series", tmdbId: { not: null } },
-    select: { id: true, tmdbId: true, title: true, isAnime: true, genres: true },
+    select: { id: true, tmdbId: true, title: true, isAnime: true, genresJson: true },
   });
   console.log(`[INFO] Found ${series.length} series to check`);
 
@@ -84,11 +84,11 @@ async function main() {
           }
           
           // Update genres if empty
-          if ((!s.genres || s.genres.length === 0) && details.genres) {
+          if ((!s.genresJson || s.genresJson === "[]") && details.genres) {
             await db.media.update({
               where: { id: s.id },
               data: { 
-                genres: details.genres.map((g: any) => g.name),
+                genresJson: JSON.stringify(details.genres.map((g: any) => g.name)),
                 isAnime 
               },
             });

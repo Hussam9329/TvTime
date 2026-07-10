@@ -1,102 +1,85 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
+// TVM-01: SQLite is the only supported database provider for this project.
+// The packaged runtime, local development and build pipeline all use the same
+// DATABASE_URL format: file:/absolute/or/relative/path.db
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id              String           @id @default(cuid())
-  name            String           @default("Cinephile")
-  avatar          String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id        String   @id @default(cuid())
+  name      String   @default("Cinephile")
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   media           Media[]
-  watchlistItems  WatchlistItem[]
-  watchedMovies   WatchedMovie[]
   watchedEpisodes WatchedEpisode[]
-  followingShows  FollowingShow[]
-  ratings         Rating[]
+
+  // Deprecated migration-only relations. Runtime library APIs never read or
+  // write these tables after TVM-01/02 canonicalization.
+  legacyWatchlistItems  WatchlistItem[]
+  legacyWatchedMovies   WatchedMovie[]
+  legacyFollowingShows  FollowingShow[]
+  legacyRatings         Rating[]
 }
 
-/// Canonical media record - tracks all types of media (movies, TV, books, games)
+/// Canonical source of truth for every tracked movie/show/book/game.
+///
+/// `libraryState` is the only authoritative work-level state:
+///   none | planned | watching | up_to_date | completed
+///
+/// `status` and `watched` are retained only as compatibility mirrors for old
+/// clients/backups. All server writes derive them from `libraryState`.
 model Media {
-  id             String   @id @default(cuid())
-  userId         String   @default("cinetrack_default")
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  tmdbId         Int?
-  title          String
-  originalTitle  String?
-  year           String?
-  type           String   // "movie" | "series" | "book" | "game"
-  poster         String?
-  rating         String?
-  overview       String?
-  genres         String[] @default([])
-  episodes       Int?
-  seasons        Int?
-  duration       String?
-  status         String?  // "planned" | "watched" | null
-  author         String?
-  pages          Int?
-  tags           String[] @default([])
-  notes          String?
-  watched        Boolean  @default(false)
-  watchedAt      DateTime?
-  userRating     Int?     // 0-100
-  rewatch        Boolean  @default(false)
-  runtime        Int?
-  ratingStatus   String?
-  isAnime        Boolean  @default(false)
-  addedAt        DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  tmdbId        Int?
+  title         String
+  originalTitle String?
+  year          String?
+  type          String
+  poster        String?
+  rating        String?
+  overview      String?
+  genresJson    String @default("[]") @map("genres")
+  episodes      Int?
+  seasons       Int?
+  duration      String?
+  author        String?
+  pages         Int?
+  tagsJson      String @default("[]") @map("tags")
+  notes         String?
+  rewatch       Boolean @default(false)
+  runtime       Int?
+  ratingStatus  String?
+  isAnime       Boolean @default(false)
 
+  libraryState String   @default("none")
+  stateChangedAt DateTime @default(now())
+  watchedAt    DateTime?
+  userRating   Int?
+
+  // Deprecated compatibility mirrors. Never query these as source of truth.
+  status  String?
+  watched Boolean @default(false)
+
+  addedAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, type, tmdbId])
   @@index([userId])
   @@index([userId, type])
-  @@index([userId, status])
-  @@index([userId, watched])
+  @@index([userId, libraryState])
   @@index([userId, userRating])
   @@index([userId, isAnime])
   @@index([tmdbId])
-}
-
-model WatchlistItem {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mediaType    String   // "movie" | "tv"
-  tmdbId       Int
-  title        String
-  posterPath   String?
-  backdropPath String?
-  overview     String?
-  releaseDate  String?
-  voteAverage  Float?
-  addedAt      DateTime @default(now())
-
-  @@unique([userId, mediaType, tmdbId])
-  @@index([userId])
-}
-
-model WatchedMovie {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tmdbId    Int
-  title     String
-  posterPath String?
-  runtime   Int?
-  watchedAt DateTime @default(now())
-
-  @@unique([userId, tmdbId])
-  @@index([userId])
 }
 
 model WatchedEpisode {
@@ -113,6 +96,50 @@ model WatchedEpisode {
   @@unique([userId, showId, seasonNumber, episodeNumber])
   @@index([userId])
   @@index([userId, showId])
+}
+
+model AppMeta {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Legacy migration-only models
+// ---------------------------------------------------------------------------
+// These tables remain mapped so existing SQLite files can be upgraded without
+// data loss. New application code must use Media + WatchedEpisode only.
+
+model WatchlistItem {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaType    String
+  tmdbId       Int
+  title        String
+  posterPath   String?
+  backdropPath String?
+  overview     String?
+  releaseDate  String?
+  voteAverage  Float?
+  addedAt      DateTime @default(now())
+
+  @@unique([userId, mediaType, tmdbId])
+  @@index([userId])
+}
+
+model WatchedMovie {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId     Int
+  title      String
+  posterPath String?
+  runtime    Int?
+  watchedAt  DateTime @default(now())
+
+  @@unique([userId, tmdbId])
+  @@index([userId])
 }
 
 model FollowingShow {
@@ -132,7 +159,7 @@ model Rating {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mediaType  String   // "movie" | "tv"
+  mediaType  String
   tmdbId     Int
   title      String
   posterPath String?

@@ -164,9 +164,9 @@ export function usePersonDetail(id: number | null) {
   });
 }
 
-// ---------- Library (Neon PostgreSQL backend) ----------
-// All tracking actions write directly to the Neon database via API routes.
-// This unifies the Home/Discover browsing with the Library view.
+// ---------- Library (canonical SQLite backend) ----------
+// Media.libraryState is the only source of truth for work-level tracking.
+// Ratings are independent metadata and never imply that an item was watched.
 
 // Re-export types for backwards compatibility
 export type WatchlistItemDB = MediaItemDB;
@@ -196,6 +196,7 @@ async function findOrCreateMedia(args: {
   rating?: number;
   runtime?: number | null;
   genres?: string[];
+  initialState?: "none" | "planned" | "watching" | "up_to_date" | "completed";
 }): Promise<string> {
   const posterUrl = args.poster
     ? (args.poster.startsWith("http")
@@ -215,6 +216,7 @@ async function findOrCreateMedia(args: {
       rating: args.rating,
       runtime: args.runtime,
       genres: args.genres,
+      initialState: args.initialState,
     }),
   });
   if (!res.ok) throw new Error("Failed to find-or-create media");
@@ -224,7 +226,7 @@ async function findOrCreateMedia(args: {
 
 // Compatibility mapper: converts a Media DB item to the shape that the
 // TMDB-style library hooks (useWatchlist, useWatchedMovies, etc.) used to
-// return when backed by localStorage. This keeps existing consumers working
+// return from the deprecated library table APIs. This keeps existing consumers working
 // without having to rewrite every call site.
 function mediaToLibraryCompat(m: any) {
   const mediaType = m.type === "series" ? "tv" : m.type;
@@ -241,14 +243,14 @@ function mediaToLibraryCompat(m: any) {
   };
 }
 
-// Watchlist - reads from Neon (status="planned")
+// Watchlist - canonical state: planned
 export function useWatchlist(mediaType?: "movie" | "tv") {
   const type = mediaType === "tv" ? "series" : mediaType || undefined;
   return useQuery({
     queryKey: ["media", "watchlist", type],
     queryFn: async () => {
       const url = withUserId(new URL("/api/media", window.location.origin));
-      url.searchParams.set("status", "planned");
+      url.searchParams.set("state", "planned");
       if (type) url.searchParams.set("type", type);
       const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
@@ -285,14 +287,15 @@ export function useWatchlistToggle() {
           overview: args.overview,
           rating: args.voteAverage,
           runtime: args.runtime,
+          initialState: "planned",
         });
         await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
-          body: JSON.stringify({ status: "planned", watched: false, userRating: null, watchedAt: null }),
+          body: JSON.stringify({ libraryState: "planned" }),
         });
       } else {
-        // Remove from watchlist: find by tmdbId and clear status
+        // Remove from watchlist: find by tmdbId and clear only the canonical planned state
         const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", args.mediaType === "tv" ? "series" : "movie");
         const res = await fetch(url, { headers: userHeaders() });
@@ -303,7 +306,7 @@ export function useWatchlistToggle() {
             await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
               method: "PATCH",
               headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ status: null, watched: false, userRating: null, watchedAt: null }),
+              body: JSON.stringify({ libraryState: "none" }),
             });
           }
         }
@@ -331,7 +334,7 @@ export type RecentlyWatchedItem = {
   episodeNumber?: number | null;
   episodeName?: string | null;
   hasProfile: boolean;
-  source: "media" | "watched-movie" | "watched-episode";
+  source: "media" | "watched-episode";
 };
 
 export function useRecentlyWatched(limit = 12) {
@@ -353,14 +356,14 @@ export function useRecentlyWatched(limit = 12) {
   });
 }
 
-// Watched Movies - reads from Neon (watched=true)
+// Watched Movies - canonical state: completed
 export function useWatchedMovies() {
   return useQuery({
     queryKey: ["media", "watched-movies"],
     queryFn: async () => {
       const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "movie");
-      url.searchParams.set("watched", "true");
+      url.searchParams.set("state", "completed");
       // Sort by watchedAt desc so the "Recently Watched" row reflects recency,
       // matching the section name on the home page.
       url.searchParams.set("sortBy", "watchedAt");
@@ -398,14 +401,15 @@ export function useWatchedMovieToggle() {
           overview: args.overview,
           rating: args.voteAverage,
           runtime: args.runtime,
+          initialState: "completed",
         });
         await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
-          body: JSON.stringify({ watched: true, watchedAt: new Date().toISOString(), status: "watched" }),
+          body: JSON.stringify({ libraryState: "completed", watchedAt: new Date().toISOString() }),
         });
       } else {
-        // Remove from watched: clear rating and watched status
+        // Unwatch moves the movie back to planned; the independent rating is preserved.
         const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", "movie");
         const res = await fetch(url, { headers: userHeaders() });
@@ -416,7 +420,7 @@ export function useWatchedMovieToggle() {
             await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
               method: "PATCH",
               headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ watched: false, userRating: null, watchedAt: null, status: null }),
+              body: JSON.stringify({ libraryState: "planned" }),
             });
           }
         }
@@ -436,6 +440,7 @@ export function useWatchedMovieToggle() {
 // The client uses this to decide whether to open the RatingDialog.
 export type EpisodeCompletion = {
   newStatus: "finished" | "uptodate" | "planned" | null;
+  libraryState?: "none" | "planned" | "watching" | "up_to_date" | "completed";
   isEnded: boolean;
   showTmdbId: number;
   mediaId: string;
@@ -527,14 +532,14 @@ export function useBulkEpisodeToggle() {
   });
 }
 
-// Following - reads from Neon (type="series", status="planned")
+// Following - every actively tracked series, regardless of progress
 export function useFollowing() {
   return useQuery({
     queryKey: ["media", "following"],
     queryFn: async () => {
       const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "series");
-      url.searchParams.set("status", "planned");
+      url.searchParams.set("state", "planned,watching,up_to_date,completed");
       const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
       const data = await res.json();
@@ -552,6 +557,7 @@ export function useTrackedShows() {
     queryFn: async () => {
       const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "series");
+      url.searchParams.set("active", "true");
       url.searchParams.set("limit", "500");
       const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) return { items: [] };
@@ -577,8 +583,9 @@ export function useFollowingToggle() {
           year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
           overview: args.overview,
           rating: args.voteAverage,
+          initialState: "planned",
         });
-        // Only set status to "planned" if not already watched
+        // Only promote an untracked row to planned; never downgrade progress.
         const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", "series");
         url.searchParams.set("limit", "500");
@@ -586,16 +593,16 @@ export function useFollowingToggle() {
         if (res.ok) {
           const data = await res.json();
           const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
-          if (item && !item.watched && !item.userRating) {
+          if (item && item.libraryState === "none") {
             await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
               method: "PATCH",
               headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ status: "planned" }),
+              body: JSON.stringify({ libraryState: "planned" }),
             });
           }
         }
       } else {
-        // Unfollow: only clear status if not watched, keep watched/rating intact
+        // Unfollow clears tracking state but preserves the independent rating
         const url = withUserId(new URL("/api/media", window.location.origin));
         url.searchParams.set("type", "series");
         url.searchParams.set("limit", "500");
@@ -604,14 +611,11 @@ export function useFollowingToggle() {
           const data = await res.json();
           const item = data.items?.find((i: any) => i.tmdbId === args.tmdbId);
           if (item) {
-            // Only clear status if the show is not watched
-            if (!item.watched) {
-              await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json", ...userHeaders() },
-                body: JSON.stringify({ status: null }),
-              });
-            }
+            await fetch(withUserId(new URL(`/api/media/${item.id}`, window.location.origin)), {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", ...userHeaders() },
+              body: JSON.stringify({ libraryState: "none" }),
+            });
           }
         }
       }
@@ -625,7 +629,7 @@ export function useFollowingToggle() {
   });
 }
 
-// Ratings - reads from Neon (userRating != null)
+// Ratings - independent of tracking state (userRating != null)
 export function useRatings(mediaType?: "movie" | "tv") {
   const type = mediaType === "tv" ? "series" : mediaType || undefined;
   return useQuery({
@@ -648,7 +652,7 @@ export function useRatingMutate() {
   return useMutation({
     mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null }) => {
       if (args.action === "set") {
-        // Find-or-create, then set rating (0-100 directly) + watched
+        // Find-or-create a rating-only row when needed, then set 0-100 rating
         const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title || "Unknown",
@@ -658,15 +662,13 @@ export function useRatingMutate() {
           overview: args.overview,
           rating: args.voteAverage,
           runtime: args.runtime,
+          initialState: "none",
         });
         const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({
-            userRating: args.value, // stored as 0-100 directly
-            watched: true,
-            watchedAt: new Date().toISOString(),
-            // Preserve existing status (finished/uptodate) — don't override
+            userRating: args.value, // stored as 0-100; tracking state is unchanged
           }),
         });
         if (!patchRes.ok) {
@@ -700,7 +702,7 @@ export function useRatingMutate() {
   });
 }
 
-// Stats - reads from Neon via library/stats endpoint (includes Media + watched episodes)
+// Stats - reads from the canonical Media + WatchedEpisode tables
 export function useStats() {
   const userId = useNav((s) => s.userId);
   return useQuery({
@@ -883,9 +885,10 @@ export function useShowProgress(showId: number | null | undefined) {
   };
 }
 
-// ---------- Media (Neon PostgreSQL backend) ----------
+// ---------- Media (canonical SQLite backend) ----------
 export interface MediaItemDB {
   id: string;
+  tmdbId: number | null;
   title: string;
   originalTitle: string | null;
   year: string | null;
@@ -897,7 +900,9 @@ export interface MediaItemDB {
   episodes: number | null;
   seasons: number | null;
   duration: string | null;
+  libraryState: "none" | "planned" | "watching" | "up_to_date" | "completed";
   status: string | null;
+  isTracked: boolean;
   author: string | null;
   pages: number | null;
   tags: string[];
@@ -921,6 +926,9 @@ export interface MediaStats {
     books: number;
     games: number;
     rated: number;
+    ratedMovies?: number;
+    ratedShows?: number;
+    ratedAnime?: number;
     watched: number;
     planned: number;
     watchlist?: number;
@@ -933,6 +941,8 @@ export interface MediaStats {
     watchedEpisodes?: number;
     following?: number;
     ratings?: number;
+    watching?: number;
+    upToDate?: number;
   };
   ratingDist: { value: number; count: number }[];
   typeDist: { type: string; count: number }[];
@@ -957,6 +967,8 @@ async function mediaGet<T>(path: string, params?: Record<string, string | number
 
 export function useMedia(params: {
   type?: string;
+  state?: string;
+  active?: string;
   status?: string;
   watched?: string;
   rated?: string;
@@ -987,6 +999,7 @@ export function useMediaUpdate() {
     mutationFn: async (args: {
       id: string;
       userRating?: number | null;
+      libraryState?: "none" | "planned" | "watching" | "up_to_date" | "completed";
       watched?: boolean;
       watchedAt?: string | null;
       isAnime?: boolean;

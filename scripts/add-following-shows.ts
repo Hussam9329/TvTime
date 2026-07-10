@@ -1,5 +1,6 @@
 // Add TV shows as following (not started, no episodes watched)
 import { PrismaClient } from '@prisma/client';
+import { compatibilityFieldsForState } from '../src/lib/media-state';
 
 const db = new PrismaClient({ log: ['error'] });
 const TMDB_API_KEY = "8265bd1679663a7ea12ac168da84d2e8";
@@ -74,6 +75,11 @@ const SHOWS = [
 ];
 
 async function main() {
+  const user = await db.user.upsert({
+    where: { id: "cinetrack_default" },
+    create: { id: "cinetrack_default", name: "Cinephile" },
+    update: {},
+  });
   console.log(`[START] Adding ${SHOWS.length} shows as following...`);
   let added = 0, updated = 0, notFound = 0;
 
@@ -98,41 +104,39 @@ async function main() {
       const details = await getShowDetails(tmdbId);
       const totalEpisodes = details?.number_of_episodes || null;
       const seasons = details?.number_of_seasons || null;
-      const status = details?.status || null;
       const genres = details?.genres?.map((g: any) => g.name) || [];
 
-      const existing = await db.media.findFirst({ where: { tmdbId } });
+      const existing = await db.media.findFirst({ where: { userId: user.id, tmdbId, type: "series" } });
 
       if (existing) {
-        // Update as following (planned) - DON'T overwrite if already watched
-        if (!existing.watched) {
-          await db.media.update({
-            where: { id: existing.id },
-            data: {
-              status: "planned",
-              watched: false,
-              isAnime: anime || existing.isAnime,
-              poster: poster || existing.poster,
-              overview: overview || existing.overview,
-              rating: rating || existing.rating,
-              episodes: totalEpisodes || existing.episodes,
-              seasons: seasons || existing.seasons,
-              genres: genres.length > 0 ? genres : existing.genres,
-            },
-          });
-          updated++;
-        }
+        const shouldTrackAsPlanned = existing.libraryState === "none";
+        await db.media.update({
+          where: { id: existing.id },
+          data: {
+            ...(shouldTrackAsPlanned
+              ? compatibilityFieldsForState("planned", "series", { currentWatchedAt: existing.watchedAt })
+              : {}),
+            isAnime: anime || existing.isAnime,
+            poster: poster || existing.poster,
+            overview: overview || existing.overview,
+            rating: rating || existing.rating,
+            episodes: totalEpisodes || existing.episodes,
+            seasons: seasons || existing.seasons,
+            genresJson: genres.length > 0 ? JSON.stringify(genres) : existing.genresJson,
+          },
+        });
+        updated++;
       } else {
         const id = `tmdb_${tmdbId}_following`;
         await db.media.create({
           data: {
-            id, tmdbId, title, type: "series",
-            poster, year, overview, rating, genres,
+            id, userId: user.id, tmdbId, title, type: "series",
+            poster, year, overview, rating,
+            genresJson: JSON.stringify(genres),
             episodes: totalEpisodes, seasons,
-            status: "planned",
-            watched: false,
             isAnime: anime,
-            tags: ["following"],
+            tagsJson: JSON.stringify(["following"]),
+            ...compatibilityFieldsForState("planned", "series"),
           },
         });
         added++;

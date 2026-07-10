@@ -24,8 +24,8 @@ export function RatingDialog({ open, onOpenChange, title, poster, onRate }: Rati
   const [submitting, setSubmitting] = useState(false);
 
   // Reset to neutral default each time the dialog opens, so a previous rating
-  // doesn't leak into the next session.
-  // (Adjust state when prop changes pattern — fires when `open` toggles true.)
+  // doesn't leak into the next session. Uses the "adjust state during render"
+  // pattern (no setState-in-effect lint violation).
   const [lastOpen, setLastOpen] = useState(open);
   if (open !== lastOpen) {
     setLastOpen(open);
@@ -52,10 +52,10 @@ export function RatingDialog({ open, onOpenChange, title, poster, onRate }: Rati
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> Mark as watched & rate
+            <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> Rate this title
           </DialogTitle>
           <DialogDescription>
-            Saving will mark this as watched and store your rating out of 100. Drag the slider or pick a preset.
+            Saving stores only your rating out of 100. It does not change Watchlist, Watching, Up To Date, or Completed state.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useMedia, useMediaStats, type MediaItemDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, BookOpen, Gamepad2, Star, Clock, Check, Search, ArrowUpDown, Database } from "lucide-react";
+import { Film, Tv, BookOpen, Gamepad2, Star, Search, ArrowUpDown, Database } from "lucide-react";
 import { motion } from "framer-motion";
 import { SafeImage } from "@/components/media/safe-image";
 
@@ -22,7 +22,7 @@ export function MediaView() {
   const [type, setType] = useState<string>("");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("addedAt");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [stateFilter, setStateFilter] = useState<string>("");
   const [showRatedOnly, setShowRatedOnly] = useState(false);
   const [page, setPage] = useState(0);
   const limit = 60;
@@ -31,7 +31,7 @@ export function MediaView() {
 
   const media = useMedia({
     type: type || undefined,
-    status: statusFilter || undefined,
+    state: stateFilter || undefined,
     rated: showRatedOnly ? "true" : undefined,
     search: debouncedSearch || undefined,
     sortBy,
@@ -56,7 +56,7 @@ export function MediaView() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">My Media Collection</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {stats.data ? `${stats.data.counts.total} items` : "Loading..."} from your Neon database
+            {stats.data ? `${stats.data.counts.total} items` : "Loading..."} from your canonical SQLite library
           </p>
         </div>
       </div>
@@ -128,14 +128,18 @@ export function MediaView() {
           </div>
           <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
             {[
-              { v: "", l: "All" },
+              { v: "", l: "All states" },
               { v: "planned", l: "Planned" },
+              { v: "watching", l: "Watching" },
+              { v: "up_to_date", l: "Up to date" },
+              { v: "completed", l: "Completed" },
+              { v: "none", l: "Untracked" },
             ].map((opt) => (
               <button
                 key={opt.v}
-                onClick={() => { setStatusFilter(opt.v); setPage(0); }}
+                onClick={() => { setStateFilter(opt.v); setPage(0); }}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                  statusFilter === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  stateFilter === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {opt.l}
@@ -245,19 +249,12 @@ function MediaCard({ item, index }: { item: MediaItemDB; index: number }) {
             </div>
           )}
 
-          {/* watched badge */}
-          {item.watched && (
+          {/* canonical state badge */}
+          {item.libraryState !== "none" && (
             <div className="absolute top-10 right-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-600/90 backdrop-blur flex items-center justify-center" title="Watched">
-                <Check className="w-3.5 h-3.5 text-white" />
-              </span>
-            </div>
-          )}
-
-          {/* planned badge */}
-          {item.status === "planned" && !item.watched && (
-            <div className="absolute top-10 right-2">
-              <Badge className="bg-blue-500/90 text-white border-0 text-[9px] h-5 px-1.5">PLAN</Badge>
+              <Badge className="bg-background/85 backdrop-blur text-foreground border-0 text-[9px] h-5 px-1.5">
+                {item.libraryState === "completed" ? "COMPLETED" : item.libraryState === "up_to_date" ? "UP TO DATE" : item.libraryState === "watching" ? "WATCHING" : "PLANNED"}
+              </Badge>
             </div>
           )}
 
@@ -283,7 +280,7 @@ function MediaCard({ item, index }: { item: MediaItemDB; index: number }) {
 // Simple debounce hook
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
-  useMemo(() => {
+  useEffect(() => {
     const timer = setTimeout(() => setDebounced(value), delay);
     return () => clearTimeout(timer);
   }, [value, delay]);

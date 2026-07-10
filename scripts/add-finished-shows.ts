@@ -1,5 +1,6 @@
-// Add TV shows as finished/watched to Neon database
+// Add TV shows as completed in the canonical SQLite Media table
 import { PrismaClient } from '@prisma/client';
+import { compatibilityFieldsForState } from '../src/lib/media-state';
 
 const db = new PrismaClient({ log: ['error'] });
 const TMDB_API_KEY = "8265bd1679663a7ea12ac168da84d2e8";
@@ -153,6 +154,11 @@ async function getShowDetails(tmdbId: number): Promise<any | null> {
 }
 
 async function main() {
+  const user = await db.user.upsert({
+    where: { id: "cinetrack_default" },
+    create: { id: "cinetrack_default", name: "Cinephile" },
+    update: {},
+  });
   console.log(`[START] Adding ${SHOWS.length} TV shows as finished...`);
   
   let added = 0;
@@ -185,40 +191,36 @@ async function main() {
       const details = await getShowDetails(tmdbId);
       const totalEpisodes = details?.number_of_episodes || null;
       const seasons = details?.number_of_seasons || null;
-      const status = details?.status || null;
       const genres = details?.genres?.map((g: any) => g.name) || [];
 
       const id = `tmdb_${tmdbId}_finished`;
 
       // Check if already exists
       const existing = await db.media.findFirst({
-        where: { tmdbId },
+        where: { userId: user.id, tmdbId, type: "series" },
       });
 
       if (existing) {
-        // Update as finished
         await db.media.update({
           where: { id: existing.id },
           data: {
-            watched: true,
-            watchedAt: new Date(),
-            userRating: existing.userRating || 75, // keep existing rating or default 75
-            status: "watched",
+            ...compatibilityFieldsForState("completed", "series", { currentWatchedAt: existing.watchedAt }),
+            // Completion and rating are independent. Never invent a rating.
             poster: poster || existing.poster,
             overview: overview || existing.overview,
             rating: rating || existing.rating,
             episodes: totalEpisodes || existing.episodes,
             seasons: seasons || existing.seasons,
-            genres: genres.length > 0 ? genres : existing.genres,
+            genresJson: genres.length > 0 ? JSON.stringify(genres) : existing.genresJson,
             isAnime: anime || existing.isAnime,
           },
         });
         updated++;
       } else {
-        // Create new
         await db.media.create({
           data: {
             id,
+            userId: user.id,
             tmdbId,
             title,
             type: "series",
@@ -226,15 +228,12 @@ async function main() {
             year,
             overview,
             rating,
-            genres,
+            genresJson: JSON.stringify(genres),
             episodes: totalEpisodes,
             seasons,
-            status: "watched",
-            watched: true,
-            watchedAt: new Date(),
-            userRating: 75, // default rating
             isAnime: anime,
-            tags: ["finished"],
+            tagsJson: JSON.stringify(["finished"]),
+            ...compatibilityFieldsForState("completed", "series"),
           },
         });
         added++;

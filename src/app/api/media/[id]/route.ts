@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMedia } from "@/lib/media-normalize";
+import { canonicalStateFromLegacy, compatibilityFieldsForState, stateFromPatch } from "@/lib/media-state";
 import { tmdb } from "@/lib/tmdb";
 
 function isEndedTvStatus(status?: string | null) {
@@ -9,7 +10,12 @@ function isEndedTvStatus(status?: string | null) {
   return normalized === "ended" || normalized === "canceled" || normalized === "cancelled";
 }
 
-async function getTvRatingEligibility(userId: string, tmdbId: number | null | undefined, fallbackTotalEpisodes?: number | null) {
+async function getTvRatingEligibility(
+  userId: string,
+  tmdbId: number | null | undefined,
+  canonicalState: string,
+  fallbackTotalEpisodes?: number | null,
+) {
   if (!tmdbId) return { allowed: false, reason: "missing-tmdb-id", totalEpisodes: 0, watchedEpisodes: 0 };
 
   try {
@@ -18,9 +24,14 @@ async function getTvRatingEligibility(userId: string, tmdbId: number | null | un
       return { allowed: false, reason: "show-not-ended", totalEpisodes: detail?.number_of_episodes ?? fallbackTotalEpisodes ?? 0, watchedEpisodes: 0 };
     }
 
+    const watchedEpisodes = await db.watchedEpisode.count({
+      where: { userId, showId: Number(tmdbId), seasonNumber: { gt: 0 } },
+    });
     const totalEpisodes = Number(detail?.number_of_episodes ?? fallbackTotalEpisodes ?? 0);
-    const watchedEpisodes = await db.watchedEpisode.count({ where: { userId, showId: Number(tmdbId) } });
-    if (totalEpisodes > 0 && watchedEpisodes < totalEpisodes) {
+
+    // Media.libraryState is authoritative. Episode rows support progress and
+    // diagnostics, but a rating must never be used to infer completion.
+    if (canonicalState !== "completed") {
       return { allowed: false, reason: "not-fully-watched", totalEpisodes, watchedEpisodes };
     }
 
@@ -33,28 +44,32 @@ async function getTvRatingEligibility(userId: string, tmdbId: number | null | un
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
     const user = await getOrCreateUser(parseUserId(req));
     const body = await req.json();
 
+    const existing = await db.media.findFirst({ where: { id, userId: user.id } });
+    if (!existing) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
+
     const data: any = {};
-    if (body.userRating !== undefined) data.userRating = body.userRating === null ? null : Math.max(0, Math.min(100, Number(body.userRating)));
-    if (body.watched !== undefined) data.watched = Boolean(body.watched);
-    if (body.watchedAt !== undefined) data.watchedAt = body.watchedAt ? new Date(body.watchedAt) : null;
+    if (body.userRating !== undefined) {
+      data.userRating = body.userRating === null ? null : Math.max(0, Math.min(100, Number(body.userRating)));
+    }
     if (body.isAnime !== undefined) data.isAnime = Boolean(body.isAnime);
-    if (body.status !== undefined) data.status = body.status;
     if (body.ratingStatus !== undefined) data.ratingStatus = body.ratingStatus;
     if (body.notes !== undefined) data.notes = body.notes || null;
     if (body.rewatch !== undefined) data.rewatch = Boolean(body.rewatch);
 
-    const existing = await db.media.findFirst({ where: { id, userId: user.id } });
-    if (!existing) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
-
     if (existing.type === "series" && data.userRating != null) {
-      const eligibility = await getTvRatingEligibility(user.id, existing.tmdbId, existing.episodes);
+      const eligibility = await getTvRatingEligibility(
+        user.id,
+        existing.tmdbId,
+        canonicalStateFromLegacy(existing),
+        existing.episodes,
+      );
       if (!eligibility.allowed) {
         const isNotFullyWatched = eligibility.reason === "not-fully-watched";
         return NextResponse.json(
@@ -66,9 +81,24 @@ export async function PATCH(
             totalEpisodes: eligibility.totalEpisodes,
             watchedEpisodes: eligibility.watchedEpisodes,
           },
-          { status: 409 }
+          { status: 409 },
         );
       }
+    }
+
+    const nextState = stateFromPatch(existing, body);
+    const stateWasAddressed = ["libraryState", "status", "watched", "watchedAt"].some((key) =>
+      Object.prototype.hasOwnProperty.call(body, key),
+    );
+
+    if (stateWasAddressed || existing.libraryState !== nextState) {
+      Object.assign(
+        data,
+        compatibilityFieldsForState(nextState, existing.type, {
+          currentWatchedAt: existing.watchedAt,
+          completedAt: body.watchedAt || null,
+        }),
+      );
     }
 
     const item = await db.media.update({ where: { id }, data });
@@ -81,7 +111,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;

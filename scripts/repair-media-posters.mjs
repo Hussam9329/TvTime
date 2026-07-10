@@ -4,71 +4,40 @@ const prisma = new PrismaClient();
 const TMDB_API_KEY = process.env.TMDB_API_KEY || "8265bd1679663a7ea12ac168da84d2e8";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
-async function tmdbMovie(tmdbId) {
-  const url = new URL(`${TMDB_BASE_URL}/movie/${tmdbId}`);
+async function tmdbDetails(type, tmdbId) {
+  const endpoint = type === "series" ? "tv" : "movie";
+  const url = new URL(`${TMDB_BASE_URL}/${endpoint}/${tmdbId}`);
   url.searchParams.set("api_key", TMDB_API_KEY);
   url.searchParams.set("language", "en-US");
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`TMDB ${res.status} for movie ${tmdbId}`);
-  return res.json();
-}
-
-async function safeUpdate(tableName, action) {
-  try {
-    return await action();
-  } catch (error) {
-    const message = String(error?.message || error);
-    if (message.includes("does not exist") || message.includes("Unknown arg") || message.includes("Cannot read properties of undefined")) {
-      console.log(`skip ${tableName}: table/model not available in this build`);
-      return 0;
-    }
-    throw error;
-  }
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`TMDB ${response.status} for ${endpoint} ${tmdbId}`);
+  return response.json();
 }
 
 async function main() {
+  const media = await prisma.media.findMany({
+    where: { type: { in: ["movie", "series"] }, tmdbId: { not: null } },
+    select: { id: true, tmdbId: true, title: true, type: true, poster: true },
+  });
+
   let fixed = 0;
-  const watchedMovies = await safeUpdate("watchedMovie", () => prisma.watchedMovie.findMany({
-    select: { id: true, tmdbId: true, title: true, posterPath: true },
-  })) || [];
-
-  const mediaMovies = await safeUpdate("media", () => prisma.media.findMany({
-    where: { type: "movie", tmdbId: { not: null } },
-    select: { id: true, tmdbId: true, title: true, poster: true },
-  })) || [];
-
-  const tmdbIds = [...new Set([...watchedMovies, ...mediaMovies].map((item) => item.tmdbId).filter(Boolean))];
-  const posterByTmdbId = new Map();
-
-  for (const tmdbId of tmdbIds) {
+  for (const item of media) {
     try {
-      const movie = await tmdbMovie(tmdbId);
-      posterByTmdbId.set(tmdbId, movie.poster_path || null);
+      const details = await tmdbDetails(item.type, item.tmdbId);
+      const poster = details.poster_path
+        ? `https://image.tmdb.org/t/p/w500${details.poster_path}`
+        : null;
+      if (poster && poster !== item.poster) {
+        await prisma.media.update({ where: { id: item.id }, data: { poster } });
+        fixed += 1;
+        console.log(`fixed media poster: ${item.title} (${item.tmdbId})`);
+      }
     } catch (error) {
-      console.warn(`could not fetch movie ${tmdbId}: ${error.message}`);
+      console.warn(`could not repair ${item.title}: ${error.message}`);
     }
   }
 
-  for (const item of watchedMovies) {
-    const posterPath = posterByTmdbId.get(item.tmdbId);
-    if (posterPath && item.posterPath !== posterPath) {
-      await prisma.watchedMovie.update({ where: { id: item.id }, data: { posterPath } });
-      fixed++;
-      console.log(`fixed watched movie poster: ${item.title} (${item.tmdbId})`);
-    }
-  }
-
-  for (const item of mediaMovies) {
-    const posterPath = posterByTmdbId.get(item.tmdbId);
-    const poster = posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : null;
-    if (poster && item.poster !== poster) {
-      await prisma.media.update({ where: { id: item.id }, data: { poster } });
-      fixed++;
-      console.log(`fixed media poster: ${item.title} (${item.tmdbId})`);
-    }
-  }
-
-  console.log(`poster repair complete: ${fixed} row(s) updated`);
+  console.log(`poster repair complete: ${fixed} canonical Media row(s) updated`);
 }
 
 main()
