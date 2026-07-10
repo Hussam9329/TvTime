@@ -318,6 +318,41 @@ export function useWatchlistToggle() {
   });
 }
 
+
+export type RecentlyWatchedItem = {
+  id: string;
+  kind: "movie" | "tv";
+  tmdbId: number | null;
+  title: string;
+  posterPath: string | null;
+  watchedAt: string;
+  subtitle?: string | null;
+  seasonNumber?: number | null;
+  episodeNumber?: number | null;
+  episodeName?: string | null;
+  hasProfile: boolean;
+  source: "media" | "watched-movie" | "watched-episode";
+};
+
+export function useRecentlyWatched(limit = 12) {
+  return useQuery({
+    queryKey: ["media", "recently", limit],
+    queryFn: async () => {
+      const url = withUserId(new URL("/api/media/recently", window.location.origin));
+      url.searchParams.set("limit", String(limit));
+      const res = await fetch(url, { headers: userHeaders() });
+      if (!res.ok) return { items: [] as RecentlyWatchedItem[], total: 0 };
+      const data = await res.json();
+      return {
+        items: (data.items || []) as RecentlyWatchedItem[],
+        total: Number(data.total || data.items?.length || 0),
+      };
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 // Watched Movies - reads from Neon (watched=true)
 export function useWatchedMovies() {
   return useQuery({

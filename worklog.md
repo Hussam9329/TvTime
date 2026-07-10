@@ -632,3 +632,47 @@ Stage Summary:
   - New show just followed → purple "Watchlist" badge
 - Filter chips let users drill into a specific status without leaving the tab
 - Existing tabs (Watchlist / Up To Date / Finished / etc.) remain unchanged
+
+---
+Task ID: recently-profile-click-fix
+Agent: main
+Task: Apply patch tvtime_recently_profile_click_fix — fix Recently Watched opening empty/failed profiles
+
+Work Log:
+- Inspected uploaded zip (DIFF + PATCH_NOTES + AGENT_PROMPT)
+- Verified repo state: home-view.tsx import line matched patch context exactly, use-tmdb.ts context matched
+- Applied patch with `patch -p1 < DIFF_recently_profile_click_fix.patch` — applied cleanly with no fuzz/rejects to all 3 files:
+  - src/app/api/media/recently/route.ts (new file, 149 lines)
+  - src/components/views/home-view.tsx (modified)
+  - src/hooks/use-tmdb.ts (modified)
+- Ran `bun install` + `bunx prisma generate` (db:sync equivalent — schema unchanged, just regenerated client)
+- TypeScript checks pass (`tsc --noEmit`)
+- ESLint checks pass
+- Production build succeeds — `/api/media/recently` registered as serverless route
+
+Changes applied (per PATCH_NOTES):
+- Added `GET /api/media/recently` — one fast canonical source merging:
+  - Media watched movies (type=movie, watched=true)
+  - Legacy WatchedMovie rows
+  - Latest watched TV episodes (with show title/poster resolved via Media + FollowingShow)
+- Each item includes `kind` ("movie"|"tv"), `tmdbId`, `hasProfile` (true only when tmdbId is valid), `watchedAt`, `subtitle` (e.g. "S2 • E5" for TV episodes)
+- Added `useRecentlyWatched(limit=12)` hook in use-tmdb.ts with 30s staleTime
+- Rewrote `RecentlyWatched` component in home-view.tsx:
+  - Now uses useRecentlyWatched instead of useWatchedMovies
+  - Skeleton loading state (6 shimmer cards) while fetching
+  - Returns null when empty (no section header)
+- Rewrote `RecentlyWatchedCard`:
+  - Validates tmdbId + hasProfile before navigating; shows toast error if invalid
+  - Routes to goMovie (kind=movie) or goTv (kind=tv)
+  - Cards without hasProfile are aria-disabled and don't navigate
+  - Badge shows "Movie" or "TV" instead of just a check
+  - Eager image loading with fetchPriority="high" to avoid Chromium lazy-placeholder intervention
+  - Unwatch (×) button only shows for movies (episode unwatching handled from TV profile)
+  - Subtitle line shows "S2 • E5 • <date>" for TV episodes
+
+Stage Summary:
+- Recently Watched now opens valid movie/TV profiles reliably — no more empty/failed profile loads
+- TV episodes appear alongside movies in Recently Watched (previously movies only)
+- Invalid legacy/manual items (no tmdbId) are visually disabled instead of navigating to a broken profile
+- Image loading intervention reduced via eager loading + fetch priority
+- Skeleton state added for better loading UX
