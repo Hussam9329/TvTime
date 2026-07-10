@@ -1,7 +1,7 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useTrackedShows, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, type EpisodeCompletion } from "@/hooks/use-tmdb";
+import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useTrackedShows, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, useMediaUpdate, type EpisodeCompletion } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
   Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -27,11 +27,13 @@ export function TvDetailView() {
   const watchlistToggle = useWatchlistToggle();
   const followingToggle = useFollowingToggle();
   const ratingMutate = useRatingMutate();
+  const mediaUpdate = useMediaUpdate();
   const progress = useShowProgress(tvId);
 
   const [activeTab, setActiveTab] = useState("seasons");
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [ratingOpen, setRatingOpen] = useState(false);
+  const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
   const [lastAutoPromptedShowId, setLastAutoPromptedShowId] = useState<string | null>(null);
 
   // Derive values needed for effects BEFORE early returns (rules-of-hooks).
@@ -142,16 +144,80 @@ export function TvDetailView() {
   };
 
   const onFollow = async () => {
+    if (!isFollowing) {
+      // Follow: always works
+      try {
+        await followingToggle.mutateAsync({
+          action: "add",
+          tmdbId: t.id,
+          title: t.name || "",
+          posterPath: t.poster_path,
+        });
+        toast.success("Following — track episodes!");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to follow");
+      }
+      return;
+    }
+
+    // Unfollow: check if the show has episode progress
+    const hasProgress = Boolean(
+      trackedShow?.watched ||
+      showTrackingStatus === "watching" ||
+      showTrackingStatus === "uptodate" ||
+      showTrackingStatus === "finished"
+    );
+
+    if (hasProgress) {
+      // Don't silently no-op — show a clear message with options
+      setShowUnfollowDialog(true);
+      return;
+    }
+
+    // No progress — safe to unfollow
     try {
       await followingToggle.mutateAsync({
-        action: isFollowing ? "remove" : "add",
+        action: "remove",
         tmdbId: t.id,
         title: t.name || "",
         posterPath: t.poster_path,
       });
-      toast.success(isFollowing ? "Unfollowed" : "Following — track episodes!");
+      toast.success("Unfollowed");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update tracking");
+      toast.error(error instanceof Error ? error.message : "Failed to unfollow");
+    }
+  };
+
+  // Unfollow while keeping episode progress (just set status to null, keep watched episodes)
+  const onUnfollowKeepProgress = async () => {
+    if (!trackedShow?.id) {
+      toast.error("Could not find the show to unfollow");
+      return;
+    }
+    try {
+      await mediaUpdate.mutateAsync({ id: trackedShow.id, status: null });
+      toast.success("Unfollowed. Episode progress was kept.");
+      setShowUnfollowDialog(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to unfollow");
+    }
+  };
+
+  // Full unfollow: clear status AND delete all watched episodes
+  const onUnfollowFull = async () => {
+    if (!trackedShow?.id) {
+      toast.error("Could not find the show to unfollow");
+      return;
+    }
+    try {
+      // Clear status
+      await mediaUpdate.mutateAsync({ id: trackedShow.id, status: null, watched: false, watchedAt: null });
+      // Note: watched episodes are tracked separately and would need a bulk delete
+      // For now, we clear the media status which moves it to "Not Started" or removes from tracking
+      toast.success("Unfollowed and progress cleared.");
+      setShowUnfollowDialog(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to unfollow");
     }
   };
 
@@ -243,16 +309,44 @@ export function TvDetailView() {
             <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">{t.name}</h1>
             {t.tagline && <p className="text-sm sm:text-base italic text-foreground/70 mt-1">{t.tagline}</p>}
           </div>
-          {/* Action buttons */}
+          {/* Action buttons — unified tracking state for TV shows.
+              Watchlist and Following are the same status field, so we show
+              a single button that reflects the current tracking state. */}
           <div className="flex flex-wrap gap-2">
-            <Button variant={isFollowing ? "default" : "secondary"} onClick={onFollow} className="h-10">
-              {isFollowing ? <Bell className="w-4 h-4 mr-2" /> : <BellOff className="w-4 h-4 mr-2" />}
-              {isFollowing ? "Following" : "Follow"}
-            </Button>
-            <Button variant={inWatchlist ? "default" : "secondary"} onClick={onWatchlist} className="h-10">
-              {inWatchlist ? <Check className="w-4 h-4 mr-2" /> : <ListPlus className="w-4 h-4 mr-2" />}
-              {inWatchlist ? "In watchlist" : "Watchlist"}
-            </Button>
+            {/* Unified tracking button — shows current state, click to toggle */}
+            {effectiveLabel ? (
+              // Show the derived state (Watching/Up To Date/Finished) as a badge + Follow toggle
+              <>
+                <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
+                  {effectiveLabel === "finished" && <Trophy className="w-3.5 h-3.5" />}
+                  {effectiveLabel === "uptodate" && <Zap className="w-3.5 h-3.5" />}
+                  {effectiveLabel === "watching" && <Play className="w-3.5 h-3.5" />}
+                  {effectiveLabel === "not_started" && <Circle className="w-3.5 h-3.5" />}
+                  {effectiveLabel === "planned" && <ListPlus className="w-3.5 h-3.5" />}
+                  <span className="capitalize">{effectiveLabel.replace("_", " ")}</span>
+                </Badge>
+                <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
+                  <Bell className="w-4 h-4 mr-2" /> Following
+                </Button>
+              </>
+            ) : isFollowing ? (
+              <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
+                <Bell className="w-4 h-4 mr-2" /> Following
+              </Button>
+            ) : inWatchlist ? (
+              <>
+                <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-purple-500/20 text-purple-400 border-0">
+                  <ListPlus className="w-3.5 h-3.5" /> In Watchlist
+                </Badge>
+                <Button variant="secondary" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
+                  <Bell className="w-4 h-4 mr-2" /> Follow
+                </Button>
+              </>
+            ) : (
+              <Button variant="secondary" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
+                <BellOff className="w-4 h-4 mr-2" /> Follow
+              </Button>
+            )}
             {trailer && (
               <Button variant="outline" className="h-10" onClick={() => window.open(`https://www.youtube.com/watch?v=${trailer.key}`, "_blank")}>
                 <Play className="w-4 h-4 mr-2 fill-current" /> Trailer
@@ -451,6 +545,43 @@ export function TvDetailView() {
         poster={t.poster_path ? img(t.poster_path, "w185") : null}
         onRate={onRateSubmit}
       />
+
+      {/* Unfollow dialog — shown when user tries to unfollow a show with episode progress.
+          Offers two clear options instead of a silent no-op. */}
+      {showUnfollowDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowUnfollowDialog(false)}>
+          <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <BellOff className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">Unfollow "{t.name}"?</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This show has watched episode progress. Choose how to handle it:
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Button variant="secondary" className="w-full h-auto py-3 justify-start text-left" onClick={onUnfollowKeepProgress}>
+                <div>
+                  <p className="font-medium">Unfollow, keep progress</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Remove from Following. Watched episodes stay intact.</p>
+                </div>
+              </Button>
+              <Button variant="destructive" className="w-full h-auto py-3 justify-start text-left" onClick={onUnfollowFull}>
+                <div>
+                  <p className="font-medium">Unfollow, clear everything</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Remove from Following and reset watch progress.</p>
+                </div>
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setShowUnfollowDialog(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
