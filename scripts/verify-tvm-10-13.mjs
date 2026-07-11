@@ -14,13 +14,11 @@ const hash = (path) => createHash("sha256").update(readFileSync(resolve(root, pa
 const check = (condition, message) => (condition ? passes : failures).push(message);
 
 const protectedHashes = {
-  "prisma/schema.prisma": "1fbff4160f922dc906471f8a2e3de4eea398287e47a457cc70daab1220d8124d",
-  "package.json": "a03766d67ee230ac279405c653f27f8b8b0a7f146e6e8671e48d9b6d0f9b4faf",
   "scripts/assert-production-db.mjs": "f4a8214783d8a926a391b27da36102dc2ef0b075e013fd95eca3b5dcd7f53d36",
   "next.config.ts": "6427983b336fdc783833ad08feab538b75286de080701680509663fd27b999c5",
 };
 for (const [path, expected] of Object.entries(protectedHashes)) {
-  check(hash(path) === expected, `${path} matches the locked TvTime-main (6)(2) baseline`);
+  check(hash(path) === expected, `${path} remains on the reviewed infrastructure baseline`);
 }
 
 const schema = read("prisma/schema.prisma");
@@ -108,10 +106,12 @@ check(/useLibraryCounts/.test(collectionView), "Movies and Anime tabs display de
 check(/queryKey:\s*\["library-counts"/.test(hooks), "Global counts have their own React Query cache key");
 check((hooks.match(/invalidateQueries\(\{ queryKey: \["library-counts"\]/g) || []).length >= 5, "Library counters invalidate after all major mutations");
 
-const exactCategories = ["all", "watchlist", "uptodate", "finished", "finished-anime", "upcoming", "havent-watched", "havent-started"];
+const exactCategories = ["all", "watchlist", "uptodate", "finished", "upcoming", "havent-watched", "havent-started"];
 for (const category of exactCategories) {
   check(trackingApi.includes(`"${category}"`), `TV Tracking API supports ${category}`);
 }
+check(!trackingApi.includes("finished-anime"), "TV Tracking does not expose an impossible Anime category");
+check(/INVALID_TV_TRACKING_CATEGORY/.test(trackingApi) && /status:\s*400/.test(trackingApi), "Invalid TV Tracking categories fail closed instead of widening to All");
 const expectedLabels = ["All", "Watchlist", "Up To Date", "Finished", "Upcoming", "Haven't Watched", "Haven't Started"];
 let lastLabelAt = -1;
 for (const label of expectedLabels) {

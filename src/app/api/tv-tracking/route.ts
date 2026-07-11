@@ -17,7 +17,6 @@ const CATEGORY_VALUES = new Set([
   "watchlist",
   "uptodate",
   "finished",
-  "finished-anime",
   "upcoming",
   "havent-watched",
   "havent-started",
@@ -38,7 +37,6 @@ type TvTrackingCategory =
   | "watchlist"
   | "uptodate"
   | "finished"
-  | "finished-anime"
   | "upcoming"
   | "havent-watched"
   | "havent-started";
@@ -256,8 +254,7 @@ async function buildTrackingSnapshot(userId: string) {
     haventStarted: decorated.filter((show) => show._serverTrackingStatus === "not_started").length,
     watching: decorated.filter((show) => show._serverTrackingStatus === "watching").length,
     uptodate: decorated.filter((show) => show._serverTrackingStatus === "uptodate").length,
-    finished: decorated.filter((show) => show._serverTrackingStatus === "finished" && !show.isAnime).length,
-    finishedAnime: decorated.filter((show) => show._serverTrackingStatus === "finished" && show.isAnime).length,
+    finished: decorated.filter((show) => show._serverTrackingStatus === "finished").length,
     upcoming: decorated.filter(isUpcoming).length,
     haventWatched: decorated.filter(hasUnwatchedReleasedEpisode).length,
   };
@@ -271,7 +268,17 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const rawCategory = url.searchParams.get("category") || "all";
     const aliasedCategory = LEGACY_CATEGORY_ALIASES[rawCategory] || rawCategory;
-    const category = (CATEGORY_VALUES.has(aliasedCategory) ? aliasedCategory : "all") as TvTrackingCategory;
+    if (!CATEGORY_VALUES.has(aliasedCategory)) {
+      return NextResponse.json(
+        {
+          error: `Unsupported TV tracking category: ${rawCategory}`,
+          code: "INVALID_TV_TRACKING_CATEGORY",
+          allowedCategories: [...CATEGORY_VALUES],
+        },
+        { status: 400 },
+      );
+    }
+    const category = aliasedCategory as TvTrackingCategory;
     const search = url.searchParams.get("search")?.trim().toLowerCase() || "";
     const sortByParam = url.searchParams.get("sortBy") || "title";
     const orderParam = url.searchParams.get("order") || "asc";
@@ -294,8 +301,7 @@ export async function GET(req: NextRequest) {
       all: () => true,
       watchlist: (show) => show._serverTrackingStatus === "planned",
       uptodate: (show) => show._serverTrackingStatus === "uptodate",
-      finished: (show) => show._serverTrackingStatus === "finished" && !show.isAnime,
-      "finished-anime": (show) => show._serverTrackingStatus === "finished" && show.isAnime,
+      finished: (show) => show._serverTrackingStatus === "finished",
       upcoming: snapshot.predicates.isUpcoming,
       "havent-watched": snapshot.predicates.hasUnwatchedReleasedEpisode,
       "havent-started": (show) => show._serverTrackingStatus === "not_started",

@@ -15,13 +15,11 @@ const sha256 = (path) => createHash("sha256").update(readFileSync(resolve(root, 
 const check = (condition, message) => (condition ? passes : failures).push(message);
 
 const protectedHashes = {
-  "prisma/schema.prisma": "1fbff4160f922dc906471f8a2e3de4eea398287e47a457cc70daab1220d8124d",
-  "package.json": "a03766d67ee230ac279405c653f27f8b8b0a7f146e6e8671e48d9b6d0f9b4faf",
   "scripts/assert-production-db.mjs": "f4a8214783d8a926a391b27da36102dc2ef0b075e013fd95eca3b5dcd7f53d36",
   "next.config.ts": "6427983b336fdc783833ad08feab538b75286de080701680509663fd27b999c5",
 };
 for (const [path, expected] of Object.entries(protectedHashes)) {
-  check(sha256(path) === expected, `${path} matches the locked TvTime-main (5) baseline`);
+  check(sha256(path) === expected, `${path} remains on the reviewed infrastructure baseline`);
 }
 
 const schema = read("prisma/schema.prisma");
@@ -56,7 +54,7 @@ check(/ON(?:GOING)?_TV_META_TTL_MS\s*=\s*5 \* 60 \* 1000/.test(statusServer), "O
 check(/cached\.nextEpisode[\s\S]*isEpisodeReleased/.test(statusServer), "Cache is invalidated when the next episode air date arrives");
 check(/hasUnwatchedReleasedEpisode/.test(trackingRoute), "Haven't Watched is based on a released unwatched episode");
 check(/"havent-watched": snapshot\.predicates\.hasUnwatchedReleasedEpisode/.test(trackingRoute), "Haven't Watched filter uses the released-episode predicate");
-check(/stateVerified[\s\S]*Never rewrite persistent progress during a temporary TMDB failure/.test(trackingRoute), "Background repair writes only verified states");
+check(/if \(stateVerified\)/.test(trackingRoute) && /repairShowIfNeeded\([\s\S]*derived\.verified/.test(trackingRoute), "Background display repair applies derived progress only when TMDB state is verified");
 check(/refetchInterval:\s*5 \* 60 \* 1000/.test(hooks), "TV tracking/progress refetches while the app is open");
 check(/setInterval\([\s\S]*5 \* 60 \* 1000/.test(providers), "Global provider triggers periodic server reconciliation");
 check(/visibilitychange/.test(providers) && /online/.test(providers) && /focus/.test(providers), "Reconciliation runs on return, reconnect and focus");

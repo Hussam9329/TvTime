@@ -51,7 +51,7 @@ export function StatsView() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <BigStat icon={<Film className="w-5 h-5" />} label="Movies watched" value={counts.watchedMovies} color="from-rose-500/20 to-rose-500/5" />
         <BigStat icon={<Tv className="w-5 h-5" />} label="Episodes watched" value={counts.watchedEpisodes} color="from-purple-500/20 to-purple-500/5" />
-        <BigStat icon={<Bell className="w-5 h-5" />} label="Shows following" value={counts.following} color="from-amber-500/20 to-amber-500/5" />
+        <BigStat icon={<Bell className="w-5 h-5" />} label="TV shows following" value={counts.following} color="from-amber-500/20 to-amber-500/5" />
         <BigStat icon={<BookOpen className="w-5 h-5" />} label="In watchlist" value={counts.watchlist} color="from-emerald-500/20 to-emerald-500/5" />
       </div>
 
@@ -91,7 +91,7 @@ export function StatsView() {
                 <Pie
                   data={[
                     { name: "Movies watched", value: counts.watchedMovies },
-                    { name: "Shows following", value: counts.following },
+                    { name: "TV shows following", value: counts.following },
                     { name: "Watchlist movies", value: counts.watchlistMovies },
                     { name: "Watchlist shows", value: counts.watchlistShows },
                     { name: "Anime watched", value: counts.watchedAnime },

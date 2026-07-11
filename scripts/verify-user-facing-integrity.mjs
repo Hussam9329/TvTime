@@ -56,11 +56,17 @@ check(/if \(derived\.verified\)[\s\S]*tvStateToMediaPatch/.test(watchedEpisodes)
 check(/derived\.verified \? derived\.state : persistedState/.test(watchedEpisodes), "Episode responses preserve the last persisted state during TMDB failure");
 check(/const effectiveState = derived\.verified[\s\S]*persisted \?\?/.test(tracking), "TV tracking display preserves persisted state when TMDB verification fails");
 
-check(/type CollectionTab = "watchlist" \| "watching" \| "watched"/.test(collection), "Anime collection has a dedicated in-progress tab state");
+check(/type CollectionTab = "watchlist" \| "not-started" \| "watching" \| "watched"/.test(collection), "Anime collection models Watchlist, Not Started, In Progress and Watched separately");
+check(/value="not-started"/.test(collection) && /Not Started/.test(collection), "Anime not-started titles remain visible in their own tab");
+check(/status:\s*"not_started",\s*watched:\s*"false",\s*tracked:\s*"true"/.test(collection), "Anime Not Started requires explicit following membership and no watched progress");
 check(/value="watching"/.test(collection) && /In Progress/.test(collection), "Anime in-progress is visible and selectable");
-check(/status:\s*"not_started,watching,uptodate"/.test(collection), "Anime in-progress query includes all active progress states");
-check(/watchingAnime/.test(counts) && /isAnime:\s*true/.test(counts), "Anime in-progress badge is counted from the complete canonical library");
-check(/watchingAnime\?:\s*number/.test(hooks), "Client stats contract includes the anime in-progress count");
+check(/status:\s*"watching,uptodate"/.test(collection), "Anime In Progress includes only actual episode-progress states");
+check(!/status:\s*"not_started,watching,uptodate"/.test(collection), "Anime In Progress no longer mislabels Not Started titles");
+check(/notStartedAnime/.test(counts) && /isFollowing:\s*true/.test(counts) && /status:\s*"not_started"/.test(counts), "Anime Not Started badge is counted from explicit following membership");
+check(/watchingAnime/.test(counts) && /status:\s*\{\s*in:\s*\["watching",\s*"uptodate"\]/.test(counts), "Anime In Progress badge counts only Watching and Up To Date");
+check(/notStartedAnime\?:\s*number/.test(hooks) && /watchingAnime\?:\s*number/.test(hooks), "Client stats contract exposes both Anime state counters");
+check(!/finished-anime/.test(tracking) && !/finishedAnime/.test(hooks), "TV Tracking no longer exposes the unreachable Finished Anime category");
+check(/INVALID_TV_TRACKING_CATEGORY/.test(tracking) && /status:\s*400/.test(tracking), "Unknown TV Tracking categories fail explicitly instead of silently returning All");
 
 const sequenceAt = shortcuts.indexOf('lastKeyRef.current === "g"');
 const standaloneAt = shortcuts.indexOf('e.key.toLowerCase() === "s"');
@@ -74,6 +80,7 @@ check(/Media\.isFollowing/.test(schemaVerifier), "Schema guard verifies the dedi
 check(/Media_userId_type_tmdbId_key/.test(schemaVerifier), "Schema guard verifies the canonical Media identity constraint");
 check(/type" = 'tv'|"type" = 'tv'/.test(schemaVerifier), "Schema guard rejects unnormalized legacy TV identities");
 check(!/\b(prisma\s+db\s+push|prisma\s+migrate\s+reset)\b/i.test(pkg.scripts?.build || ""), "Build contains no destructive schema command");
+check(pkg.scripts?.["verify:all"] === "node scripts/verify-all.mjs", "One comprehensive verification command covers the maintained project checks");
 
 check(/errorBody\?\.error \|\| "Failed to unmark episode"/.test(hooks), "Episode removal surfaces the server's safety error to the user");
 check(/payload\?\.user\?\.name/.test(profile), "Profile UI stores the server-normalized display name");

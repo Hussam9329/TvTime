@@ -18,7 +18,8 @@
     "db:migrate:status": "node scripts/assert-production-db.mjs && prisma migrate status",
     "db:migrate:deploy": "node scripts/assert-production-db.mjs && prisma migrate deploy",
     "db:verify:schema": "node scripts/assert-production-db.mjs && prisma generate && node scripts/verify-required-schema.mjs",
-    "verify:user-facing": "node scripts/verify-user-facing-integrity.mjs"
+    "verify:user-facing": "node scripts/verify-user-facing-integrity.mjs",
+    "verify:all": "node scripts/verify-all.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

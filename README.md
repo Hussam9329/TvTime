@@ -36,7 +36,7 @@ The app is split into three independent sections:
 
 1. **Movies** — non-anime movies only (Watchlist + Watched tabs)
 2. **TV Shows** — non-anime series only (all tracking filters)
-3. **Anime** — all anime (movies + series) with Watchlist + Watched tabs
+3. **Anime** — all anime (movies + series) with Watchlist, Not Started, In Progress, and Watched tabs
 
 Items can be moved between worlds via the `Move to Anime` / `To Movies` / `To TV Shows` buttons, which toggle `isAnime` on the same Media record without duplicating or losing progress.
 
@@ -137,7 +137,7 @@ npm run db:verify:readonly
 
 ### TV Tracking
 - `GET /api/tv-tracking` — list shows with derived states + global counts
-- Categories: all, watchlist, uptodate, finished, finished-anime, upcoming, havent-watched, havent-started
+- Categories: all, watchlist, uptodate, finished, upcoming, havent-watched, havent-started
 
 ### TMDB Proxy
 - `GET /api/tmdb/[...path]` — proxies all TMDB API calls (caching, no CORS)
@@ -163,6 +163,11 @@ npm run db:verify:readonly
 | `src/lib/legacy-library-migration.ts` | One-time legacy table migration (TVM-10) |
 
 ## Verification Scripts
+
+```bash
+# Run every maintained safety and user-facing verification
+npm run verify:all
+```
 
 ```bash
 # TVM-03/04/05 state engine + future episode protection

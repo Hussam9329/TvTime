@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { SafeImage } from "@/components/media/safe-image";
 
 type CollectionWorld = "movies" | "anime";
-type CollectionTab = "watchlist" | "watching" | "watched";
+type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
 
 type WorldConfig = {
   title: string;
@@ -59,17 +59,20 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
   const [page, setPage] = useState(0);
   const limit = 60;
   const isWatchedTab = tab === "watched";
+  const isNotStartedTab = tab === "not-started";
   const isWatchingTab = tab === "watching";
   const debouncedSearch = useDebounce(search, 400);
 
   const media = useMedia({
-    type: isWatchingTab ? "series" : config.type,
+    type: isWatchingTab || isNotStartedTab ? "series" : config.type,
     isAnime: config.isAnime,
     ...(isWatchedTab
       ? { watched: "true" }
-      : isWatchingTab
-        ? { status: "not_started,watching,uptodate", watched: "false" }
-        : { status: "planned", watched: "false" }),
+      : isNotStartedTab
+        ? { status: "not_started", watched: "false", tracked: "true" }
+        : isWatchingTab
+          ? { status: "watching,uptodate", watched: "false" }
+          : { status: "planned", watched: "false" }),
     search: debouncedSearch || undefined,
     sortBy,
     order: "desc",
@@ -84,6 +87,7 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
   const counts = globalCounts.data?.counts;
   const watchlistCount = Number(counts?.[config.watchlistCount] ?? 0);
   const watchedCount = Number(counts?.[config.watchedCount] ?? 0);
+  const notStartedCount = world === "anime" ? Number(counts?.notStartedAnime ?? 0) : 0;
   const watchingCount = world === "anime" ? Number(counts?.watchingAnime ?? 0) : 0;
   return (
     <div className="space-y-5">
@@ -97,8 +101,9 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
         </div>
       </div>
 
-      <div className={`grid gap-3 max-w-xl ${world === "anime" ? "grid-cols-3" : "grid-cols-2"}`}>
+      <div className={`grid gap-3 ${world === "anime" ? "max-w-3xl grid-cols-2 sm:grid-cols-4" : "max-w-xl grid-cols-2"}`}>
         <MiniStat label="Watchlist" value={watchlistCount} />
+        {world === "anime" && <MiniStat label="Not started" value={notStartedCount} />}
         {world === "anime" && <MiniStat label="In progress" value={watchingCount} />}
         <MiniStat label="Watched" value={watchedCount} />
       </div>
@@ -110,6 +115,13 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
             Watchlist
             <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchlistCount}</span>
           </TabsTrigger>
+          {world === "anime" && (
+            <TabsTrigger value="not-started" className="min-w-36 h-10">
+              <Clock3 className="w-4 h-4 mr-2" />
+              Not Started
+              <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{notStartedCount}</span>
+            </TabsTrigger>
+          )}
           {world === "anime" && (
             <TabsTrigger value="watching" className="min-w-36 h-10">
               <Play className="w-4 h-4 mr-2" />
@@ -157,7 +169,7 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : tab === "watching" ? "anime series in progress" : "anime titles"}
+        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
       </p>
 
       {/* Fix #14: Distinguish loading, error, empty, and success states */}
@@ -177,7 +189,7 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
       ) : items.length === 0 ? (
         <Card className="p-12 text-center text-muted-foreground">
           <WorldIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">No {tab === "watchlist" ? "watchlist" : tab === "watching" ? "in-progress" : "watched"} {world === "movies" ? "movies" : "anime"} found</p>
+          <p className="font-medium">No {tab === "watchlist" ? "watchlist" : tab === "not-started" ? "not-started" : tab === "watching" ? "in-progress" : "watched"} {world === "movies" ? "movies" : "anime"} found</p>
           <p className="text-sm mt-1">Try adjusting your search or add something new</p>
         </Card>
       ) : (

@@ -1049,7 +1049,6 @@ export type TvTrackingCategory =
   | "watchlist"
   | "uptodate"
   | "finished"
-  | "finished-anime"
   | "upcoming"
   | "havent-watched"
   | "havent-started";
@@ -1063,7 +1062,6 @@ export interface TvTrackingCounts {
   watching: number;
   uptodate: number;
   finished: number;
-  finishedAnime: number;
   upcoming: number;
   haventWatched: number;
 }
@@ -1334,6 +1332,7 @@ export interface MediaStats {
     watchedMovies?: number;
     watchedShows?: number;
     watchedAnime?: number;
+    notStartedAnime?: number;
     watchingAnime?: number;
     watchedEpisodes?: number;
     following?: number;
@@ -1365,6 +1364,7 @@ export function useMedia(params: {
   status?: string;
   watched?: string;
   rated?: string;
+  tracked?: string;
   isAnime?: string;
   search?: string;
   sortBy?: string;

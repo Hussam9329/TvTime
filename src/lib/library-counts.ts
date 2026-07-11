@@ -1,7 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
-export const ACTIVE_TV_STATES = ["not_started", "watching", "uptodate", "finished"] as const;
 
 export function eligibleTitleRatingWhere(userId: string): Prisma.MediaWhereInput {
   return {
@@ -50,6 +49,7 @@ export async function getCanonicalLibraryCounts(userId: string) {
     watchedMovies,
     watchedShows,
     watchedAnime,
+    notStartedAnime,
     watchingAnime,
     following,
     watchedEpisodes,
@@ -76,8 +76,18 @@ export async function getCanonicalLibraryCounts(userId: string) {
         ...base,
         type: "series",
         isAnime: true,
+        isFollowing: true,
         watched: false,
-        status: { in: ["not_started", "watching", "uptodate"] },
+        status: "not_started",
+      },
+    }),
+    db.media.count({
+      where: {
+        ...base,
+        type: "series",
+        isAnime: true,
+        watched: false,
+        status: { in: ["watching", "uptodate"] },
       },
     }),
     db.media.count({ where: { ...base, type: "series", isAnime: false, isFollowing: true } }),
@@ -104,6 +114,7 @@ export async function getCanonicalLibraryCounts(userId: string) {
     watchedMovies,
     watchedShows,
     watchedAnime,
+    notStartedAnime,
     watchingAnime,
     watchedEpisodes,
     following,

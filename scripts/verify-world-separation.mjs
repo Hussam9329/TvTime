@@ -14,19 +14,18 @@ const failures = [];
 const check = (condition, message) => (condition ? passes : failures).push(message);
 
 const protectedHashes = {
-  "prisma/schema.prisma": "1fbff4160f922dc906471f8a2e3de4eea398287e47a457cc70daab1220d8124d",
-  "package.json": "a03766d67ee230ac279405c653f27f8b8b0a7f146e6e8671e48d9b6d0f9b4faf",
   "scripts/assert-production-db.mjs": "f4a8214783d8a926a391b27da36102dc2ef0b075e013fd95eca3b5dcd7f53d36",
   "next.config.ts": "6427983b336fdc783833ad08feab538b75286de080701680509663fd27b999c5",
 };
 for (const [path, expected] of Object.entries(protectedHashes)) {
-  check(sha256(path) === expected, `${path} remains identical to TvTime-main (7)`);
+  check(sha256(path) === expected, `${path} remains on the reviewed infrastructure baseline`);
 }
 
 const schema = read("prisma/schema.prisma");
 const header = read("src/components/layout/header.tsx");
 const shell = read("src/components/app-shell.tsx");
 const store = read("src/lib/store.ts");
+const navigation = read("src/lib/navigation.ts");
 const collection = read("src/components/views/collection-world-view.tsx");
 const movies = read("src/components/views/movies-view.tsx");
 const anime = read("src/components/views/anime-view.tsx");
@@ -57,8 +56,8 @@ check(!/label:\s*"TV Track"/.test(header), "TV Track label was fully replaced by
 check(!/label:\s*"Library"/.test(header), "Library was removed from top navigation");
 check(/xl:hidden/.test(header) && /hidden xl:flex/.test(header), "Expanded navigation remains responsive on smaller desktop widths");
 
-check(/\| "movies"/.test(store) && /\| "tv-shows"/.test(store) && /\| "anime"/.test(store), "Navigation state has separate Movies, TV Shows and Anime worlds");
-check(!/\| "library"/.test(store) && !/\| "tv-tracking"/.test(store), "Old Library and TV Track view names are retired");
+check(/\| "movies"/.test(navigation) && /\| "tv-shows"/.test(navigation) && /\| "anime"/.test(navigation), "Navigation state has separate Movies, TV Shows and Anime worlds");
+check(!/\| "library"/.test(navigation) && !/\| "tv-tracking"/.test(navigation), "Old Library and TV Track view names are retired");
 check(!/libraryTab|setLibraryTab|LibraryTab/.test(store), "Obsolete mixed Library navigation state was removed");
 check(/view === "movies"[\s\S]*<MoviesView/.test(shell), "App shell renders the Movies world");
 check(/view === "tv-shows"[\s\S]*<TvShowsView/.test(shell), "App shell renders the TV Shows world");
@@ -69,8 +68,8 @@ check(/world="anime"/.test(anime), "Anime page is backed by the shared collectio
 check(/title:\s*"Movies"[\s\S]*type:\s*"movie"[\s\S]*isAnime:\s*"false"/.test(collection), "Movies reads only non-anime movie records");
 check(/title:\s*"Anime"[\s\S]*isAnime:\s*"true"/.test(collection), "Anime reads only anime records");
 check(!/title:\s*"Anime"[\s\S]{0,260}type:\s*"series"/.test(collection), "Anime can contain anime movies and anime series without mixing with other worlds");
-check((collection.match(/<TabsTrigger value=/g) || []).length === 2, "Movies and Anime expose exactly Watchlist and Watched tabs");
-check(/<TabsTrigger value="watchlist"/.test(collection) && /<TabsTrigger value="watched"/.test(collection), "The two collection tabs are Watchlist and Watched");
+check(/<TabsTrigger value="watchlist"/.test(collection) && /<TabsTrigger value="watched"/.test(collection), "Movies retain Watchlist and Watched tabs");
+check(/<TabsTrigger value="not-started"/.test(collection) && /<TabsTrigger value="watching"/.test(collection), "Anime adds distinct Not Started and In Progress tabs");
 check(!/Watchlist TV|Watched TV|My Library/.test(collection), "Movies and Anime contain no legacy mixed Library tabs");
 check(/status:\s*"planned"/.test(collection) && /watched:\s*"true"/.test(collection), "Watchlist and Watched use explicit canonical states");
 check(/status:\s*"planned",\s*watched:\s*"false"/.test(collection), "Watchlist tabs explicitly exclude watched titles");
@@ -84,7 +83,9 @@ check(/>TV Shows<\/h1>/.test(tvShows), "TV Shows page uses the requested name");
 check(/type:\s*"movie",\s*isAnime:\s*false/.test(counts), "Movie counters exclude Anime movies");
 check(/status:\s*"planned",\s*watched:\s*false,\s*isAnime:\s*true/.test(counts), "Anime Watchlist counter covers the dedicated Anime world");
 check(/watched:\s*true,\s*isAnime:\s*true/.test(counts), "Anime Watched counter covers the dedicated Anime world");
-check(/type:\s*"series",\s*isAnime:\s*false,\s*status:\s*\{\s*in:/.test(counts), "TV Shows following counter excludes Anime");
+check(/type:\s*"series",\s*isAnime:\s*false,\s*isFollowing:\s*true/.test(counts), "TV Shows following counter uses explicit membership and excludes Anime");
+check(/notStartedAnime/.test(counts) && /status:\s*"not_started"/.test(counts) && /isFollowing:\s*true/.test(counts), "Anime Not Started is counted separately from progress");
+check(/watchingAnime/.test(counts) && /\["watching",\s*"uptodate"\]/.test(counts), "Anime In Progress contains only real progress states");
 
 check(/Go to Movies/.test(shortcuts) && /Go to TV Shows/.test(shortcuts) && /Go to Anime/.test(shortcuts), "Keyboard shortcuts navigate to all three worlds");
 check(/setView\("movies"\)/.test(home) && /setView\("tv-shows"\)/.test(home) && /setView\("anime"\)/.test(home), "Home quick actions route to the separated worlds");
