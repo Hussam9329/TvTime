@@ -307,10 +307,10 @@ export function MovieDetailView() {
             <p className="text-foreground/80 leading-relaxed">{m.overview || "No overview available."}</p>
           </div>
           {recommendations.length > 0 && (
-            <MediaRow title="Recommendations" icon={<Sparkles className="w-5 h-5" />} items={recommendations} />
+            <MediaRow title="Recommendations" icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="movie" />
           )}
           {similar.length > 0 && (
-            <MediaRow title="More like this" icon={<Heart className="w-5 h-5" />} items={similar} />
+            <MediaRow title="More like this" icon={<Heart className="w-5 h-5" />} items={similar} forcedMediaType="movie" />
           )}
         </TabsContent>
 

@@ -125,6 +125,7 @@ export function HomeView() {
         icon={<Tv className="w-5 h-5" />}
         items={(onAirTv.data?.results ?? []).filter((m) => m.poster_path)}
         loading={onAirTv.isLoading}
+        forcedMediaType="tv"
       />
       <MediaRow
         title="Popular TV Shows"
@@ -132,6 +133,7 @@ export function HomeView() {
         items={(popularTv.data?.results ?? []).filter((m) => m.poster_path)}
         loading={popularTv.isLoading}
         onSeeAll={() => setView("discover")}
+        forcedMediaType="tv"
       />
       <MediaRow
         title="Top Rated Movies"
@@ -144,6 +146,7 @@ export function HomeView() {
         icon={<Star className="w-5 h-5" />}
         items={(topTv.data?.results ?? []).filter((m) => m.poster_path)}
         loading={topTv.isLoading}
+        forcedMediaType="tv"
       />
       <MediaRow
         title="Upcoming Movies"

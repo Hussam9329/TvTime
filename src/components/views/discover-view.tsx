@@ -254,9 +254,9 @@ export function DiscoverView() {
         </div>
       )}
 
-      {/* Results grid */}
+      {/* Results grid — Fix #1: force mediaType based on current tab */}
       {!current.isLoading && !current.isError && items.length > 0 && (
-        <MediaGrid items={items} />
+        <MediaGrid items={items} forcedMediaType={discoverTab === "tv" ? "tv" : "movie"} />
       )}
 
       {/* Pagination */}

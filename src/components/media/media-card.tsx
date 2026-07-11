@@ -14,16 +14,21 @@ interface MediaCardProps {
   item: MediaItem;
   index?: number;
   showMediaType?: boolean;
+  forcedMediaType?: "movie" | "tv";
 }
 
-export function MediaCard({ item, index = 0, showMediaType = true }: MediaCardProps) {
+export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
 
-  // NEVER guess media type from title/name. Use the explicit media_type field.
-  // Default to "movie" only when media_type is genuinely absent, but prefer
-  // "tv" when the item has a name (not title) and no explicit media_type.
-  const mediaType: "movie" | "tv" = item.media_type === "tv" ? "tv" : "movie";
+  // Fix #1: Use forcedMediaType if provided (e.g., TV rows in Home/Discover).
+  // Otherwise fall back to item.media_type. Default to "movie" only when
+  // neither is available — never guess from title/name.
+  const mediaType: "movie" | "tv" = forcedMediaType
+    ? forcedMediaType
+    : item.media_type === "tv"
+      ? "tv"
+      : "movie";
 
   // determine library status
   const watchlist = useWatchlist();
@@ -158,9 +163,10 @@ interface MediaGridProps {
   items: MediaItem[];
   loading?: boolean;
   showMediaType?: boolean;
+  forcedMediaType?: "movie" | "tv";
 }
 
-export function MediaGrid({ items, loading, showMediaType = true }: MediaGridProps) {
+export function MediaGrid({ items, loading, showMediaType = true, forcedMediaType }: MediaGridProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
@@ -173,7 +179,7 @@ export function MediaGrid({ items, loading, showMediaType = true }: MediaGridPro
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
       {items.map((item, i) => (
-        <MediaCard key={`${item.id}-${item.media_type || ""}`} item={item} index={i} showMediaType={showMediaType} />
+        <MediaCard key={`${item.id}-${item.media_type || ""}`} item={item} index={i} showMediaType={showMediaType} forcedMediaType={forcedMediaType} />
       ))}
     </div>
   );

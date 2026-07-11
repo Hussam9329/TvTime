@@ -13,9 +13,10 @@ interface MediaRowProps {
   loading?: boolean;
   icon?: React.ReactNode;
   onSeeAll?: () => void;
+  forcedMediaType?: "movie" | "tv";
 }
 
-export function MediaRow({ title, items, loading, icon, onSeeAll }: MediaRowProps) {
+export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType }: MediaRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (dir: "left" | "right") => {
@@ -72,7 +73,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll }: MediaRowProp
             ))
           : items.map((item, i) => (
               <div key={`${item.id}-${item.media_type || ""}`} className={cn("flex-shrink-0 w-[130px] sm:w-[160px]")}>
-                <MediaCard item={item} index={i} />
+                <MediaCard item={item} index={i} forcedMediaType={forcedMediaType} />
               </div>
             ))}
       </div>

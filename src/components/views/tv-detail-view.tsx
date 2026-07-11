@@ -2,6 +2,7 @@
 
 import { useNav } from "@/lib/store";
 import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useTrackedShows, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, useMediaUpdate, type EpisodeCompletion } from "@/hooks/use-tmdb";
+import { withUserId, userHeaders } from "@/lib/client-user";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +41,8 @@ export function TvDetailView() {
   const tData = detail.data;
   const trackedShow = tData ? trackedShows.data?.items.find((w: any) => w.tmdbId === tData.id) : undefined;
   const myRating = trackedShow?.userRating ?? null;
-  const showTrackingStatus = (progress.trackingState || trackedShow?.status || "not_started") as TvTrackingState;
+  // Fix #2: Don't default to "not_started" — use null if show is not tracked
+  const showTrackingStatus = (progress.trackingState || trackedShow?.status || null) as TvTrackingState | null;
   const isFullyWatched = showTrackingStatus === "finished" || showTrackingStatus === "uptodate";
   const tmdbStatus = tData?.status || "";
   const isEnded = /ended|canceled|cancelled/i.test(tmdbStatus);
@@ -96,14 +98,13 @@ export function TvDetailView() {
   // After early returns, detail.data is guaranteed to be defined.
   const t = detail.data;
   const inWatchlist = watchlist.data?.items.some((w) => w.mediaType === "tv" && w.tmdbId === t.id);
+  // Fix #2: isFollowing is true ONLY if trackedShow exists and has a non-planned status.
+  // A show that's not in the user's library at all is NOT following.
   const isFollowing = Boolean(
-    trackedShow && trackedShow.status !== "planned",
+    trackedShow && trackedShow.status && trackedShow.status !== "planned",
   );
 
-  // Derive the "effective" tracking label:
-  //  - If show is Ended AND user watched all -> "Finished"
-  //  - If show is ongoing AND user watched all aired -> "Up To Date"
-  //  - Otherwise -> null
+  // Fix #2: effectiveLabel is null when show is not tracked at all
   const effectiveLabel = showTrackingStatus;
 
   const year = t.first_air_date?.slice(0, 4);
@@ -188,14 +189,18 @@ export function TvDetailView() {
     }
   };
 
-  // Unfollow while keeping episode progress (just set status to null, keep watched episodes)
+  // Fix #3: Unfollow while keeping episode progress via dedicated endpoint
   const onUnfollowKeepProgress = async () => {
-    if (!trackedShow?.id) {
-      toast.error("Could not find the show to unfollow");
-      return;
-    }
     try {
-      await mediaUpdate.mutateAsync({ id: trackedShow.id, status: null });
+      const res = await fetch(withUserId(new URL("/api/tv-tracking/unfollow", window.location.origin)), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...userHeaders() },
+        body: JSON.stringify({ tmdbId: t.id, keepProgress: true }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Failed to unfollow");
+      }
       toast.success("Unfollowed. Episode progress was kept.");
       setShowUnfollowDialog(false);
     } catch (error) {
@@ -203,18 +208,20 @@ export function TvDetailView() {
     }
   };
 
-  // Full unfollow: clear status AND delete all watched episodes
+  // Fix #3: Full unfollow: delete all watched episodes via dedicated endpoint
   const onUnfollowFull = async () => {
-    if (!trackedShow?.id) {
-      toast.error("Could not find the show to unfollow");
-      return;
-    }
     try {
-      // Clear status
-      await mediaUpdate.mutateAsync({ id: trackedShow.id, status: null, watched: false, watchedAt: null });
-      // Note: watched episodes are tracked separately and would need a bulk delete
-      // For now, we clear the media status which moves it to "Not Started" or removes from tracking
-      toast.success("Unfollowed and progress cleared.");
+      const res = await fetch(withUserId(new URL("/api/tv-tracking/unfollow", window.location.origin)), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...userHeaders() },
+        body: JSON.stringify({ tmdbId: t.id, keepProgress: false }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Failed to unfollow");
+      }
+      const data = await res.json();
+      toast.success(`Unfollowed. ${data.deletedEpisodes || 0} watched episodes cleared.`);
       setShowUnfollowDialog(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to unfollow");
@@ -313,31 +320,26 @@ export function TvDetailView() {
             <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">{t.name}</h1>
             {t.tagline && <p className="text-sm sm:text-base italic text-foreground/70 mt-1">{t.tagline}</p>}
           </div>
-          {/* Action buttons — unified tracking state for TV shows.
-              Watchlist and Following are the same status field, so we show
-              a single button that reflects the current tracking state. */}
+          {/* Fix #4: Action buttons — unified tracking + Watchlist option.
+              When show is not tracked, show both "Plan to Watch" and "Follow".
+              When tracked, show current state badge + appropriate action. */}
           <div className="flex flex-wrap gap-2">
-            {/* Unified tracking button — shows current state, click to toggle */}
             {effectiveLabel ? (
-              // Show the derived state (Watching/Up To Date/Finished) as a badge + Follow toggle
+              // Show the derived state (Watching/Up To Date/Finished/Not Started) as a badge + Following button
               <>
                 <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
                   {effectiveLabel === "finished" && <Trophy className="w-3.5 h-3.5" />}
                   {effectiveLabel === "uptodate" && <Zap className="w-3.5 h-3.5" />}
                   {effectiveLabel === "watching" && <Play className="w-3.5 h-3.5" />}
                   {effectiveLabel === "not_started" && <Circle className="w-3.5 h-3.5" />}
-                  {effectiveLabel === "planned" && <ListPlus className="w-3.5 h-3.5" />}
                   <span className="capitalize">{effectiveLabel.replace("_", " ")}</span>
                 </Badge>
                 <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
                   <Bell className="w-4 h-4 mr-2" /> Following
                 </Button>
               </>
-            ) : isFollowing ? (
-              <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
-                <Bell className="w-4 h-4 mr-2" /> Following
-              </Button>
             ) : inWatchlist ? (
+              // In Watchlist — show badge + Follow button
               <>
                 <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-purple-500/20 text-purple-400 border-0">
                   <ListPlus className="w-3.5 h-3.5" /> In Watchlist
@@ -347,9 +349,15 @@ export function TvDetailView() {
                 </Button>
               </>
             ) : (
-              <Button variant="secondary" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
-                <BellOff className="w-4 h-4 mr-2" /> Follow
-              </Button>
+              // Not tracked at all — show both Plan to Watch and Follow buttons
+              <>
+                <Button variant="secondary" onClick={onWatchlist} className="h-10" disabled={watchlistToggle.isPending}>
+                  <ListPlus className="w-4 h-4 mr-2" /> Plan to Watch
+                </Button>
+                <Button variant="outline" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
+                  <Bell className="w-4 h-4 mr-2" /> Follow
+                </Button>
+              </>
             )}
             {trailer && (
               <Button variant="outline" className="h-10" onClick={() => window.open(`https://www.youtube.com/watch?v=${trailer.key}`, "_blank")}>
@@ -480,10 +488,10 @@ export function TvDetailView() {
             </div>
           )}
           {recommendations.length > 0 && (
-            <MediaRow title="Recommendations" icon={<Sparkles className="w-5 h-5" />} items={recommendations} />
+            <MediaRow title="Recommendations" icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="tv" />
           )}
           {similar.length > 0 && (
-            <MediaRow title="More like this" icon={<Heart className="w-5 h-5" />} items={similar} />
+            <MediaRow title="More like this" icon={<Heart className="w-5 h-5" />} items={similar} forcedMediaType="tv" />
           )}
         </TabsContent>
 

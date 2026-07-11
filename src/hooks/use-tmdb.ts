@@ -303,14 +303,14 @@ async function ensureApiOk(res: Response, fallback: string): Promise<Response> {
 /**
  * TVM Fix: Direct state lookup by tmdbId + type — NO pagination.
  * Returns the media item's DB id, or null if not found.
- * This replaces the old pattern of fetching an entire list and doing .find().
+ * Throws on server error (not silent return null).
  */
 async function getMediaIdByTmdbId(tmdbId: number, mediaType: "movie" | "tv"): Promise<string | null> {
   const url = withUserId(new URL("/api/media/state", window.location.origin));
   url.searchParams.set("tmdbId", String(tmdbId));
   url.searchParams.set("type", mediaType);
   const res = await fetch(url, { headers: userHeaders() });
-  if (!res.ok) return null;
+  if (!res.ok) throw new Error(`Failed to load media state (${res.status})`);
   const data = await res.json();
   return data.item?.id ?? null;
 }
@@ -329,7 +329,7 @@ export function useMediaState(tmdbId: number | null, mediaType: "movie" | "tv") 
       url.searchParams.set("tmdbId", String(tmdbId));
       url.searchParams.set("type", mediaType);
       const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) return null;
+      if (!res.ok) throw new Error(`Failed to load media state (${res.status})`);
       const data = await res.json();
       return data.item;
     },
@@ -1127,7 +1127,7 @@ export function useShowProgress(showId: number | null | undefined) {
     totalKnownEpisodes: detail.data?.number_of_episodes ?? 0,
     watchedCount: 0,
     ignoredFutureWatchedCount: 0,
-    trackingState: (trackedShow?.status || "not_started") as TvTrackingState,
+    trackingState: (trackedShow?.status || (watchedItems.length > 0 ? "watching" : null)) as TvTrackingState | null,
     stateVerified: false,
     legacyCompletionAssumed: false,
     nextEp: null,
