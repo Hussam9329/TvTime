@@ -188,8 +188,8 @@ async function buildTrackingSnapshot(userId: string) {
         existingEpisodeCount: watched.count,
         metadata,
       });
-      if (snapshot.materialized) {
-        legacySnapshotMaterialized = true;
+      if (snapshot.verified && snapshot.episodes.length > 0) {
+        legacySnapshotMaterialized = snapshot.materialized;
         for (const episode of snapshot.episodes) {
           watched.keys.add(episodeKey(episode.seasonNumber, episode.episodeNumber));
         }
@@ -212,16 +212,19 @@ async function buildTrackingSnapshot(userId: string) {
       legacyCompleted,
     });
 
+    const effectiveState = derived.verified
+      ? derived.state
+      : (persisted ?? (watched.count > 0 ? "watching" : "not_started"));
     const repaired = await repairShowIfNeeded(
       show,
-      derived.state,
+      effectiveState,
       metadata,
       watched.lastWatchedAt,
       derived.verified,
     );
     return {
       ...repaired,
-      _serverTrackingStatus: derived.state,
+      _serverTrackingStatus: effectiveState,
       _serverTvMeta: metadata,
       _serverWatchedMeta: watched,
       _serverAiredEpisodeCount: derived.airedEpisodeCount,
@@ -280,7 +283,7 @@ export async function GET(req: NextRequest) {
 
     const snapshot = await buildTrackingSnapshot(user.id);
     if (countsOnly) {
-      return NextResponse.json({ counts: snapshot.counts, countsAreGlobal: true, repairedOnRead: true });
+      return NextResponse.json({ counts: snapshot.counts, countsAreGlobal: true, repairedOnRead: false });
     }
 
     const filteredBySearch = search
@@ -346,7 +349,7 @@ export async function GET(req: NextRequest) {
       category,
       counts: snapshot.counts,
       countsAreGlobal: true,
-      repairedOnRead: true,
+      repairedOnRead: false,
     });
   } catch (error) {
     console.error("[tv-tracking]", error);

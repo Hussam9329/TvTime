@@ -16,6 +16,7 @@ import { MoviesView } from "@/components/views/movies-view";
 import { AnimeView } from "@/components/views/anime-view";
 import { StatsView } from "@/components/views/stats-view";
 import { TvShowsView } from "@/components/views/tv-tracking-view";
+import { MediaView } from "@/components/views/media-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 
 export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
@@ -68,6 +69,7 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
           {view === "movies" && <MoviesView />}
           {view === "anime" && <AnimeView />}
           {view === "stats" && <StatsView />}
+          {view === "media" && <MediaView />}
           {view === "tv-shows" && <TvShowsView />}
         </div>
       </main>

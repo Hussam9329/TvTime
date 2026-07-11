@@ -15,7 +15,7 @@ import { RatingDialog } from "@/components/media/rating-dialog";
 import { SafeImage } from "@/components/media/safe-image";
 
 type CollectionWorld = "movies" | "anime";
-type CollectionTab = "watchlist" | "watched";
+type CollectionTab = "watchlist" | "watching" | "watched";
 
 type WorldConfig = {
   title: string;
@@ -59,12 +59,17 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
   const [page, setPage] = useState(0);
   const limit = 60;
   const isWatchedTab = tab === "watched";
+  const isWatchingTab = tab === "watching";
   const debouncedSearch = useDebounce(search, 400);
 
   const media = useMedia({
-    type: config.type,
+    type: isWatchingTab ? "series" : config.type,
     isAnime: config.isAnime,
-    ...(isWatchedTab ? { watched: "true" } : { status: "planned", watched: "false" }),
+    ...(isWatchedTab
+      ? { watched: "true" }
+      : isWatchingTab
+        ? { status: "not_started,watching,uptodate", watched: "false" }
+        : { status: "planned", watched: "false" }),
     search: debouncedSearch || undefined,
     sortBy,
     order: "desc",
@@ -79,6 +84,7 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
   const counts = globalCounts.data?.counts;
   const watchlistCount = Number(counts?.[config.watchlistCount] ?? 0);
   const watchedCount = Number(counts?.[config.watchedCount] ?? 0);
+  const watchingCount = world === "anime" ? Number(counts?.watchingAnime ?? 0) : 0;
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
@@ -91,18 +97,26 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 max-w-xl">
+      <div className={`grid gap-3 max-w-xl ${world === "anime" ? "grid-cols-3" : "grid-cols-2"}`}>
         <MiniStat label="Watchlist" value={watchlistCount} />
+        {world === "anime" && <MiniStat label="In progress" value={watchingCount} />}
         <MiniStat label="Watched" value={watchedCount} />
       </div>
 
       <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
-        <TabsList className="w-full sm:w-auto h-auto">
+        <TabsList className="w-full sm:w-auto h-auto justify-start overflow-x-auto">
           <TabsTrigger value="watchlist" className="min-w-36 h-10">
             <WorldIcon className="w-4 h-4 mr-2" />
             Watchlist
             <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchlistCount}</span>
           </TabsTrigger>
+          {world === "anime" && (
+            <TabsTrigger value="watching" className="min-w-36 h-10">
+              <Play className="w-4 h-4 mr-2" />
+              In Progress
+              <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchingCount}</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="watched" className="min-w-36 h-10">
             <Check className="w-4 h-4 mr-2" />
             Watched
@@ -143,7 +157,7 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : "anime titles"}
+        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : tab === "watching" ? "anime series in progress" : "anime titles"}
       </p>
 
       {/* Fix #14: Distinguish loading, error, empty, and success states */}
@@ -163,13 +177,13 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
       ) : items.length === 0 ? (
         <Card className="p-12 text-center text-muted-foreground">
           <WorldIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">No {tab === "watchlist" ? "watchlist" : "watched"} {world === "movies" ? "movies" : "anime"} found</p>
+          <p className="font-medium">No {tab === "watchlist" ? "watchlist" : tab === "watching" ? "in-progress" : "watched"} {world === "movies" ? "movies" : "anime"} found</p>
           <p className="text-sm mt-1">Try adjusting your search or add something new</p>
         </Card>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {items.map((item, index) => (
-            <CollectionMediaCard key={item.id} item={item} index={index} isWatchedTab={isWatchedTab} world={world} />
+            <CollectionMediaCard key={item.id} item={item} index={index} tab={tab} world={world} />
           ))}
         </div>
       )}
@@ -200,7 +214,8 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: MediaItemDB; index: number; isWatchedTab: boolean; world: CollectionWorld }) {
+function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; index: number; tab: CollectionTab; world: CollectionWorld }) {
+  const isWatchedTab = tab === "watched";
   const update = useMediaUpdate();
   const goMovie = useNav((state) => state.goMovie);
   const goTv = useNav((state) => state.goTv);
@@ -369,9 +384,11 @@ function CollectionMediaCard({ item, index, isWatchedTab, world }: { item: Media
                       <Star className="w-3.5 h-3.5 mr-1" /> {userRating != null ? "Re-rate" : "Rate"}
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); void handleQuickUnwatch(); }} title="Remove from watchlist">
-                    Remove
-                  </Button>
+                  {tab === "watchlist" && (
+                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); void handleQuickUnwatch(); }} title="Remove from watchlist">
+                      Remove
+                    </Button>
+                  )}
                 </>
               ) : (
                 <>

@@ -18,10 +18,14 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json();
   const user = await getOrCreateUser(userId);
+  const name = typeof body?.name === "string" ? body.name.trim().slice(0, 30) : undefined;
+  if (body?.name !== undefined && !name) {
+    return NextResponse.json({ error: "Display name cannot be empty" }, { status: 400 });
+  }
   const updated = await db.user.update({
     where: { id: user.id },
     data: {
-      ...(body.name ? { name: body.name } : {}),
+      ...(name ? { name } : {}),
       ...(body.avatar !== undefined ? { avatar: body.avatar } : {}),
     },
   });

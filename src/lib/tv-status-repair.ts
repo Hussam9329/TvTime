@@ -20,6 +20,7 @@ type LegacyCompletionMedia = {
 
 export type LegacyCompletionMaterialization = {
   attempted: boolean;
+  verified: boolean;
   materialized: boolean;
   completionAt: Date | null;
   episodes: ReleasedEpisode[];
@@ -61,7 +62,7 @@ export async function materializeLegacyCompletionSnapshot(args: {
   });
 
   if (!isLegacyWholeShowCompletion(args.media, existingEpisodeCount)) {
-    return { attempted: false, materialized: false, completionAt: null, episodes: [] };
+    return { attempted: false, verified: true, materialized: false, completionAt: null, episodes: [] };
   }
 
   const completionAt = validDate(args.media.watchedAt)
@@ -78,7 +79,7 @@ export async function materializeLegacyCompletionSnapshot(args: {
     );
 
     if (releasedAtCompletion.length === 0) {
-      return { attempted: true, materialized: false, completionAt, episodes: [] };
+      return { attempted: true, verified: true, materialized: false, completionAt, episodes: [] };
     }
 
     // TVM-27: Only persist when explicitly requested (not during GET)
@@ -99,6 +100,7 @@ export async function materializeLegacyCompletionSnapshot(args: {
 
     return {
       attempted: true,
+      verified: true,
       materialized: persist, // only true if we actually wrote
       completionAt,
       episodes: releasedAtCompletion,
@@ -109,6 +111,6 @@ export async function materializeLegacyCompletionSnapshot(args: {
       tmdbId: args.media.tmdbId,
       error,
     });
-    return { attempted: true, materialized: false, completionAt, episodes: [] };
+    return { attempted: true, verified: false, materialized: false, completionAt, episodes: [] };
   }
 }

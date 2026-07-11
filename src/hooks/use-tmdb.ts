@@ -655,7 +655,10 @@ export function useWatchedEpisodes(showId?: number) {
       const url = withUserId(new URL("/api/library/watched-episodes", window.location.origin));
       if (showId != null) url.searchParams.set("showId", String(showId));
       const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) throw new Error("Failed to load");
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        throw new Error(errorBody?.error || "Failed to load watched episodes");
+      }
       return res.json();
     },
     staleTime: 0,
@@ -694,7 +697,10 @@ export function useEpisodeToggle() {
         url.searchParams.set("seasonNumber", String(args.seasonNumber));
         url.searchParams.set("episodeNumber", String(args.episodeNumber));
         const res = await fetch(url, { method: "DELETE", headers: userHeaders() });
-        if (!res.ok) throw new Error("Failed to unmark episode");
+        if (!res.ok) {
+          const errorBody = await res.json().catch(() => ({}));
+          throw new Error(errorBody?.error || "Failed to unmark episode");
+        }
         return res.json();
       }
     },
@@ -1328,6 +1334,7 @@ export interface MediaStats {
     watchedMovies?: number;
     watchedShows?: number;
     watchedAnime?: number;
+    watchingAnime?: number;
     watchedEpisodes?: number;
     following?: number;
     ratings?: number;

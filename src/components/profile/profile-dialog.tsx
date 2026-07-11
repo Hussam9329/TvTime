@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useStats } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { useQueryClient } from "@tanstack/react-query";
-import { userHeaders, withUserId } from "@/lib/client-user";
+import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
 import { getUserPreferences, setUserPreferences, COUNTRY_OPTIONS, TIMEZONE_OPTIONS } from "@/lib/user-preferences";
 import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Globe, Clock, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  const { userId, userName, setUserName } = useNav();
+  const { userName, setUserName } = useNav();
+  const userId = getClientUserId();
   const stats = useStats();
   const qc = useQueryClient();
   const [name, setName] = useState(userName);
@@ -49,13 +50,19 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const onSaveName = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/user?userId=${encodeURIComponent(userId)}`, {
+      const res = await fetch(withUserId(new URL("/api/user", window.location.origin)), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...userHeaders() },
         body: JSON.stringify({ name }),
       });
-      if (!res.ok) throw new Error("Failed");
-      setUserName(name);
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.error || "Failed to update profile");
+      }
+      const payload = await res.json();
+      const savedName = String(payload?.user?.name || name).trim();
+      setName(savedName);
+      setUserName(savedName);
       toast.success("Profile updated");
     } catch {
       toast.error("Failed to update profile");
@@ -69,11 +76,19 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     try {
       const res = await fetch(withUserId(new URL("/api/library/clear", window.location.origin)), {
         method: "DELETE",
-        headers: userHeaders(),
+        headers: { ...userHeaders(), "x-confirm-delete": "DELETE EVERYTHING" },
       });
-      if (!res.ok) throw new Error("Failed to clear");
-      qc.invalidateQueries({ queryKey: ["lib"] });
-      qc.invalidateQueries({ queryKey: ["media"] });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.error || "Failed to clear");
+      }
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["lib"] }),
+        qc.invalidateQueries({ queryKey: ["media"] }),
+        qc.invalidateQueries({ queryKey: ["library-counts"] }),
+        qc.invalidateQueries({ queryKey: ["tv-tracking"] }),
+        qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] }),
+      ]);
       toast.success("All collection data cleared");
       onOpenChange(false);
     } catch {
@@ -122,8 +137,13 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       });
       if (!res.ok) throw new Error("Import failed");
       const result = await res.json();
-      qc.invalidateQueries({ queryKey: ["lib"] });
-      qc.invalidateQueries({ queryKey: ["media"] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["lib"] }),
+        qc.invalidateQueries({ queryKey: ["media"] }),
+        qc.invalidateQueries({ queryKey: ["library-counts"] }),
+        qc.invalidateQueries({ queryKey: ["tv-tracking"] }),
+        qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] }),
+      ]);
       const imported = result?.imported || {};
       const total = (imported.watchlist || 0) + (imported.watchedMovies || 0) + (imported.watchedEpisodes || 0) + (imported.following || 0) + (imported.ratings || 0) + (imported.episodeRatings || 0) + (imported.media || 0);
       toast.success(`Imported ${total} items`);

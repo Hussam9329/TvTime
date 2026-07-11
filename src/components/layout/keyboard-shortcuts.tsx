@@ -84,27 +84,11 @@ export function KeyboardShortcuts() {
         return;
       }
 
-      // "/" or "s" to focus search
-      if (e.key === "/" || e.key === "s") {
-        e.preventDefault();
-        const input = document.querySelector('input[placeholder*="Search movies"]') as HTMLInputElement | null;
-        if (input) {
-          input.focus();
-          input.select();
-        }
-        return;
-      }
-
-      // "g" prefix for navigation (g h, g d, g m, g t, g a, g s, g c)
+      // Resolve an active "g" navigation sequence before standalone keys.
+      // Otherwise the second key in "g s" is consumed by the search shortcut.
       const now = Date.now();
-      if (e.key === "g" && now - lastKeyTimeRef.current > 1500) {
-        lastKeyRef.current = "g";
-        lastKeyTimeRef.current = now;
-        return;
-      }
-
       if (lastKeyRef.current === "g" && now - lastKeyTimeRef.current < 1500) {
-        switch (e.key) {
+        switch (e.key.toLowerCase()) {
           case "h":
             e.preventDefault();
             setView("home");
@@ -137,6 +121,25 @@ export function KeyboardShortcuts() {
         lastKeyRef.current = "";
         return;
       }
+
+      // "/" or "s" to focus search when not completing a "g" sequence.
+      if (e.key === "/" || e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        const input = document.querySelector('input[placeholder*="Search movies"]') as HTMLInputElement | null;
+        if (input) {
+          input.focus();
+          input.select();
+        }
+        return;
+      }
+
+      // "g" prefix for navigation (g h, g d, g m, g t, g a, g s, g c)
+      if (e.key.toLowerCase() === "g") {
+        lastKeyRef.current = "g";
+        lastKeyTimeRef.current = now;
+        return;
+      }
+
 
       lastKeyRef.current = "";
     };

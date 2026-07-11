@@ -52,21 +52,24 @@ Items can be moved between worlds via the `Move to Anime` / `To Movies` / `To TV
 
 - **Provider**: PostgreSQL (Neon)
 - **DATABASE_URL**: Set in Vercel environment variables (must be `postgresql://...`)
-- **No migrations**: Schema is managed via `prisma db push` (blocked in production by `scripts/refuse-destructive-db-command.mjs`)
-- **Build pipeline**: `node scripts/assert-production-db.mjs && prisma generate && next build`
-  - `assert-production-db.mjs` refuses to build unless DATABASE_URL is PostgreSQL
-  - No `db push`/`migrate`/`reset` during build
+- **Reviewed migrations only**: destructive `db push`/`reset` commands remain blocked. Production schema changes are delivered as reviewed Prisma migrations.
+- **Migration deployment**: run `npm run db:migrate:status`, take a verified backup, then run `npm run db:migrate:deploy` in the approved maintenance window.
+- **Build pipeline**: `assert-production-db` → `prisma generate` → read-only schema contract verification → `next build`
+  - The build never applies a migration or writes to production.
+  - It fails before deployment when `Media.isFollowing`, the canonical media identity constraint, or the `series` type normalization is missing.
 
-### Protected Files
+### Safety-Critical Files
 
-These files must remain byte-for-byte identical (SHA-256 baselines in delivery packages):
+Changes to these files require explicit review and must be delivered with verification and rollback instructions:
 
 | File | Purpose |
 |------|---------|
 | `prisma/schema.prisma` | Database schema (PostgreSQL) |
-| `package.json` | Dependencies + scripts |
-| `scripts/assert-production-db.mjs` | Build guard |
-| `next.config.ts` | Next.js config |
+| `prisma/migrations/**` | Reviewed, ordered production schema changes |
+| `package.json` | Dependencies, build and migration safety scripts |
+| `scripts/assert-production-db.mjs` | PostgreSQL build guard |
+| `scripts/verify-required-schema.mjs` | Read-only schema compatibility guard |
+| `next.config.ts` | Next.js runtime/build configuration |
 
 ## Development
 
@@ -97,7 +100,7 @@ bun run dev  # or npm run dev
 
 ```bash
 bun run build  # or npm run build
-# Runs: assert-production-db → prisma generate → next build
+# Runs: assert-production-db → prisma generate → read-only schema verification → next build
 ```
 
 ### Lint
@@ -182,12 +185,13 @@ node --experimental-strip-types scripts/test-tvm-06-09.ts
 ## Deployment (Vercel)
 
 1. Push to GitHub `main` branch
-2. Vercel auto-deploys
-3. Environment variables:
+2. Before the first deployment containing a new migration, run `npm run db:migrate:status`, take a verified database backup, and run `npm run db:migrate:deploy` from an approved maintenance environment.
+3. Vercel auto-deploys only after the migration is ready; the build guard blocks an incompatible schema.
+4. Environment variables:
    - `DATABASE_URL` — PostgreSQL connection string (must be `postgresql://`)
    - `TMDB_API_KEY` — optional (has default)
    - `ADMIN_REPAIR_SECRET` — optional, protects admin endpoints
-4. Build: `assert-production-db.mjs` → `prisma generate` → `next build`
+5. Build: `assert-production-db.mjs` → `prisma generate` → `verify-required-schema.mjs` → `next build`
 
 ### Admin Endpoints
 

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { DEFAULT_USER_ID } from "@/lib/user-id";
 import {
   HOME_NAVIGATION_ENTRY,
   navigationEntryFromView,
@@ -42,10 +43,6 @@ interface NavState extends NavigationEntry {
 
 const HISTORY_LIMIT = 30;
 const NAV_INDEX_KEY = "__tvTimeNavigationIndex";
-
-function genId() {
-  return "u_" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
-}
 
 function currentEntry(state: Pick<NavState, keyof NavigationEntry>): NavigationEntry {
   return normalizeNavigationEntry({
@@ -102,7 +99,7 @@ export const useNav = create<NavState>()(
         history: [],
         navigationIndex: 0,
         routeReady: false,
-        userId: "",
+        userId: DEFAULT_USER_ID,
         userName: "Cinephile",
 
         setView: (view) => navigate(navigationEntryFromView(view)),
@@ -150,13 +147,18 @@ export const useNav = create<NavState>()(
         setDiscoverGenre: (discoverGenre) => set({ discoverGenre }),
         setSearchQuery: (searchQuery) => set({ searchQuery }),
         setUserName: (userName) => set({ userName }),
-        ensureUserId: () => set((state) => (state.userId ? {} : { userId: genId() })),
+        ensureUserId: () => set((state) => (state.userId === DEFAULT_USER_ID ? {} : { userId: DEFAULT_USER_ID })),
       };
     },
     {
       name: "cinetrack-nav",
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ userId: state.userId, userName: state.userName }),
+      partialize: (state) => ({ userName: state.userName }),
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<NavState>),
+        userId: DEFAULT_USER_ID,
+      }),
     },
   ),
 );

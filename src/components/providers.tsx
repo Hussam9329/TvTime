@@ -22,10 +22,34 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   const ensureUserId = useNav((s) => s.ensureUserId);
   const userId = useNav((s) => s.userId);
+  const setUserName = useNav((s) => s.setUserName);
 
   useEffect(() => {
     ensureUserId();
   }, [ensureUserId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+
+    const hydrateCanonicalProfile = async () => {
+      try {
+        const res = await fetch(withUserId(new URL("/api/user", window.location.origin)), {
+          headers: userHeaders(),
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const payload = await res.json();
+        const serverName = String(payload?.user?.name || "").trim();
+        if (!cancelled && serverName) setUserName(serverName);
+      } catch {
+        // Keep the locally cached display name when the profile endpoint is unavailable.
+      }
+    };
+
+    void hydrateCanonicalProfile();
+    return () => { cancelled = true; };
+  }, [setUserName]);
 
   // Keep the server-side TV state engine alive while the app is open. A show
   // that was Up To Date must be re-evaluated when a new episode reaches its air

@@ -50,6 +50,7 @@ export async function getCanonicalLibraryCounts(userId: string) {
     watchedMovies,
     watchedShows,
     watchedAnime,
+    watchingAnime,
     following,
     watchedEpisodes,
   ] = await Promise.all([
@@ -70,6 +71,15 @@ export async function getCanonicalLibraryCounts(userId: string) {
     db.media.count({ where: { ...base, type: "movie", watched: true, isAnime: false } }),
     db.media.count({ where: { ...base, type: "series", watched: true, isAnime: false } }),
     db.media.count({ where: { ...base, watched: true, isAnime: true } }),
+    db.media.count({
+      where: {
+        ...base,
+        type: "series",
+        isAnime: true,
+        watched: false,
+        status: { in: ["not_started", "watching", "uptodate"] },
+      },
+    }),
     db.media.count({ where: { ...base, type: "series", isAnime: false, isFollowing: true } }),
     db.watchedEpisode.count({ where: base }),
   ]);
@@ -94,6 +104,7 @@ export async function getCanonicalLibraryCounts(userId: string) {
     watchedMovies,
     watchedShows,
     watchedAnime,
+    watchingAnime,
     watchedEpisodes,
     following,
   };
