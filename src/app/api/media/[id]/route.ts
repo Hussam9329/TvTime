@@ -32,6 +32,7 @@ export async function PATCH(
         ? null
         : Math.max(0, Math.min(100, Number(body.userRating)));
     }
+    if (body.tmdbId !== undefined) data.tmdbId = body.tmdbId === null ? null : Number(body.tmdbId);
     if (body.watched !== undefined) data.watched = Boolean(body.watched);
     if (body.watchedAt !== undefined) data.watchedAt = body.watchedAt ? new Date(body.watchedAt) : null;
     if (body.isAnime !== undefined) data.isAnime = Boolean(body.isAnime);
@@ -39,6 +40,8 @@ export async function PATCH(
     if (body.ratingStatus !== undefined) data.ratingStatus = body.ratingStatus;
     if (body.notes !== undefined) data.notes = body.notes || null;
     if (body.rewatch !== undefined) data.rewatch = Boolean(body.rewatch);
+    if (body.poster !== undefined) data.poster = body.poster || null;
+    if (body.overview !== undefined) data.overview = body.overview || null;
 
     const existing = await db.media.findFirst({ where: { id, userId: user.id } });
     if (!existing) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
