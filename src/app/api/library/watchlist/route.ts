@@ -48,7 +48,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "mediaType, tmdbId, title required" }, { status: 400 });
     }
 
-    let item = await db.media.findFirst({ where: { userId: user.id, type, tmdbId } });
+    const identity = { userId: user.id, type, tmdbId };
+    let item = await db.media.findUnique({ where: { userId_type_tmdbId: identity } });
     if (item?.watched || (type === "series" && item?.status && item.status !== "planned")) {
       return NextResponse.json(
         { error: "A watched or actively tracked title cannot also be in Watchlist.", code: "WATCHLIST_REQUIRES_PLANNED" },
@@ -65,11 +66,14 @@ export async function POST(req: NextRequest) {
       status: "planned",
       watched: false,
       watchedAt: null,
+      ...(type === "series" ? { isFollowing: false } : {}),
     };
 
-    item = item
-      ? await db.media.update({ where: { id: item.id }, data: common })
-      : await db.media.create({ data: { userId: user.id, tmdbId, type, ...common } });
+    item = await db.media.upsert({
+      where: { userId_type_tmdbId: identity },
+      create: { userId: user.id, tmdbId, type, ...common },
+      update: common,
+    });
 
     return NextResponse.json({ item: toCompat(item), source: "Media" });
   } catch (error) {

@@ -202,30 +202,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let item = await db.media.findFirst({ where: { userId: user.id, type, tmdbId } });
-    if (!item) {
-      item = await db.media.create({
-        data: {
-          userId: user.id,
-          type,
-          tmdbId,
-          title: body.title || "Unknown",
-          poster: body.posterPath || null,
-          userRating: value,
-          watched: false,
-          status: null,
-        },
-      });
-    } else {
-      item = await db.media.update({
-        where: { id: item.id },
-        data: {
-          userRating: value,
-          ...(body.title ? { title: body.title } : {}),
-          ...(body.posterPath !== undefined ? { poster: body.posterPath || null } : {}),
-        },
-      });
-    }
+    const item = await db.media.upsert({
+      where: {
+        userId_type_tmdbId: { userId: user.id, type, tmdbId },
+      },
+      create: {
+        userId: user.id,
+        type,
+        tmdbId,
+        title: body.title || "Unknown",
+        poster: body.posterPath || null,
+        userRating: value,
+        watched: false,
+        status: null,
+      },
+      update: {
+        userRating: value,
+        ...(body.title ? { title: body.title } : {}),
+        ...(body.posterPath !== undefined ? { poster: body.posterPath || null } : {}),
+      },
+    });
     return NextResponse.json({ item: titleRatingCompat(item), source: "Media" });
   } catch (error) {
     console.error("[ratings:POST]", error);

@@ -62,6 +62,7 @@ export function GenreRecommendations() {
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
           items={(rec3.data?.results ?? []).filter((m) => m.poster_path).slice(0, 20)}
           loading={rec3.isLoading}
+          forcedMediaType="tv"
         />
       )}
       {movieGenre2 && (rec2.data?.results?.length ?? 0) > 0 && (

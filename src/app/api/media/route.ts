@@ -39,8 +39,8 @@ export async function GET(req: NextRequest) {
     if (watched === "false") where.watched = false;
     if (rated === "true") where.userRating = { not: null };
     if (rated === "false") where.userRating = null;
-    if (tracked === "true" && where.status === undefined) where.status = { not: null };
-    if (tracked === "false" && where.status === undefined) where.status = null;
+    if (tracked === "true") where.isFollowing = true;
+    if (tracked === "false") where.isFollowing = false;
 
     const isAnime = url.searchParams.get("isAnime");
     if (isAnime === "true") where.isAnime = true;

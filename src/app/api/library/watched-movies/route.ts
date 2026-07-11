@@ -33,18 +33,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "tmdbId, title required" }, { status: 400 });
     }
 
-    let item = await db.media.findFirst({ where: { userId: user.id, type: "movie", tmdbId } });
+    const identity = { userId: user.id, type: "movie", tmdbId };
+    const existing = await db.media.findUnique({ where: { userId_type_tmdbId: identity } });
     const data = {
       title: String(body.title),
-      poster: body.posterPath || item?.poster || null,
-      runtime: body.runtime != null ? Number(body.runtime) : item?.runtime || null,
+      poster: body.posterPath || existing?.poster || null,
+      runtime: body.runtime != null ? Number(body.runtime) : existing?.runtime || null,
       watched: true,
       watchedAt: new Date(),
       status: "watched",
     };
-    item = item
-      ? await db.media.update({ where: { id: item.id }, data })
-      : await db.media.create({ data: { userId: user.id, tmdbId, type: "movie", ...data } });
+    const item = await db.media.upsert({
+      where: { userId_type_tmdbId: identity },
+      create: { userId: user.id, tmdbId, type: "movie", ...data },
+      update: data,
+    });
 
     return NextResponse.json({ item: toCompat(item), source: "Media" });
   } catch (error) {

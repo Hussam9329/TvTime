@@ -1,7 +1,7 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useMovieDetail, useWatchlist, useWatchedMovies, useWatchlistToggle, useWatchedMovieToggle, useRatingMutate, useRatings, useMediaState } from "@/hooks/use-tmdb";
+import { useMovieDetail, useWatchlistToggle, useWatchedMovieToggle, useRatingMutate, useMediaState } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,9 +24,6 @@ export function MovieDetailView() {
   // that only return first 100 items. This fixes movies beyond page 1 not
   // showing as watched/rated/watchlisted.
   const mediaState = useMediaState(movieId, "movie");
-  const watchlist = useWatchlist();
-  const watchedMovies = useWatchedMovies();
-  const ratings = useRatings();
   const watchlistToggle = useWatchlistToggle();
   const watchedToggle = useWatchedMovieToggle();
   const ratingMutate = useRatingMutate();
@@ -60,18 +57,12 @@ export function MovieDetailView() {
   }
 
   const m = detail.data;
-  // Fix #3/#15: Prefer direct state lookup (works for ALL items, not just first 100)
-  // Fall back to paginated hooks only if mediaState hasn't loaded yet
+  // Direct identity lookup is the only source for detail-page state. It does
+  // not depend on the first page of Watchlist/Watched/Ratings collections.
   const stateItem = mediaState.data;
-  const inWatchlist = stateItem
-    ? stateItem.status === "planned"
-    : watchlist.data?.items.some((w) => w.mediaType === "movie" && w.tmdbId === m.id);
-  const isWatched = stateItem
-    ? stateItem.watched === true
-    : watchedMovies.data?.items.some((w) => w.tmdbId === m.id);
-  const myRating = stateItem
-    ? stateItem.userRating ?? null
-    : (ratings.data?.items.find((r) => r.mediaType === "movie" && r.tmdbId === m.id)?.userRating ?? null);
+  const inWatchlist = stateItem?.status === "planned" && stateItem?.watched !== true;
+  const isWatched = stateItem?.watched === true;
+  const myRating = stateItem?.userRating ?? null;
 
   const runtime = m.runtime ? `${Math.floor(m.runtime / 60)}h ${m.runtime % 60}m` : null;
   const year = m.release_date?.slice(0, 4);

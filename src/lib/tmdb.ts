@@ -125,6 +125,8 @@ export interface MovieDetail extends MediaItem {
 }
 
 export interface TvDetail extends MediaItem {
+  origin_country: string[];
+  original_language: string;
   number_of_seasons: number;
   number_of_episodes: number;
   seasons: Season[];

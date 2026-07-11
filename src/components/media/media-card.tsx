@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star, Film, Tv, Check, ListPlus, Bell } from "lucide-react";
 import { useNav } from "@/lib/store";
-import { useWatchlist, useWatchedMovies, useFollowing } from "@/hooks/use-tmdb";
+import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use-tmdb";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { SafeImage } from "@/components/media/safe-image";
@@ -15,9 +15,10 @@ interface MediaCardProps {
   index?: number;
   showMediaType?: boolean;
   forcedMediaType?: "movie" | "tv";
+  libraryState?: MediaBatchState | null;
 }
 
-export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType }: MediaCardProps) {
+export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
 
@@ -30,20 +31,11 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       ? "tv"
       : "movie";
 
-  // determine library status
-  const watchlist = useWatchlist();
-  const watchedMovies = useWatchedMovies();
-  const following = useFollowing();
-
-  const inWatchlist = watchlist.data?.items.some(
-    (w) => w.tmdbId === item.id && w.mediaType === mediaType
-  );
-  const watched =
-    mediaType === "movie"
-      ? watchedMovies.data?.items.some((w) => w.tmdbId === item.id)
-      : undefined;
-  const isFollowing =
-    mediaType === "tv" ? following.data?.items.some((w) => w.tmdbId === item.id) : undefined;
+  // Card badges come from the batched state endpoint for only the visible IDs.
+  const inWatchlist = Boolean(libraryState?.inWatchlist);
+  const watched = mediaType === "movie" ? Boolean(libraryState?.watched) : false;
+  const isFollowing = mediaType === "tv" ? Boolean(libraryState?.isFollowing) : false;
+  const userRating = libraryState?.userRating ?? null;
 
   const handleClick = () => {
     // Validate tmdbId before navigating — prevents opening broken profiles
@@ -137,6 +129,11 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
                   <Bell className="w-2.5 h-2.5" /> Following
                 </span>
               )}
+              {userRating != null && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] text-amber-300 bg-amber-500/20 rounded px-1 py-0.5" title="Your rating">
+                  <Star className="w-2.5 h-2.5 fill-current" /> {userRating}/100
+                </span>
+              )}
             </div>
             <h3 className="font-semibold text-white text-sm line-clamp-2 leading-tight drop-shadow">
               {title}
@@ -167,6 +164,12 @@ interface MediaGridProps {
 }
 
 export function MediaGrid({ items, loading, showMediaType = true, forcedMediaType }: MediaGridProps) {
+  const stateRequests = items.map((item) => ({
+    tmdbId: Number(item.id),
+    mediaType: forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
+  }));
+  const states = useMediaStates(stateRequests);
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
@@ -179,7 +182,17 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
       {items.map((item, i) => (
-        <MediaCard key={`${item.id}-${item.media_type || ""}`} item={item} index={i} showMediaType={showMediaType} forcedMediaType={forcedMediaType} />
+        <MediaCard
+          key={`${item.id}-${item.media_type || ""}`}
+          item={item}
+          index={i}
+          showMediaType={showMediaType}
+          forcedMediaType={forcedMediaType}
+          libraryState={states.data?.[mediaStateKey(
+            forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
+            Number(item.id),
+          )] ?? null}
+        />
       ))}
     </div>
   );

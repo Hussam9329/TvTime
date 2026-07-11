@@ -40,14 +40,16 @@ function isLegacyCompleted(media: { watched: boolean; status: string | null }, e
 }
 
 async function ensureSeriesMedia(userId: string, showTmdbId: number) {
-  const existing = await db.media.findFirst({
-    where: { userId, tmdbId: showTmdbId, type: "series" },
+  const identity = { userId, type: "series", tmdbId: showTmdbId };
+  const existing = await db.media.findUnique({
+    where: { userId_type_tmdbId: identity },
   });
   if (existing) return existing;
 
   const metadata = await getTvStatusMetadata(showTmdbId);
-  return db.media.create({
-    data: {
+  return db.media.upsert({
+    where: { userId_type_tmdbId: identity },
+    create: {
       userId,
       tmdbId: showTmdbId,
       title: metadata.title,
@@ -60,6 +62,7 @@ async function ensureSeriesMedia(userId: string, showTmdbId: number) {
       status: "not_started",
       watched: false,
     },
+    update: {},
   });
 }
 
@@ -69,8 +72,8 @@ async function ensureSeriesMedia(userId: string, showTmdbId: number) {
  */
 async function autoUpdateShowStatus(userId: string, showTmdbId: number): Promise<CompletionInfo | null> {
   try {
-    const media = await db.media.findFirst({
-      where: { userId, tmdbId: showTmdbId, type: "series" },
+    const media = await db.media.findUnique({
+      where: { userId_type_tmdbId: { userId, type: "series", tmdbId: showTmdbId } },
     });
     if (!media) return null;
 
@@ -151,8 +154,8 @@ export async function GET(req: NextRequest) {
 
     const numericShowId = showId ? Number(showId) : null;
     if (numericShowId && Number.isInteger(numericShowId) && numericShowId > 0) {
-      const media = await db.media.findFirst({
-        where: { userId: user.id, tmdbId: numericShowId, type: "series" },
+      const media = await db.media.findUnique({
+        where: { userId_type_tmdbId: { userId: user.id, type: "series", tmdbId: numericShowId } },
       });
       if (media) {
         await materializeLegacyCompletionSnapshot({ media });
@@ -270,7 +273,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const [media, existingCount] = await Promise.all([
-      db.media.findFirst({ where: { userId: user.id, tmdbId: showId, type: "series" } }),
+      db.media.findUnique({ where: { userId_type_tmdbId: { userId: user.id, type: "series", tmdbId: showId } } }),
       db.watchedEpisode.count({ where: { userId: user.id, showId } }),
     ]);
 

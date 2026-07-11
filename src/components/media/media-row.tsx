@@ -6,6 +6,7 @@ import type { MediaItem } from "@/lib/tmdb";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { mediaStateKey, useMediaStates } from "@/hooks/use-tmdb";
 
 interface MediaRowProps {
   title: string;
@@ -18,6 +19,11 @@ interface MediaRowProps {
 
 export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType }: MediaRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const stateRequests = items.map((item) => ({
+    tmdbId: Number(item.id),
+    mediaType: forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
+  }));
+  const states = useMediaStates(stateRequests);
 
   const scroll = (dir: "left" | "right") => {
     if (!scrollRef.current) return;
@@ -73,7 +79,15 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
             ))
           : items.map((item, i) => (
               <div key={`${item.id}-${item.media_type || ""}`} className={cn("flex-shrink-0 w-[130px] sm:w-[160px]")}>
-                <MediaCard item={item} index={i} forcedMediaType={forcedMediaType} />
+                <MediaCard
+                  item={item}
+                  index={i}
+                  forcedMediaType={forcedMediaType}
+                  libraryState={states.data?.[mediaStateKey(
+                    forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
+                    Number(item.id),
+                  )] ?? null}
+                />
               </div>
             ))}
       </div>

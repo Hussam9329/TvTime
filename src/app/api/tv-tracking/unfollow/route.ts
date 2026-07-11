@@ -4,35 +4,36 @@ import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMedia } from "@/lib/media-normalize";
 
 /**
- * Fix #3: Dedicated unfollow endpoint for TV shows.
+ * Dedicated unfollow endpoint for TV shows.
  *
  * POST /api/tv-tracking/unfollow
  * Body: { "tmdbId": 123, "keepProgress": true }
  *
- * - keepProgress=true: sets status=null only, keeps watched episodes + rating
- * - keepProgress=false: deletes ALL watched episodes + resets media status
- *
- * This bypasses the episode-engine protection in PATCH /api/media/[id] which
- * prevents direct status writes for shows with episode progress.
+ * - keepProgress=true: clears the following state only and preserves episodes/ratings
+ * - keepProgress=false: atomically clears this show's episodes, episode ratings and Media state
  */
 export async function POST(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const body = await req.json();
-    const { tmdbId, keepProgress } = body;
+    const tmdbId = Number(body?.tmdbId);
+    const keep = body?.keepProgress !== false;
 
-    if (!tmdbId || typeof tmdbId !== "number") {
+    if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
       return NextResponse.json(
-        { error: "tmdbId (number) is required", code: "INVALID_TMDB_ID" },
+        { error: "tmdbId (positive integer) is required", code: "INVALID_TMDB_ID", changed: false },
         { status: 400 },
       );
     }
 
-    const keep = keepProgress !== false; // default: true
-
-    // Find the media item
-    const media = await db.media.findFirst({
-      where: { userId: user.id, tmdbId, type: "series" },
+    const media = await db.media.findUnique({
+      where: {
+        userId_type_tmdbId: {
+          userId: user.id,
+          type: "series",
+          tmdbId,
+        },
+      },
     });
 
     if (!media) {
@@ -42,60 +43,90 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const activeProgressStates = new Set(["watching", "uptodate", "finished"]);
+
     if (keep) {
-      // Just clear status — keep episodes and rating
+      const watchedEpisodeCount = await db.watchedEpisode.count({
+        where: { userId: user.id, showId: tmdbId },
+      });
+      const hasProgress = watchedEpisodeCount > 0
+        || media.watched
+        || activeProgressStates.has(String(media.status || ""));
+      const needsStateCleanup = !hasProgress
+        && (media.status !== null || media.watched || media.watchedAt !== null);
+      const changed = media.isFollowing || needsStateCleanup;
+
+      if (!changed) {
+        return NextResponse.json({
+          ok: true,
+          changed: false,
+          action: "unfollow_keep_progress",
+          item: normalizeMedia(media),
+          message: "The show was already unfollowed. Episode progress is unchanged.",
+        });
+      }
+
       const updated = await db.media.update({
         where: { id: media.id },
-        data: { status: null, watched: false, watchedAt: null },
+        data: {
+          isFollowing: false,
+          ...(hasProgress ? {} : { status: null, watched: false, watchedAt: null }),
+        },
       });
+
       return NextResponse.json({
         ok: true,
-        changed: true,
+        changed,
         action: "unfollow_keep_progress",
         item: normalizeMedia(updated),
         message: "Unfollowed. Episode progress was kept.",
       });
-    } else {
-      // Delete ALL watched episodes for this show
-      const deletedEpisodes = await db.watchedEpisode.deleteMany({
-        where: { userId: user.id, showId: tmdbId },
-      });
+    }
 
-      // Also delete episode-level ratings (episode:S:E format)
-      const episodeRatingPattern = `episode:%`;
-      const deletedRatings = await db.rating.deleteMany({
+    // All three writes are one atomic unit. A failure rolls every deletion/update back.
+    const [deletedEpisodes, deletedRatings, updated] = await db.$transaction([
+      db.watchedEpisode.deleteMany({
+        where: { userId: user.id, showId: tmdbId },
+      }),
+      db.rating.deleteMany({
         where: {
           userId: user.id,
+          tmdbId,
           mediaType: { startsWith: "episode:" },
         },
-      }).catch(() => ({ count: 0 }));
-
-      // Reset media status
-      const updated = await db.media.update({
+      }),
+      db.media.update({
         where: { id: media.id },
         data: {
+          isFollowing: false,
           status: null,
           watched: false,
           watchedAt: null,
-          // Keep userRating — user may want to preserve their show rating
+          // Whole-show rating remains independent from episode progress.
         },
-      });
+      }),
+    ]);
 
-      return NextResponse.json({
-        ok: true,
-        changed: true,
-        action: "unfollow_clear_all",
-        item: normalizeMedia(updated),
-        deletedEpisodes: deletedEpisodes.count,
-        deletedRatings: deletedRatings.count,
-        message: `Unfollowed. ${deletedEpisodes.count} watched episodes cleared.`,
-      });
-    }
-  } catch (error: any) {
+    const changed = media.isFollowing
+      || media.status !== null
+      || media.watched
+      || media.watchedAt !== null
+      || deletedEpisodes.count > 0
+      || deletedRatings.count > 0;
+
+    return NextResponse.json({
+      ok: true,
+      changed,
+      action: "unfollow_clear_all",
+      item: normalizeMedia(updated),
+      deletedEpisodes: deletedEpisodes.count,
+      deletedRatings: deletedRatings.count,
+      message: changed
+        ? `Unfollowed. ${deletedEpisodes.count} watched episodes and ${deletedRatings.count} episode ratings cleared.`
+        : "The show was already unfollowed with no saved episode progress.",
+    });
+  } catch (error: unknown) {
     console.error("[tv-tracking:unfollow]", error);
-    return NextResponse.json(
-      { error: error?.message || "Failed to unfollow", changed: false },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to unfollow", changed: false }, { status: 500 });
   }
 }

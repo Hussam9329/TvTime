@@ -4,6 +4,54 @@ import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { toJsonArray } from "@/lib/media-normalize";
 import { getTvRatingEligibility } from "@/lib/tv-rating-eligibility";
 
+type MediaImportCreateData = {
+  userId: string;
+  tmdbId?: number | null;
+  title: string;
+  originalTitle?: string | null;
+  year?: string | null;
+  type: string;
+  poster?: string | null;
+  rating?: string | null;
+  overview?: string | null;
+  genres?: string[];
+  episodes?: number | null;
+  seasons?: number | null;
+  duration?: string | null;
+  status?: string | null;
+  author?: string | null;
+  pages?: number | null;
+  tags?: string[];
+  notes?: string | null;
+  watched?: boolean;
+  watchedAt?: Date | null;
+  userRating?: number | null;
+  rewatch?: boolean;
+  runtime?: number | null;
+  ratingStatus?: string | null;
+  isAnime?: boolean;
+  isFollowing?: boolean;
+  addedAt?: Date;
+};
+
+async function createMediaSafely({ data }: { data: MediaImportCreateData }) {
+  const tmdbId = data.tmdbId == null ? null : Number(data.tmdbId);
+  if (tmdbId != null && Number.isInteger(tmdbId) && tmdbId > 0) {
+    return db.media.upsert({
+      where: {
+        userId_type_tmdbId: {
+          userId: String(data.userId),
+          type: String(data.type),
+          tmdbId,
+        },
+      },
+      create: { ...data, tmdbId },
+      update: {},
+    });
+  }
+  return db.media.create({ data });
+}
+
 // POST - import library data from JSON (merges with existing data)
 // Supports version 2 (Media + watchedEpisodes) and version 1 (legacy tables).
 export async function POST(req: NextRequest) {
@@ -34,7 +82,7 @@ export async function POST(req: NextRequest) {
   if (Array.isArray(library.media)) {
     for (const item of library.media) {
       if (!item.title || !item.type) continue;
-      const itemType = String(item.type);
+      const itemType = String(item.type) === "tv" ? "series" : String(item.type);
       const itemTmdbId = item.tmdbId != null ? Number(item.tmdbId) : null;
       const importedUserRating = item.userRating != null
         ? Math.max(0, Math.min(100, Number(item.userRating)))
@@ -43,17 +91,33 @@ export async function POST(req: NextRequest) {
         deferredSeriesRatings.set(itemTmdbId, importedUserRating);
       }
 
+      const importedIsFollowing = itemType === "series" && (
+        typeof item.isFollowing === "boolean"
+          ? item.isFollowing
+          : ["not_started", "watching", "uptodate", "finished"].includes(String(item.status || ""))
+      );
       const whereClause = itemTmdbId != null
         ? { userId: user.id, tmdbId: itemTmdbId, type: itemType }
         : { userId: user.id, title: String(item.title), type: itemType };
 
       const existing = await db.media.findFirst({ where: whereClause });
       if (existing) {
-        // Skip - already exists. Could update in future.
+        // Imports merge conservatively. A new export can explicitly preserve
+        // isFollowing=false while retaining episode progress; older exports
+        // without the field fall back to their legacy active status.
+        if (itemType === "series" && importedIsFollowing && !existing.isFollowing) {
+          await db.media.update({
+            where: { id: existing.id },
+            data: {
+              isFollowing: true,
+              ...(existing.status ? {} : { status: "not_started" }),
+            },
+          });
+        }
         continue;
       }
 
-      await db.media.create({
+      await createMediaSafely({
         data: {
           userId: user.id,
           tmdbId: itemTmdbId,
@@ -86,6 +150,7 @@ export async function POST(req: NextRequest) {
           runtime: item.runtime != null ? Number(item.runtime) : null,
           ratingStatus: item.ratingStatus || null,
           isAnime: Boolean(item.isAnime),
+          isFollowing: importedIsFollowing,
         },
       });
       imported.media++;
@@ -183,7 +248,7 @@ export async function POST(req: NextRequest) {
         where: { userId: user.id, tmdbId: Number(item.tmdbId), type: mediaType },
       });
       if (!existing) {
-        await db.media.create({
+        await createMediaSafely({
           data: {
             userId: user.id,
             tmdbId: Number(item.tmdbId),
@@ -210,7 +275,7 @@ export async function POST(req: NextRequest) {
         where: { userId: user.id, tmdbId: Number(item.tmdbId), type: "movie" },
       });
       if (!existing) {
-        await db.media.create({
+        await createMediaSafely({
           data: {
             userId: user.id,
             tmdbId: Number(item.tmdbId),
@@ -234,8 +299,16 @@ export async function POST(req: NextRequest) {
       const existing = await db.media.findFirst({
         where: { userId: user.id, tmdbId: Number(item.tmdbId), type: "series" },
       });
-      if (!existing) {
-        await db.media.create({
+      if (existing) {
+        await db.media.update({
+          where: { id: existing.id },
+          data: {
+            isFollowing: true,
+            ...(existing.status ? {} : { status: "not_started" }),
+          },
+        });
+      } else {
+        await createMediaSafely({
           data: {
             userId: user.id,
             tmdbId: Number(item.tmdbId),
@@ -243,6 +316,7 @@ export async function POST(req: NextRequest) {
             type: "series",
             poster: item.posterPath || null,
             status: "not_started",
+            isFollowing: true,
             watched: false,
           },
         });
@@ -280,7 +354,7 @@ export async function POST(req: NextRequest) {
           });
         }
       } else {
-        await db.media.create({
+        await createMediaSafely({
           data: {
             userId: user.id,
             tmdbId,

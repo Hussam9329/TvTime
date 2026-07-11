@@ -43,7 +43,7 @@ model Media {
   episodes       Int?
   seasons        Int?
   duration       String?
-  status         String?  // "planned" | "watched" | null
+  status         String?  // list/progress state; independent from isFollowing
   author         String?
   pages          Int?
   tags           String[] @default([])
@@ -55,9 +55,11 @@ model Media {
   runtime        Int?
   ratingStatus   String?
   isAnime        Boolean  @default(false)
+  isFollowing    Boolean  @default(false)
   addedAt        DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@unique([userId, type, tmdbId], map: "Media_userId_type_tmdbId_key")
   @@index([userId])
   @@index([userId, type])
   @@index([userId, status])

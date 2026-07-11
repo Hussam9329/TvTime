@@ -8,95 +8,125 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const body = await req.json();
-    const { tmdbId, title, type, poster, year, overview, rating, runtime, genres, seasons, episodes, isAnime, originCountry, originalLanguage } = body;
+    const {
+      tmdbId,
+      title,
+      type,
+      poster,
+      year,
+      overview,
+      rating,
+      runtime,
+      genres,
+      seasons,
+      episodes,
+      isAnime,
+      originCountry,
+      originalLanguage,
+    } = body;
 
     if (!title || typeof title !== "string") {
       return NextResponse.json({ error: "title required" }, { status: 400 });
     }
 
-    // Fix #13: Auto-detect anime from TMDB metadata if not explicitly provided
+    const mediaType = type === "tv" ? "series" : type || "movie";
+    const parsedTmdbId = tmdbId == null || tmdbId === "" ? null : Number(tmdbId);
+    if (parsedTmdbId != null && (!Number.isInteger(parsedTmdbId) || parsedTmdbId <= 0)) {
+      return NextResponse.json({ error: "tmdbId must be a positive integer" }, { status: 400 });
+    }
+
+    const safeTitle = title.trim();
+    if (!safeTitle) {
+      return NextResponse.json({ error: "title required" }, { status: 400 });
+    }
+    const normalizedGenres = Array.isArray(genres)
+      ? genres.map((genre: unknown) => String(genre).trim()).filter(Boolean)
+      : [];
+    const hasAnimeMetadata = Array.isArray(originCountry || body.origin_country)
+      || typeof (originalLanguage || body.original_language) === "string"
+      || normalizedGenres.length > 0;
     const detectedAnime = isAnime !== undefined
       ? Boolean(isAnime)
       : detectIsAnime({
-          originCountry: originCountry || (body.origin_country),
-          originalLanguage: originalLanguage || (body.original_language),
-          genres: genres,
-          title: title,
+          originCountry: originCountry || body.origin_country,
+          originalLanguage: originalLanguage || body.original_language,
+          genres: normalizedGenres,
+          title: safeTitle,
         });
 
-    const mediaType = type === "tv" ? "series" : type || "movie";
-    const numericTmdbId = tmdbId ? Number(tmdbId) : null;
+    const createData = {
+      userId: user.id,
+      tmdbId: parsedTmdbId,
+      title: safeTitle,
+      type: mediaType,
+      poster: poster || null,
+      year: year || null,
+      overview: overview || null,
+      rating: rating != null ? String(rating) : null,
+      runtime: runtime != null ? Number(runtime) : null,
+      seasons: seasons != null ? Number(seasons) : null,
+      episodes: episodes != null ? Number(episodes) : null,
+      genres: normalizedGenres,
+      isAnime: detectedAnime,
+      status: null,
+      watched: false,
+    };
 
-    let item = numericTmdbId
-      ? await db.media.findFirst({ where: { userId: user.id, tmdbId: numericTmdbId, type: mediaType } })
-      : null;
+    let item;
 
-    // IMPORTANT: never match TMDB-backed movies by title when tmdbId is present.
-    if (!item && !numericTmdbId) {
-      item = await db.media.findFirst({
-        where: { userId: user.id, title: { equals: title.trim() }, type: mediaType },
+    if (parsedTmdbId != null) {
+      // The compound database constraint is the final race-condition guard.
+      // Metadata updates never overwrite user tracking/rating state.
+      item = await db.media.upsert({
+        where: {
+          userId_type_tmdbId: {
+            userId: user.id,
+            type: mediaType,
+            tmdbId: parsedTmdbId,
+          },
+        },
+        create: createData,
+        update: {
+          title: safeTitle,
+          ...(poster ? { poster } : {}),
+          ...(year ? { year } : {}),
+          ...(overview ? { overview } : {}),
+          ...(rating != null ? { rating: String(rating) } : {}),
+          ...(runtime != null ? { runtime: Number(runtime) } : {}),
+          ...(seasons != null ? { seasons: Number(seasons) } : {}),
+          ...(episodes != null ? { episodes: Number(episodes) } : {}),
+          ...(normalizedGenres.length > 0 ? { genres: normalizedGenres } : {}),
+          // Authoritative TMDB metadata can promote a previously misclassified
+          // item to Anime. It never auto-demotes a manual Anime classification.
+          ...(isAnime !== undefined
+            ? { isAnime: Boolean(isAnime) }
+            : hasAnimeMetadata && detectedAnime ? { isAnime: true } : {}),
+        },
       });
-    }
-
-    if (!item) {
-      // TVM Fix: Use a transaction to prevent race-condition duplicates.
-      // Two concurrent requests could both findFirst → both create.
-      // Serializable isolation ensures only one create succeeds.
-      try {
-        item = await db.$transaction(async (tx) => {
-          // Re-check inside the transaction
-          const existing = numericTmdbId
-            ? await tx.media.findFirst({ where: { userId: user.id, tmdbId: numericTmdbId, type: mediaType } })
-            : await tx.media.findFirst({ where: { userId: user.id, title: { equals: title.trim() }, type: mediaType } });
-          if (existing) return existing;
-          return await tx.media.create({
-            data: {
-              userId: user.id,
-              tmdbId: numericTmdbId,
-              title: title.trim(),
-              type: mediaType,
-              poster: poster || null,
-              year: year || null,
-              overview: overview || null,
-              rating: rating != null ? String(rating) : null,
-              runtime: runtime != null ? Number(runtime) : null,
-              seasons: seasons != null ? Number(seasons) : null,
-              episodes: episodes != null ? Number(episodes) : null,
-              genres: Array.isArray(genres) ? genres : [],
-              isAnime: detectedAnime,
-              status: null,
-              watched: false,
-            },
-          });
-        }, { isolationLevel: "Serializable", maxWait: 5000, timeout: 10000 });
-      } catch {
-        // If the transaction fails (e.g., concurrent create won), try one more findFirst
-        item = numericTmdbId
-          ? await db.media.findFirst({ where: { userId: user.id, tmdbId: numericTmdbId, type: mediaType } })
-          : await db.media.findFirst({ where: { userId: user.id, title: { equals: title.trim() }, type: mediaType } });
-        if (!item) throw new Error("Failed to create media item after retry");
-      }
     } else {
-      const updates: any = {};
-      const safeTitle = title.trim();
+      // Non-TMDB items have no stable external identity; retain the existing
+      // title-based compatibility behavior without inventing a new key.
+      item = await db.media.findFirst({
+        where: { userId: user.id, title: { equals: safeTitle }, type: mediaType },
+      });
 
-      if (numericTmdbId && !item.tmdbId) updates.tmdbId = numericTmdbId;
-      if (safeTitle && item.title !== safeTitle) updates.title = safeTitle;
-
-      // When the record is matched by the same TMDB id, incoming TMDB metadata is
-      // authoritative. Update a stale/wrong poster instead of keeping the first
-      // poster forever; this also heals rows created before this fix.
-      if (poster && item.poster !== poster) updates.poster = poster;
-      if (overview && item.overview !== overview) updates.overview = overview;
-      if (year && item.year !== year) updates.year = year;
-      if (rating != null && item.rating !== String(rating)) updates.rating = String(rating);
-      if (runtime != null && item.runtime !== Number(runtime)) updates.runtime = Number(runtime);
-      if (seasons != null && item.seasons !== Number(seasons)) updates.seasons = Number(seasons);
-      if (episodes != null && item.episodes !== Number(episodes)) updates.episodes = Number(episodes);
-      if (Array.isArray(genres) && genres.length > 0 && JSON.stringify(item.genres ?? []) !== JSON.stringify(genres)) updates.genres = genres;
-      if (isAnime !== undefined && item.isAnime !== Boolean(isAnime)) updates.isAnime = Boolean(isAnime);
-      if (Object.keys(updates).length > 0) {
-        item = await db.media.update({ where: { id: item.id }, data: updates });
+      if (!item) {
+        item = await db.media.create({ data: createData });
+      } else {
+        item = await db.media.update({
+          where: { id: item.id },
+          data: {
+            ...(poster ? { poster } : {}),
+            ...(year ? { year } : {}),
+            ...(overview ? { overview } : {}),
+            ...(rating != null ? { rating: String(rating) } : {}),
+            ...(runtime != null ? { runtime: Number(runtime) } : {}),
+            ...(normalizedGenres.length > 0 ? { genres: normalizedGenres } : {}),
+            ...(isAnime !== undefined
+              ? { isAnime: Boolean(isAnime) }
+              : hasAnimeMetadata && detectedAnime ? { isAnime: true } : {}),
+          },
+        });
       }
     }
 

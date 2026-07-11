@@ -70,7 +70,7 @@ export async function getCanonicalLibraryCounts(userId: string) {
     db.media.count({ where: { ...base, type: "movie", watched: true, isAnime: false } }),
     db.media.count({ where: { ...base, type: "series", watched: true, isAnime: false } }),
     db.media.count({ where: { ...base, watched: true, isAnime: true } }),
-    db.media.count({ where: { ...base, type: "series", isAnime: false, status: { in: [...ACTIVE_TV_STATES] } } }),
+    db.media.count({ where: { ...base, type: "series", isAnime: false, isFollowing: true } }),
     db.watchedEpisode.count({ where: base }),
   ]);
 

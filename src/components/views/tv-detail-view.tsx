@@ -1,8 +1,7 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useWatchlist, useTrackedShows, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, useMediaUpdate, type EpisodeCompletion } from "@/hooks/use-tmdb";
-import { withUserId, userHeaders } from "@/lib/client-user";
+import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useMediaState, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, useMediaUpdate, type EpisodeCompletion } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +22,7 @@ import { isEpisodeReleased, isFutureEpisode, type TvTrackingState } from "@/lib/
 export function TvDetailView() {
   const { tvId, back, goPerson } = useNav();
   const detail = useTvDetail(tvId);
-  const watchlist = useWatchlist();
-  const trackedShows = useTrackedShows();
+  const mediaState = useMediaState(tvId, "tv");
   const watchlistToggle = useWatchlistToggle();
   const followingToggle = useFollowingToggle();
   const ratingMutate = useRatingMutate();
@@ -39,7 +37,7 @@ export function TvDetailView() {
 
   // Derive values needed for effects BEFORE early returns (rules-of-hooks).
   const tData = detail.data;
-  const trackedShow = tData ? trackedShows.data?.items.find((w: any) => w.tmdbId === tData.id) : undefined;
+  const trackedShow = mediaState.data ?? progress.mediaItem ?? undefined;
   const myRating = trackedShow?.userRating ?? null;
   // Fix #2: Don't default to "not_started" — use null if show is not tracked
   const showTrackingStatus = (progress.trackingState || trackedShow?.status || null) as TvTrackingState | null;
@@ -97,15 +95,14 @@ export function TvDetailView() {
 
   // After early returns, detail.data is guaranteed to be defined.
   const t = detail.data;
-  const inWatchlist = watchlist.data?.items.some((w) => w.mediaType === "tv" && w.tmdbId === t.id);
-  // Fix #2: isFollowing is true ONLY if trackedShow exists and has a non-planned status.
-  // A show that's not in the user's library at all is NOT following.
-  const isFollowing = Boolean(
-    trackedShow && trackedShow.status && trackedShow.status !== "planned",
-  );
-
-  // Fix #2: effectiveLabel is null when show is not tracked at all
+  const inWatchlist = Boolean(mediaState.data?.status === "planned");
+  // Following membership and episode progress are separate concepts. A show
+  // can retain a Watching/Up To Date progress badge while isFollowing is false.
+  const isFollowing = progress.isFollowing;
   const effectiveLabel = showTrackingStatus;
+  const hasSavedProgress = progress.watchedItems.length > 0
+    || trackedShow?.watched === true
+    || ["watching", "uptodate", "finished"].includes(String(showTrackingStatus || ""));
 
   const year = t.first_air_date?.slice(0, 4);
   const runtime = t.episode_run_time?.[0] ? `${t.episode_run_time[0]}m` : null;
@@ -137,6 +134,11 @@ export function TvDetailView() {
         overview: t.overview,
         releaseDate: t.first_air_date,
         voteAverage: t.vote_average,
+        genres: t.genres.map((genre) => genre.name),
+        originCountry: t.origin_country,
+        originalLanguage: t.original_language,
+        seasons: t.number_of_seasons,
+        episodes: t.number_of_episodes,
       });
       toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
     } catch (error) {
@@ -146,82 +148,77 @@ export function TvDetailView() {
 
   const onFollow = async () => {
     if (!isFollowing) {
-      // Follow: always works
       try {
-        await followingToggle.mutateAsync({
+        const result = await followingToggle.mutateAsync({
           action: "add",
           tmdbId: t.id,
           title: t.name || "",
           posterPath: t.poster_path,
+          releaseDate: t.first_air_date,
+          overview: t.overview,
+          voteAverage: t.vote_average,
+          genres: t.genres.map((genre) => genre.name),
+          originCountry: t.origin_country,
+          originalLanguage: t.original_language,
+          seasons: t.number_of_seasons,
+          episodes: t.number_of_episodes,
         });
-        toast.success("Following — track episodes!");
+        if (result.changed) toast.success("Following — track episodes!");
+        else toast.info("This show is already followed.");
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to follow");
       }
       return;
     }
 
-    // Unfollow: check if the show has episode progress
-    const hasProgress = Boolean(
-      trackedShow?.watched ||
-      showTrackingStatus === "watching" ||
-      showTrackingStatus === "uptodate" ||
-      showTrackingStatus === "finished"
-    );
-
-    if (hasProgress) {
-      // Don't silently no-op — show a clear message with options
+    if (hasSavedProgress) {
       setShowUnfollowDialog(true);
       return;
     }
 
-    // No progress — safe to unfollow
     try {
-      await followingToggle.mutateAsync({
+      const result = await followingToggle.mutateAsync({
         action: "remove",
         tmdbId: t.id,
         title: t.name || "",
-        posterPath: t.poster_path,
+        keepProgress: true,
       });
-      toast.success("Unfollowed");
+      if (result.changed) toast.success("Unfollowed");
+      else toast.info("This show was already unfollowed.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to unfollow");
     }
   };
 
-  // Fix #3: Unfollow while keeping episode progress via dedicated endpoint
   const onUnfollowKeepProgress = async () => {
     try {
-      const res = await fetch(withUserId(new URL("/api/tv-tracking/unfollow", window.location.origin)), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...userHeaders() },
-        body: JSON.stringify({ tmdbId: t.id, keepProgress: true }),
+      const result = await followingToggle.mutateAsync({
+        action: "remove",
+        tmdbId: t.id,
+        title: t.name || "",
+        keepProgress: true,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error || "Failed to unfollow");
-      }
-      toast.success("Unfollowed. Episode progress was kept.");
+      if (result.changed) toast.success("Unfollowed. Episode progress was kept.");
+      else toast.info("This show was already unfollowed. Progress is unchanged.");
       setShowUnfollowDialog(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to unfollow");
     }
   };
 
-  // Fix #3: Full unfollow: delete all watched episodes via dedicated endpoint
   const onUnfollowFull = async () => {
     try {
-      const res = await fetch(withUserId(new URL("/api/tv-tracking/unfollow", window.location.origin)), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...userHeaders() },
-        body: JSON.stringify({ tmdbId: t.id, keepProgress: false }),
+      const result = await followingToggle.mutateAsync({
+        action: "remove",
+        tmdbId: t.id,
+        title: t.name || "",
+        keepProgress: false,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error || "Failed to unfollow");
+      if (result.changed) {
+        toast.success(`Unfollowed. ${result.deletedEpisodes || 0} watched episodes and ${result.deletedRatings || 0} episode ratings cleared.`);
+      } else {
+        toast.info("This show was already unfollowed with no saved progress.");
       }
-      const data = await res.json();
-      toast.success(`Unfollowed. ${data.deletedEpisodes || 0} watched episodes cleared.`);
       setShowUnfollowDialog(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to unfollow");
@@ -240,6 +237,14 @@ export function TvDetailView() {
       value: rating,
       title: t.name || `TV ${t.id}`,
       posterPath: t.poster_path,
+      releaseDate: t.first_air_date,
+      overview: t.overview,
+      voteAverage: t.vote_average,
+      genres: t.genres.map((genre) => genre.name),
+      originCountry: t.origin_country,
+      originalLanguage: t.original_language,
+      seasons: t.number_of_seasons,
+      episodes: t.number_of_episodes,
     });
   };
 
@@ -320,26 +325,23 @@ export function TvDetailView() {
             <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">{t.name}</h1>
             {t.tagline && <p className="text-sm sm:text-base italic text-foreground/70 mt-1">{t.tagline}</p>}
           </div>
-          {/* Fix #4: Action buttons — unified tracking + Watchlist option.
-              When show is not tracked, show both "Plan to Watch" and "Follow".
-              When tracked, show current state badge + appropriate action. */}
+          {/* Episode progress and following membership are intentionally separate. */}
           <div className="flex flex-wrap gap-2">
-            {effectiveLabel ? (
-              // Show the derived state (Watching/Up To Date/Finished/Not Started) as a badge + Following button
-              <>
-                <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
-                  {effectiveLabel === "finished" && <Trophy className="w-3.5 h-3.5" />}
-                  {effectiveLabel === "uptodate" && <Zap className="w-3.5 h-3.5" />}
-                  {effectiveLabel === "watching" && <Play className="w-3.5 h-3.5" />}
-                  {effectiveLabel === "not_started" && <Circle className="w-3.5 h-3.5" />}
-                  <span className="capitalize">{effectiveLabel.replace("_", " ")}</span>
-                </Badge>
-                <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
-                  <Bell className="w-4 h-4 mr-2" /> Following
-                </Button>
-              </>
+            {effectiveLabel && effectiveLabel !== "planned" && (
+              <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
+                {effectiveLabel === "finished" && <Trophy className="w-3.5 h-3.5" />}
+                {effectiveLabel === "uptodate" && <Zap className="w-3.5 h-3.5" />}
+                {effectiveLabel === "watching" && <Play className="w-3.5 h-3.5" />}
+                {effectiveLabel === "not_started" && <Circle className="w-3.5 h-3.5" />}
+                <span className="capitalize">{effectiveLabel.replace("_", " ")}</span>
+              </Badge>
+            )}
+
+            {isFollowing ? (
+              <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
+                <Bell className="w-4 h-4 mr-2" /> Following
+              </Button>
             ) : inWatchlist ? (
-              // In Watchlist — show badge + Follow button
               <>
                 <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-purple-500/20 text-purple-400 border-0">
                   <ListPlus className="w-3.5 h-3.5" /> In Watchlist
@@ -348,8 +350,11 @@ export function TvDetailView() {
                   <Bell className="w-4 h-4 mr-2" /> Follow
                 </Button>
               </>
+            ) : hasSavedProgress ? (
+              <Button variant="outline" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
+                <Bell className="w-4 h-4 mr-2" /> Follow
+              </Button>
             ) : (
-              // Not tracked at all — show both Plan to Watch and Follow buttons
               <>
                 <Button variant="secondary" onClick={onWatchlist} className="h-10" disabled={watchlistToggle.isPending}>
                   <ListPlus className="w-4 h-4 mr-2" /> Plan to Watch

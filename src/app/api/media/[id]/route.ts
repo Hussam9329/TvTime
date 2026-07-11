@@ -103,6 +103,8 @@ export async function PATCH(
         );
       }
 
+      if (requestedState === "planned") data.isFollowing = false;
+
       if (body.status !== undefined && body.status !== null && requestedState !== "planned" && requestedState !== "not_started") {
         return NextResponse.json(
           {

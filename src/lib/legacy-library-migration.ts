@@ -39,6 +39,7 @@ type WorkingMedia = {
     rating: string | null;
     runtime: number | null;
     status: string | null;
+    isFollowing: boolean;
     watched: boolean;
     watchedAt: Date | null;
     userRating: number | null;
@@ -87,6 +88,7 @@ function createWorking(type: CanonicalType, tmdbId: number, existing: Media | nu
           rating: existing.rating,
           runtime: existing.runtime,
           status: existing.status,
+          isFollowing: existing.isFollowing,
           watched: existing.watched,
           watchedAt: existing.watchedAt,
           userRating: existing.userRating,
@@ -101,6 +103,7 @@ function createWorking(type: CanonicalType, tmdbId: number, existing: Media | nu
           rating: null,
           runtime: null,
           status: null,
+          isFollowing: false,
           watched: false,
           watchedAt: null,
           userRating: null,
@@ -138,6 +141,7 @@ function updatePatch(entry: WorkingMedia): Prisma.MediaUpdateInput {
   if (before.rating !== after.rating) patch.rating = after.rating;
   if (before.runtime !== after.runtime) patch.runtime = after.runtime;
   if (before.status !== after.status) patch.status = after.status;
+  if (before.isFollowing !== after.isFollowing) patch.isFollowing = after.isFollowing;
   if (before.watched !== after.watched) patch.watched = after.watched;
   if ((before.watchedAt?.getTime() ?? null) !== (after.watchedAt?.getTime() ?? null)) patch.watchedAt = after.watchedAt;
   if (before.userRating !== after.userRating) patch.userRating = after.userRating;
@@ -227,6 +231,7 @@ async function migrateInsideTransaction(tx: Tx, userId: string): Promise<LegacyL
     const stronger = entry.current.watched || (entry.current.status != null && entry.current.status !== "planned" && entry.current.status !== "not_started");
     if (stronger) report.canonical.preservedStrongerState++;
     else entry.current.status = "not_started";
+    entry.current.isFollowing = true;
   }
 
   for (const legacy of watchedMovies) {
@@ -263,6 +268,7 @@ async function migrateInsideTransaction(tx: Tx, userId: string): Promise<LegacyL
         rating: entry.current.rating,
         runtime: entry.current.runtime,
         status: entry.current.status,
+        isFollowing: entry.current.isFollowing,
         watched: entry.current.watched,
         watchedAt: entry.current.watchedAt,
         userRating: entry.current.userRating,
@@ -276,7 +282,7 @@ async function migrateInsideTransaction(tx: Tx, userId: string): Promise<LegacyL
   }
 
   if (creates.length > 0) {
-    const created = await tx.media.createMany({ data: creates });
+    const created = await tx.media.createMany({ data: creates, skipDuplicates: true });
     report.canonical.created = created.count;
   }
   for (const update of updates) {
@@ -307,7 +313,8 @@ async function migrateInsideTransaction(tx: Tx, userId: string): Promise<LegacyL
     }
   }
   for (const legacy of following) {
-    if (!canonicalByKey.has(mediaKey("series", Number(legacy.tmdbId)))) {
+    const item = canonicalByKey.get(mediaKey("series", Number(legacy.tmdbId)));
+    if (!item?.isFollowing) {
       throw new Error(`Legacy following show ${legacy.tmdbId} was not preserved`);
     }
   }

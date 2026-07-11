@@ -268,6 +268,10 @@ async function findOrCreateMedia(args: {
   rating?: number;
   runtime?: number | null;
   genres?: string[];
+  originCountry?: string[] | null;
+  originalLanguage?: string | null;
+  seasons?: number | null;
+  episodes?: number | null;
 }): Promise<string> {
   const posterUrl = args.poster
     ? (args.poster.startsWith("http")
@@ -287,6 +291,10 @@ async function findOrCreateMedia(args: {
       rating: args.rating,
       runtime: args.runtime,
       genres: args.genres,
+      originCountry: args.originCountry,
+      originalLanguage: args.originalLanguage,
+      seasons: args.seasons,
+      episodes: args.episodes,
     }),
   });
   if (!res.ok) throw new Error("Failed to find-or-create media");
@@ -322,7 +330,7 @@ async function getMediaIdByTmdbId(tmdbId: number, mediaType: "movie" | "tv"): Pr
  */
 export function useMediaState(tmdbId: number | null, mediaType: "movie" | "tv") {
   return useQuery({
-    queryKey: ["media", "state", mediaType, tmdbId],
+    queryKey: ["media", "state", getClientUserId(), mediaType, tmdbId],
     queryFn: async () => {
       if (!tmdbId) return null;
       const url = withUserId(new URL("/api/media/state", window.location.origin));
@@ -334,6 +342,67 @@ export function useMediaState(tmdbId: number | null, mediaType: "movie" | "tv") 
       return data.item;
     },
     enabled: tmdbId != null && tmdbId > 0,
+    staleTime: 0,
+  });
+}
+
+export type MediaBatchState = {
+  id: string;
+  tmdbId: number;
+  type: "movie" | "series";
+  status: string | null;
+  watched: boolean;
+  userRating: number | null;
+  isAnime: boolean;
+  isFollowing: boolean;
+  inWatchlist: boolean;
+};
+
+export function mediaStateKey(mediaType: "movie" | "tv", tmdbId: number): string {
+  return `${mediaType}:${tmdbId}`;
+}
+
+/**
+ * Loads only the state for cards currently rendered on screen. This avoids
+ * deriving badges from the first page of a globally paginated library.
+ */
+export function useMediaStates(items: { tmdbId: number; mediaType: "movie" | "tv" }[]) {
+  const normalized = Array.from(
+    new Map(
+      items
+        .filter((item) => Number.isInteger(item.tmdbId) && item.tmdbId > 0)
+        .map((item) => [mediaStateKey(item.mediaType, item.tmdbId), item]),
+    ).values(),
+  ).sort((a, b) => mediaStateKey(a.mediaType, a.tmdbId).localeCompare(mediaStateKey(b.mediaType, b.tmdbId)));
+  const signature = normalized.map((item) => mediaStateKey(item.mediaType, item.tmdbId)).join("|");
+
+  return useQuery({
+    queryKey: ["media", "states", getClientUserId(), signature],
+    queryFn: async () => {
+      if (normalized.length === 0) return {} as Record<string, MediaBatchState>;
+
+      // The API deliberately caps each request. Large grids are split into
+      // bounded batches so a page with more than 200 rendered cards never
+      // falls back to missing badges or a 413 response.
+      const chunks: typeof normalized[] = [];
+      for (let index = 0; index < normalized.length; index += 200) {
+        chunks.push(normalized.slice(index, index + 200));
+      }
+
+      const responses = await Promise.all(chunks.map(async (chunk) => {
+        const res = await fetch(withUserId(new URL("/api/media/states", window.location.origin)), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...userHeaders() },
+          body: JSON.stringify({ items: chunk }),
+        });
+        await ensureApiOk(res, "Failed to load media card states");
+        const data = await res.json();
+        return (data.states || {}) as Record<string, MediaBatchState>;
+      }));
+
+      return Object.assign({}, ...responses) as Record<string, MediaBatchState>;
+    },
+    enabled: normalized.length > 0,
     staleTime: 0,
   });
 }
@@ -389,6 +458,11 @@ export function useWatchlistToggle() {
       releaseDate?: string;
       voteAverage?: number;
       runtime?: number | null;
+      genres?: string[];
+      originCountry?: string[] | null;
+      originalLanguage?: string | null;
+      seasons?: number | null;
+      episodes?: number | null;
     }) => {
       if (args.action === "add") {
         // Find-or-create, then set status to "planned"
@@ -401,6 +475,11 @@ export function useWatchlistToggle() {
           overview: args.overview,
           rating: args.voteAverage,
           runtime: args.runtime,
+          genres: args.genres,
+          originCountry: args.originCountry,
+          originalLanguage: args.originalLanguage,
+          seasons: args.seasons,
+          episodes: args.episodes,
         });
         const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
@@ -499,6 +578,11 @@ export function useWatchedMovieToggle() {
       releaseDate?: string;
       voteAverage?: number;
       overview?: string;
+      genres?: string[];
+      originCountry?: string[] | null;
+      originalLanguage?: string | null;
+      seasons?: number | null;
+      episodes?: number | null;
     }) => {
       if (args.action === "add") {
         // Find-or-create, then mark as watched (without rating - will be rated via rating dialog)
@@ -511,6 +595,11 @@ export function useWatchedMovieToggle() {
           overview: args.overview,
           rating: args.voteAverage,
           runtime: args.runtime,
+          genres: args.genres,
+          originCountry: args.originCountry,
+          originalLanguage: args.originalLanguage,
+          seasons: args.seasons,
+          episodes: args.episodes,
         });
         const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
@@ -657,7 +746,7 @@ export function useFollowing() {
     queryFn: async () => {
       const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "series");
-      url.searchParams.set("status", "not_started,watching,uptodate,finished");
+      url.searchParams.set("tracked", "true");
       url.searchParams.set("limit", "500");
       const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) throw new Error("Failed to load");
@@ -687,61 +776,91 @@ export function useTrackedShows() {
   });
 }
 
+export type FollowingToggleResult = {
+  ok?: boolean;
+  changed: boolean;
+  action: string;
+  item?: any;
+  deletedEpisodes?: number;
+  deletedRatings?: number;
+  message?: string;
+};
+
 export function useFollowingToggle() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { action: "add" | "remove"; tmdbId: number; title: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number }) => {
-      if (args.action === "add") {
-        // Find-or-create without changing rating or existing progress
-        await findOrCreateMedia({
+    mutationFn: async (args: {
+      action: "add" | "remove";
+      tmdbId: number;
+      title: string;
+      posterPath?: string | null;
+      releaseDate?: string;
+      overview?: string;
+      voteAverage?: number;
+      genres?: string[];
+      originCountry?: string[] | null;
+      originalLanguage?: string | null;
+      seasons?: number | null;
+      episodes?: number | null;
+      keepProgress?: boolean;
+    }): Promise<FollowingToggleResult> => {
+      if (args.action === "remove") {
+        const res = await fetch(withUserId(new URL("/api/tv-tracking/unfollow", window.location.origin)), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...userHeaders() },
+          body: JSON.stringify({
+            tmdbId: args.tmdbId,
+            keepProgress: args.keepProgress !== false,
+          }),
+        });
+        await ensureApiOk(res, "Failed to unfollow TV show");
+        return res.json();
+      }
+
+      await findOrCreateMedia({
+        tmdbId: args.tmdbId,
+        title: args.title,
+        type: "tv",
+        poster: args.posterPath,
+        year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
+        overview: args.overview,
+        rating: args.voteAverage,
+        genres: args.genres,
+        originCountry: args.originCountry,
+        originalLanguage: args.originalLanguage,
+        seasons: args.seasons,
+        episodes: args.episodes,
+      });
+
+      const stateUrl = withUserId(new URL("/api/media/state", window.location.origin));
+      stateUrl.searchParams.set("tmdbId", String(args.tmdbId));
+      stateUrl.searchParams.set("type", "tv");
+      const stateRes = await fetch(stateUrl, { headers: userHeaders() });
+      await ensureApiOk(stateRes, "Failed to verify TV show state");
+      const stateData = await stateRes.json();
+      const item = stateData.item;
+      if (!item) throw new Error("TV show state was not found after saving it");
+
+      if (item.isFollowing === true) {
+        return { changed: false, action: "already_following", item };
+      }
+
+      const followRes = await fetch(withUserId(new URL("/api/library/following", window.location.origin)), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...userHeaders() },
+        body: JSON.stringify({
           tmdbId: args.tmdbId,
           title: args.title,
-          type: "tv",
-          poster: args.posterPath,
-          year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
-          overview: args.overview,
-          rating: args.voteAverage,
-        });
-        // TVM Fix: find by tmdbId DIRECTLY (not via paginated list .find())
-        const id = await getMediaIdByTmdbId(args.tmdbId, "tv");
-        if (id) {
-          // Fetch the item to check current state
-          const stateUrl = withUserId(new URL("/api/media/state", window.location.origin));
-          stateUrl.searchParams.set("tmdbId", String(args.tmdbId));
-          stateUrl.searchParams.set("type", "tv");
-          const stateRes = await fetch(stateUrl, { headers: userHeaders() });
-          const stateData = await stateRes.json();
-          const item = stateData.item;
-          if (item && !item.watched && (!item.status || item.status === "planned")) {
-            const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ status: "not_started" }),
-            });
-            await ensureApiOk(patchRes, "Failed to follow TV show");
-          }
-        }
-      } else {
-        // Unfollow: only clear status if not watched, keep watched/rating intact
-        // TVM Fix: find by tmdbId DIRECTLY (not via paginated list .find())
-        const id = await getMediaIdByTmdbId(args.tmdbId, "tv");
-        if (id) {
-          const stateUrl = withUserId(new URL("/api/media/state", window.location.origin));
-          stateUrl.searchParams.set("tmdbId", String(args.tmdbId));
-          stateUrl.searchParams.set("type", "tv");
-          const stateRes = await fetch(stateUrl, { headers: userHeaders() });
-          const stateData = await stateRes.json();
-          const item = stateData.item;
-          if (item && !item.watched && (!item.status || item.status === "planned" || item.status === "not_started")) {
-            const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", ...userHeaders() },
-              body: JSON.stringify({ status: null }),
-            });
-            await ensureApiOk(patchRes, "Failed to unfollow TV show");
-          }
-        }
-      }
+          posterPath: args.posterPath,
+        }),
+      });
+      await ensureApiOk(followRes, "Failed to follow TV show");
+      const followData = await followRes.json();
+      return {
+        ...followData,
+        changed: Boolean(followData.changed),
+        action: followData.changed ? "follow" : "already_following",
+      };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
@@ -850,7 +969,7 @@ export function useEpisodeRatingMutate(showId: number) {
 export function useRatingMutate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null }) => {
+    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null; genres?: string[]; originCountry?: string[] | null; originalLanguage?: string | null; seasons?: number | null; episodes?: number | null }) => {
       if (args.action === "set") {
         // Find-or-create, then save only the independent rating
         const id = await findOrCreateMedia({
@@ -862,6 +981,11 @@ export function useRatingMutate() {
           overview: args.overview,
           rating: args.voteAverage,
           runtime: args.runtime,
+          genres: args.genres,
+          originCountry: args.originCountry,
+          originalLanguage: args.originalLanguage,
+          seasons: args.seasons,
+          episodes: args.episodes,
         });
         const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
@@ -1025,15 +1149,14 @@ export function useTvTracking(params: {
 export function useShowProgress(showId: number | null | undefined) {
   const detail = useTvDetail(showId ?? null);
   const watched = useWatchedEpisodes(showId ?? undefined);
-  const trackedShows = useTrackedShows();
+  const mediaState = useMediaState(showId ?? null, "tv");
   const watchedItems = watched.data?.items ?? [];
   const watchedSignature = watchedItems
     .map((episode: any) => `${episode.showId}-${episode.seasonNumber}-${episode.episodeNumber}-${episode.watchedAt || ""}`)
     .sort()
     .join("|");
-  const trackedShow = showId == null
-    ? undefined
-    : trackedShows.data?.items.find((item: any) => Number(item.tmdbId) === Number(showId));
+  const trackedShow = mediaState.data ?? undefined;
+  const isFollowing = Boolean(trackedShow?.isFollowing);
 
   const seasonsQuery = useQuery({
     queryKey: ["tmdb", "show-progress-seasons", showId, detail.data?.number_of_seasons ?? 0, watchedSignature, trackedShow?.status, trackedShow?.watched],
@@ -1093,7 +1216,12 @@ export function useShowProgress(showId: number | null | undefined) {
         totalKnownEpisodes: allEpisodesIncludingFuture.length,
         watchedCount: derived.watchedAiredEpisodeCount,
         ignoredFutureWatchedCount: derived.futureOrUnknownWatchedEpisodeCount,
-        trackingState: derived.state,
+        trackingState: trackedShow?.isFollowing
+          || trackedShow?.status
+          || trackedShow?.watched
+          || actualWatchedSet.size > 0
+          ? derived.state
+          : null,
         stateVerified: derived.verified,
         legacyCompletionAssumed: derived.legacyCompletionAssumed,
         nextEp,
@@ -1128,6 +1256,7 @@ export function useShowProgress(showId: number | null | undefined) {
     watchedCount: 0,
     ignoredFutureWatchedCount: 0,
     trackingState: (trackedShow?.status || (watchedItems.length > 0 ? "watching" : null)) as TvTrackingState | null,
+    isFollowing,
     stateVerified: false,
     legacyCompletionAssumed: false,
     nextEp: null,
@@ -1141,8 +1270,9 @@ export function useShowProgress(showId: number | null | undefined) {
     nextEpAirDate: null,
     isUpcoming: false,
     ...(seasonsQuery.data ?? {}),
-    isLoading: detail.isLoading || watched.isLoading || trackedShows.isLoading || seasonsQuery.isLoading,
-    isError: detail.isError || watched.isError || trackedShows.isError || seasonsQuery.isError,
+    mediaItem: trackedShow,
+    isLoading: detail.isLoading || watched.isLoading || mediaState.isLoading || seasonsQuery.isLoading,
+    isError: detail.isError || watched.isError || mediaState.isError || seasonsQuery.isError,
   };
 }
 
@@ -1175,6 +1305,7 @@ export interface MediaItemDB {
   addedAt: string;
   updatedAt: string;
   isAnime: boolean;
+  isFollowing: boolean;
 }
 
 export interface MediaStats {

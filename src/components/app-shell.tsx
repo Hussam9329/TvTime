@@ -1,6 +1,8 @@
 "use client";
 
-import { useNav } from "@/lib/store";
+import { useEffect, useLayoutEffect, useMemo } from "react";
+import { useNav, getBrowserNavigationIndex, initializeBrowserNavigation } from "@/lib/store";
+import { navigationEntryFromPath, normalizeNavigationEntry, type NavigationEntry } from "@/lib/navigation";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { HomeView } from "@/components/views/home-view";
@@ -15,18 +17,40 @@ import { AnimeView } from "@/components/views/anime-view";
 import { StatsView } from "@/components/views/stats-view";
 import { TvShowsView } from "@/components/views/tv-tracking-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
-import { useEffect } from "react";
 
-export function AppShell() {
-  const view = useNav((s) => s.view);
-  const movieId = useNav((s) => s.movieId);
-  const tvId = useNav((s) => s.tvId);
-  const personId = useNav((s) => s.personId);
+export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
+  const normalizedInitialRoute = useMemo(
+    () => normalizeNavigationEntry(initialRoute),
+    [initialRoute.view, initialRoute.movieId, initialRoute.tvId, initialRoute.personId],
+  );
+  const view = useNav((state) => state.view);
+  const movieId = useNav((state) => state.movieId);
+  const tvId = useNav((state) => state.tvId);
+  const personId = useNav((state) => state.personId);
+  const syncRoute = useNav((state) => state.syncRoute);
+  const routeReady = useNav((state) => state.routeReady);
 
-  // Scroll to top on view change
+  useLayoutEffect(() => {
+    const navigationIndex = initializeBrowserNavigation(normalizedInitialRoute);
+    syncRoute(normalizedInitialRoute, "reset", navigationIndex);
+  }, [normalizedInitialRoute, syncRoute]);
+
   useEffect(() => {
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" });
-  }, [view, movieId, tvId, personId]);
+    const onPopState = () => {
+      const route = navigationEntryFromPath(window.location.pathname, window.location.search);
+      syncRoute(route, "pop", getBrowserNavigationIndex());
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [syncRoute]);
+
+  useEffect(() => {
+    if (routeReady) window.scrollTo({ top: 0, behavior: "auto" });
+  }, [routeReady, view, movieId, tvId, personId]);
+
+  if (!routeReady) {
+    return <div className="min-h-screen bg-background" aria-busy="true" />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -37,9 +61,9 @@ export function AppShell() {
           {view === "home" && <HomeView />}
           {view === "discover" && <DiscoverView />}
           {view === "search" && <SearchView />}
-          {view === "movie-detail" && <MovieDetailView />}
-          {view === "tv-detail" && <TvDetailView />}
-          {view === "person-detail" && <PersonDetailView />}
+          {view === "movie-detail" && movieId && <MovieDetailView />}
+          {view === "tv-detail" && tvId && <TvDetailView />}
+          {view === "person-detail" && personId && <PersonDetailView />}
           {view === "calendar" && <CalendarView />}
           {view === "movies" && <MoviesView />}
           {view === "anime" && <AnimeView />}
