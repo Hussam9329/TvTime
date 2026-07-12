@@ -73,17 +73,17 @@ check(/<TabsTrigger value="not-started"/.test(collection) && /<TabsTrigger value
 check(!/Watchlist TV|Watched TV|My Library/.test(collection), "Movies and Anime contain no legacy mixed Library tabs");
 check(/status:\s*"planned"/.test(collection) && /watched:\s*"true"/.test(collection), "Watchlist and Watched use explicit canonical states");
 check(/status:\s*"planned",\s*watched:\s*"false"/.test(collection), "Watchlist tabs explicitly exclude watched titles");
-check(/Move to Anime/.test(tvShows) && /isAnime:\s*true/.test(tvShows), "TV Shows can move a misclassified title into Anime without duplicating it");
+check(/To Anime/.test(tvShows) && /isAnime:\s*true,\s*isArabic:\s*false/.test(tvShows), "TV Shows can move a misclassified title into Anime without duplicating it");
 check(/To TV Shows/.test(collection) && /To Movies/.test(collection), "Anime titles can be moved back to the correct world");
 
 check(/type:\s*"series",\s*\n\s*isAnime:\s*false/.test(tvApi), "TV Shows API excludes Anime at the source");
 check(!/label="Finished Anime"/.test(tvShows) && !/label:\s*"Finished Anime"/.test(tvShows), "TV Shows no longer exposes an Anime filter");
-check(/>TV Shows<\/h1>/.test(tvShows), "TV Shows page uses the requested name");
+check(/world === "arabic" \? "Arabic TV Shows" : "TV Shows"/.test(tvShows), "TV Shows page uses the requested name");
 
 check(/type:\s*"movie",\s*isAnime:\s*false/.test(counts), "Movie counters exclude Anime movies");
 check(/status:\s*"planned",\s*watched:\s*false,\s*isAnime:\s*true/.test(counts), "Anime Watchlist counter covers the dedicated Anime world");
 check(/watched:\s*true,\s*isAnime:\s*true/.test(counts), "Anime Watched counter covers the dedicated Anime world");
-check(/type:\s*"series",\s*isAnime:\s*false,\s*isFollowing:\s*true/.test(counts), "TV Shows following counter uses explicit membership and excludes Anime");
+check(/type:\s*"series",\s*isAnime:\s*false,\s*isArabic:\s*false,\s*isFollowing:\s*true/.test(counts), "TV Shows following counter uses explicit membership and excludes Anime and Arabic TV");
 check(/notStartedAnime/.test(counts) && /status:\s*"not_started"/.test(counts) && /isFollowing:\s*true/.test(counts), "Anime Not Started is counted separately from progress");
 check(/watchingAnime/.test(counts) && /\["watching",\s*"uptodate"\]/.test(counts), "Anime In Progress contains only real progress states");
 

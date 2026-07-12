@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { canonicalMediaPoster } from "@/lib/media-poster";
 
 function toCompat(item: any) {
   return { ...item, posterPath: item.poster, followedAt: item.addedAt };
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const items = await db.media.findMany({
-      where: { userId: user.id, type: "series", isAnime: false, isFollowing: true },
+      where: { userId: user.id, type: "series", isAnime: false, isArabic: false, isFollowing: true },
       orderBy: { addedAt: "desc" },
     });
     return NextResponse.json({ items: items.map(toCompat), source: "Media" });
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     const identity = { userId: user.id, type: "series", tmdbId };
+    const normalizedPoster = canonicalMediaPoster(body.posterPath);
     const [existing, watchedEpisodes] = await Promise.all([
       db.media.findUnique({ where: { userId_type_tmdbId: identity } }),
       db.watchedEpisode.count({ where: { userId: user.id, showId: tmdbId } }),
@@ -48,14 +50,14 @@ export async function POST(req: NextRequest) {
         tmdbId,
         title: String(body.title),
         type: "series",
-        poster: body.posterPath || null,
+        poster: normalizedPoster,
         status: nextStatus,
         isFollowing: true,
         watched: false,
       },
       update: {
         title: String(body.title),
-        ...(body.posterPath ? { poster: body.posterPath } : {}),
+        ...(normalizedPoster ? { poster: normalizedPoster } : {}),
         status: nextStatus,
         isFollowing: true,
       },

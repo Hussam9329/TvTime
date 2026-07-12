@@ -3,6 +3,7 @@
 import { useDiscoverMovies, useDiscoverTv, useMovieGenres, useTvGenres, useMedia } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { Sparkles, Star } from "lucide-react";
+import { isArabicMediaItem } from "@/lib/arabic-media";
 
 /**
  * TVM-42: Personalized recommendations.
@@ -20,8 +21,8 @@ export function GenreRecommendations() {
   const tvGenres = useTvGenres();
 
   // TVM-42: Fetch the user's highly-rated media to derive personal genres
-  const ratedMovies = useMedia({ type: "movie", rated: "true", limit: 500 });
-  const ratedTv = useMedia({ type: "series", rated: "true", limit: 500 });
+  const ratedMovies = useMedia({ type: "movie", rated: "true", isArabic: "false", limit: 500 });
+  const ratedTv = useMedia({ type: "series", rated: "true", isArabic: "false", limit: 500 });
 
   // Derive top genres from user's highest-rated items (rating >= 70)
   const userMovieGenres = deriveTopGenres(ratedMovies.data?.items ?? [], movieGenres.data ?? [], 2);
@@ -52,7 +53,7 @@ export function GenreRecommendations() {
         <MediaRow
           title={isPersonalized ? `Top ${movieGenre1.name} Movies • For You` : `Top ${movieGenre1.name} Movies`}
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
-          items={(rec1.data?.results ?? []).filter((m) => m.poster_path).slice(0, 20)}
+          items={(rec1.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20)}
           loading={rec1.isLoading}
         />
       )}
@@ -60,7 +61,7 @@ export function GenreRecommendations() {
         <MediaRow
           title={isPersonalized ? `Popular ${tvGenre1.name} Shows • For You` : `Popular ${tvGenre1.name} Shows`}
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
-          items={(rec3.data?.results ?? []).filter((m) => m.poster_path).slice(0, 20)}
+          items={(rec3.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20)}
           loading={rec3.isLoading}
           forcedMediaType="tv"
         />
@@ -69,7 +70,7 @@ export function GenreRecommendations() {
         <MediaRow
           title={isPersonalized ? `Trending ${movieGenre2.name} Movies • For You` : `Trending ${movieGenre2.name} Movies`}
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
-          items={(rec2.data?.results ?? []).filter((m) => m.poster_path).slice(0, 20)}
+          items={(rec2.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20)}
           loading={rec2.isLoading}
         />
       )}

@@ -1,7 +1,7 @@
 // TMDB API client - proxies all requests through server-side
 // TMDB API is free: https://developer.themoviedb.org/
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "8265bd1679663a7ea12ac168da84d2e8";
+const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim() || "";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 export const TMDB_IMG_BASE = "https://image.tmdb.org/t/p";
 
@@ -22,6 +22,7 @@ export function imgOrPlaceholder(path: string | null | undefined, size: string =
 }
 
 async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
+  if (!TMDB_API_KEY) throw new Error("TMDB_API_KEY is not configured");
   const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
   url.searchParams.set("api_key", TMDB_API_KEY);
   url.searchParams.set("language", "en-US");
@@ -56,6 +57,7 @@ export interface MediaItem {
   genre_ids?: number[];
   popularity: number;
   original_language?: string;
+  origin_country?: string[];
   original_title?: string;
   original_name?: string;
 }
@@ -118,6 +120,7 @@ export interface MovieDetail extends MediaItem {
   budget: number;
   revenue: number;
   production_companies: { id: number; name: string; logo_path: string | null }[];
+  production_countries: { iso_3166_1: string; name: string }[];
   spoken_languages: { english_name: string; name: string }[];
   imdb_id: string | null;
   homepage: string | null;
@@ -135,6 +138,7 @@ export interface TvDetail extends MediaItem {
   status: string;
   episode_run_time: number[];
   production_companies: { id: number; name: string; logo_path: string | null }[];
+  production_countries: { iso_3166_1: string; name: string }[];
   spoken_languages: { english_name: string; name: string }[];
   homepage: string | null;
   in_production: boolean;
@@ -191,11 +195,14 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/movie/upcoming`, { page }),
   movieGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`),
-  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number } = {}) => {
-    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": 100 };
+  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string } = {}) => {
+    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": params.vote_count_gte ?? 100 };
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.primary_release_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
+    if (params.original_language) p.with_original_language = params.original_language;
+    if (params.release_date_gte) p["primary_release_date.gte"] = params.release_date_gte;
+    if (params.release_date_lte) p["primary_release_date.lte"] = params.release_date_lte;
     return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p);
   },
 
@@ -210,11 +217,12 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/airing_today`, { page }),
   tvGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
-  discoverTv: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number } = {}) => {
-    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": 100 };
+  discoverTv: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number } = {}) => {
+    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": params.vote_count_gte ?? 100 };
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.first_air_date_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
+    if (params.original_language) p.with_original_language = params.original_language;
     return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p);
   },
 

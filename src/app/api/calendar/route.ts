@@ -16,6 +16,7 @@ type FollowedShow = {
   title: string;
   poster: string | null;
   isAnime: boolean;
+  isArabic: boolean;
 };
 
 type CalendarEpisode = {
@@ -26,6 +27,7 @@ type CalendarEpisode = {
   showPoster: string | null;
   showBackdrop: string | null;
   isAnime: boolean;
+  isArabic: boolean;
   seasonNumber: number;
   episodeNumber: number;
   episodeName: string;
@@ -120,6 +122,7 @@ async function buildShowSchedule(
         showPoster: show.poster || detail.poster_path || null,
         showBackdrop: detail.backdrop_path || null,
         isAnime: show.isAnime,
+        isArabic: show.isArabic,
         seasonNumber: episode.season_number,
         episodeNumber: episode.episode_number,
         episodeName: episode.name || `Episode ${episode.episode_number}`,
@@ -152,9 +155,21 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const worldParam = url.searchParams.get("world") || "general";
+    if (worldParam !== "general" && worldParam !== "arabic-tv") {
+      return NextResponse.json({ error: "Unsupported calendar world", code: "INVALID_CALENDAR_WORLD" }, { status: 400 });
+    }
+    const world = worldParam as "general" | "arabic-tv";
+
     const user = await getOrCreateUser(parseUserId(req));
     const rawShows = await db.media.findMany({
-      where: { userId: user.id, type: "series", isFollowing: true, tmdbId: { not: null } },
+      where: {
+        userId: user.id,
+        type: "series",
+        isFollowing: true,
+        isArabic: world === "arabic-tv",
+        tmdbId: { not: null },
+      },
       orderBy: [{ title: "asc" }, { tmdbId: "asc" }],
       select: {
         id: true,
@@ -162,6 +177,7 @@ export async function GET(req: NextRequest) {
         title: true,
         poster: true,
         isAnime: true,
+        isArabic: true,
       },
     });
 
@@ -171,6 +187,7 @@ export async function GET(req: NextRequest) {
       title: show.title,
       poster: show.poster,
       isAnime: show.isAnime,
+      isArabic: show.isArabic,
     }]);
 
     if (shows.length === 0) {
@@ -181,6 +198,7 @@ export async function GET(req: NextRequest) {
         shows: [],
         warnings: [],
         partial: false,
+        world,
       }, { headers: { "Cache-Control": "private, no-store" } });
     }
 
@@ -212,9 +230,11 @@ export async function GET(req: NextRequest) {
         title: show.title,
         poster: show.poster,
         isAnime: show.isAnime,
+        isArabic: show.isArabic,
       })),
       warnings,
       partial: warnings.length > 0,
+      world,
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("[calendar:GET]", error);

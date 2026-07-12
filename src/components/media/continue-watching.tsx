@@ -5,10 +5,18 @@ import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
 import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useState } from "react";
+import {
+  buildEpisodeWatchPlan,
+  buildSeasonWatchPlan,
+  progressEpisodesToWatchRefs,
+  type EpisodeWatchPlan,
+} from "@/lib/episode-watch-plan";
 
 /**
  * Continue Watching - the core TV Time feature.
@@ -63,41 +71,75 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
 
   const episodeToggle = useEpisodeToggle();
   const bulkToggle = useBulkEpisodeToggle();
+  const [watchPlan, setWatchPlan] = useState<EpisodeWatchPlan | null>(null);
 
   const allWatched = !isLoading && totalEpisodes > 0 && !nextEp;
   const remaining = Math.max(0, totalEpisodes - watchedCount);
   const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
 
-  const markWatched = () => {
-    if (!nextEp) return;
-    episodeToggle.mutate({
-      action: "add",
-      showId,
-      seasonNumber: nextEp.seasonNumber,
-      episodeNumber: nextEp.episode.episode_number,
-      episodeName: nextEp.episode.name,
-    });
-    toast.success(`Marked S${nextEp.seasonNumber}E${nextEp.episode.episode_number} as watched`);
-  };
+  const releasedTimeline = progressEpisodesToWatchRefs(allEpisodes);
 
-  const markAllSeason = () => {
-    if (!nextEp) return;
-    const unwatched = allEpisodes
-      .filter(({ seasonNumber, episode }) =>
-        seasonNumber === nextEp.seasonNumber
-        && !watchedSet.has(`${episode.season_number}-${episode.episode_number}`),
-      )
-      .map(({ episode }) => ({
-        seasonNumber: episode.season_number,
-        episodeNumber: episode.episode_number,
-        episodeName: episode.name,
-      }));
-    if (unwatched.length === 0) {
-      toast.info("All episodes already watched");
+  const applyWatchPlan = async (plan: EpisodeWatchPlan, includePrevious: boolean) => {
+    const episodes = includePrevious ? plan.allEpisodes : plan.selectedEpisodes;
+    if (episodes.length === 0) {
+      setWatchPlan(null);
       return;
     }
-    bulkToggle.mutate({ showId, episodes: unwatched });
-    toast.success(`Marked ${unwatched.length} episodes as watched`);
+    try {
+      await (episodes.length === 1
+        ? episodeToggle.mutateAsync({
+            action: "add",
+            showId,
+            seasonNumber: episodes[0].seasonNumber,
+            episodeNumber: episodes[0].episodeNumber,
+            episodeName: episodes[0].episodeName || undefined,
+          })
+        : bulkToggle.mutateAsync({ showId, episodes }));
+      toast.success(
+        includePrevious && plan.previousUnwatched.length > 0
+          ? `Marked ${episodes.length} released episodes as watched, including earlier gaps.`
+          : `${plan.targetLabel} marked as watched.`,
+      );
+      setWatchPlan(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to mark episodes");
+    }
+  };
+
+  const markWatched = async () => {
+    if (!nextEp) return;
+    const plan = buildEpisodeWatchPlan({
+      target: {
+        seasonNumber: nextEp.seasonNumber,
+        episodeNumber: nextEp.episode.episode_number,
+        episodeName: nextEp.episode.name,
+      },
+      releasedEpisodes: releasedTimeline,
+      watchedKeys: watchedSet,
+    });
+    if (plan.previousUnwatched.length > 0) {
+      setWatchPlan(plan);
+      return;
+    }
+    await applyWatchPlan(plan, false);
+  };
+
+  const markAllSeason = async () => {
+    if (!nextEp) return;
+    const plan = buildSeasonWatchPlan({
+      seasonNumber: nextEp.seasonNumber,
+      releasedEpisodes: releasedTimeline,
+      watchedKeys: watchedSet,
+    });
+    if (plan.selectedEpisodes.length === 0) {
+      toast.info("All released episodes in this season are already watched");
+      return;
+    }
+    if (plan.previousUnwatched.length > 0) {
+      setWatchPlan(plan);
+      return;
+    }
+    await applyWatchPlan(plan, false);
   };
 
   // Loading state
@@ -254,6 +296,14 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
           </div>
         </div>
       </Card>
+      <EpisodeWatchConfirmationDialog
+        plan={watchPlan}
+        open={Boolean(watchPlan)}
+        pending={episodeToggle.isPending || bulkToggle.isPending}
+        onOpenChange={(nextOpen) => { if (!nextOpen) setWatchPlan(null); }}
+        onSelectedOnly={() => watchPlan ? applyWatchPlan(watchPlan, false) : undefined}
+        onWithPrevious={() => watchPlan ? applyWatchPlan(watchPlan, true) : undefined}
+      />
     </motion.div>
   );
 }

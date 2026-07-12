@@ -18,6 +18,8 @@ import {
   Keyboard,
   Clapperboard,
   Sparkles,
+  Languages,
+  ChevronDown,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -33,8 +35,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ProfileDialog } from "@/components/profile/profile-dialog";
 import { ShortcutsHelpDialog } from "@/components/layout/keyboard-shortcuts";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const navItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
+const primaryNavItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
   { view: "home", label: "Home", icon: Home },
   { view: "discover", label: "Discover", icon: Compass },
   { view: "search", label: "Search", icon: Search },
@@ -44,6 +52,13 @@ const navItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
   { view: "calendar", label: "Calendar", icon: CalendarDays },
   { view: "stats", label: "Stats", icon: BarChart3 },
 ];
+
+const arabicNavItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
+  { view: "arabic-movies", label: "Arabic Movies", icon: Film },
+  { view: "arabic-tv", label: "Arabic TV", icon: Clapperboard },
+];
+
+const mobileNavItems = [...primaryNavItems, ...arabicNavItems];
 
 export function Header() {
   const { view, setView, setSearchQuery, back, history, userName } = useNav();
@@ -93,7 +108,7 @@ export function Header() {
               </SheetTitle>
             </SheetHeader>
             <nav className="p-3 flex flex-col gap-1">
-              {navItems.map((item) => (
+              {mobileNavItems.map((item) => (
                 <button
                   key={item.view}
                   onClick={() => goTo(item.view)}
@@ -126,7 +141,7 @@ export function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden xl:flex items-center gap-1">
-          {navItems.map((item) => (
+          {primaryNavItems.map((item) => (
             <button
               key={item.view}
               onClick={() => goTo(item.view)}
@@ -141,6 +156,31 @@ export function Header() {
               {item.label}
             </button>
           ))}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  view === "arabic-movies" || view === "arabic-tv"
+                    ? "bg-emerald-500/15 text-emerald-400"
+                    : "hover:bg-accent text-foreground/70"
+                )}
+                aria-label="Open Arabic media navigation"
+              >
+                <Languages className="w-4 h-4" />
+                Arabic
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-52">
+              {arabicNavItems.map((item) => (
+                <DropdownMenuItem key={item.view} onSelect={() => goTo(item.view)} className={cn(view === item.view && "bg-accent text-accent-foreground")}>
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         {/* Search */}
@@ -150,7 +190,7 @@ export function Header() {
             <Input
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
-              placeholder="Search movies, TV shows, anime..."
+              placeholder="Search movies, TV shows, anime, Arabic titles..."
               className="pl-9 h-9 bg-muted/50 border-border/50 focus-visible:bg-background"
             />
           </div>

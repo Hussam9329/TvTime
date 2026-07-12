@@ -40,26 +40,26 @@ export async function GET(req: NextRequest) {
     const user = await getOrCreateUser(parseUserId(req));
     const limit = Math.min(Math.max(Number(new URL(req.url).searchParams.get("limit")) || 12, 1), 50);
 
-    const [mediaMovies, watchedEpisodes] = await Promise.all([
+    const [mediaMovies, mediaShows] = await Promise.all([
       db.media.findMany({
-        where: { userId: user.id, type: "movie", watched: true },
+        where: { userId: user.id, type: "movie", watched: true, isArabic: false },
         orderBy: [{ watchedAt: "desc" }, { updatedAt: "desc" }],
         take: 100,
       }),
-      db.watchedEpisode.findMany({
-        where: { userId: user.id },
-        orderBy: { watchedAt: "desc" },
-        take: 200,
+      db.media.findMany({
+        where: { userId: user.id, type: "series", isArabic: false, tmdbId: { not: null } },
+        select: { tmdbId: true, title: true, poster: true },
       }),
     ]);
 
-    const showIds = Array.from(
-      new Set(watchedEpisodes.map((episode) => validTmdbId(episode.showId)).filter((id): id is number => id != null)),
-    );
-    const mediaShows = showIds.length
-      ? await db.media.findMany({
-          where: { userId: user.id, type: "series", tmdbId: { in: showIds } },
-          select: { tmdbId: true, title: true, poster: true },
+    const showIds = mediaShows
+      .map((show) => validTmdbId(show.tmdbId))
+      .filter((id): id is number => id != null);
+    const watchedEpisodes = showIds.length
+      ? await db.watchedEpisode.findMany({
+          where: { userId: user.id, showId: { in: showIds } },
+          orderBy: { watchedAt: "desc" },
+          take: 200,
         })
       : [];
     const showMeta = new Map<number, { title: string; posterPath: string | null }>();
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => new Date(b.watchedAt).getTime() - new Date(a.watchedAt).getTime())
       .slice(0, limit);
 
-    return NextResponse.json({ items: sorted, total: sorted.length, source: "Media+WatchedEpisode" });
+    return NextResponse.json({ items: sorted, total: sorted.length, source: "NonArabicMedia+WatchedEpisode" });
   } catch (error) {
     console.error("[media:recently]", error);
     return NextResponse.json({ error: "Failed to load recently watched" }, { status: 500 });

@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { SafeImage } from "@/components/media/safe-image";
 
-type CollectionWorld = "movies" | "anime";
+export type CollectionWorld = "movies" | "anime" | "arabic-movies";
 type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
 
 type WorldConfig = {
@@ -24,8 +24,9 @@ type WorldConfig = {
   icon: React.ElementType;
   type?: string;
   isAnime: "true" | "false";
-  watchlistCount: "watchlistMovies" | "watchlistAnime";
-  watchedCount: "watchedMovies" | "watchedAnime";
+  isArabic: "true" | "false";
+  watchlistCount: "watchlistMovies" | "watchlistAnime" | "watchlistArabicMovies";
+  watchedCount: "watchedMovies" | "watchedAnime" | "watchedArabicMovies";
 };
 
 const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
@@ -36,8 +37,20 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
     icon: Film,
     type: "movie",
     isAnime: "false",
+    isArabic: "false",
     watchlistCount: "watchlistMovies",
     watchedCount: "watchedMovies",
+  },
+  "arabic-movies": {
+    title: "Arabic Movies",
+    subtitle: "A dedicated library for Arabic-language cinema, separate from Movies and Anime",
+    searchPlaceholder: "Search your Arabic movies...",
+    icon: Film,
+    type: "movie",
+    isAnime: "false",
+    isArabic: "true",
+    watchlistCount: "watchlistArabicMovies",
+    watchedCount: "watchedArabicMovies",
   },
   anime: {
     title: "Anime",
@@ -45,12 +58,13 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
     searchPlaceholder: "Search your anime...",
     icon: Sparkles,
     isAnime: "true",
+    isArabic: "false",
     watchlistCount: "watchlistAnime",
     watchedCount: "watchedAnime",
   },
 };
 
-export function CollectionWorldView({ world }: { world: CollectionWorld }) {
+export function CollectionWorldView({ world, embedded = false }: { world: CollectionWorld; embedded?: boolean }) {
   const config = WORLD_CONFIG[world];
   const WorldIcon = config.icon;
   const [tab, setTab] = useState<CollectionTab>("watchlist");
@@ -66,6 +80,7 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
   const media = useMedia({
     type: isWatchingTab || isNotStartedTab ? "series" : config.type,
     isAnime: config.isAnime,
+    isArabic: config.isArabic,
     ...(isWatchedTab
       ? { watched: "true" }
       : isNotStartedTab
@@ -91,15 +106,17 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
   const watchingCount = world === "anime" ? Number(counts?.watchingAnime ?? 0) : 0;
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-          <WorldIcon className="w-6 h-6 text-primary" />
+      {!embedded && (
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
+            <WorldIcon className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{config.title}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{config.subtitle}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{config.title}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{config.subtitle}</p>
-        </div>
-      </div>
+      )}
 
       <div className={`grid gap-3 ${world === "anime" ? "max-w-3xl grid-cols-2 sm:grid-cols-4" : "max-w-xl grid-cols-2"}`}>
         <MiniStat label="Watchlist" value={watchlistCount} />
@@ -169,7 +186,7 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
+        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "arabic-movies" ? "Arabic movies" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
       </p>
 
       {/* Fix #14: Distinguish loading, error, empty, and success states */}
@@ -189,7 +206,7 @@ export function CollectionWorldView({ world }: { world: CollectionWorld }) {
       ) : items.length === 0 ? (
         <Card className="p-12 text-center text-muted-foreground">
           <WorldIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">No {tab === "watchlist" ? "watchlist" : tab === "not-started" ? "not-started" : tab === "watching" ? "in-progress" : "watched"} {world === "movies" ? "movies" : "anime"} found</p>
+          <p className="font-medium">No {tab === "watchlist" ? "watchlist" : tab === "not-started" ? "not-started" : tab === "watching" ? "in-progress" : "watched"} {world === "movies" ? "movies" : world === "arabic-movies" ? "Arabic movies" : "anime"} found</p>
           <p className="text-sm mt-1">Try adjusting your search or add something new</p>
         </Card>
       ) : (
@@ -303,12 +320,19 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
     toast.success("Removed from watchlist");
   };
 
-  const handleMoveWorld = async () => {
-    await update.mutateAsync({ id: item.id, isAnime: world !== "anime" });
-    const destination = world === "anime"
-      ? (item.type === "movie" ? "Movies" : "TV Shows")
-      : "Anime";
-    toast.success(`Moved to ${destination}`);
+  const handleMoveWorld = async (destination: "standard" | "anime" | "arabic") => {
+    if (destination === "anime") {
+      await update.mutateAsync({ id: item.id, isAnime: true, isArabic: false });
+      toast.success("Moved to Anime");
+      return;
+    }
+    if (destination === "arabic") {
+      await update.mutateAsync({ id: item.id, isArabic: true, isAnime: false });
+      toast.success(`Moved to ${item.type === "movie" ? "Arabic Movies" : "Arabic TV"}`);
+      return;
+    }
+    await update.mutateAsync({ id: item.id, isAnime: false, isArabic: false });
+    toast.success(`Moved to ${item.type === "movie" ? "Movies" : "TV Shows"}`);
   };
 
 
@@ -340,7 +364,9 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
             {/* type badge */}
             <div className="absolute top-2 left-2">
               <Badge variant="secondary" className="bg-black/60 backdrop-blur border-0 text-[10px] h-6 px-2">
-                {item.isAnime ? (
+                {item.isArabic ? (
+                  <><span className="mr-1 text-[11px] font-black">ع</span>{item.type === "movie" ? "Arabic Movie" : "Arabic TV"}</>
+                ) : item.isAnime ? (
                   <><Sparkles className="w-3 h-3 mr-1 text-purple-400" />Anime</>
                 ) : item.type === "movie" ? (
                   <><Film className="w-3 h-3 mr-1" />Movie</>
@@ -430,15 +456,50 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
                   )}
                 </>
               )}
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={(e) => { e.stopPropagation(); void handleMoveWorld(); }}
-                title={world === "anime" ? "Move out of Anime" : "Move to Anime"}
-              >
-                {world === "anime" ? (item.type === "movie" ? "To Movies" : "To TV Shows") : "To Anime"}
-              </Button>
+              {world !== "anime" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("anime"); }}
+                  title="Move to Anime"
+                >
+                  To Anime
+                </Button>
+              )}
+              {world !== "arabic-movies" && item.type === "movie" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("arabic"); }}
+                  title="Move to Arabic Movies"
+                >
+                  To Arabic Movies
+                </Button>
+              )}
+              {world === "anime" && item.type === "series" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("arabic"); }}
+                  title="Move to Arabic TV"
+                >
+                  To Arabic TV
+                </Button>
+              )}
+              {(world === "anime" || world === "arabic-movies") && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("standard"); }}
+                  title="Move to the standard collection"
+                >
+                  {item.type === "movie" ? "To Movies" : "To TV Shows"}
+                </Button>
+              )}
             </div>
           </div>
         </Card>

@@ -136,7 +136,7 @@ async function repairShowIfNeeded(
   return patched;
 }
 
-async function buildTrackingSnapshot(userId: string) {
+async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic") {
   const watchedRows = await db.watchedEpisode.findMany({
     where: { userId },
     select: { showId: true, seasonNumber: true, episodeNumber: true, watchedAt: true },
@@ -148,6 +148,7 @@ async function buildTrackingSnapshot(userId: string) {
       userId,
       type: "series",
       isAnime: false,
+      isArabic: world === "arabic",
       OR: [
         { status: { not: null } },
         { watched: true },
@@ -287,10 +288,15 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 60, 1), 500);
     const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
     const countsOnly = url.searchParams.get("countsOnly") === "true";
+    const worldParam = url.searchParams.get("world") || "standard";
+    if (worldParam !== "standard" && worldParam !== "arabic") {
+      return NextResponse.json({ error: "Unsupported TV tracking world", code: "INVALID_TV_TRACKING_WORLD" }, { status: 400 });
+    }
+    const world = worldParam as "standard" | "arabic";
 
-    const snapshot = await buildTrackingSnapshot(user.id);
+    const snapshot = await buildTrackingSnapshot(user.id, world);
     if (countsOnly) {
-      return NextResponse.json({ counts: snapshot.counts, countsAreGlobal: true, repairedOnRead: false });
+      return NextResponse.json({ counts: snapshot.counts, countsAreGlobal: true, repairedOnRead: false, world });
     }
 
     const filteredBySearch = search
@@ -356,6 +362,7 @@ export async function GET(req: NextRequest) {
       counts: snapshot.counts,
       countsAreGlobal: true,
       repairedOnRead: false,
+      world,
     });
   } catch (error) {
     console.error("[tv-tracking]", error);

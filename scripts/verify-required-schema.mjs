@@ -21,6 +21,43 @@ try {
       ) AS "hasFollowingColumn",
       EXISTS (
         SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'Media'
+          AND column_name = 'isArabic'
+          AND is_nullable = 'NO'
+      ) AS "hasArabicColumn",
+      EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'Media'
+          AND column_name = 'originalLanguage'
+      ) AS "hasOriginalLanguageColumn",
+      EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'Media'
+          AND column_name = 'originCountries'
+          AND is_nullable = 'NO'
+      ) AS "hasOriginCountriesColumn",
+      EXISTS (
+        SELECT 1
+        FROM pg_indexes
+        WHERE schemaname = current_schema()
+          AND tablename = 'Media'
+          AND indexname = 'Media_userId_isArabic_idx'
+      ) AS "hasArabicIndex",
+      EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = '"Media"'::regclass
+          AND conname = 'Media_media_world_exclusive_check'
+          AND contype = 'c'
+      ) AS "hasMediaWorldConstraint",
+      EXISTS (
+        SELECT 1
         FROM pg_constraint
         WHERE conrelid = '"Media"'::regclass
           AND conname = 'Media_userId_type_tmdbId_key'
@@ -33,6 +70,12 @@ try {
 
   if (!contract?.hasFollowingColumn) {
     fail('Required column Media.isFollowing is missing or nullable.');
+  } else if (!contract?.hasArabicColumn || !contract?.hasOriginalLanguageColumn || !contract?.hasOriginCountriesColumn) {
+    fail('Required Arabic media classification columns are missing or invalid.');
+  } else if (!contract?.hasArabicIndex) {
+    fail('Required index Media_userId_isArabic_idx is missing.');
+  } else if (!contract?.hasMediaWorldConstraint) {
+    fail('Required Media world exclusivity constraint is missing.');
   } else if (!contract?.hasMediaIdentityConstraint) {
     fail('Required unique constraint Media_userId_type_tmdbId_key is missing.');
   } else if (!contract?.hasCanonicalSeriesType) {

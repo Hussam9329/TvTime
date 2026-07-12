@@ -3,7 +3,7 @@
 import { useStats, useWatchedMovies, useWatchedEpisodes, useFollowing, useWatchlist, useRatings, useTvDetail } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
-import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, BarChart3 } from "lucide-react";
+import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, BarChart3, Languages } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { useNav } from "@/lib/store";
 
@@ -18,7 +18,7 @@ export function StatsView() {
     return (
       <div className="space-y-4">
         <div className="h-32 shimmer rounded-xl" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
           {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 shimmer rounded-xl" />)}
         </div>
       </div>
@@ -52,7 +52,9 @@ export function StatsView() {
         <BigStat icon={<Film className="w-5 h-5" />} label="Movies watched" value={counts.watchedMovies} color="from-rose-500/20 to-rose-500/5" />
         <BigStat icon={<Tv className="w-5 h-5" />} label="Episodes watched" value={counts.watchedEpisodes} color="from-purple-500/20 to-purple-500/5" />
         <BigStat icon={<Bell className="w-5 h-5" />} label="TV shows following" value={counts.following} color="from-amber-500/20 to-amber-500/5" />
-        <BigStat icon={<BookOpen className="w-5 h-5" />} label="In watchlist" value={counts.watchlist} color="from-emerald-500/20 to-emerald-500/5" />
+        <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic movies" value={(counts.watchedArabicMovies ?? 0) + (counts.watchlistArabicMovies ?? 0)} color="from-emerald-500/20 to-emerald-500/5" />
+        <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic TV following" value={counts.followingArabicShows ?? 0} color="from-orange-500/20 to-orange-500/5" />
+        <BigStat icon={<BookOpen className="w-5 h-5" />} label="All watchlists" value={counts.watchlist} color="from-cyan-500/20 to-cyan-500/5" />
       </div>
 
       {/* Watch time hero */}
@@ -96,6 +98,8 @@ export function StatsView() {
                     { name: "Watchlist shows", value: counts.watchlistShows },
                     { name: "Anime watched", value: counts.watchedAnime },
                     { name: "Anime watchlist", value: counts.watchlistAnime },
+                    { name: "Arabic movies", value: (counts.watchedArabicMovies ?? 0) + (counts.watchlistArabicMovies ?? 0) },
+                    { name: "Arabic TV", value: counts.followingArabicShows ?? 0 },
                   ].filter((x) => x.value > 0)}
                   dataKey="value"
                   nameKey="name"
@@ -103,7 +107,7 @@ export function StatsView() {
                   outerRadius={80}
                   paddingAngle={3}
                 >
-                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
                   ))}
                 </Pie>

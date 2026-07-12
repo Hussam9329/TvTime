@@ -5,15 +5,16 @@ import { useSearchAccumulated } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search as SearchIcon, X, Loader2, AlertCircle, Users, Film, Tv, ChevronDown } from "lucide-react";
+import { Search as SearchIcon, X, Loader2, AlertCircle, Users, ChevronDown, Languages } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { img } from "@/lib/tmdb";
+import { isArabicMediaItem } from "@/lib/arabic-media";
 
 export function SearchView() {
   const { searchQuery, setSearchQuery, goPerson, goMovie, goTv } = useNav();
   const [local, setLocal] = useState(searchQuery);
-  const [filter, setFilter] = useState<"all" | "movie" | "tv" | "people">("all");
+  const [filter, setFilter] = useState<"all" | "movie" | "tv" | "arabic-movies" | "arabic-tv" | "people">("all");
 
   const search = useSearchAccumulated(searchQuery);
 
@@ -25,14 +26,26 @@ export function SearchView() {
   }, [local, searchQuery, setSearchQuery]);
 
   const allResults = search.accumulated;
-  const filtered = filter === "all" ? allResults : allResults.filter((r) => r.media_type === filter);
+  const filtered = filter === "all"
+    ? allResults
+    : filter === "arabic-movies"
+      ? allResults.filter((result) => result.media_type === "movie" && isArabicMediaItem(result))
+      : filter === "arabic-tv"
+        ? allResults.filter((result) => result.media_type === "tv" && isArabicMediaItem(result))
+        : filter === "movie"
+          ? allResults.filter((result) => result.media_type === "movie" && !isArabicMediaItem(result))
+          : filter === "tv"
+            ? allResults.filter((result) => result.media_type === "tv" && !isArabicMediaItem(result))
+            : [];
+  const arabicMovieCount = allResults.filter((result) => result.media_type === "movie" && isArabicMediaItem(result)).length;
+  const arabicTvCount = allResults.filter((result) => result.media_type === "tv" && isArabicMediaItem(result)).length;
   const people = search.people;
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Search</h1>
-        <p className="text-sm text-muted-foreground">Find movies, TV shows, and people from the TMDB database</p>
+        <p className="text-sm text-muted-foreground">Find movies, TV shows, anime, Arabic titles and people from the TMDB database</p>
       </div>
 
       <div className="relative">
@@ -71,11 +84,21 @@ export function SearchView() {
                 : `${search.totalResults} results for "${searchQuery}"`}
             </p>
             {(allResults.length > 0 || people.length > 0) && (
-              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
-                <TabsList>
+              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="max-w-full">
+                <TabsList className="h-auto max-w-[calc(100vw-1.5rem)] justify-start overflow-x-auto sm:max-w-none">
                   <TabsTrigger value="all">All ({allResults.length})</TabsTrigger>
                   <TabsTrigger value="movie">Movies</TabsTrigger>
                   <TabsTrigger value="tv">TV</TabsTrigger>
+                  {arabicMovieCount > 0 && (
+                    <TabsTrigger value="arabic-movies" className="gap-1.5">
+                      <Languages className="h-3.5 w-3.5" /> Arabic Movies ({arabicMovieCount})
+                    </TabsTrigger>
+                  )}
+                  {arabicTvCount > 0 && (
+                    <TabsTrigger value="arabic-tv" className="gap-1.5">
+                      <Languages className="h-3.5 w-3.5" /> Arabic TV ({arabicTvCount})
+                    </TabsTrigger>
+                  )}
                   {people.length > 0 && (
                     <TabsTrigger value="people">People ({people.length})</TabsTrigger>
                   )}
@@ -116,7 +139,7 @@ export function SearchView() {
               ) : !search.isLoading && !search.isError ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <SearchIcon className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">No {filter === "all" ? "" : filter + " "}results found</p>
+                  <p className="font-medium">No {filter === "all" ? "" : filter.replace("arabic-", "Arabic ") + " "}results found</p>
                   <p className="text-sm mt-1">Try a different search term or filter.</p>
                 </div>
               ) : null}

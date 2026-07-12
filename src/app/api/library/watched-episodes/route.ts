@@ -15,6 +15,9 @@ import {
   type TvEpisodeRequest,
 } from "@/lib/tv-status-server";
 import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
+import { detectIsAnime } from "@/lib/anime-detect";
+import { detectIsArabic, normalizeCountryCodes } from "@/lib/arabic-media";
+import { canonicalMediaPoster } from "@/lib/media-poster";
 
 type CompletionInfo = {
   newStatus: TvTrackingState;
@@ -28,9 +31,18 @@ type CompletionInfo = {
   verified: boolean;
 };
 
-function posterUrl(path: string | null): string | null {
-  if (!path) return null;
-  return path.startsWith("http") ? path : `https://image.tmdb.org/t/p/w500${path}`;
+function classificationFromMetadata(metadata: Awaited<ReturnType<typeof getTvStatusMetadata>>) {
+  const originalLanguage = metadata.detail.original_language?.trim().toLowerCase() || null;
+  const originCountries = normalizeCountryCodes(metadata.detail.origin_country);
+  const genres = (metadata.detail.genres || []).map((genre) => genre.name).filter(Boolean);
+  const isArabic = detectIsArabic({ originalLanguage, originCountry: originCountries });
+  const isAnime = !isArabic && detectIsAnime({
+    originalLanguage,
+    originCountry: originCountries,
+    genres,
+    title: metadata.title,
+  });
+  return { originalLanguage, originCountries, genres, isArabic, isAnime };
 }
 
 function isLegacyCompleted(media: { watched: boolean; status: string | null }, episodeCount: number): boolean {
@@ -48,6 +60,7 @@ async function ensureSeriesMedia(userId: string, showTmdbId: number) {
   if (existing) return existing;
 
   const metadata = await getTvStatusMetadata(showTmdbId);
+  const classification = classificationFromMetadata(metadata);
   return db.media.upsert({
     where: { userId_type_tmdbId: identity },
     create: {
@@ -55,8 +68,13 @@ async function ensureSeriesMedia(userId: string, showTmdbId: number) {
       tmdbId: showTmdbId,
       title: metadata.title,
       type: "series",
-      poster: posterUrl(metadata.posterPath),
+      poster: canonicalMediaPoster(metadata.posterPath),
       overview: metadata.overview,
+      genres: classification.genres,
+      isArabic: classification.isArabic,
+      isAnime: classification.isAnime,
+      originalLanguage: classification.originalLanguage,
+      originCountries: classification.originCountries,
       year: metadata.firstAirDate?.slice(0, 4) || null,
       episodes: metadata.totalEpisodes,
       seasons: metadata.totalSeasons,
@@ -116,10 +134,21 @@ async function autoUpdateShowStatus(userId: string, showTmdbId: number): Promise
     }
 
     if (metadata) {
+      const classification = classificationFromMetadata(metadata);
       if (metadata.totalEpisodes != null) update.episodes = metadata.totalEpisodes;
       if (metadata.totalSeasons != null) update.seasons = metadata.totalSeasons;
-      if (!media.poster && metadata.posterPath) update.poster = posterUrl(metadata.posterPath);
+      if (!media.poster && metadata.posterPath) update.poster = canonicalMediaPoster(metadata.posterPath);
       if (!media.overview && metadata.overview) update.overview = metadata.overview;
+      if (media.genres.length === 0 && classification.genres.length > 0) update.genres = classification.genres;
+      if (!media.originalLanguage && classification.originalLanguage) update.originalLanguage = classification.originalLanguage;
+      if (media.originCountries.length === 0 && classification.originCountries.length > 0) update.originCountries = classification.originCountries;
+      if (classification.isArabic && !media.isArabic) {
+        update.isArabic = true;
+        update.isAnime = false;
+      } else if (classification.isAnime && !media.isAnime && !media.isArabic) {
+        update.isAnime = true;
+        update.isArabic = false;
+      }
     }
 
     const updated = Object.keys(update).length > 0

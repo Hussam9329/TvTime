@@ -45,6 +45,9 @@ export async function GET(req: NextRequest) {
     const isAnime = url.searchParams.get("isAnime");
     if (isAnime === "true") where.isAnime = true;
     if (isAnime === "false") where.isAnime = false;
+    const isArabic = url.searchParams.get("isArabic");
+    if (isArabic === "true") where.isArabic = true;
+    if (isArabic === "false") where.isArabic = false;
     if (search) where.title = { contains: search };
 
     const sortBy = SORTABLE_FIELDS.has(sortByParam) ? sortByParam : "addedAt";

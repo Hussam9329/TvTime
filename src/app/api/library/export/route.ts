@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     return NextResponse.json({
-      version: 3,
+      version: 4,
       exportedAt: new Date().toISOString(),
       app: "CineTrack",
       source: "Media+WatchedEpisode+Rating:episode-only",

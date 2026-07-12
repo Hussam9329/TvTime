@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, SlidersHorizontal, Dices, AlertCircle, X } from "lucide-react";
 import { toast } from "sonner";
+import { isArabicMediaItem } from "@/lib/arabic-media";
 
 const SORT_OPTIONS = [
   { value: "popularity.desc", label: "Most Popular" },
@@ -64,6 +65,7 @@ export function DiscoverView() {
     page,
     year,
     rating: minRating ? Number(minRating) : undefined,
+    enabled: discoverTab === "movies",
   });
   const discoverTv = useDiscoverTv({
     genres: selectedGenres.length > 0 ? selectedGenres : undefined,
@@ -71,10 +73,11 @@ export function DiscoverView() {
     page,
     year,
     rating: minRating ? Number(minRating) : undefined,
+    enabled: discoverTab === "tv",
   });
 
   const current = discoverTab === "movies" ? discover : discoverTv;
-  const items = (current.data?.results ?? []).filter((m) => m.poster_path);
+  const items = (current.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
   const totalPages = Math.min(current.data?.total_pages ?? 1, 500);
 
   // TVM-33: Toggle genre selection (multi-select)
@@ -98,7 +101,7 @@ export function DiscoverView() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Discover</h1>
-            <p className="text-sm text-muted-foreground mt-1">Find your next favorite {discoverTab === "movies" ? "movie" : "show"}</p>
+            <p className="text-sm text-muted-foreground mt-1">Find your next favorite non-Arabic {discoverTab === "movies" ? "movie" : "show"}; Arabic titles have their own dedicated worlds</p>
           </div>
           <div className="flex items-center gap-2">
             <Button

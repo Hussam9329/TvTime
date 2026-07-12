@@ -20,7 +20,10 @@
     "db:verify:schema": "node scripts/assert-production-db.mjs && prisma generate && node scripts/verify-required-schema.mjs",
     "verify:user-facing": "node scripts/verify-user-facing-integrity.mjs",
     "verify:all": "node scripts/verify-all.mjs",
-    "verify:calendar": "node scripts/verify-calendar-professional.mjs"
+    "verify:calendar": "node scripts/verify-calendar-professional.mjs",
+    "verify:episode-flow": "node scripts/verify-episode-watch-poster.mjs",
+    "db:backfill:arabic": "node scripts/backfill-arabic-media.mjs",
+    "verify:arabic": "node scripts/verify-arabic-worlds.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

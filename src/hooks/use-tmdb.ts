@@ -105,7 +105,7 @@ export function useTvGenres() {
   });
 }
 
-export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number }) {
+export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "movies", "discover", params],
     queryFn: () =>
@@ -115,11 +115,16 @@ export function useDiscoverMovies(params: { genres?: number[]; year?: number; so
         ...(params.sort_by ? { sort_by: params.sort_by } : {}),
         page: params.page || 1,
         ...(params.rating ? { rating: params.rating } : {}),
+        ...(params.originalLanguage ? { original_language: params.originalLanguage } : {}),
+        ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
+        ...(params.releaseDateFrom ? { release_date_gte: params.releaseDateFrom } : {}),
+        ...(params.releaseDateTo ? { release_date_lte: params.releaseDateTo } : {}),
       }),
+    enabled: params.enabled !== false,
   });
 }
 
-export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number }) {
+export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "tv", "discover", params],
     queryFn: () =>
@@ -129,7 +134,10 @@ export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_b
         ...(params.sort_by ? { sort_by: params.sort_by } : {}),
         page: params.page || 1,
         ...(params.rating ? { rating: params.rating } : {}),
+        ...(params.originalLanguage ? { original_language: params.originalLanguage } : {}),
+        ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
       }),
+    enabled: params.enabled !== false,
   });
 }
 
@@ -354,6 +362,9 @@ export type MediaBatchState = {
   watched: boolean;
   userRating: number | null;
   isAnime: boolean;
+  isArabic: boolean;
+  originalLanguage: string | null;
+  originCountries: string[];
   isFollowing: boolean;
   inWatchlist: boolean;
 };
@@ -665,6 +676,34 @@ export function useWatchedEpisodes(showId?: number) {
   });
 }
 
+export type EpisodeWatchTimeline = {
+  releasedEpisodes: Array<{
+    seasonNumber: number;
+    episodeNumber: number;
+    episodeName?: string | null;
+  }>;
+  watchedKeys: string[];
+  source: string;
+};
+
+export function useEpisodeWatchTimeline(showId?: number | null) {
+  const userId = useNav((s) => s.userId);
+  const numericShowId = Number(showId || 0);
+  return useQuery({
+    queryKey: ["episode-watch-plan", userId || getClientUserId(), numericShowId],
+    enabled: numericShowId > 0,
+    queryFn: async () => {
+      const url = withUserId(new URL("/api/library/watched-episodes/plan", window.location.origin));
+      url.searchParams.set("showId", String(numericShowId));
+      const res = await fetch(url, { headers: userHeaders() });
+      await ensureApiOk(res, "Failed to verify earlier episode progress");
+      return res.json() as Promise<EpisodeWatchTimeline>;
+    },
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useEpisodeToggle() {
   const qc = useQueryClient();
   return useMutation({
@@ -713,6 +752,7 @@ export function useEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
       qc.invalidateQueries({ queryKey: ["calendar"] });
+      qc.invalidateQueries({ queryKey: ["episode-watch-plan"] });
     },
   });
 }
@@ -722,7 +762,7 @@ export function useBulkEpisodeToggle() {
   return useMutation({
     mutationFn: async (args: {
       showId: number;
-      episodes: { seasonNumber: number; episodeNumber: number; episodeName?: string }[];
+      episodes: { seasonNumber: number; episodeNumber: number; episodeName?: string | null }[];
     }): Promise<{ ok?: boolean; count?: number; completion?: EpisodeCompletion | null }> => {
       const res = await fetch(withUserId(new URL("/api/library/watched-episodes", window.location.origin)), {
         method: "POST",
@@ -743,6 +783,7 @@ export function useBulkEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
       qc.invalidateQueries({ queryKey: ["calendar"] });
+      qc.invalidateQueries({ queryKey: ["episode-watch-plan"] });
     },
   });
 }
@@ -756,6 +797,7 @@ export type CalendarScheduleEpisode = {
   showPoster: string | null;
   showBackdrop: string | null;
   isAnime: boolean;
+  isArabic: boolean;
   seasonNumber: number;
   episodeNumber: number;
   episodeName: string;
@@ -777,19 +819,50 @@ export type CalendarScheduleResponse = {
     title: string;
     poster: string | null;
     isAnime: boolean;
+    isArabic: boolean;
   }>;
   warnings: string[];
   partial: boolean;
+  world?: "general" | "arabic-tv";
 };
 
-export function useCalendarSchedule(from: string, to: string) {
+export type ArabicMovieScheduleResponse = {
+  from: string;
+  to: string;
+  items: MediaItem[];
+  total: number;
+  pagesFetched: number;
+  truncated: boolean;
+};
+
+export function useArabicMovieSchedule(from: string, to: string) {
+  return useQuery({
+    queryKey: ["arabic-movies", "release-schedule", from, to],
+    queryFn: async (): Promise<ArabicMovieScheduleResponse> => {
+      const url = new URL("/api/arabic-movies/calendar", window.location.origin);
+      url.searchParams.set("from", from);
+      url.searchParams.set("to", to);
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        throw new Error(errorBody?.error || "Failed to load Arabic movie releases");
+      }
+      return res.json();
+    },
+    staleTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useCalendarSchedule(from: string, to: string, world: "general" | "arabic-tv" = "general") {
   const userId = useNav((state) => state.userId);
   return useQuery({
-    queryKey: ["calendar", userId || getClientUserId(), from, to],
+    queryKey: ["calendar", userId || getClientUserId(), world, from, to],
     queryFn: async (): Promise<CalendarScheduleResponse> => {
       const url = withUserId(new URL("/api/calendar", window.location.origin));
       url.searchParams.set("from", from);
       url.searchParams.set("to", to);
+      url.searchParams.set("world", world);
       const res = await fetch(url, { headers: userHeaders(), cache: "no-store" });
       if (!res.ok) {
         const errorBody = await res.json().catch(() => ({}));
@@ -810,6 +883,8 @@ export function useFollowing() {
       const url = withUserId(new URL("/api/media", window.location.origin));
       url.searchParams.set("type", "series");
       url.searchParams.set("tracked", "true");
+      url.searchParams.set("isAnime", "false");
+      url.searchParams.set("isArabic", "false");
       url.searchParams.set("limit", "500");
       const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) throw new Error("Failed to load");
@@ -1151,12 +1226,14 @@ export interface TvTrackingResponse {
   counts: TvTrackingCounts;
   countsAreGlobal: boolean;
   repairedOnRead?: boolean;
+  world?: "standard" | "arabic";
 }
 
 export interface TvTrackingCountsResponse {
   counts: TvTrackingCounts;
   countsAreGlobal: boolean;
   repairedOnRead?: boolean;
+  world?: "standard" | "arabic";
 }
 
 async function tvTrackingGet<T>(params?: Record<string, string | number | boolean | undefined>): Promise<T> {
@@ -1173,11 +1250,11 @@ async function tvTrackingGet<T>(params?: Record<string, string | number | boolea
   return res.json();
 }
 
-export function useTvTrackingCounts() {
+export function useTvTrackingCounts(world: "standard" | "arabic" = "standard") {
   const userId = useNav((s) => s.userId);
   return useQuery({
-    queryKey: ["tv-tracking-counts", userId || getClientUserId()],
-    queryFn: () => tvTrackingGet<TvTrackingCountsResponse>({ countsOnly: true }),
+    queryKey: ["tv-tracking-counts", userId || getClientUserId(), world],
+    queryFn: () => tvTrackingGet<TvTrackingCountsResponse>({ countsOnly: true, world }),
     staleTime: 0,
     refetchInterval: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
@@ -1192,6 +1269,7 @@ export function useTvTracking(params: {
   order?: string;
   limit?: number;
   offset?: number;
+  world?: "standard" | "arabic";
 } = {}) {
   const userId = useNav((s) => s.userId);
   return useQuery({
@@ -1366,6 +1444,9 @@ export interface MediaItemDB {
   addedAt: string;
   updatedAt: string;
   isAnime: boolean;
+  isArabic: boolean;
+  originalLanguage: string | null;
+  originCountries: string[];
   isFollowing: boolean;
 }
 
@@ -1391,6 +1472,13 @@ export interface MediaStats {
     watchedAnime?: number;
     notStartedAnime?: number;
     watchingAnime?: number;
+    watchlistArabicMovies?: number;
+    watchedArabicMovies?: number;
+    watchlistArabicShows?: number;
+    notStartedArabicShows?: number;
+    watchingArabicShows?: number;
+    finishedArabicShows?: number;
+    followingArabicShows?: number;
     watchedEpisodes?: number;
     following?: number;
     ratings?: number;
@@ -1423,6 +1511,7 @@ export function useMedia(params: {
   rated?: string;
   tracked?: string;
   isAnime?: string;
+  isArabic?: string;
   search?: string;
   sortBy?: string;
   order?: string;
@@ -1474,6 +1563,7 @@ export function useMediaUpdate() {
       watched?: boolean;
       watchedAt?: string | null;
       isAnime?: boolean;
+      isArabic?: boolean;
       status?: string | null;
     }) => {
       const res = await fetch(withUserId(new URL(`/api/media/${args.id}`, window.location.origin)), {

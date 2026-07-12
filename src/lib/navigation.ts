@@ -10,7 +10,9 @@ export type ViewName =
   | "anime"
   | "stats"
   | "media"
-  | "tv-shows";
+  | "tv-shows"
+  | "arabic-movies"
+  | "arabic-tv";
 
 export type NavigationEntry = {
   view: ViewName;
@@ -29,6 +31,8 @@ const ROOT_VIEWS = new Set<ViewName>([
   "stats",
   "media",
   "tv-shows",
+  "arabic-movies",
+  "arabic-tv",
 ]);
 
 export const HOME_NAVIGATION_ENTRY: NavigationEntry = {
@@ -69,12 +73,21 @@ export function navigationEntryToHref(entry: NavigationEntry): string {
   if (normalized.view === "movie-detail") return `/movie/${normalized.movieId}`;
   if (normalized.view === "tv-detail") return `/tv/${normalized.tvId}`;
   if (normalized.view === "person-detail") return `/person/${normalized.personId}`;
+  if (normalized.view === "arabic-movies") return "/arabic/movies";
+  if (normalized.view === "arabic-tv") return "/arabic/tv";
   if (normalized.view === "home") return "/";
   return `/?view=${encodeURIComponent(normalized.view)}`;
 }
 
 export function navigationEntryFromPath(pathname: string, search = ""): NavigationEntry {
   const cleanPath = pathname.replace(/\/+$/, "") || "/";
+  if (cleanPath === "/arabic/movies") {
+    return { view: "arabic-movies", movieId: null, tvId: null, personId: null };
+  }
+  if (cleanPath === "/arabic/tv") {
+    return { view: "arabic-tv", movieId: null, tvId: null, personId: null };
+  }
+
   const detailMatch = /^\/(movie|tv|person)\/(\d+)$/.exec(cleanPath);
   if (detailMatch) {
     const id = positiveInteger(detailMatch[2]);

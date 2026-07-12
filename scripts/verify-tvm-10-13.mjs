@@ -122,11 +122,11 @@ for (const label of expectedLabels) {
 check(/const counts = \{[\s\S]*all:[\s\S]*haventWatched:/.test(trackingApi), "TV Tracking computes every filter count from one snapshot");
 check(/countsOnly[\s\S]*countsAreGlobal:\s*true/.test(trackingApi), "TV Tracking counts-only response is global");
 check(/const matching =[\s\S]*matching\.slice\(offset, offset \+ limit\)/.test(trackingApi), "TV Tracking counts/filtering happen before pagination");
-check(/const snapshot = await buildTrackingSnapshot\(user\.id\)/.test(trackingApi), "TV Tracking list and counters share one canonical snapshot");
+check(/const snapshot = await buildTrackingSnapshot\(user\.id, world\)/.test(trackingApi), "TV Tracking list and counters share one canonical world-scoped snapshot");
 check(/Every number is calculated across your complete TV Shows collection/.test(trackingView), "TV Shows explains that badge counts are global");
 
 check(!/watchedMovie|followingShow|watchlistItem/.test(recently), "Recently Watched reads no legacy title table");
-check(/source:\s*"Media\+WatchedEpisode"/.test(recently), "Recently Watched declares its canonical sources");
+check(/source:\s*"(?:NonArabic)?Media\+WatchedEpisode"/.test(recently), "Recently Watched declares its canonical sources");
 
 const localStorageImports = [];
 for (const absolute of walk(resolve(root, "src"))) {

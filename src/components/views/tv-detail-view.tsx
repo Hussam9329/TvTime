@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingDialog } from "@/components/media/rating-dialog";
+import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
@@ -18,6 +19,14 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { isEpisodeReleased, isFutureEpisode, type TvTrackingState } from "@/lib/tv-status-engine";
+import {
+  buildEpisodeWatchPlan,
+  buildSeasonWatchPlan,
+  progressEpisodesToWatchRefs,
+  type EpisodeWatchPlan,
+  type WatchEpisodeRef,
+} from "@/lib/episode-watch-plan";
+import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
 
 export function TvDetailView() {
   const { tvId, back, goPerson } = useNav();
@@ -106,10 +115,15 @@ export function TvDetailView() {
 
   const year = t.first_air_date?.slice(0, 4);
   const runtime = t.episode_run_time?.[0] ? `${t.episode_run_time[0]}m` : null;
+  const isArabicShow = detectIsArabic({ originalLanguage: t.original_language, originCountry: t.origin_country });
 
   const cast = (t as any).credits?.cast?.slice(0, 16) ?? [];
-  const recommendations = ((t as any).recommendations?.results ?? []).filter((r: any) => r.poster_path).slice(0, 20);
-  const similar = ((t as any).similar?.results ?? []).filter((r: any) => r.poster_path).slice(0, 20);
+  const recommendations = ((t as any).recommendations?.results ?? [])
+    .filter((result: any) => result.poster_path && isArabicMediaItem(result) === isArabicShow)
+    .slice(0, 20);
+  const similar = ((t as any).similar?.results ?? [])
+    .filter((result: any) => result.poster_path && isArabicMediaItem(result) === isArabicShow)
+    .slice(0, 20);
   const videos = ((t as any).videos?.results ?? []).filter((v: any) => v.site === "YouTube");
   const trailer = videos.find((v: any) => v.type === "Trailer") || videos[0];
 
@@ -294,6 +308,7 @@ export function TvDetailView() {
           <div>
             <div className="flex items-end gap-2 mb-2 flex-wrap">
               <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
+              {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">Arabic TV</Badge>}
               {effectiveLabel === "finished" && (
                 <Badge className="bg-emerald-500/20 text-emerald-400 border-0">
                   <Trophy className="w-3 h-3 mr-1" /> Finished
@@ -465,6 +480,8 @@ export function TvDetailView() {
             isEnded={isEnded}
             showTitle={t.name || `TV ${t.id}`}
             showPoster={t.poster_path}
+            releasedEpisodeTimeline={progressEpisodesToWatchRefs(progress.allEpisodes)}
+            watchPlanReady={!progress.isLoading && !progress.isError}
             onCompletion={(c) => {
               if (!c) return;
               if (c.newStatus === "finished" && c.needsRating) {
@@ -612,6 +629,8 @@ function SeasonEpisodes({
   isEnded = false,
   showTitle,
   showPoster,
+  releasedEpisodeTimeline,
+  watchPlanReady,
   onCompletion,
 }: {
   tvId: number;
@@ -621,6 +640,8 @@ function SeasonEpisodes({
   isEnded?: boolean;
   showTitle: string;
   showPoster: string | null;
+  releasedEpisodeTimeline: WatchEpisodeRef[];
+  watchPlanReady: boolean;
   onCompletion?: (c: EpisodeCompletion | null | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -637,6 +658,7 @@ function SeasonEpisodes({
     episodeName: string;
     currentRating: number | null;
   } | null>(null);
+  const [watchPlan, setWatchPlan] = useState<EpisodeWatchPlan | null>(null);
 
   const ratingByEpisode = new Map<string, number>(
     (episodeRatings.data?.items ?? []).map((rating) => [
@@ -646,8 +668,8 @@ function SeasonEpisodes({
   );
 
   const currentSeason = seasons.find((s) => s.season_number === season);
-  const watchedSet = new Set(
-    (watched.data?.items ?? []).map((e) => `${e.seasonNumber}-${e.episodeNumber}`)
+  const watchedSet = new Set<string>(
+    (watched.data?.items ?? []).map((e: { seasonNumber: number; episodeNumber: number }) => `${e.seasonNumber}-${e.episodeNumber}`)
   );
 
   const isReleased = (episode: { air_date?: string | null; season_number: number }) =>
@@ -656,25 +678,58 @@ function SeasonEpisodes({
     isReleased(episode) && watchedSet.has(`${episode.season_number}-${episode.episode_number}`);
   const releasedEpisodes = (seasonData.data?.episodes ?? []).filter(isReleased);
 
-  const markAllWatched = async () => {
-    const unwatched = releasedEpisodes
-      .filter((episode) => !isEpisodeWatched(episode))
-      .map((episode) => ({
-        seasonNumber: episode.season_number,
-        episodeNumber: episode.episode_number,
-        episodeName: episode.name,
-      }));
-    if (unwatched.length === 0) {
-      toast.info(releasedEpisodes.length === 0 ? "No released episodes in this season yet" : "All released episodes already watched");
+  const applyWatchPlan = async (plan: EpisodeWatchPlan, includePrevious: boolean) => {
+    const episodes = includePrevious ? plan.allEpisodes : plan.selectedEpisodes;
+    if (episodes.length === 0) {
+      setWatchPlan(null);
       return;
     }
+
     try {
-      const result = await bulkEpisodeToggle.mutateAsync({ showId: tvId, episodes: unwatched });
-      toast.success(`Marked ${unwatched.length} released episode${unwatched.length === 1 ? "" : "s"} as watched`);
-      if (onCompletion) onCompletion(result?.completion);
+      const result = episodes.length === 1
+        ? await episodeToggle.mutateAsync({
+            action: "add",
+            showId: tvId,
+            seasonNumber: episodes[0].seasonNumber,
+            episodeNumber: episodes[0].episodeNumber,
+            episodeName: episodes[0].episodeName || undefined,
+          })
+        : await bulkEpisodeToggle.mutateAsync({ showId: tvId, episodes });
+      const previousCount = includePrevious ? plan.previousUnwatched.length : 0;
+      const selectedCount = plan.selectedEpisodes.length;
+      toast.success(
+        previousCount > 0
+          ? `Marked ${previousCount + selectedCount} released episodes as watched, including earlier gaps.`
+          : plan.kind === "episode"
+            ? `${plan.targetLabel} marked as watched.`
+            : `${plan.targetLabel} marked as watched (${selectedCount} released episode${selectedCount === 1 ? "" : "s"}).`,
+      );
+      onCompletion?.(result?.completion);
+      setWatchPlan(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to mark episodes");
     }
+  };
+
+  const markAllWatched = async () => {
+    if (!watchPlanReady) {
+      toast.error("Earlier episode history is still loading. Try again in a moment.");
+      return;
+    }
+    const plan = buildSeasonWatchPlan({
+      seasonNumber: season,
+      releasedEpisodes: releasedEpisodeTimeline,
+      watchedKeys: watchedSet,
+    });
+    if (plan.selectedEpisodes.length === 0) {
+      toast.info(releasedEpisodes.length === 0 ? "No released episodes in this season yet" : "All released episodes already watched");
+      return;
+    }
+    if (plan.previousUnwatched.length > 0) {
+      setWatchPlan(plan);
+      return;
+    }
+    await applyWatchPlan(plan, false);
   };
 
   const toggleEpisode = async (episode: { season_number: number; episode_number: number; name: string; air_date?: string | null }) => {
@@ -686,18 +741,38 @@ function SeasonEpisodes({
     const en = episode.episode_number;
     const name = episode.name;
     const isWatched = isEpisodeWatched(episode);
-    try {
-      const result = await episodeToggle.mutateAsync({
-        action: isWatched ? "remove" : "add",
-        showId: tvId,
-        seasonNumber: sn,
-        episodeNumber: en,
-        episodeName: name,
-      });
-      if (onCompletion && !isWatched) onCompletion(result?.completion);
-    } catch {
-      toast.error("Failed to update episode");
+
+    if (isWatched) {
+      try {
+        await episodeToggle.mutateAsync({
+          action: "remove",
+          showId: tvId,
+          seasonNumber: sn,
+          episodeNumber: en,
+          episodeName: name,
+        });
+        toast.success(`S${sn}E${en} marked as unwatched.`);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to update episode");
+      }
+      return;
     }
+
+    if (!watchPlanReady) {
+      toast.error("Earlier episode history is still loading. Try again in a moment.");
+      return;
+    }
+
+    const plan = buildEpisodeWatchPlan({
+      target: { seasonNumber: sn, episodeNumber: en, episodeName: name },
+      releasedEpisodes: releasedEpisodeTimeline,
+      watchedKeys: watchedSet,
+    });
+    if (plan.previousUnwatched.length > 0) {
+      setWatchPlan(plan);
+      return;
+    }
+    await applyWatchPlan(plan, false);
   };
 
   const openEpisodeRating = (episode: { season_number: number; episode_number: number; name: string; air_date?: string | null }) => {
@@ -777,7 +852,7 @@ function SeasonEpisodes({
           )}
         </div>
 
-        <Button variant="outline" size="sm" onClick={markAllWatched} disabled={seasonData.isLoading || bulkEpisodeToggle.isPending || releasedEpisodes.length === 0}>
+        <Button variant="outline" size="sm" onClick={markAllWatched} disabled={seasonData.isLoading || bulkEpisodeToggle.isPending || episodeToggle.isPending || releasedEpisodes.length === 0 || !watchPlanReady}>
           <CheckCheck className="w-4 h-4 mr-1.5" /> Mark season watched
         </Button>
       </div>
@@ -823,7 +898,7 @@ function SeasonEpisodes({
                 )}>
                   <button
                     onClick={() => toggleEpisode(ep)}
-                    disabled={!released}
+                    disabled={!released || (!isWatched && !watchPlanReady)}
                     className="flex-shrink-0 mt-0.5 disabled:cursor-not-allowed"
                     aria-label={!released ? "Episode not released" : isWatched ? "Mark as not watched" : "Mark as watched"}
                   >
@@ -919,6 +994,14 @@ function SeasonEpisodes({
         description="This rating belongs only to this watched episode. It does not rate the whole series or change episode progress."
         submitLabel={ratingTarget?.currentRating == null ? "Save Episode Rating" : "Update Episode Rating"}
         onRate={saveEpisodeRating}
+      />
+      <EpisodeWatchConfirmationDialog
+        plan={watchPlan}
+        open={Boolean(watchPlan)}
+        pending={episodeToggle.isPending || bulkEpisodeToggle.isPending}
+        onOpenChange={(nextOpen) => { if (!nextOpen) setWatchPlan(null); }}
+        onSelectedOnly={() => watchPlan ? applyWatchPlan(watchPlan, false) : undefined}
+        onWithPrevious={() => watchPlan ? applyWatchPlan(watchPlan, true) : undefined}
       />
     </div>
   );

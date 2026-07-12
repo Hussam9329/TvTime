@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { canonicalMediaPoster } from "@/lib/media-poster";
 
 function canonicalType(mediaType: string | null) {
   return mediaType === "tv" || mediaType === "series" ? "series" : mediaType === "movie" ? "movie" : null;
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     const identity = { userId: user.id, type, tmdbId };
+    const normalizedPoster = canonicalMediaPoster(body.posterPath);
     let item = await db.media.findUnique({ where: { userId_type_tmdbId: identity } });
     if (item?.watched || (type === "series" && item?.status && item.status !== "planned")) {
       return NextResponse.json(
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     const common = {
       title: String(body.title),
-      poster: body.posterPath || null,
+      poster: normalizedPoster,
       overview: body.overview || null,
       year: body.releaseDate ? String(body.releaseDate).slice(0, 4) : null,
       rating: body.voteAverage != null ? String(body.voteAverage) : null,

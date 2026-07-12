@@ -9,6 +9,7 @@ import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { SafeImage } from "@/components/media/safe-image";
+import { isArabicMediaItem } from "@/lib/arabic-media";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -55,6 +56,8 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   const rating = item.vote_average ? Math.round(item.vote_average * 10) / 10 : 0;
   const title = getTitle(item);
   const year = getYear(item);
+  const isArabic = isArabicMediaItem(item);
+  const typeLabel = isArabic ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV") : (mediaType === "movie" ? "Movie" : "TV");
 
   return (
     <motion.div
@@ -96,7 +99,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
                 className="bg-black/60 backdrop-blur text-white border-0 text-[10px] h-6 px-2"
               >
                 {mediaType === "movie" ? <Film className="w-3 h-3 mr-1" /> : <Tv className="w-3 h-3 mr-1" />}
-                {mediaType === "movie" ? "Movie" : "TV"}
+                {typeLabel}
               </Badge>
             )}
             {/* Fix #8: TMDB score labeled explicitly as /10 */}

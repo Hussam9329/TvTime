@@ -4,7 +4,7 @@ import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, us
 import { MediaRow } from "@/components/media/media-row";
 import { ContinueWatching } from "@/components/media/continue-watching";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
-import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X } from "lucide-react";
+import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
@@ -12,6 +12,7 @@ import { SafeImage } from "@/components/media/safe-image";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { isArabicMediaItem } from "@/lib/arabic-media";
 
 export function HomeView() {
   const trending = useTrending("week", "all");
@@ -28,7 +29,8 @@ export function HomeView() {
   const setView = useNav((s) => s.setView);
   const userName = useNav((s) => s.userName);
 
-  const heroItem = trending.data?.results?.find((m) => m.backdrop_path && (m.overview?.length || 0) > 100) || trending.data?.results?.[0];
+  const standardTrending = (trending.data?.results ?? []).filter((media) => !isArabicMediaItem(media));
+  const heroItem = standardTrending.find((media) => media.backdrop_path && (media.overview?.length || 0) > 100) || standardTrending[0];
 
   const [greeting, setGreeting] = useState("Good evening");
 
@@ -63,7 +65,7 @@ export function HomeView() {
 
       {/* Quick stats */}
       {stats.data && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
           <QuickStat
             icon={<BookOpen className="w-4 h-4" />}
             label="Movie Watchlist"
@@ -95,6 +97,18 @@ export function HomeView() {
             onClick={() => setView("anime")}
           />
           <QuickStat
+            icon={<Languages className="w-4 h-4" />}
+            label="Arabic Movies"
+            value={(stats.data.counts.watchlistArabicMovies ?? 0) + (stats.data.counts.watchedArabicMovies ?? 0)}
+            onClick={() => setView("arabic-movies")}
+          />
+          <QuickStat
+            icon={<Languages className="w-4 h-4" />}
+            label="Arabic TV"
+            value={stats.data.counts.followingArabicShows ?? 0}
+            onClick={() => setView("arabic-tv")}
+          />
+          <QuickStat
             icon={<Clock className="w-4 h-4" />}
             label="Watch time"
             value={stats.data.watchTime?.totalHours || 0}
@@ -110,27 +124,27 @@ export function HomeView() {
       <MediaRow
         title="Trending Now"
         icon={<Flame className="w-5 h-5" />}
-        items={trending.data?.results ?? []}
+        items={standardTrending}
         loading={trending.isLoading}
       />
       <MediaRow
         title="Popular Movies"
         icon={<TrendingUp className="w-5 h-5" />}
-        items={(popularMovies.data?.results ?? []).filter((m) => m.poster_path)}
+        items={(popularMovies.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
         loading={popularMovies.isLoading}
         onSeeAll={() => setView("discover")}
       />
       <MediaRow
         title="On The Air"
         icon={<Tv className="w-5 h-5" />}
-        items={(onAirTv.data?.results ?? []).filter((m) => m.poster_path)}
+        items={(onAirTv.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
         loading={onAirTv.isLoading}
         forcedMediaType="tv"
       />
       <MediaRow
         title="Popular TV Shows"
         icon={<Tv className="w-5 h-5" />}
-        items={(popularTv.data?.results ?? []).filter((m) => m.poster_path)}
+        items={(popularTv.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
         loading={popularTv.isLoading}
         onSeeAll={() => setView("discover")}
         forcedMediaType="tv"
@@ -138,20 +152,20 @@ export function HomeView() {
       <MediaRow
         title="Top Rated Movies"
         icon={<Star className="w-5 h-5" />}
-        items={(topMovies.data?.results ?? []).filter((m) => m.poster_path)}
+        items={(topMovies.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
         loading={topMovies.isLoading}
       />
       <MediaRow
         title="Top Rated TV Shows"
         icon={<Star className="w-5 h-5" />}
-        items={(topTv.data?.results ?? []).filter((m) => m.poster_path)}
+        items={(topTv.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
         loading={topTv.isLoading}
         forcedMediaType="tv"
       />
       <MediaRow
         title="Upcoming Movies"
         icon={<Calendar className="w-5 h-5" />}
-        items={(upcoming.data?.results ?? []).filter((m) => m.poster_path)}
+        items={(upcoming.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
         loading={upcoming.isLoading}
       />
 

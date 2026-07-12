@@ -30,6 +30,9 @@ type MediaImportCreateData = {
   runtime?: number | null;
   ratingStatus?: string | null;
   isAnime?: boolean;
+  isArabic?: boolean;
+  originalLanguage?: string | null;
+  originCountries?: string[];
   isFollowing?: boolean;
   addedAt?: Date;
 };
@@ -53,7 +56,7 @@ async function createMediaSafely({ data }: { data: MediaImportCreateData }) {
 }
 
 // POST - import library data from JSON (merges with existing data)
-// Supports version 2 (Media + watchedEpisodes) and version 1 (legacy tables).
+// Supports version 4 (Arabic classification metadata), versions 2/3, and version 1 legacy tables.
 export async function POST(req: NextRequest) {
   const userId = parseUserId(req);
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
@@ -78,7 +81,7 @@ export async function POST(req: NextRequest) {
   };
   const deferredSeriesRatings = new Map<number, number>();
 
-  // Media (version 2 format)
+  // Media (versions 2-4 format)
   if (Array.isArray(library.media)) {
     for (const item of library.media) {
       if (!item.title || !item.type) continue;
@@ -105,12 +108,27 @@ export async function POST(req: NextRequest) {
         // Imports merge conservatively. A new export can explicitly preserve
         // isFollowing=false while retaining episode progress; older exports
         // without the field fall back to their legacy active status.
-        if (itemType === "series" && importedIsFollowing && !existing.isFollowing) {
+        const importedOriginCountries = toJsonArray(item.originCountries || item.originCountry)
+          .map((country) => String(country).trim().toUpperCase())
+          .filter(Boolean);
+        const importedOriginalLanguage = typeof item.originalLanguage === "string"
+          ? item.originalLanguage.trim().toLowerCase() || null
+          : null;
+        const shouldPromoteArabic = item.isArabic === true && !existing.isArabic;
+        const shouldFillMetadata = (!existing.originalLanguage && importedOriginalLanguage)
+          || (existing.originCountries.length === 0 && importedOriginCountries.length > 0);
+        if ((itemType === "series" && importedIsFollowing && !existing.isFollowing) || shouldPromoteArabic || shouldFillMetadata) {
           await db.media.update({
             where: { id: existing.id },
             data: {
-              isFollowing: true,
-              ...(existing.status ? {} : { status: "not_started" }),
+              ...(itemType === "series" && importedIsFollowing && !existing.isFollowing
+                ? { isFollowing: true, ...(existing.status ? {} : { status: "not_started" }) }
+                : {}),
+              ...(shouldPromoteArabic ? { isArabic: true, isAnime: false } : {}),
+              ...(!existing.originalLanguage && importedOriginalLanguage ? { originalLanguage: importedOriginalLanguage } : {}),
+              ...(existing.originCountries.length === 0 && importedOriginCountries.length > 0
+                ? { originCountries: importedOriginCountries }
+                : {}),
             },
           });
         }
@@ -149,7 +167,12 @@ export async function POST(req: NextRequest) {
           rewatch: Boolean(item.rewatch),
           runtime: item.runtime != null ? Number(item.runtime) : null,
           ratingStatus: item.ratingStatus || null,
-          isAnime: Boolean(item.isAnime),
+          isAnime: Boolean(item.isAnime) && item.isArabic !== true,
+          isArabic: Boolean(item.isArabic),
+          originalLanguage: typeof item.originalLanguage === "string" ? item.originalLanguage.trim().toLowerCase() || null : null,
+          originCountries: toJsonArray(item.originCountries || item.originCountry)
+            .map((country) => String(country).trim().toUpperCase())
+            .filter(Boolean),
           isFollowing: importedIsFollowing,
         },
       });

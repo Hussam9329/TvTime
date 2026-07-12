@@ -3,6 +3,8 @@
 import {
   useCalendarSchedule,
   useEpisodeToggle,
+  useBulkEpisodeToggle,
+  useEpisodeWatchTimeline,
   type CalendarScheduleEpisode,
 } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
@@ -49,6 +51,11 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
+import {
+  buildEpisodeWatchPlan,
+  type EpisodeWatchPlan,
+} from "@/lib/episode-watch-plan";
 
 type CalendarMode = "month" | "week" | "agenda";
 type CalendarFilter = "all" | "upcoming" | "aired" | "unwatched" | "watched" | "tv" | "anime";
@@ -135,7 +142,7 @@ function isVisibleByFilter(episode: CalendarScheduleEpisode, filter: CalendarFil
   }
 }
 
-export function CalendarView() {
+export function CalendarView({ world = "general", embedded = false }: { world?: "general" | "arabic-tv"; embedded?: boolean }) {
   const { goTv, setView } = useNav();
   const [cursor, setCursor] = useState(() => {
     const today = new Date();
@@ -158,7 +165,7 @@ export function CalendarView() {
 
   const todayKey = dateOnlyFromLocalDate(new Date());
   const range = useMemo(() => rangeFor(mode, cursor), [mode, cursor]);
-  const schedule = useCalendarSchedule(range.from, range.to);
+  const schedule = useCalendarSchedule(range.from, range.to, world);
   const allEpisodes = schedule.data?.episodes ?? [];
   const normalizedSearch = search.trim().toLocaleLowerCase();
 
@@ -220,11 +227,13 @@ export function CalendarView() {
         <div className="relative flex flex-col gap-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
-                <CalendarDays className="h-7 w-7 text-primary" /> Episode Calendar
+              <h1 className={cn("flex items-center gap-2 font-extrabold tracking-tight", embedded ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl")}>
+                <CalendarDays className="h-7 w-7 text-primary" /> {world === "arabic-tv" ? "Arabic TV Schedule" : "Episode Calendar"}
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Every scheduled episode from your followed TV shows and anime, in one timezone-safe view.
+                {world === "arabic-tv"
+                  ? "A dedicated timezone-safe schedule for followed Arabic TV shows only."
+                  : "Every scheduled episode from your followed non-Arabic TV shows and anime, in one timezone-safe view."}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -275,7 +284,7 @@ export function CalendarView() {
               />
             </div>
             <div className="flex max-w-full gap-1 overflow-x-auto pb-1 sm:pb-0">
-              {FILTERS.map((item) => (
+              {FILTERS.filter((item) => world === "arabic-tv" ? item.value !== "tv" && item.value !== "anime" : true).map((item) => (
                 <Button
                   key={item.value}
                   size="sm"
@@ -313,8 +322,8 @@ export function CalendarView() {
         <EmptyCalendar
           title="Follow a show to build your calendar"
           description="Once you follow a TV show or anime, its dated episodes will appear here automatically."
-          actionLabel="Discover shows"
-          onAction={() => setView("discover")}
+          actionLabel={world === "arabic-tv" ? "Discover Arabic shows" : "Discover shows"}
+          onAction={() => setView(world === "arabic-tv" ? "arabic-tv" : "discover")}
         />
       ) : episodes.length === 0 ? (
         <EmptyCalendar
@@ -359,7 +368,7 @@ export function CalendarView() {
         <YourSchedulePanel
           shows={schedule.data?.shows ?? []}
           onShow={(showId) => goTv(showId)}
-          onDiscover={() => setView("discover")}
+          onDiscover={() => setView(world === "arabic-tv" ? "arabic-tv" : "discover")}
         />
       </div>
 
@@ -566,7 +575,7 @@ function AgendaEpisode({ episode, onClick }: { episode: CalendarScheduleEpisode;
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-bold">{episode.showTitle}</p>
-            {episode.isAnime && <Badge variant="secondary" className="text-[9px]">Anime</Badge>}
+            {episode.isArabic ? <Badge variant="secondary" className="text-[9px]">Arabic TV</Badge> : episode.isAnime && <Badge variant="secondary" className="text-[9px]">Anime</Badge>}
           </div>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             S{String(episode.seasonNumber).padStart(2, "0")}E{String(episode.episodeNumber).padStart(2, "0")} · {episode.episodeName}
@@ -652,7 +661,7 @@ function UpcomingPanel({ episodes, todayKey, onEpisode }: {
 }
 
 function YourSchedulePanel({ shows, onShow, onDiscover }: {
-  shows: Array<{ tmdbId: number; title: string; poster: string | null; isAnime: boolean }>;
+  shows: Array<{ tmdbId: number; title: string; poster: string | null; isAnime: boolean; isArabic: boolean }>;
   onShow: (showId: number) => void;
   onDiscover: () => void;
 }) {
@@ -711,29 +720,85 @@ function EpisodeSheet({ episode, todayKey, onOpenChange, onShow, onChanged }: {
   onChanged: (watched: boolean) => void;
 }) {
   const toggle = useEpisodeToggle();
+  const bulkToggle = useBulkEpisodeToggle();
+  const timeline = useEpisodeWatchTimeline(episode?.showId ?? null);
+  const [watchPlan, setWatchPlan] = useState<EpisodeWatchPlan | null>(null);
   if (!episode) return null;
 
   const isFuture = episode.date > todayKey;
   const fullDate = formatDateOnly(episode.date, { weekday: "long", month: "long", day: "numeric", year: "numeric" }) || episode.date;
 
-  const changeWatched = async () => {
+  const applyWatchPlan = async (plan: EpisodeWatchPlan, includePrevious: boolean) => {
+    const episodes = includePrevious ? plan.allEpisodes : plan.selectedEpisodes;
+    if (episodes.length === 0) {
+      setWatchPlan(null);
+      return;
+    }
     try {
-      const nextWatched = !episode.watched;
-      await toggle.mutateAsync({
-        action: nextWatched ? "add" : "remove",
-        showId: episode.showId,
-        seasonNumber: episode.seasonNumber,
-        episodeNumber: episode.episodeNumber,
-        episodeName: episode.episodeName,
-      });
-      onChanged(nextWatched);
-      toast.success(nextWatched ? "Episode marked watched" : "Episode marked unwatched");
+      await (episodes.length === 1
+        ? toggle.mutateAsync({
+            action: "add",
+            showId: episode.showId,
+            seasonNumber: episodes[0].seasonNumber,
+            episodeNumber: episodes[0].episodeNumber,
+            episodeName: episodes[0].episodeName || undefined,
+          })
+        : bulkToggle.mutateAsync({ showId: episode.showId, episodes }));
+      onChanged(true);
+      toast.success(
+        includePrevious && plan.previousUnwatched.length > 0
+          ? `Marked ${episodes.length} released episodes as watched, including earlier gaps.`
+          : `${plan.targetLabel} marked as watched.`,
+      );
+      setWatchPlan(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update episode");
     }
   };
 
+  const changeWatched = async () => {
+    if (episode.watched) {
+      try {
+        await toggle.mutateAsync({
+          action: "remove",
+          showId: episode.showId,
+          seasonNumber: episode.seasonNumber,
+          episodeNumber: episode.episodeNumber,
+          episodeName: episode.episodeName,
+        });
+        onChanged(false);
+        toast.success("Episode marked unwatched");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to update episode");
+      }
+      return;
+    }
+
+    if (timeline.isLoading || timeline.isError || !timeline.data) {
+      toast.error(timeline.isError
+        ? "Could not verify earlier episodes. Try again before changing progress."
+        : "Earlier episode history is still loading. Try again in a moment.");
+      return;
+    }
+
+    const plan = buildEpisodeWatchPlan({
+      target: {
+        seasonNumber: episode.seasonNumber,
+        episodeNumber: episode.episodeNumber,
+        episodeName: episode.episodeName,
+      },
+      releasedEpisodes: timeline.data.releasedEpisodes,
+      watchedKeys: new Set(timeline.data.watchedKeys),
+    });
+    if (plan.previousUnwatched.length > 0) {
+      setWatchPlan(plan);
+      return;
+    }
+    await applyWatchPlan(plan, false);
+  };
+
   return (
+    <>
     <Sheet open={Boolean(episode)} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
         <div className="relative aspect-video overflow-hidden bg-muted">
@@ -747,7 +812,7 @@ function EpisodeSheet({ episode, todayKey, onOpenChange, onShow, onChanged }: {
         <SheetHeader className="px-5 pb-0 pt-2">
           <div className="mb-1 flex flex-wrap items-center gap-2">
             <Badge variant="secondary">S{String(episode.seasonNumber).padStart(2, "0")}E{String(episode.episodeNumber).padStart(2, "0")}</Badge>
-            {episode.isAnime && <Badge className="bg-fuchsia-500/15 text-fuchsia-300">Anime</Badge>}
+            {episode.isArabic ? <Badge className="bg-emerald-500/15 text-emerald-300">Arabic TV</Badge> : episode.isAnime && <Badge className="bg-fuchsia-500/15 text-fuchsia-300">Anime</Badge>}
             <Badge variant={episode.watched ? "default" : "outline"}>{episode.watched ? "Watched" : isFuture ? "Upcoming" : "Unwatched"}</Badge>
           </div>
           <SheetTitle className="text-xl">{episode.episodeName}</SheetTitle>
@@ -777,7 +842,7 @@ function EpisodeSheet({ episode, todayKey, onOpenChange, onShow, onChanged }: {
           <div className="grid gap-2 sm:grid-cols-2">
             <Button
               onClick={changeWatched}
-              disabled={toggle.isPending || (isFuture && !episode.watched)}
+              disabled={toggle.isPending || bulkToggle.isPending || (isFuture && !episode.watched) || (!episode.watched && timeline.isLoading)}
               variant={episode.watched ? "outline" : "default"}
             >
               {episode.watched ? <EyeOff className="mr-2 h-4 w-4" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
@@ -799,6 +864,15 @@ function EpisodeSheet({ episode, todayKey, onOpenChange, onShow, onChanged }: {
         </div>
       </SheetContent>
     </Sheet>
+    <EpisodeWatchConfirmationDialog
+      plan={watchPlan}
+      open={Boolean(watchPlan)}
+      pending={toggle.isPending || bulkToggle.isPending}
+      onOpenChange={(nextOpen) => { if (!nextOpen) setWatchPlan(null); }}
+      onSelectedOnly={() => watchPlan ? applyWatchPlan(watchPlan, false) : undefined}
+      onWithPrevious={() => watchPlan ? applyWatchPlan(watchPlan, true) : undefined}
+    />
+    </>
   );
 }
 

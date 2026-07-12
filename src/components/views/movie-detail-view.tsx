@@ -17,6 +17,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { formatReleaseDateParts } from "@/lib/date-only";
+import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
 
 export function MovieDetailView() {
   const { movieId, back, goPerson } = useNav();
@@ -67,10 +68,17 @@ export function MovieDetailView() {
 
   const runtime = m.runtime ? `${Math.floor(m.runtime / 60)}h ${m.runtime % 60}m` : null;
   const releaseDate = formatReleaseDateParts(m.release_date);
+  const originCountries = (m.production_countries ?? []).map((country) => country.iso_3166_1);
+  const genreNames = (m.genres ?? []).map((genre) => genre.name);
+  const isArabicMovie = detectIsArabic({ originalLanguage: m.original_language, originCountry: originCountries });
 
   const cast = (m as any).credits?.cast?.slice(0, 16) ?? [];
-  const recommendations = ((m as any).recommendations?.results ?? []).filter((r: any) => r.poster_path).slice(0, 20);
-  const similar = ((m as any).similar?.results ?? []).filter((r: any) => r.poster_path).slice(0, 20);
+  const recommendations = ((m as any).recommendations?.results ?? [])
+    .filter((result: any) => result.poster_path && isArabicMediaItem(result) === isArabicMovie)
+    .slice(0, 20);
+  const similar = ((m as any).similar?.results ?? [])
+    .filter((result: any) => result.poster_path && isArabicMediaItem(result) === isArabicMovie)
+    .slice(0, 20);
   const videos = ((m as any).videos?.results ?? []).filter((v: any) => v.site === "YouTube");
   const trailer = videos.find((v: any) => v.type === "Trailer") || videos[0];
 
@@ -91,6 +99,10 @@ export function MovieDetailView() {
         overview: m.overview,
         releaseDate: m.release_date,
         voteAverage: m.vote_average,
+        runtime: m.runtime,
+        genres: genreNames,
+        originCountry: originCountries,
+        originalLanguage: m.original_language,
       });
       toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
     } catch (error) {
@@ -109,6 +121,9 @@ export function MovieDetailView() {
         releaseDate: m.release_date,
         voteAverage: m.vote_average,
         overview: m.overview,
+        genres: genreNames,
+        originCountry: originCountries,
+        originalLanguage: m.original_language,
       });
       toast.success(isWatched ? "Marked as not watched" : "Marked as watched");
     } catch (error) {
@@ -127,6 +142,10 @@ export function MovieDetailView() {
       releaseDate: m.release_date,
       voteAverage: m.vote_average,
       runtime: m.runtime,
+      overview: m.overview,
+      genres: genreNames,
+      originCountry: originCountries,
+      originalLanguage: m.original_language,
     });
   };
 
@@ -178,6 +197,11 @@ export function MovieDetailView() {
               <Badge variant="secondary" className="bg-primary/20 text-primary border-0">
                 <Film className="w-3 h-3 mr-1" /> Movie
               </Badge>
+              {isArabicMovie && (
+                <Badge className="border-0 bg-emerald-500/20 text-emerald-300">
+                  Arabic Movie
+                </Badge>
+              )}
               {releaseDate && (
                 <>
                   <Badge variant="secondary" className="border-0">

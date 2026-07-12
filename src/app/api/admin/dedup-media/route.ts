@@ -50,6 +50,10 @@ export async function GET(req: NextRequest) {
         episodes: true,
         genres: true,
         isAnime: true,
+        isArabic: true,
+        originalLanguage: true,
+        originCountries: true,
+        isFollowing: true,
         notes: true,
         rewatch: true,
         ratingStatus: true,
@@ -118,7 +122,15 @@ export async function GET(req: NextRequest) {
         if (item.seasons != null && best.seasons == null) mergedData.seasons = item.seasons;
         if (item.episodes != null && best.episodes == null) mergedData.episodes = item.episodes;
         if (item.genres.length > 0 && best.genres.length === 0) mergedData.genres = item.genres;
-        if (item.isAnime && !best.isAnime) mergedData.isAnime = true;
+        if (item.originalLanguage && !best.originalLanguage) mergedData.originalLanguage = item.originalLanguage;
+        if (item.originCountries.length > 0 && best.originCountries.length === 0) mergedData.originCountries = item.originCountries;
+        if (item.isFollowing && !best.isFollowing) mergedData.isFollowing = true;
+        if (item.isArabic && !best.isArabic) {
+          mergedData.isArabic = true;
+          mergedData.isAnime = false;
+        } else if (item.isAnime && !best.isAnime && !best.isArabic && mergedData.isArabic !== true) {
+          mergedData.isAnime = true;
+        }
       }
 
       // IDs to delete (all except best)

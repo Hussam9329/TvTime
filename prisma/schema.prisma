@@ -55,6 +55,9 @@ model Media {
   runtime        Int?
   ratingStatus   String?
   isAnime        Boolean  @default(false)
+  isArabic       Boolean  @default(false)
+  originalLanguage String?
+  originCountries String[] @default([])
   isFollowing    Boolean  @default(false)
   addedAt        DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -66,6 +69,7 @@ model Media {
   @@index([userId, watched])
   @@index([userId, userRating])
   @@index([userId, isAnime])
+  @@index([userId, isArabic])
   @@index([tmdbId])
 }
 

@@ -17,6 +17,8 @@ import { AnimeView } from "@/components/views/anime-view";
 import { StatsView } from "@/components/views/stats-view";
 import { TvShowsView } from "@/components/views/tv-tracking-view";
 import { MediaView } from "@/components/views/media-view";
+import { ArabicMoviesView } from "@/components/views/arabic-movies-view";
+import { ArabicTvView } from "@/components/views/arabic-tv-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 
 export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
@@ -71,6 +73,8 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
           {view === "stats" && <StatsView />}
           {view === "media" && <MediaView />}
           {view === "tv-shows" && <TvShowsView />}
+          {view === "arabic-movies" && <ArabicMoviesView />}
+          {view === "arabic-tv" && <ArabicTvView />}
         </div>
       </main>
       <Footer />

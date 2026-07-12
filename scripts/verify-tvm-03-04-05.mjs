@@ -63,7 +63,7 @@ const calendarRoute = read("src/app/api/calendar/route.ts");
 check(/episode\.date > todayKey/.test(calendarView) && /isFuture && !episode\.watched/.test(calendarView), "Calendar shows future schedule while blocking future watch mutations");
 check(/isFollowing:\s*true/.test(calendarRoute) && /watchedEpisode\.findMany/.test(calendarRoute), "Calendar schedule and watched state come from canonical server sources");
 check(/deriveTvTrackingState/.test(trackingRoute), "TV tracking API uses the central state engine");
-check(/type:\s*"series",\s*isAnime:\s*false,\s*isFollowing:\s*true/.test(libraryCounts), "Following statistics use explicit TV following membership and exclude Anime");
+check(/type:\s*"series",\s*isAnime:\s*false,\s*isArabic:\s*false,\s*isFollowing:\s*true/.test(libraryCounts), "Following statistics use explicit TV following membership and exclude Anime and Arabic TV");
 check(/watched:\s*itemType\s*===\s*"series"\s*\?\s*false/.test(importRoute), "Legacy rating import does not mark media watched");
 check(/item\.type\s*===\s*"movie"\s*\?/.test(collectionView) && /> Episodes\s*</.test(collectionView), "Watched TV cards route state changes through episode tracking");
 check(/getAllReleasedEpisodes/.test(server) && /isEpisodeReleased/.test(server), "Server computes released episodes from episode air dates");

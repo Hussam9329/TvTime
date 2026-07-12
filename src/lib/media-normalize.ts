@@ -1,3 +1,5 @@
+import { canonicalMediaPoster } from "@/lib/media-poster";
+
 // Media normalizer for PostgreSQL (arrays are native, so this is mostly pass-through)
 // Kept for API compatibility with code that expects genresJson/tagsJson pattern
 
@@ -28,6 +30,7 @@ export function fromJsonArray(value?: string | null): string[] {
 export function normalizeMedia<T extends Record<string, any>>(item: T) {
   return {
     ...item,
+    poster: canonicalMediaPoster(item.poster),
     genres: Array.isArray(item.genres) ? item.genres : (item.genresJson ? fromJsonArray(item.genresJson) : []),
     tags: Array.isArray(item.tags) ? item.tags : (item.tagsJson ? fromJsonArray(item.tagsJson) : []),
   };

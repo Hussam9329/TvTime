@@ -6,21 +6,18 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RatingDialog } from "@/components/media/rating-dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward, ListChecks, Clapperboard, BookOpen, AlertCircle, Sparkles, Trophy, Star, Zap, Layers } from "lucide-react";
+import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
+import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward, ListChecks, Clapperboard, BookOpen, Sparkles, Trophy, Star, Zap, Layers } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useState } from "react";
+import {
+  buildEpisodeWatchPlan,
+  buildSeasonWatchPlan,
+  progressEpisodesToWatchRefs,
+  type EpisodeWatchPlan,
+} from "@/lib/episode-watch-plan";
 
 
 // Tracking status is calculated by the shared server engine.
@@ -55,9 +52,9 @@ function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
   return <Badge className="text-[9px] bg-slate-500/20 text-slate-300 border-0"><Clock className="w-2.5 h-2.5 mr-1" /> Not Started</Badge>;
 }
 
-export function TvShowsView() {
+export function TvShowsView({ world = "standard", embedded = false }: { world?: "standard" | "arabic"; embedded?: boolean }) {
   const stats = useStats();
-  const trackingCounts = useTvTrackingCounts();
+  const trackingCounts = useTvTrackingCounts(world);
   const counts = trackingCounts.data?.counts;
   const goTv = useNav((s) => s.goTv);
 
@@ -84,16 +81,21 @@ export function TvShowsView() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-          <Clapperboard className="w-6 h-6 text-primary" />
+      {!embedded && (
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
+            <Clapperboard className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{world === "arabic" ? "Arabic TV Shows" : "TV Shows"}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {world === "arabic"
+                ? "Arabic-language series tracking, fully separated from TV Shows and Anime"
+                : "Your complete non-anime, non-Arabic TV tracking world, with global counts across every show"}
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">TV Shows</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Your complete non-anime TV tracking world, with global counts across every show</p>
-        </div>
-      </div>
+      )}
 
       {/* TV Shows filters, all backed by full-collection counters. */}
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
@@ -112,7 +114,7 @@ export function TvShowsView() {
         </p>
       )}
 
-      <AllShowsTab onGo={goTv} globalCounts={counts} />
+      <AllShowsTab onGo={goTv} globalCounts={counts} world={world} />
 
       <RatingDialog
         open={!!ratingTarget}
@@ -130,11 +132,11 @@ export function TvShowsView() {
 // "All" tab — shows every tracked series, each badged with its current tracking
 // status (Finished / Up To Date / Watching / Not Started / Planned). Includes quick filter chips so the
 // user can drill into a specific status without leaving the tab.
-function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globalCounts?: any }) {
+function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void; globalCounts?: any; world: "standard" | "arabic" }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<TvTrackingCategory>("all");
   const limit = 60;
-  const tracking = useTvTracking({ category: filter, sortBy: "title", order: "asc", limit, offset: page * limit });
+  const tracking = useTvTracking({ category: filter, sortBy: "title", order: "asc", limit, offset: page * limit, world });
 
   const items = tracking.data?.items ?? [];
   const total = tracking.data?.total ?? 0;
@@ -175,7 +177,7 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
       <div className="flex items-center justify-between gap-3 px-1 flex-wrap">
         <div className="flex items-center gap-2">
           <Layers className="w-5 h-5 text-primary" />
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight">All TV Shows</h2>
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">{world === "arabic" ? "All Arabic TV Shows" : "All TV Shows"}</h2>
           <span className="text-xs text-muted-foreground ml-1">({total})</span>
         </div>
         <Badge variant="secondary" className="text-[10px]">
@@ -183,7 +185,9 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
         </Badge>
       </div>
       <p className="text-xs text-muted-foreground px-1 -mt-2">
-        Use these filters from inside All. Every number is calculated across your complete TV Shows collection, never from Anime or only the visible page.
+        Use these filters from inside All. {world === "arabic"
+          ? "Every number is calculated across your complete Arabic TV collection only, never from standard TV Shows, Anime or the visible page."
+          : "Every number is calculated across your complete TV Shows collection, never from Arabic TV, Anime or only the visible page."}
       </p>
 
       <div className="flex items-center gap-2 flex-wrap px-1">
@@ -209,14 +213,14 @@ function AllShowsTab({ onGo, globalCounts }: { onGo: (id: number) => void; globa
       ) : items.length === 0 ? (
         <EmptyTab
           icon={<Layers className="w-10 h-10" />}
-          title={filter === "all" ? "No tracked shows yet" : `No ${activeFilterLabel} shows`}
-          subtitle={filter === "all" ? "Follow TV shows to start tracking" : "This filter is empty across your full TV Shows collection"}
+          title={filter === "all" ? (world === "arabic" ? "No tracked Arabic shows yet" : "No tracked shows yet") : `No ${activeFilterLabel} shows`}
+          subtitle={filter === "all" ? (world === "arabic" ? "Follow an Arabic TV show to start tracking" : "Follow TV shows to start tracking") : `This filter is empty across your full ${world === "arabic" ? "Arabic TV" : "TV Shows"} collection`}
         />
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {items.map((s: any) => (
-              <AllShowCard key={s.id} show={{ ...s, _trackingStatus: s._trackingStatus ?? deriveTrackingStatus(s) }} onGo={() => s.tmdbId && onGo(s.tmdbId)} />
+              <AllShowCard key={s.id} show={{ ...s, _trackingStatus: s._trackingStatus ?? deriveTrackingStatus(s) }} onGo={() => s.tmdbId && onGo(s.tmdbId)} world={world} />
             ))}
           </div>
           {totalPages > 1 && (
@@ -262,7 +266,7 @@ function FilterChip({ active, onClick, label, icon, count, color }: {
   );
 }
 
-function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
+function AllShowCard({ show, onGo, world }: { show: any; onGo: () => void; world: "standard" | "arabic" }) {
   const update = useMediaUpdate();
   const trackingStatus = show._trackingStatus as TrackingStatus;
   const userRating = trackingStatus === "finished" && show._isEndedByTmdb === true
@@ -316,18 +320,49 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
               </div>
             </div>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-2 h-7 w-fit text-[10px]"
-            onClick={(event) => {
-              event.stopPropagation();
-              void update.mutateAsync({ id: show.id, isAnime: true }).then(() => toast.success("Moved to Anime"));
-            }}
-          >
-            <Sparkles className="w-3 h-3 mr-1" /> Move to Anime
-          </Button>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {world === "standard" ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[10px]"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void update.mutateAsync({ id: show.id, isAnime: true, isArabic: false }).then(() => toast.success("Moved to Anime"));
+                  }}
+                >
+                  <Sparkles className="w-3 h-3 mr-1" /> To Anime
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[10px]"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void update.mutateAsync({ id: show.id, isArabic: true, isAnime: false }).then(() => toast.success("Moved to Arabic TV"));
+                  }}
+                >
+                  <span className="mr-1 font-black">ع</span> To Arabic TV
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-[10px]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void update.mutateAsync({ id: show.id, isArabic: false, isAnime: false }).then(() => toast.success("Moved to TV Shows"));
+                }}
+              >
+                <Clapperboard className="w-3 h-3 mr-1" /> To TV Shows
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
     </motion.div>
@@ -678,108 +713,79 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
   const episodeToggle = useEpisodeToggle();
   const bulkToggle = useBulkEpisodeToggle();
 
-  // Dialog state for "Make Previous Episodes"
-  const [prevEpDialog, setPrevEpDialog] = useState<{
-    open: boolean;
-    currentEp: { seasonNumber: number; episode: any } | null;
-    prevEpisodes: { seasonNumber: number; episodeNumber: number; episodeName?: string }[];
-  }>({ open: false, currentEp: null, prevEpisodes: [] });
+  const [watchPlan, setWatchPlan] = useState<EpisodeWatchPlan | null>(null);
 
   const { nextEp, totalEpisodes, watchedCount, watchedSet, seasons, allEpisodes, isLoading } = data;
   const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
   const remaining = Math.max(0, totalEpisodes - watchedCount);
 
+  const releasedTimeline = progressEpisodesToWatchRefs(allEpisodes);
+
+  const applyWatchPlan = async (plan: EpisodeWatchPlan, includePrevious: boolean) => {
+    const episodes = includePrevious ? plan.allEpisodes : plan.selectedEpisodes;
+    if (episodes.length === 0) {
+      setWatchPlan(null);
+      return;
+    }
+    try {
+      const result = episodes.length === 1
+        ? await episodeToggle.mutateAsync({
+            action: "add",
+            showId,
+            seasonNumber: episodes[0].seasonNumber,
+            episodeNumber: episodes[0].episodeNumber,
+            episodeName: episodes[0].episodeName || undefined,
+          })
+        : await bulkToggle.mutateAsync({ showId, episodes });
+      const previousCount = includePrevious ? plan.previousUnwatched.length : 0;
+      toast.success(
+        previousCount > 0
+          ? `Marked ${episodes.length} released episodes as watched, including earlier gaps.`
+          : plan.kind === "episode"
+            ? `${plan.targetLabel} marked as watched.`
+            : `${plan.targetLabel} marked as watched.`,
+      );
+      onCompletion?.(result?.completion);
+      setWatchPlan(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to mark episodes");
+    }
+  };
+
   const markWatched = async () => {
     if (!nextEp) return;
-    // Check if there are previous unwatched episodes in the same season
-    const seasonData = seasons.find((s) => s.seasonNumber === nextEp.seasonNumber);
-    if (seasonData) {
-      const prevUnwatched = seasonData.episodes
-        .filter((e: any) => e.episode_number < nextEp.episode.episode_number && !watchedSet.has(`${e.season_number}-${e.episode_number}`))
-        .map((e: any) => ({ seasonNumber: e.season_number, episodeNumber: e.episode_number, episodeName: e.name }));
-
-      if (prevUnwatched.length > 0) {
-        // Show "Make Previous Episodes" dialog
-        setPrevEpDialog({
-          open: true,
-          currentEp: { seasonNumber: nextEp.seasonNumber, episode: nextEp.episode },
-          prevEpisodes: prevUnwatched,
-        });
-        return;
-      }
-    }
-    // No previous unwatched episodes, just mark this one
-    try {
-      const result = await episodeToggle.mutateAsync({
-        action: "add",
-        showId,
+    const plan = buildEpisodeWatchPlan({
+      target: {
         seasonNumber: nextEp.seasonNumber,
         episodeNumber: nextEp.episode.episode_number,
         episodeName: nextEp.episode.name,
-      });
-      toast.success(`Marked S${nextEp.seasonNumber}E${nextEp.episode.episode_number} as watched`);
-      if (onCompletion) onCompletion(result?.completion);
-    } catch {
-      toast.error("Failed to mark episode");
+      },
+      releasedEpisodes: releasedTimeline,
+      watchedKeys: watchedSet,
+    });
+    if (plan.previousUnwatched.length > 0) {
+      setWatchPlan(plan);
+      return;
     }
-  };
-
-  const handleMarkAllPrevious = async () => {
-    if (!prevEpDialog.currentEp) return;
-    // Mark all previous episodes + current episode
-    const allEps = [...prevEpDialog.prevEpisodes, {
-      seasonNumber: prevEpDialog.currentEp.seasonNumber,
-      episodeNumber: prevEpDialog.currentEp.episode.episode_number,
-      episodeName: prevEpDialog.currentEp.episode.name,
-    }];
-    try {
-      const result = await bulkToggle.mutateAsync({ showId, episodes: allEps });
-      toast.success(`Marked ${allEps.length} episodes as watched (including previous)`);
-      if (onCompletion) onCompletion(result?.completion);
-    } catch {
-      toast.error("Failed to mark episodes");
-    }
-    setPrevEpDialog({ open: false, currentEp: null, prevEpisodes: [] });
-  };
-
-  const handleMarkOnlyCurrent = async () => {
-    if (!prevEpDialog.currentEp) return;
-    try {
-      const result = await episodeToggle.mutateAsync({
-        action: "add",
-        showId,
-        seasonNumber: prevEpDialog.currentEp.seasonNumber,
-        episodeNumber: prevEpDialog.currentEp.episode.episode_number,
-        episodeName: prevEpDialog.currentEp.episode.name,
-      });
-      toast.success(`Marked S${prevEpDialog.currentEp.seasonNumber}E${prevEpDialog.currentEp.episode.episode_number} as watched`);
-      if (onCompletion) onCompletion(result?.completion);
-    } catch {
-      toast.error("Failed to mark episode");
-    }
-    setPrevEpDialog({ open: false, currentEp: null, prevEpisodes: [] });
+    await applyWatchPlan(plan, false);
   };
 
   const markAllSeason = async () => {
     if (!nextEp) return;
-    const unwatched = allEpisodes
-      .filter(({ seasonNumber, episode }) =>
-        seasonNumber === nextEp.seasonNumber
-        && !watchedSet.has(`${episode.season_number}-${episode.episode_number}`),
-      )
-      .map(({ episode }) => ({
-        seasonNumber: episode.season_number,
-        episodeNumber: episode.episode_number,
-        episodeName: episode.name,
-      }));
-    if (unwatched.length === 0) { toast.info("All episodes already watched"); return; }
-    try {
-      const result = await bulkToggle.mutateAsync({ showId, episodes: unwatched });
-      toast.success(`Marked ${unwatched.length} episodes as watched`);
-      if (onCompletion) onCompletion(result?.completion);
-    } catch {
-      toast.error("Failed to mark episodes");
+    const plan = buildSeasonWatchPlan({
+      seasonNumber: nextEp.seasonNumber,
+      releasedEpisodes: releasedTimeline,
+      watchedKeys: watchedSet,
+    });
+    if (plan.selectedEpisodes.length === 0) {
+      toast.info("All released episodes in this season are already watched");
+      return;
     }
+    if (plan.previousUnwatched.length > 0) {
+      setWatchPlan(plan);
+      return;
+    }
+    await applyWatchPlan(plan, false);
   };
 
   if (isLoading) {
@@ -896,30 +902,14 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
         </Card>
       </motion.div>
 
-      {/* Make Previous Episodes dialog */}
-      <AlertDialog open={prevEpDialog.open} onOpenChange={(open) => !open && setPrevEpDialog({ open: false, currentEp: null, prevEpisodes: [] })}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-amber-400" />
-              Make Previous Episodes?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              You're marking <strong>S{prevEpDialog.currentEp?.seasonNumber}E{prevEpDialog.currentEp?.episode.episode_number}</strong> as watched, but there {prevEpDialog.prevEpisodes.length === 1 ? "is" : "are"} <strong>{prevEpDialog.prevEpisodes.length} episode{prevEpDialog.prevEpisodes.length === 1 ? "" : "s"}</strong> before it that you haven't watched yet.
-              <br /><br />
-              Do you want to mark all previous episodes as watched?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleMarkOnlyCurrent}>
-              No, just this episode
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleMarkAllPrevious} className="bg-primary text-primary-foreground hover:bg-primary/90">
-              Yes, mark all {prevEpDialog.prevEpisodes.length + 1} episodes
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <EpisodeWatchConfirmationDialog
+        plan={watchPlan}
+        open={Boolean(watchPlan)}
+        pending={episodeToggle.isPending || bulkToggle.isPending}
+        onOpenChange={(nextOpen) => { if (!nextOpen) setWatchPlan(null); }}
+        onSelectedOnly={() => watchPlan ? applyWatchPlan(watchPlan, false) : undefined}
+        onWithPrevious={() => watchPlan ? applyWatchPlan(watchPlan, true) : undefined}
+      />
     </>
   );
 }
