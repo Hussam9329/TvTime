@@ -712,6 +712,7 @@ export function useEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+      qc.invalidateQueries({ queryKey: ["calendar"] });
     },
   });
 }
@@ -741,7 +742,63 @@ export function useBulkEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+      qc.invalidateQueries({ queryKey: ["calendar"] });
     },
+  });
+}
+
+// ---------- Calendar schedule ----------
+export type CalendarScheduleEpisode = {
+  id: string;
+  date: string;
+  showId: number;
+  showTitle: string;
+  showPoster: string | null;
+  showBackdrop: string | null;
+  isAnime: boolean;
+  seasonNumber: number;
+  episodeNumber: number;
+  episodeName: string;
+  overview: string | null;
+  stillPath: string | null;
+  runtime: number | null;
+  watched: boolean;
+  trailerKey: string | null;
+  networkNames: string[];
+};
+
+export type CalendarScheduleResponse = {
+  from: string;
+  to: string;
+  episodes: CalendarScheduleEpisode[];
+  shows: Array<{
+    id: string;
+    tmdbId: number;
+    title: string;
+    poster: string | null;
+    isAnime: boolean;
+  }>;
+  warnings: string[];
+  partial: boolean;
+};
+
+export function useCalendarSchedule(from: string, to: string) {
+  const userId = useNav((state) => state.userId);
+  return useQuery({
+    queryKey: ["calendar", userId || getClientUserId(), from, to],
+    queryFn: async (): Promise<CalendarScheduleResponse> => {
+      const url = withUserId(new URL("/api/calendar", window.location.origin));
+      url.searchParams.set("from", from);
+      url.searchParams.set("to", to);
+      const res = await fetch(url, { headers: userHeaders(), cache: "no-store" });
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        throw new Error(errorBody?.error || "Failed to load your episode calendar");
+      }
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 }
 

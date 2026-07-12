@@ -58,7 +58,10 @@ check(/body:\s*JSON\.stringify\(\{\s*userRating:\s*args\.value[\s\S]*?\}\)/.test
 check(/body:\s*JSON\.stringify\(\{\s*userRating:\s*null\s*\}\)/.test(hooks), "Rating removal payload clears only userRating");
 check(/allEpisodes\s*=\s*allEpisodesIncludingFuture\.filter/.test(hooks), "Client progress separates released and future episodes");
 check(/nextEp\s*=\s*allEpisodes\.find/.test(hooks), "Next-to-watch is selected only from released episodes");
-check(/allEpisodesIncludingFuture/.test(read("src/components/views/calendar-view.tsx")), "Calendar may still show future schedule without counting it as progress");
+const calendarView = read("src/components/views/calendar-view.tsx");
+const calendarRoute = read("src/app/api/calendar/route.ts");
+check(/episode\.date > todayKey/.test(calendarView) && /isFuture && !episode\.watched/.test(calendarView), "Calendar shows future schedule while blocking future watch mutations");
+check(/isFollowing:\s*true/.test(calendarRoute) && /watchedEpisode\.findMany/.test(calendarRoute), "Calendar schedule and watched state come from canonical server sources");
 check(/deriveTvTrackingState/.test(trackingRoute), "TV tracking API uses the central state engine");
 check(/type:\s*"series",\s*isAnime:\s*false,\s*isFollowing:\s*true/.test(libraryCounts), "Following statistics use explicit TV following membership and exclude Anime");
 check(/watched:\s*itemType\s*===\s*"series"\s*\?\s*false/.test(importRoute), "Legacy rating import does not mark media watched");

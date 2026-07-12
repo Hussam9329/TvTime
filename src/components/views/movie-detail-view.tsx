@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { formatReleaseDateParts } from "@/lib/date-only";
 
 export function MovieDetailView() {
   const { movieId, back, goPerson } = useNav();
@@ -65,7 +66,7 @@ export function MovieDetailView() {
   const myRating = stateItem?.userRating ?? null;
 
   const runtime = m.runtime ? `${Math.floor(m.runtime / 60)}h ${m.runtime % 60}m` : null;
-  const year = m.release_date?.slice(0, 4);
+  const releaseDate = formatReleaseDateParts(m.release_date);
 
   const cast = (m as any).credits?.cast?.slice(0, 16) ?? [];
   const recommendations = ((m as any).recommendations?.results ?? []).filter((r: any) => r.poster_path).slice(0, 20);
@@ -177,7 +178,16 @@ export function MovieDetailView() {
               <Badge variant="secondary" className="bg-primary/20 text-primary border-0">
                 <Film className="w-3 h-3 mr-1" /> Movie
               </Badge>
-              {year && <Badge variant="secondary" className="border-0">{year}</Badge>}
+              {releaseDate && (
+                <>
+                  <Badge variant="secondary" className="border-0">
+                    <Calendar className="w-3 h-3 mr-1" /> {releaseDate.dayMonth}
+                  </Badge>
+                  <Badge className="border-0 bg-primary text-primary-foreground font-extrabold tracking-wide">
+                    {releaseDate.year}
+                  </Badge>
+                </>
+              )}
               {runtime && <Badge variant="secondary" className="border-0"><Clock className="w-3 h-3 mr-1" />{runtime}</Badge>}
               {m.vote_average > 0 && (
                 <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0">
@@ -338,7 +348,7 @@ export function MovieDetailView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label="Budget" value={`$${m.budget.toLocaleString()}`} />
               <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label="Revenue" value={`$${m.revenue.toLocaleString()}`} />
-              <DetailCard icon={<Calendar className="w-5 h-5 text-primary" />} label="Release date" value={m.release_date || "—"} />
+              <DetailCard icon={<Calendar className="w-5 h-5 text-primary" />} label="Release date" value={releaseDate?.full || "—"} />
               <DetailCard icon={<Clock className="w-5 h-5 text-primary" />} label="Runtime" value={runtime || "—"} />
               <DetailCard icon={<Film className="w-5 h-5 text-primary" />} label="Status" value={m.status || "—"} />
               <DetailCard icon={<Users className="w-5 h-5 text-primary" />} label="Language" value={m.spoken_languages?.map((l) => l.english_name).join(", ") || "—"} />
