@@ -18,8 +18,10 @@ function uniqueCountryCodes(value) {
 }
 
 function isArabic(originalLanguage, originCountries) {
-  return String(originalLanguage || "").toLowerCase() === "ar"
-    || originCountries.some((country) => ARAB_COUNTRY_CODES.has(country));
+  // Arabic originals require original_language === "ar". Origin country alone
+  // is intentionally NOT enough: many foreign productions are shot or
+  // co-produced in Arab countries without being Arabic-language originals.
+  return String(originalLanguage || "").toLowerCase() === "ar";
 }
 
 async function fetchDetails(item) {
