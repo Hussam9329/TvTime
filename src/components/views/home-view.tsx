@@ -303,18 +303,50 @@ function FeaturedCarousel({ slides }: { slides: FeaturedSlide[] }) {
           transition={{ duration: 0.5 }}
           className="relative aspect-[16/10] sm:aspect-[21/9] w-full"
         >
-          <SafeImage
-            src={slide.backdropPath ? img(slide.backdropPath, "w1280") : imgOrPlaceholder(slide.posterPath, "w500")}
-            alt={slide.title}
-            fill
-            variant="backdrop"
-            priority={current === 0}
-            className="absolute inset-0"
-          />
+          {/* Backdrop image — if we have a real backdrop_path (from trending),
+              use it. Otherwise use the poster as a blurred background + the
+              poster itself on the left side (Netflix style for titles without
+              backdrop). */}
+          {slide.backdropPath ? (
+            <SafeImage
+              src={img(slide.backdropPath, "w1280")}
+              alt={slide.title}
+              fill
+              variant="backdrop"
+              priority={current === 0}
+              className="absolute inset-0"
+            />
+          ) : (
+            <>
+              {/* Blurred poster as background fill */}
+              <div className="absolute inset-0 overflow-hidden">
+                <SafeImage
+                  src={imgOrPlaceholder(slide.posterPath, "w500")}
+                  alt=""
+                  fill
+                  variant="poster"
+                  className="absolute inset-0 object-cover scale-125 blur-2xl opacity-40"
+                />
+              </div>
+              {/* Sharp poster on the left */}
+              <div className="absolute left-4 sm:left-8 lg:left-12 bottom-0 top-0 flex items-center">
+                <div className="relative w-24 sm:w-36 lg:w-44 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl flex-shrink-0">
+                  <SafeImage
+                    src={imgOrPlaceholder(slide.posterPath, "w342")}
+                    alt={slide.title}
+                    fill
+                    variant="poster"
+                    priority={current === 0}
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+            </>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/20" />
           <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
 
-          <div className="absolute inset-0 flex items-end p-4 sm:p-8 lg:p-12">
+          <div className={`absolute inset-0 flex items-end p-4 sm:p-8 lg:p-12 ${!slide.backdropPath ? "pl-36 sm:pl-52 lg:pl-60" : ""}`}>
             <div className="max-w-2xl">
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full backdrop-blur text-xs font-bold uppercase tracking-wide ${slide.badgeColor}`}>
