@@ -449,7 +449,7 @@ function MonthCalendar({ cursor, grouped, todayKey, onEpisode, onMore }: {
                 )}>
                   {dateOnlyToLocalDate(dateKey)?.getDate()}
                 </span>
-                {dayEpisodes.length > 0 && <span className="text-[9px] text-muted-foreground">{dayEpisodes.length}</span>}
+                {dayEpisodes.length > 0 && <span className="text-[10px] text-muted-foreground">{dayEpisodes.length}</span>}
               </div>
               <div className="space-y-1">
                 {dayEpisodes.slice(0, 3).map((episode) => (
@@ -457,7 +457,7 @@ function MonthCalendar({ cursor, grouped, todayKey, onEpisode, onMore }: {
                 ))}
                 {dayEpisodes.length > 3 && (
                   <button
-                    className="w-full rounded px-1 py-0.5 text-left text-[9px] font-semibold text-primary hover:bg-primary/10"
+                    className="w-full rounded px-1 py-0.5 text-left text-[10px] font-semibold text-primary hover:bg-primary/10"
                     onClick={() => onMore(dateKey)}
                   >
                     +{dayEpisodes.length - 3} more
@@ -553,12 +553,12 @@ function EpisodeChip({ episode, onClick, compact = false }: {
     >
       <span className="flex items-center gap-1">
         {episode.watched ? <CheckCircle2 className="h-2.5 w-2.5 shrink-0" /> : <Circle className="h-2.5 w-2.5 shrink-0" />}
-        <span className={cn("truncate font-semibold", compact ? "text-[8px] sm:text-[9px]" : "text-[10px]")}>
+        <span className={cn("truncate font-semibold", compact ? "text-[10px] sm:text-[10px]" : "text-[10px]")}>
           {episode.showTitle}
         </span>
       </span>
       {!compact && (
-        <span className="mt-0.5 block truncate text-[9px] opacity-80">
+        <span className="mt-0.5 block truncate text-[10px] opacity-80">
           S{String(episode.seasonNumber).padStart(2, "0")}E{String(episode.episodeNumber).padStart(2, "0")}
         </span>
       )}
@@ -570,13 +570,13 @@ function AgendaEpisode({ episode, onClick }: { episode: CalendarScheduleEpisode;
   return (
     <Card className="overflow-hidden p-0 transition-colors hover:border-primary/40">
       <button type="button" onClick={onClick} className="flex w-full items-center gap-3 p-3 text-left">
-        <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
+        <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
           <SafeImage src={imgOrPlaceholder(episode.showPoster, "w92")} alt={episode.showTitle} fill variant="poster" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-bold">{episode.showTitle}</p>
-            {episode.isArabic ? <Badge variant="secondary" className="text-[9px]">Arabic TV</Badge> : episode.isAnime && <Badge variant="secondary" className="text-[9px]">Anime</Badge>}
+            {episode.isArabic ? <Badge variant="secondary" className="text-[10px]">Arabic TV</Badge> : episode.isAnime && <Badge variant="secondary" className="text-[10px]">Anime</Badge>}
           </div>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             S{String(episode.seasonNumber).padStart(2, "0")}E{String(episode.episodeNumber).padStart(2, "0")} · {episode.episodeName}
@@ -640,7 +640,7 @@ function UpcomingPanel({ episodes, todayKey, onEpisode }: {
                     onClick={() => onEpisode(episode)}
                     className="flex w-full items-center gap-3 rounded-lg border border-border/50 p-2 text-left transition-colors hover:bg-accent/50"
                   >
-                    <div className="relative h-10 w-8 shrink-0 overflow-hidden rounded bg-muted">
+                    <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded bg-muted">
                       <SafeImage src={imgOrPlaceholder(episode.showPoster, "w92")} alt="" fill variant="poster" />
                     </div>
                     <div className="min-w-0 flex-1">
