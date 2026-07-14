@@ -58,7 +58,7 @@ import {
   type EpisodeWatchPlan,
 } from "@/lib/episode-watch-plan";
 
-type CalendarMode = "month" | "week" | "agenda";
+type CalendarMode = "Month" | "Week" | "Agenda";
 type CalendarFilter = "all" | "upcoming" | "aired" | "unwatched" | "watched" | "tv" | "anime";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -79,7 +79,7 @@ function startOfWeek(date: Date) {
 }
 
 function rangeFor(mode: CalendarMode, cursor: Date) {
-  if (mode === "week") {
+  if (mode === "Week") {
     const start = startOfWeek(cursor);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
@@ -122,7 +122,7 @@ function relativeDateLabel(dateKey: string, todayKey: string) {
 }
 
 function rangeTitle(mode: CalendarMode, cursor: Date) {
-  if (mode === "week") {
+  if (mode === "Week") {
     const days = weekCells(cursor);
     const first = formatDateOnly(days[0], { month: "short", day: "numeric" });
     const last = formatDateOnly(days[6], { month: "short", day: "numeric", year: "numeric" });
@@ -149,7 +149,7 @@ export function CalendarView({ world = "general", embedded = false }: { world?: 
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
   });
-  const [mode, setMode] = useState<CalendarMode>("month");
+  const [mode, setMode] = useState<CalendarMode>("Month");
   const [filter, setFilter] = useState<CalendarFilter>("all");
   const [search, setSearch] = useState("");
   const [selectedEpisode, setSelectedEpisode] = useState<CalendarScheduleEpisode | null>(null);
@@ -159,7 +159,7 @@ export function CalendarView({ world = "general", embedded = false }: { world?: 
     if (typeof window === "undefined") return;
     const mobile = window.matchMedia("(max-width: 639px)");
     const frame = window.requestAnimationFrame(() => {
-      if (mobile.matches) setMode((current) => current === "month" ? "agenda" : current);
+      if (mobile.matches) setMode((current) => current === "Month" ? "Agenda" : current);
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -202,7 +202,7 @@ export function CalendarView({ world = "general", embedded = false }: { world?: 
 
   const navigate = (direction: -1 | 1) => {
     setCursor((current) => {
-      if (mode === "week") {
+      if (mode === "Week") {
         const next = new Date(current);
         next.setDate(next.getDate() + direction * 7);
         return next;
@@ -262,13 +262,13 @@ export function CalendarView({ world = "general", embedded = false }: { world?: 
       <Card className="p-3 sm:p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-2">
-            {(["month", "week", "agenda"] as CalendarMode[]).map((value) => (
+            {(["Month", "Week", "Agenda"] as CalendarMode[]).map((value) => (
               <Button
                 key={value}
                 size="sm"
                 variant={mode === value ? "default" : "outline"}
                 onClick={() => setMode(value)}
-                className="capitalize"
+                className=""
               >
                 {value}
               </Button>
@@ -337,7 +337,7 @@ export function CalendarView({ world = "general", embedded = false }: { world?: 
         />
       ) : (
         <>
-          {mode === "month" && (
+          {mode === "Month" && (
             <MonthCalendar
               cursor={cursor}
               grouped={grouped}
@@ -346,7 +346,7 @@ export function CalendarView({ world = "general", embedded = false }: { world?: 
               onMore={setSelectedDay}
             />
           )}
-          {mode === "week" && (
+          {mode === "Week" && (
             <WeekCalendar
               days={weekCells(cursor)}
               grouped={grouped}
@@ -354,7 +354,7 @@ export function CalendarView({ world = "general", embedded = false }: { world?: 
               onEpisode={setSelectedEpisode}
             />
           )}
-          {mode === "agenda" && (
+          {mode === "Agenda" && (
             <AgendaCalendar
               grouped={grouped}
               todayKey={todayKey}
@@ -889,9 +889,9 @@ function InfoTile({ label, value, icon }: { label: string; value: string; icon: 
 function CalendarLoading({ mode }: { mode: CalendarMode }) {
   return (
     <Card className="p-4">
-      <div className={cn("grid gap-2", mode === "month" ? "grid-cols-7" : mode === "week" ? "sm:grid-cols-7" : "grid-cols-1")}>
-        {Array.from({ length: mode === "month" ? 35 : 7 }, (_, index) => (
-          <Skeleton key={index} className={cn("rounded-lg", mode === "agenda" ? "h-20" : "h-28")} />
+      <div className={cn("grid gap-2", mode === "Month" ? "grid-cols-7" : mode === "Week" ? "sm:grid-cols-7" : "grid-cols-1")}>
+        {Array.from({ length: mode === "Month" ? 35 : 7 }, (_, index) => (
+          <Skeleton key={index} className={cn("rounded-lg", mode === "Agenda" ? "h-20" : "h-28")} />
         ))}
       </div>
     </Card>
