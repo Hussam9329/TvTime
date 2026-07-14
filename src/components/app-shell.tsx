@@ -7,6 +7,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { HomeView } from "@/components/views/home-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 // Lazy-load secondary views so the initial bundle only contains HomeView +
 // shared layout. Each view is fetched on first navigation, then cached by
@@ -108,26 +109,34 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
         <div key={`${view}-${movieId ?? ""}-${tvId ?? ""}-${personId ?? ""}`} className="animate-fade-in-up">
           {/* HomeView stays eager — it is the landing page and the first thing
               the user sees after login. */}
-          {view === "home" && <HomeView />}
+          {view === "home" && (
+            <ErrorBoundary>
+              <HomeView />
+            </ErrorBoundary>
+          )}
 
           {/* All other views are code-split. Suspense falls back to a
-              skeleton so the user sees structure immediately. */}
+              skeleton so the user sees structure immediately. ErrorBoundary
+              catches runtime errors so a single broken view doesn't crash
+              the whole app. */}
           {view !== "home" && (
-            <Suspense fallback={<ViewSkeleton />}>
-              {view === "discover" && <DiscoverView />}
-              {view === "search" && <SearchView />}
-              {view === "movie-detail" && movieId && <MovieDetailView />}
-              {view === "tv-detail" && tvId && <TvDetailView />}
-              {view === "person-detail" && personId && <PersonDetailView />}
-              {view === "calendar" && <CalendarView />}
-              {view === "movies" && <MoviesView />}
-              {view === "anime" && <AnimeView />}
-              {view === "stats" && <StatsView />}
-              {view === "media" && <MediaView />}
-              {view === "tv-shows" && <TvShowsView />}
-              {view === "arabic-movies" && <ArabicMoviesView />}
-              {view === "arabic-tv" && <ArabicTvView />}
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<ViewSkeleton />}>
+                {view === "discover" && <DiscoverView />}
+                {view === "search" && <SearchView />}
+                {view === "movie-detail" && movieId && <MovieDetailView />}
+                {view === "tv-detail" && tvId && <TvDetailView />}
+                {view === "person-detail" && personId && <PersonDetailView />}
+                {view === "calendar" && <CalendarView />}
+                {view === "movies" && <MoviesView />}
+                {view === "anime" && <AnimeView />}
+                {view === "stats" && <StatsView />}
+                {view === "media" && <MediaView />}
+                {view === "tv-shows" && <TvShowsView />}
+                {view === "arabic-movies" && <ArabicMoviesView />}
+                {view === "arabic-tv" && <ArabicTvView />}
+              </Suspense>
+            </ErrorBoundary>
           )}
         </div>
       </main>

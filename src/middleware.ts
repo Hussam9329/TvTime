@@ -19,6 +19,8 @@ const PUBLIC_PREFIXES = [
   "/placeholder-poster.svg",
   "/api/auth",
   "/login",
+  "/robots.txt",
+  "/sitemap.xml",
 ];
 
 function isPublicPath(pathname: string): boolean {
