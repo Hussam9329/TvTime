@@ -31,8 +31,14 @@ import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
 
 export function TvDetailView() {
   const { tvId, back, goPerson } = useNav();
-  const detail = useTvDetail(tvId);
   const mediaState = useMediaState(tvId, "tv");
+  // If the show is in the user's library AND marked isArabic, fetch Arabic
+  // details from the start. Otherwise fetch English first, then re-fetch
+  // in Arabic if we discover original_language === "ar" from the response.
+  const isArabicFromDb = mediaState.data?.isArabic === true;
+  const [discoveredArabic, setDiscoveredArabic] = useState(false);
+  const shouldUseArabic = isArabicFromDb || discoveredArabic;
+  const detail = useTvDetail(tvId, shouldUseArabic);
   const watchlistToggle = useWatchlistToggle();
   const followingToggle = useFollowingToggle();
   const ratingMutate = useRatingMutate();
@@ -49,6 +55,14 @@ export function TvDetailView() {
   const tData = detail.data;
   const trackedShow = mediaState.data ?? progress.mediaItem ?? undefined;
   const myRating = trackedShow?.userRating ?? null;
+
+  // Arabic auto-detection: if the English response reveals original_language
+  // === "ar" and we haven't switched to Arabic yet, flip the flag so the
+  // next render fetches Arabic details (title, overview, poster, tagline).
+  // This fires once per show when the English detail loads.
+  if (!shouldUseArabic && tData?.original_language === "ar" && !discoveredArabic) {
+    setDiscoveredArabic(true);
+  }
   // Fix #2: Don't default to "not_started" — use null if show is not tracked
   const showTrackingStatus = (progress.trackingState || trackedShow?.status || null) as TvTrackingState | null;
   const isFullyWatched = showTrackingStatus === "finished" || showTrackingStatus === "uptodate";

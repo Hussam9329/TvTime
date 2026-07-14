@@ -22,11 +22,14 @@ import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
 
 export function MovieDetailView() {
   const { movieId, back, goPerson } = useNav();
-  const detail = useMovieDetail(movieId);
-  // Fix #3/#15: Use direct state lookup by tmdbId instead of paginated hooks
-  // that only return first 100 items. This fixes movies beyond page 1 not
-  // showing as watched/rated/watchlisted.
   const mediaState = useMediaState(movieId, "movie");
+  // If the movie is in the user's library AND marked isArabic, fetch Arabic
+  // details from the start. Otherwise fetch English first, then re-fetch
+  // in Arabic if we discover original_language === "ar" from the response.
+  const isArabicFromDb = mediaState.data?.isArabic === true;
+  const [discoveredArabic, setDiscoveredArabic] = useState(false);
+  const shouldUseArabic = isArabicFromDb || discoveredArabic;
+  const detail = useMovieDetail(movieId, shouldUseArabic);
   const watchlistToggle = useWatchlistToggle();
   const watchedToggle = useWatchedMovieToggle();
   const ratingMutate = useRatingMutate();
@@ -60,6 +63,14 @@ export function MovieDetailView() {
   }
 
   const m = detail.data;
+
+  // Arabic auto-detection: if the English response reveals original_language
+  // === "ar" and we haven't switched to Arabic yet, flip the flag so the
+  // next render fetches Arabic details (title, overview, poster, tagline).
+  if (!shouldUseArabic && m?.original_language === "ar" && !discoveredArabic) {
+    setDiscoveredArabic(true);
+  }
+
   // Direct identity lookup is the only source for detail-page state. It does
   // not depend on the first page of Watchlist/Watched/Ratings collections.
   const stateItem = mediaState.data;
