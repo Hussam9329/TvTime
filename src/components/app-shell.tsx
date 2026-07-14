@@ -40,7 +40,7 @@ const StatsView = lazy(() =>
   import("@/components/views/stats-view").then((m) => ({ default: m.StatsView })),
 );
 const TvShowsView = lazy(() =>
-  import("@/components/views/tv-tracking-view").then((m) => ({ default: m.TvShowsView })),
+  import("@/components/views/tv-shows-view").then((m) => ({ default: m.TvShowsPageView })),
 );
 const ArabicMoviesView = lazy(() =>
   import("@/components/views/arabic-movies-view").then((m) => ({ default: m.ArabicMoviesView })),
