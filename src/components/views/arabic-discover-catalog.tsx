@@ -49,7 +49,7 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
     rating,
     sort_by: sortBy,
     page,
-    voteCount: 10,
+    voteCount: 0,
     enabled: kind === "movie",
   });
   const tvQuery = useArabicDiscoverTv({
@@ -58,7 +58,7 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
     rating,
     sort_by: sortBy,
     page,
-    voteCount: 10,
+    voteCount: 0,
     enabled: kind === "tv",
   });
   const query = kind === "movie" ? movieQuery : tvQuery;
