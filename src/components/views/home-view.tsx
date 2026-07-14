@@ -238,7 +238,7 @@ function Hero({ item }: { item: any }) {
               {item.overview}
             </p>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="h-9" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
+              <Button className="h-10" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
                 <Play className="w-4 h-4 mr-1.5 fill-current" /> View Details
               </Button>
               <Button size="sm" variant="secondary" className="h-9" onClick={() => setView("discover")}>
@@ -279,7 +279,7 @@ function RecentlyWatched() {
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="flex-shrink-0 w-[130px] sm:w-[160px]">
               <div className="aspect-[2/3] shimmer rounded-lg" />
-              <div className="h-3 shimmer rounded mt-2" />
+              <div className="h-3 shimmer rounded mt-2" /><div className="h-2.5 shimmer rounded mt-1 w-3/4" />
             </div>
           ))}
         </div>

@@ -241,7 +241,7 @@ export function CalendarView({ world = "general", embedded = false }: { world?: 
               <Button variant="outline" size="icon" onClick={() => navigate(-1)} aria-label="Previous period">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="secondary" onClick={goToday} className="min-w-36 font-semibold">
+              <Button variant="outline" onClick={goToday} className="min-w-36 font-semibold">
                 {rangeTitle(mode, cursor)}
               </Button>
               <Button variant="outline" size="icon" onClick={() => navigate(1)} aria-label="Next period">
@@ -438,7 +438,7 @@ function MonthCalendar({ cursor, grouped, todayKey, onEpisode, onMore }: {
               className={cn(
                 "min-h-24 border-b border-r border-border/30 p-1 transition-colors sm:min-h-32 sm:p-1.5",
                 isWeekend && "bg-muted/10",
-                isToday && "bg-primary/8 ring-1 ring-inset ring-primary/60",
+                isToday && "bg-primary/15 ring-1 ring-inset ring-2 ring-inset ring-primary",
                 isPast && !isToday && "bg-muted/5",
               )}
             >
@@ -676,7 +676,7 @@ function YourSchedulePanel({ shows, onShow, onDiscover }: {
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-4">
         {shows.slice(0, 8).map((show) => (
           <button key={show.tmdbId} type="button" onClick={() => onShow(show.tmdbId)} className="group text-left">
-            <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-muted ring-1 ring-border/50 transition group-hover:ring-primary/60">
+            <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-muted ring-1 ring-border/50 transition group-hover:ring-2 ring-inset ring-primary">
               <SafeImage src={imgOrPlaceholder(show.poster, "w185")} alt={show.title} fill variant="poster" className="transition-transform group-hover:scale-105" />
             </div>
             <p className="mt-1 truncate text-[10px] font-medium">{show.title}</p>

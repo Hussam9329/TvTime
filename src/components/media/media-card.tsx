@@ -3,7 +3,7 @@
 import { imgOrPlaceholder, getYear, getTitle, type MediaItem } from "@/lib/tmdb";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, Film, Tv, Check, ListPlus, Bell } from "lucide-react";
+import { Star, Film, Tv, Clapperboard, Check, ListPlus, Bell } from "lucide-react";
 import { useNav } from "@/lib/store";
 import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use-tmdb";
 import { cn } from "@/lib/utils";
@@ -104,7 +104,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
                 )}
               >
                 {isArabic && <span className="mr-0.5 text-[11px] font-black">ع</span>}
-                {!isArabic && (mediaType === "movie" ? <Film className="w-3 h-3 mr-1" /> : <Tv className="w-3 h-3 mr-1" />)}
+                {!isArabic && (mediaType === "movie" ? <Film className="w-3 h-3 mr-1" /> : <Clapperboard className="w-3 h-3 mr-1" />)}
                 {typeLabel}
               </Badge>
             )}
