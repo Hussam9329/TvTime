@@ -1,8 +1,0 @@
-Official baseline archive:
-4ca8686ca1e22cefc3da43f4ae05c4c6a291dd11c154840a09a2c49d8d89847f  TvTime-main (4)(2).zip
-
-Protected files — must remain byte-for-byte identical:
-1fbff4160f922dc906471f8a2e3de4eea398287e47a457cc70daab1220d8124d  prisma/schema.prisma
-a03766d67ee230ac279405c653f27f8b8b0a7f146e6e8671e48d9b6d0f9b4faf  package.json
-f4a8214783d8a926a391b27da36102dc2ef0b075e013fd95eca3b5dcd7f53d36  scripts/assert-production-db.mjs
-6427983b336fdc783833ad08feab538b75286de080701680509663fd27b999c5  next.config.ts

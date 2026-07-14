@@ -1,6 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 const db = new PrismaClient({ log: ['error'] });
-const TMDB_API_KEY = "8265bd1679663a7ea12ac168da84d2e8";
+const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim();
+if (!TMDB_API_KEY) {
+  console.error("TMDB_API_KEY env var is required. Refusing to start.");
+  process.exit(1);
+}
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 async function searchMovie(title: string, year?: string | null): Promise<number | null> {
   const url = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}&include_adult=true${year ? `&year=${year}` : ''}`;

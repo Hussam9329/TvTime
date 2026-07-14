@@ -13,7 +13,7 @@ import { useNav } from "@/lib/store";
 import { useQueryClient } from "@tanstack/react-query";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
 import { getUserPreferences, setUserPreferences, COUNTRY_OPTIONS, TIMEZONE_OPTIONS } from "@/lib/user-preferences";
-import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Globe, Clock, Star } from "lucide-react";
+import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Globe, Clock, Star, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -37,7 +37,36 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [clearing, setClearing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [authEnabled, setAuthEnabled] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!open) return;
+    fetch("/api/auth/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setAuthEnabled(Boolean(data.authEnabled));
+      })
+      .catch(() => { /* best-effort */ });
+    return () => { cancelled = true; };
+  }, [open]);
+
+  const onSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      toast.success("Signed out");
+      onOpenChange(false);
+      // Hard reload so client-side caches (Zustand, React Query) are dropped.
+      window.location.href = "/login";
+    } catch {
+      toast.error("Failed to sign out");
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   // Sync name from store when dialog opens. Uses "adjust state during render"
   // pattern to avoid setState-in-effect lint violation.
@@ -248,6 +277,29 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
           {/* TVM-35/36/37: Preferences — timezone, country, platform preferences */}
           <PreferencesSection />
+
+          {/* Sign out (only when auth is enabled on this deployment) */}
+          {authEnabled && (
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+              <div className="flex items-start gap-2 mb-2">
+                <LogOut className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold">Session</p>
+                  <p className="text-xs text-muted-foreground">End your signed-in session on this device.</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={onSignOut}
+                disabled={signingOut}
+              >
+                {signingOut ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <LogOut className="w-4 h-4 mr-1" />}
+                Sign out
+              </Button>
+            </div>
+          )}
 
           {/* Danger zone */}
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
