@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { SafeImage } from "@/components/media/safe-image";
 import { ArrowLeft, Film, Tv, Cake, MapPin, Briefcase, Star, Users } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -60,13 +61,13 @@ export function PersonDetailView() {
         <div className="relative bg-gradient-to-br from-primary/20 via-purple-500/10 to-transparent p-6 sm:p-8">
           <div className="absolute inset-0 opacity-30">
             {knownFor[0]?.backdrop_path && (
-              <img src={img(knownFor[0].backdrop_path, "original")} alt="" className="w-full h-full object-cover blur-2xl" />
+              <SafeImage src={img(knownFor[0].backdrop_path, "w1280")} alt="" fill variant="backdrop" className="blur-2xl" />
             )}
           </div>
           <div className="relative flex flex-col sm:flex-row gap-5 items-center sm:items-start">
             <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-background shadow-2xl flex-shrink-0">
               {p.profile_path ? (
-                <img src={img(p.profile_path, "w300")} alt={p.name} className="w-full h-full object-cover" />
+                <SafeImage src={img(p.profile_path, "w300")} alt={p.name} fill variant="profile" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-muted">
                   <Users className="w-12 h-12 text-muted-foreground" />
@@ -136,8 +137,8 @@ export function PersonDetailView() {
                 className="flex-shrink-0 w-[120px] sm:w-[140px] group text-left"
               >
                 <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all hover:-translate-y-1">
-                  <div className="aspect-[2/3] overflow-hidden bg-muted">
-                    <img src={img(c.poster_path, "w342")} alt={c.title || c.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+                  <div className="relative aspect-[2/3] overflow-hidden bg-muted">
+                    <SafeImage src={img(c.poster_path, "w342")} alt={c.title || c.name} fill variant="poster" className="group-hover:scale-105 transition-transform" />
                   </div>
                   <div className="p-2">
                     <p className="text-xs font-semibold line-clamp-1">{c.title || c.name}</p>
@@ -188,9 +189,9 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
             className="w-full text-left"
           >
             <Card className="p-2.5 flex items-center gap-3 hover:border-primary/40 transition-colors group">
-              <div className="w-10 h-14 rounded-md overflow-hidden bg-muted flex-shrink-0">
+              <div className="relative w-10 h-14 rounded-md overflow-hidden bg-muted flex-shrink-0">
                 {c.poster_path ? (
-                  <img src={img(c.poster_path, "w92")} alt={title} className="w-full h-full object-cover" loading="lazy" />
+                  <SafeImage src={img(c.poster_path, "w92")} alt={title} fill variant="poster" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                     {type === "movie" ? <Film className="w-4 h-4" /> : <Tv className="w-4 h-4" />}

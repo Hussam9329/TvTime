@@ -6,6 +6,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Toolti
 import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, BarChart3, Languages } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { useNav } from "@/lib/store";
+import { SafeImage } from "@/components/media/safe-image";
 
 const PIE_COLORS = ["oklch(0.62 0.23 16)", "oklch(0.65 0.18 320)", "oklch(0.7 0.15 180)", "oklch(0.72 0.18 80)", "oklch(0.6 0.2 260)"];
 
@@ -234,9 +235,9 @@ function TopShowRow({ showId, count, rank, max, onGo }: { showId: number; count:
       className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left group"
     >
       <span className="w-7 h-7 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">{rank}</span>
-      <div className="w-10 h-14 rounded-md overflow-hidden bg-muted flex-shrink-0">
+      <div className="relative w-10 h-14 rounded-md overflow-hidden bg-muted flex-shrink-0">
         {poster ? (
-          <img src={img(poster, "w92")} alt={title} className="w-full h-full object-cover" loading="lazy" />
+          <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Tv className="w-4 h-4" /></div>
         )}

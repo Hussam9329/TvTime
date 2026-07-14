@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
 import { MediaRow } from "@/components/media/media-row";
+import { SafeImage } from "@/components/media/safe-image";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
   Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2,
@@ -287,7 +288,7 @@ export function TvDetailView() {
       {/* Hero */}
       <div className="relative rounded-2xl overflow-hidden border border-border/50 -mt-4">
         <div className="relative aspect-[16/9] sm:aspect-[21/9]">
-          <img src={img(t.backdrop_path, "original")} alt={t.name} className="absolute inset-0 w-full h-full object-cover" />
+          <SafeImage src={img(t.backdrop_path, "w1280")} alt={t.name} fill variant="backdrop" priority className="absolute inset-0" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
           <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent" />
         </div>
@@ -297,8 +298,8 @@ export function TvDetailView() {
       <div className="flex flex-col sm:flex-row gap-5 -mt-20 sm:-mt-32 px-2 sm:px-4 relative z-10">
         <div className="w-32 sm:w-48 flex-shrink-0 mx-auto sm:mx-0">
           <Card className="p-0 overflow-hidden border-border/60 shadow-2xl">
-            <div className="aspect-[2/3]">
-              <img src={imgOrPlaceholder(t.poster_path, "w342")} alt={t.name} className="w-full h-full object-cover" />
+            <div className="relative aspect-[2/3]">
+              <SafeImage src={imgOrPlaceholder(t.poster_path, "w342")} alt={t.name} fill variant="poster" />
             </div>
           </Card>
         </div>
@@ -528,7 +529,7 @@ export function TvDetailView() {
                 >
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
                     {c.profile_path ? (
-                      <img src={img(c.profile_path, "w92")} alt={c.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                      <SafeImage src={img(c.profile_path, "w92")} alt={c.name} fill variant="profile" className="group-hover:scale-110 transition-transform" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Users className="w-5 h-5" /></div>
                     )}
@@ -552,7 +553,7 @@ export function TvDetailView() {
                 <button key={v.id} onClick={() => window.open(`https://www.youtube.com/watch?v=${v.key}`, "_blank")} className="group text-left">
                   <Card className="overflow-hidden p-0 hover:border-primary/40 transition-colors">
                     <div className="relative aspect-video bg-black">
-                      <img src={`https://img.youtube.com/vi/${v.key}/hqdefault.jpg`} alt={v.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                      <SafeImage src={`https://img.youtube.com/vi/${v.key}/hqdefault.jpg`} alt={v.name} fill variant="youtube" className="opacity-80 group-hover:opacity-100 transition-opacity" />
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center group-hover:scale-110 transition-transform">
                           <Play className="w-5 h-5 text-primary-foreground fill-current" />
@@ -910,9 +911,9 @@ function SeasonEpisodes({
                   </button>
 
                   <div className="relative w-24 sm:w-32 flex-shrink-0">
-                    <div className="aspect-video rounded-md overflow-hidden bg-muted">
+                    <div className="relative aspect-video rounded-md overflow-hidden bg-muted">
                       {ep.still_path ? (
-                        <img src={img(ep.still_path, "w300")} alt={ep.name} className="w-full h-full object-cover" loading="lazy" />
+                      <SafeImage src={img(ep.still_path, "w300")} alt={ep.name} fill variant="still" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Tv className="w-5 h-5" /></div>
                       )}

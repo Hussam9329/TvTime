@@ -7,6 +7,7 @@ import { Star } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { SafeImage } from "@/components/media/safe-image";
 
 interface RatingDialogProps {
   open: boolean;
@@ -80,7 +81,9 @@ export function RatingDialog({
 
         <div className="flex items-center gap-4 py-2">
           {poster && (
-            <img src={poster} alt={title} className="w-16 h-24 rounded-md object-cover flex-shrink-0" />
+            <div className="relative w-16 h-24 rounded-md overflow-hidden flex-shrink-0">
+              <SafeImage src={poster} alt={title} fill variant="poster" />
+            </div>
           )}
           <div className="min-w-0">
             <h4 className="font-semibold text-sm line-clamp-2">{title}</h4>

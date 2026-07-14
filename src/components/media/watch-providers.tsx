@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tv, Play, ExternalLink, Star } from "lucide-react";
 import { getUserPreferences } from "@/lib/user-preferences";
+import { SafeImage } from "@/components/media/safe-image";
 
 export interface WatchProvider {
   provider_id: number;
@@ -129,9 +130,9 @@ function ProviderChip({ provider, link, small, preferred }: { provider: WatchPro
           <Star className="w-2.5 h-2.5 text-black fill-black" />
         </div>
       )}
-      <div className={`${size} rounded-md overflow-hidden bg-muted border border-border/40 group-hover:border-primary/60 transition-colors ${preferred ? "ring-2 ring-amber-400/50" : ""}`}>
+      <div className={`relative ${size} rounded-md overflow-hidden bg-muted border border-border/40 group-hover:border-primary/60 transition-colors ${preferred ? "ring-2 ring-amber-400/50" : ""}`}>
         {provider.logo_path ? (
-          <img src={img(provider.logo_path, "w92")} alt={provider.provider_name} className="w-full h-full object-cover" loading="lazy" />
+          <SafeImage src={img(provider.logo_path, "w92")} alt={provider.provider_name} fill variant="logo" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Tv className="w-4 h-4" /></div>
         )}
