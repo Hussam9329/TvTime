@@ -141,6 +141,41 @@ export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_b
   });
 }
 
+// Arabic discover hooks — fetch from /api/tmdb/arabic/movies/discover and
+// /api/tmdb/arabic/tv/discover which use language=ar-SA to return Arabic
+// titles, overviews, and posters.
+export function useArabicDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; voteCount?: number; enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["tmdb", "arabic", "movies", "discover", params],
+    queryFn: () =>
+      tmdbGet<PaginatedResponse<MediaItem>>("arabic/movies/discover", {
+        ...(params.genres && params.genres.length > 0 ? { genre: params.genres.join(",") } : {}),
+        ...(params.year ? { year: params.year } : {}),
+        ...(params.sort_by ? { sort_by: params.sort_by } : {}),
+        page: params.page || 1,
+        ...(params.rating ? { rating: params.rating } : {}),
+        ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
+      }),
+    enabled: params.enabled !== false,
+  });
+}
+
+export function useArabicDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; voteCount?: number; enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["tmdb", "arabic", "tv", "discover", params],
+    queryFn: () =>
+      tmdbGet<PaginatedResponse<MediaItem>>("arabic/tv/discover", {
+        ...(params.genres && params.genres.length > 0 ? { genre: params.genres.join(",") } : {}),
+        ...(params.year ? { year: params.year } : {}),
+        ...(params.sort_by ? { sort_by: params.sort_by } : {}),
+        page: params.page || 1,
+        ...(params.rating ? { rating: params.rating } : {}),
+        ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
+      }),
+    enabled: params.enabled !== false,
+  });
+}
+
 export function useSearch(query: string, page = 1) {
   return useQuery({
     queryKey: ["tmdb", "search", query, page],
