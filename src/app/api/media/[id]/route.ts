@@ -18,6 +18,12 @@ export async function PATCH(
     const body = await req.json();
 
     // ── Validate input via zod ──────────────────────────────────────
+    // Delete 'id' from body before validation — the client (useMediaUpdate)
+    // sends JSON.stringify(args) which includes id, but the URL param is
+    // authoritative. This prevents zod from rejecting the extra field.
+    if (typeof body === "object" && body !== null) {
+      delete (body as Record<string, unknown>).id;
+    }
     const result = validateBody(updateMediaSchema, body);
     if (result instanceof NextResponse) return result;
 

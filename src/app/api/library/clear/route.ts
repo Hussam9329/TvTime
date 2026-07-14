@@ -25,7 +25,7 @@ export async function DELETE(req: NextRequest) {
     const [media, watchedEpisodes, episodeRatings] = await db.$transaction([
       db.media.deleteMany({ where: { userId: user.id } }),
       db.watchedEpisode.deleteMany({ where: { userId: user.id } }),
-      db.rating.deleteMany({ where: { userId: user.id, mediaType: { startsWith: "episode:" } } }),
+      db.rating.deleteMany({ where: { userId: user.id,  } }),
     ]);
     return NextResponse.json({
       ok: true,

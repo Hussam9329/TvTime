@@ -1,6 +1,6 @@
 "use client";
 
-import { useStats, useWatchedMovies, useWatchedEpisodes, useFollowing, useWatchlist, useRatings, useTvDetail } from "@/hooks/use-tmdb";
+import { useStats, useTvDetail } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
 import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, BarChart3, Languages } from "lucide-react";

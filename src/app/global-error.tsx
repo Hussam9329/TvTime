@@ -53,10 +53,10 @@ export default function GlobalError({
             ⚠
           </div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0 0 0.5rem" }}>
-            حدث خطأ في التطبيق
+            Application error
           </h1>
           <p style={{ color: "#a1a1aa", fontSize: "0.9rem", margin: "0 0 1.5rem" }}>
-            نعتذر عن هذا الانقطاع. يمكنك المحاولة مرة أخرى أو تحديث الصفحة.
+            We apologize for the interruption. You can try again or reload the page.
             {error.digest && (
               <>
                 <br />
@@ -90,7 +90,7 @@ export default function GlobalError({
                 fontWeight: 500,
               }}
             >
-              إعادة المحاولة
+              Try again
             </button>
             <button
               onClick={() => window.location.reload()}
@@ -105,7 +105,7 @@ export default function GlobalError({
                 fontWeight: 500,
               }}
             >
-              تحديث الصفحة
+              Reload page
             </button>
           </div>
         </div>

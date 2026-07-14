@@ -99,7 +99,7 @@ export function KeyboardShortcuts() {
             e.preventDefault();
             setView("discover");
             break;
-          case "s":
+          case "t":
             e.preventDefault();
             setView("stats");
             break;
@@ -169,7 +169,7 @@ export function ShortcutsHelpDialog({ open, onOpenChange }: { open: boolean; onO
           <DialogTitle className="flex items-center gap-2">
             <Keyboard className="w-5 h-5 text-primary" /> Keyboard Shortcuts
           </DialogTitle>
-          <DialogDescription>Press these keys anywhere to navigate faster</DialogDescription>
+          <DialogDescription>Press these keys anywhere outside input fields to navigate faster</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           {SHORTCUTS.map((group) => (

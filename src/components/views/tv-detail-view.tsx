@@ -148,7 +148,7 @@ export function TvDetailView() {
   const contentRating = usRating?.rating || null;
 
   // Filter out specials (season 0) for the main list, but show as option
-  const seasons = t.seasons?.filter((s) => s.season_number >= 0) ?? [];
+  const seasons = t.seasons?.filter((s) => s.season_number >= 1) ?? [];
   const defaultSeason = seasons.find((s) => s.season_number === 1)?.season_number ?? seasons[0]?.season_number ?? null;
 
   const onWatchlist = async () => {
@@ -896,7 +896,7 @@ function SeasonEpisodes({
         </div>
       ) : (
         <div className="space-y-2">
-          {seasonData.data?.episodes.map((ep, idx) => {
+          {(seasonData.data?.episodes ?? []).filter((ep) => ep.episode_number >= 1).map((ep, idx) => {
             const futureEpisode = isFutureEpisode(ep.air_date);
             const released = isReleased(ep);
             const isWatched = isEpisodeWatched(ep);

@@ -352,14 +352,10 @@ function StatBox({ label, value }: { label: string; value: number }) {
 function PreferencesSection() {
   const [prefs, setPrefs] = useState({ timezone: "Asia/Baghdad", country: "IQ", preferredPlatforms: [] as string[] });
   const [platformInput, setPlatformInput] = useState("");
-  const [initialized, setInitialized] = useState(false);
-
-  // Load preferences on first render (client-side) using "adjust state during
-  // render" pattern to avoid setState-in-effect lint violation.
-  if (!initialized) {
-    setInitialized(true);
+  // Load preferences on mount via useEffect (not render-phase setState).
+  useEffect(() => {
     setPrefs(getUserPreferences());
-  }
+  }, [])
 
   const updatePref = (key: keyof typeof prefs, value: any) => {
     const updated = setUserPreferences({ [key]: value });
@@ -384,8 +380,6 @@ function PreferencesSection() {
     const updated = setUserPreferences({ preferredPlatforms: prefs.preferredPlatforms.filter((p) => p !== name) });
     setPrefs(updated);
   };
-
-  if (!initialized) return null;
 
   return (
     <div className="rounded-lg border border-border/50 bg-card/50 p-3 space-y-3">
