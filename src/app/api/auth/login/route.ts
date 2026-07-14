@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual, createHash } from "node:crypto";
 import { issueSession, getOwnerPassword, getOwnerUsername } from "@/lib/auth";
 import { getRemainingBlockTime, recordFailedAttempt, clearAttempts, getClientIp } from "@/lib/rate-limit";
+import { validateBody } from "@/lib/validate";
+import { loginSchema } from "@/lib/schemas/media";
 
 /**
  * POST /api/auth/login
@@ -49,17 +51,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { username?: unknown; password?: unknown } = {};
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json(
-      { error: "Invalid JSON body.", code: "INVALID_BODY" },
+      { error: "Invalid JSON body.", code: "VALIDATION_ERROR" },
       { status: 400 }
     );
   }
 
-  const { username, password } = body;
+  // Validate body shape via zod. .strict() rejects unknown fields.
+  const parsed = validateBody(loginSchema, body);
+  if (parsed instanceof NextResponse) return parsed;
+
+  const { username, password } = parsed;
   const credentialsValid = validateCredentials(ownerPassword, ownerUsername, username, password);
   if (credentialsValid !== "OK") {
     // Record the failed attempt for rate-limiting purposes.

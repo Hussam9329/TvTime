@@ -5,11 +5,20 @@ import { normalizeMedia } from "@/lib/media-normalize";
 import { detectIsAnime } from "@/lib/anime-detect";
 import { canonicalMediaPoster } from "@/lib/media-poster";
 import { detectIsArabic, normalizeCountryCodes } from "@/lib/arabic-media";
+import { clientToServer } from "@/lib/media-types";
+import { validateBody } from "@/lib/validate";
+import { handleError } from "@/lib/api-error";
+import { findOrCreateMediaSchema } from "@/lib/schemas/media";
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const body = await req.json();
+
+    // ── Validate input via zod ──────────────────────────────────────
+    const result = validateBody(findOrCreateMediaSchema, body);
+    if (result instanceof NextResponse) return result;
+
     const {
       tmdbId,
       title,
@@ -26,46 +35,38 @@ export async function POST(req: NextRequest) {
       isArabic,
       originCountry,
       originalLanguage,
-    } = body;
+    } = result;
 
-    if (!title || typeof title !== "string") {
-      return NextResponse.json({ error: "title required" }, { status: 400 });
-    }
-
-    const mediaType = type === "tv" ? "series" : type || "movie";
-    const parsedTmdbId = tmdbId == null || tmdbId === "" ? null : Number(tmdbId);
-    if (parsedTmdbId != null && (!Number.isInteger(parsedTmdbId) || parsedTmdbId <= 0)) {
-      return NextResponse.json({ error: "tmdbId must be a positive integer" }, { status: 400 });
-    }
+    const mediaType = clientToServer(type);
+    const parsedTmdbId = tmdbId == null ? null : Number(tmdbId);
 
     const safeTitle = title.trim();
-    if (!safeTitle) {
-      return NextResponse.json({ error: "title required" }, { status: 400 });
-    }
-    const normalizedGenres = Array.isArray(genres)
-      ? genres.map((genre: unknown) => String(genre).trim()).filter(Boolean)
-      : [];
-    const normalizedOriginCountries = normalizeCountryCodes(originCountry || body.origin_country);
-    const normalizedOriginalLanguage = typeof (originalLanguage || body.original_language) === "string"
-      ? String(originalLanguage || body.original_language).trim().toLowerCase() || null
-      : null;
-    const hasClassificationMetadata = normalizedOriginCountries.length > 0
-      || normalizedOriginalLanguage != null
-      || normalizedGenres.length > 0;
-    let detectedArabic = isArabic !== undefined
-      ? Boolean(isArabic)
-      : detectIsArabic({
-          originCountry: normalizedOriginCountries,
-          originalLanguage: normalizedOriginalLanguage,
-        });
-    let detectedAnime = isAnime !== undefined
-      ? Boolean(isAnime)
-      : detectIsAnime({
-          originCountry: normalizedOriginCountries,
-          originalLanguage: normalizedOriginalLanguage,
-          genres: normalizedGenres,
-          title: safeTitle,
-        });
+    const normalizedGenres = Array.isArray(genres) ? genres : [];
+    const normalizedOriginCountries = normalizeCountryCodes(originCountry);
+    const normalizedOriginalLanguage =
+      typeof originalLanguage === "string"
+        ? originalLanguage.trim().toLowerCase() || null
+        : null;
+    const hasClassificationMetadata =
+      normalizedOriginCountries.length > 0 ||
+      normalizedOriginalLanguage != null ||
+      normalizedGenres.length > 0;
+    let detectedArabic =
+      isArabic !== undefined
+        ? Boolean(isArabic)
+        : detectIsArabic({
+            originCountry: normalizedOriginCountries,
+            originalLanguage: normalizedOriginalLanguage,
+          });
+    let detectedAnime =
+      isAnime !== undefined
+        ? Boolean(isAnime)
+        : detectIsAnime({
+            originCountry: normalizedOriginCountries,
+            originalLanguage: normalizedOriginalLanguage,
+            genres: normalizedGenres,
+            title: safeTitle,
+          });
 
     // Collection worlds are exclusive. Arabic originals belong to the Arabic
     // Movies/TV worlds even when Animation is one of their genres.
@@ -165,7 +166,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ item: normalizeMedia(item) });
   } catch (error) {
-    console.error("[media:find-or-create]", error);
-    return NextResponse.json({ error: "Failed to save media item" }, { status: 500 });
+    return handleError(error);
   }
 }

@@ -4,6 +4,9 @@ import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMedia } from "@/lib/media-normalize";
 import { normalizeTvTrackingState } from "@/lib/tv-status-engine";
 import { getTvRatingEligibility, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
+import { validateBody } from "@/lib/validate";
+import { ApiError, handleError } from "@/lib/api-error";
+import { updateMediaSchema } from "@/lib/schemas/media";
 
 export async function PATCH(
   req: NextRequest,
@@ -14,79 +17,73 @@ export async function PATCH(
     const user = await getOrCreateUser(parseUserId(req));
     const body = await req.json();
 
-    const hasRatingMutation = body.userRating !== undefined;
-    const hasWatchMutation = body.watched !== undefined || body.watchedAt !== undefined || body.status !== undefined;
+    // ── Validate input via zod ──────────────────────────────────────
+    const result = validateBody(updateMediaSchema, body);
+    if (result instanceof NextResponse) return result;
+
+    const hasRatingMutation = result.userRating !== undefined;
+    const hasWatchMutation =
+      result.watched !== undefined || result.watchedAt !== undefined || result.status !== undefined;
     if (hasRatingMutation && hasWatchMutation) {
-      return NextResponse.json(
-        {
-          error: "Rating and watch state must be updated in separate requests.",
-          code: "RATING_WATCH_STATE_MUST_BE_SEPARATE",
-        },
-        { status: 400 },
+      throw new ApiError(
+        "RATING_WATCH_STATE_MUST_BE_SEPARATE",
+        "Rating and watch state must be updated in separate requests."
       );
     }
 
-    const data: any = {};
-    if (body.userRating !== undefined) {
-      data.userRating = body.userRating === null
-        ? null
-        : Math.max(0, Math.min(100, Number(body.userRating)));
+    const data: Record<string, unknown> = {};
+    if (result.userRating !== undefined) {
+      data.userRating = result.userRating === null ? null : Math.max(0, Math.min(100, result.userRating));
     }
-    if (body.tmdbId !== undefined) data.tmdbId = body.tmdbId === null ? null : Number(body.tmdbId);
-    if (body.watched !== undefined) data.watched = Boolean(body.watched);
-    if (body.watchedAt !== undefined) data.watchedAt = body.watchedAt ? new Date(body.watchedAt) : null;
-    if (body.isAnime !== undefined) {
-      data.isAnime = Boolean(body.isAnime);
+    if (result.tmdbId !== undefined) data.tmdbId = result.tmdbId === null ? null : Number(result.tmdbId);
+    if (result.watched !== undefined) data.watched = Boolean(result.watched);
+    if (result.watchedAt !== undefined) data.watchedAt = result.watchedAt ? new Date(result.watchedAt) : null;
+    if (result.isAnime !== undefined) {
+      data.isAnime = Boolean(result.isAnime);
       if (data.isAnime) data.isArabic = false;
     }
-    if (body.isArabic !== undefined) {
-      data.isArabic = Boolean(body.isArabic);
+    if (result.isArabic !== undefined) {
+      data.isArabic = Boolean(result.isArabic);
       if (data.isArabic) data.isAnime = false;
     }
-    if (body.status !== undefined) data.status = body.status;
-    if (body.ratingStatus !== undefined) data.ratingStatus = body.ratingStatus;
-    if (body.notes !== undefined) data.notes = body.notes || null;
-    if (body.rewatch !== undefined) data.rewatch = Boolean(body.rewatch);
-    if (body.poster !== undefined) data.poster = body.poster || null;
-    if (body.overview !== undefined) data.overview = body.overview || null;
+    if (result.status !== undefined) data.status = result.status;
+    if (result.ratingStatus !== undefined) data.ratingStatus = result.ratingStatus;
+    if (result.notes !== undefined) data.notes = result.notes || null;
+    if (result.rewatch !== undefined) data.rewatch = Boolean(result.rewatch);
+    if (result.poster !== undefined) data.poster = result.poster || null;
+    if (result.overview !== undefined) data.overview = result.overview || null;
 
     const existing = await db.media.findFirst({ where: { id, userId: user.id } });
-    if (!existing) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
+    if (!existing) {
+      throw new ApiError("NOT_FOUND", "Media item not found");
+    }
 
-    if (existing.type !== "series" && body.status === "planned" && existing.watched) {
-      return NextResponse.json(
-        {
-          error: "A watched title cannot also be placed in Watchlist.",
-          code: "WATCHLIST_REQUIRES_UNWATCHED",
-        },
-        { status: 409 },
+    if (existing.type !== "series" && result.status === "planned" && existing.watched) {
+      throw new ApiError(
+        "WATCHLIST_REQUIRES_UNWATCHED",
+        "A watched title cannot also be placed in Watchlist."
       );
     }
 
-    if (existing.type !== "series" && body.watched === true) {
+    if (existing.type !== "series" && result.watched === true) {
       data.status = "watched";
-      if (body.watchedAt === undefined) data.watchedAt = new Date();
+      if (result.watchedAt === undefined) data.watchedAt = new Date();
     }
 
     if (existing.type === "series" && hasWatchMutation) {
-      const requestedState = body.status === undefined
-        ? undefined
-        : normalizeTvTrackingState(body.status);
+      const requestedState = result.status === undefined ? undefined : normalizeTvTrackingState(result.status);
       const existingState = normalizeTvTrackingState(existing.status);
       const progressStates = new Set(["watching", "uptodate", "finished"]);
       const requestsDirectProgress = Boolean(
-        body.watched === true
-          || (body.watchedAt !== undefined && body.watchedAt !== null)
-          || (requestedState && progressStates.has(requestedState)),
+        result.watched === true ||
+          (result.watchedAt !== undefined && result.watchedAt !== null) ||
+          (requestedState && progressStates.has(requestedState))
       );
 
       if (requestsDirectProgress) {
-        return NextResponse.json(
-          {
-            error: "TV progress must be changed by marking released episodes watched or unwatched.",
-            code: "TV_STATE_REQUIRES_EPISODE_ENGINE",
-          },
-          { status: 409 },
+        throw new ApiError(
+          "TV_STATE_REQUIRES_EPISODE_ENGINE",
+          "TV progress must be changed by marking released episodes watched or unwatched."
         );
       }
 
@@ -94,31 +91,25 @@ export async function PATCH(
         ? await db.watchedEpisode.count({ where: { userId: user.id, showId: existing.tmdbId } })
         : 0;
       const hasExistingProgress = Boolean(
-        existing.watched
-          || (existingState && progressStates.has(existingState))
-          || watchedEpisodeCount > 0,
+        existing.watched ||
+          (existingState && progressStates.has(existingState)) ||
+          watchedEpisodeCount > 0
       );
 
       if (hasExistingProgress) {
-        return NextResponse.json(
-          {
-            error: "This show already has episode progress. Change its watched episodes instead of overwriting the series state.",
-            code: "TV_PROGRESS_MUST_BE_CHANGED_BY_EPISODES",
-            watchedEpisodeCount,
-          },
-          { status: 409 },
+        throw new ApiError(
+          "TV_PROGRESS_MUST_BE_CHANGED_BY_EPISODES",
+          "This show already has episode progress. Change its watched episodes instead of overwriting the series state.",
+          { watchedEpisodeCount }
         );
       }
 
       if (requestedState === "planned") data.isFollowing = false;
 
-      if (body.status !== undefined && body.status !== null && requestedState !== "planned" && requestedState !== "not_started") {
-        return NextResponse.json(
-          {
-            error: "Unsupported TV tracking state.",
-            code: "INVALID_TV_TRACKING_STATE",
-          },
-          { status: 400 },
+      if (result.status !== undefined && result.status !== null && requestedState !== "planned" && requestedState !== "not_started") {
+        throw new ApiError(
+          "INVALID_TV_TRACKING_STATE",
+          "Unsupported TV tracking state."
         );
       }
     }
@@ -127,15 +118,14 @@ export async function PATCH(
       const eligibility = await getTvRatingEligibility(user.id, existing.tmdbId);
       if (!eligibility.allowed) {
         const failure = tvRatingEligibilityError(eligibility);
-        return NextResponse.json(
+        throw new ApiError(
+          "TV_PROGRESS_MUST_BE_CHANGED_BY_EPISODES" as any,
+          failure.message,
           {
-            error: failure.message,
-            code: failure.code,
             totalEpisodes: eligibility.totalEpisodes,
             watchedEpisodes: eligibility.watchedEpisodes,
             tmdbStatus: eligibility.tmdbStatus,
-          },
-          { status: 409 },
+          }
         );
       }
     }
@@ -143,8 +133,7 @@ export async function PATCH(
     const item = await db.media.update({ where: { id }, data });
     return NextResponse.json({ item: normalizeMedia(item) });
   } catch (error) {
-    console.error("[media:update]", error);
-    return NextResponse.json({ error: "Failed to update media item" }, { status: 500 });
+    return handleError(error);
   }
 }
 
@@ -156,10 +145,11 @@ export async function DELETE(
     const { id } = await params;
     const user = await getOrCreateUser(parseUserId(req));
     const result = await db.media.deleteMany({ where: { id, userId: user.id } });
-    if (result.count === 0) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
+    if (result.count === 0) {
+      throw new ApiError("NOT_FOUND", "Media item not found");
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("[media:delete]", error);
-    return NextResponse.json({ error: "Failed to delete media item" }, { status: 500 });
+    return handleError(error);
   }
 }
