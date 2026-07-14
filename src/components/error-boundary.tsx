@@ -72,20 +72,20 @@ function DefaultErrorFallback({ error, onRetry }: { error: Error; onRetry: () =>
       </div>
       <div className="space-y-1.5">
         <h3 className="text-lg font-bold">
-          {isNetworkError ? "تعذّر تحميل البيانات" : "حدث خطأ غير متوقع"}
+          {isNetworkError ? "Failed to load data" : "An unexpected error occurred"}
         </h3>
         <p className="text-sm text-muted-foreground max-w-md">
           {isNetworkError
-            ? "تحقق من اتصال الإنترنت وحاول مرة أخرى. إذا استمرت المشكلة، قد يكون الخادم مؤقتاً غير متاح."
-            : error.message || "يرجى المحاولة مرة أخرى أو تحديث الصفحة."}
+            ? "Check your internet connection and try again. If the problem persists, the server may be temporarily unavailable."
+            : error.message || "Please try again or reload the page."}
         </p>
       </div>
       <div className="flex gap-2 flex-wrap justify-center">
         <Button onClick={onRetry} variant="default" size="sm">
-          إعادة المحاولة
+          Try again
         </Button>
         <Button onClick={() => window.location.reload()} variant="outline" size="sm">
-          تحديث الصفحة
+          Reload page
         </Button>
       </div>
     </div>

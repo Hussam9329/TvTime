@@ -359,9 +359,8 @@ function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
           alt={title}
           fill
           variant="poster"
-          loading="eager"
+          loading="lazy"
           decoding="async"
-          fetchPriority="high"
           className="group-hover:scale-105 transition-transform"
         />
         <div className="absolute top-1.5 right-1.5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center gap-1 px-1.5 h-5 text-white pointer-events-none">

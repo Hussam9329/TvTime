@@ -41,12 +41,16 @@ export const findOrCreateMediaSchema = z
 export type FindOrCreateMediaInput = z.infer<typeof findOrCreateMediaSchema>;
 
 // ── PATCH /api/media/[id] ──────────────────────────────────────────────
+// Note: "id" is included because useMediaUpdate sends JSON.stringify(args)
+// which includes the id field from the args object. The id is also in the
+// URL path, but we accept it in the body and ignore it (the URL wins).
 export const updateMediaSchema = z
   .object({
+    id: z.string().optional(), // accepted but ignored — URL param is authoritative
     userRating: z.union([z.number().int().min(0).max(100), z.null()]).optional(),
     tmdbId: z.union([z.number().int().positive(), z.null()]).optional(),
     watched: z.boolean().optional(),
-    watchedAt: z.union([z.string().datetime(), z.null()]).optional(),
+    watchedAt: z.union([z.string(), z.null()]).optional(),
     isAnime: z.boolean().optional(),
     isArabic: z.boolean().optional(),
     status: z
@@ -64,7 +68,7 @@ export const updateMediaSchema = z
     poster: z.string().url().nullable().optional(),
     overview: z.string().max(5000).nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UpdateMediaInput = z.infer<typeof updateMediaSchema>;
 

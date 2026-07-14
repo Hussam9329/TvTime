@@ -83,7 +83,7 @@ function LoginPageInner() {
               : "بيانات الدخول غير صحيحة."
           );
         } else {
-          setError(data?.error || "فشل تسجيل الدخول.");
+          setError(data?.error || "Login failed.");
         }
         return;
       }
