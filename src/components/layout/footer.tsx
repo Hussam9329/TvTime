@@ -47,6 +47,10 @@ export function Footer() {
 
           <div className="flex items-center gap-3 text-xs">
             <span className="text-muted-foreground">
+              © {new Date().getFullYear()} TvTime
+            </span>
+            <span className="text-muted-foreground/30 hidden sm:inline">|</span>
+            <span className="text-muted-foreground">
               Powered by <span className="font-semibold text-foreground">TMDB</span>
             </span>
             <span className="text-muted-foreground/30 hidden sm:inline">|</span>

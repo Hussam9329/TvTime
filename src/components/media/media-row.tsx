@@ -50,7 +50,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 hidden sm:flex"
+            className="h-8 w-8 flex"
             onClick={() => scroll("left")}
             aria-label="Scroll left"
           >
@@ -59,7 +59,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 hidden sm:flex"
+            className="h-8 w-8 flex"
             onClick={() => scroll("right")}
             aria-label="Scroll right"
           >

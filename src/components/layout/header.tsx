@@ -127,6 +127,7 @@ export function Header() {
           onClick={() => setView("home")}
           className="flex items-center gap-2 flex-shrink-0"
           aria-label="TvTime home"
+          aria-current={view === "home" ? "page" : undefined}
         >
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
             <Film className="w-5 h-5 sm:w-5 sm:h-5 text-primary-foreground" />
@@ -135,7 +136,7 @@ export function Header() {
         </button>
 
         {/* Desktop nav */}
-        <nav className="hidden xl:flex items-center gap-1 flex-wrap">
+        <nav className="hidden lg:flex items-center gap-0.5 flex-wrap">
           {primaryNavItems.map((item) => {
             const isArabicView = item.view === "arabic-movies" || item.view === "arabic-tv";
             return (
@@ -200,7 +201,7 @@ export function Header() {
                 className="hidden sm:flex relative"
               >
                 <Keyboard className="h-5 w-5" />
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary opacity-60" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
