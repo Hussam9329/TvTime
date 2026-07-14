@@ -2,9 +2,28 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNav } from "@/lib/store";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
+
+/**
+ * Background refresh interval for "slow-changing" data (TV tracking counts,
+ * library stats). 15 minutes is realistic — TV episodes don't air more often
+ * than that, and the server-side DB cache (TvMetadataCache) already has a
+ * 5-minute TTL for ongoing shows, so the data is at most 5 minutes stale.
+ *
+ * Previously this was 5 minutes AND fired on every focus + visibility change,
+ * causing 2 API calls + 4 query invalidations per trigger. That was ~12
+ * background requests per hour per open tab — excessive for a personal app.
+ */
+const BACKGROUND_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+
+/**
+ * Minimum gap between background refreshes. If the user switches tabs rapidly
+ * (triggering online events) or the interval fires while a refresh is in
+ * flight, we skip rather than queue. This prevents request pile-up.
+ */
+const MIN_REFRESH_GAP_MS = 30 * 1000;
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
@@ -12,7 +31,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60_000,
+            // Data is considered fresh for 2 minutes. After that, react-query
+            // will refetch on the next mount/focus/interaction. This is a
+            // good balance between freshness and server load.
+            staleTime: 2 * 60 * 1000,
+            // Don't refetch on window focus by default — the manual
+            // background refresh below handles slow-changing data, and
+            // individual views can opt in with their own refetchOnWindowFocus.
             refetchOnWindowFocus: false,
             retry: 1,
           },
@@ -28,6 +53,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     ensureUserId();
   }, [ensureUserId]);
 
+  // Hydrate the display name from the server once on mount. This is a
+  // single GET /api/user — not polled.
   useEffect(() => {
     if (typeof window === "undefined") return;
     let cancelled = false;
@@ -51,41 +78,69 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [setUserName]);
 
-  // Keep the server-side TV state engine alive while the app is open. A show
-  // that was Up To Date must be re-evaluated when a new episode reaches its air
-  // date, even if the user leaves the tab open overnight.
+  // ── BACKGROUND REFRESH ────────────────────────────────────────────────
+  //
+  // Replaces the old aggressive polling (5min interval + focus + visibility
+  // listeners + 4 invalidateQueries cascades).
+  //
+  // What this does:
+  // - Fires every 15 minutes (BACKGROUND_REFRESH_INTERVAL_MS).
+  // - Fires once on "online" event (reconnect after network drop).
+  // - Fetches ONLY /api/tv-tracking?countsOnly=true and /api/library/stats.
+  // - Updates the react-query cache via setQueryData (no invalidation cascade).
+  // - Individual view components refetch their own detailed data when the user
+  //   navigates to them — they don't need to be force-invalidated in the
+  //   background.
+  //
+  // What this does NOT do:
+  // - Does NOT fire on every tab focus (was causing 2 API calls per focus).
+  // - Does NOT fire on every visibility change (same issue).
+  // - Does NOT invalidate 4 broad query keys (was causing N refetches per
+  //   trigger where N = number of active queries matching those keys).
+  // - Does NOT fire immediately on mount (the initial queries fire naturally
+  //   when components mount; no need for a 100ms pre-emptive fetch).
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const stableUserId = userId || getClientUserId();
     let running = false;
+    let lastRefreshAt = 0;
 
-    const refreshTrackingState = async () => {
+    const refreshSlowChangingData = async () => {
+      // Debounce: skip if we refreshed less than MIN_REFRESH_GAP_MS ago.
+      // This prevents pile-up when "online" fires multiple times.
+      const now = Date.now();
+      if (now - lastRefreshAt < MIN_REFRESH_GAP_MS) return;
       if (running) return;
+
       running = true;
+      lastRefreshAt = now;
       try {
-        const url = withUserId(new URL("/api/tv-tracking", window.location.origin));
-        url.searchParams.set("countsOnly", "true");
-        const res = await fetch(url, {
-          headers: userHeaders(),
-          cache: "no-store",
-        });
-        if (!res.ok) throw new Error(`TV Tracking counts ${res.status}`);
-        const payload = await res.json();
-        client.setQueryData(["tv-tracking-counts", stableUserId], payload);
-        await Promise.all([
-          client.invalidateQueries({ queryKey: ["tv-tracking"] }),
-          client.invalidateQueries({ queryKey: ["tmdb", "show-progress-seasons"] }),
-          client.invalidateQueries({ queryKey: ["media"] }),
-          client.invalidateQueries({ queryKey: ["media", "following"] }),
+        // Fetch both endpoints in parallel — they're independent.
+        const [countsRes, statsRes] = await Promise.all([
+          fetch(withUserId(new URL("/api/tv-tracking", window.location.origin)) + "&countsOnly=true", {
+            headers: userHeaders(),
+            cache: "no-store",
+          }),
+          fetch(withUserId(new URL("/api/library/stats", window.location.origin)), {
+            headers: userHeaders(),
+            cache: "no-store",
+          }),
         ]);
 
-        const statsRes = await fetch(
-          withUserId(new URL("/api/library/stats", window.location.origin)),
-          { headers: userHeaders(), cache: "no-store" },
-        );
+        // Update cache for counts (if successful). Using setQueryData instead
+        // of invalidateQueries means we don't force a refetch of every active
+        // tv-tracking query — we just update the cached value. Views that are
+        // currently mounted will see the fresh data on their next render.
+        if (countsRes.ok) {
+          const countsPayload = await countsRes.json();
+          client.setQueryData(["tv-tracking-counts", stableUserId], countsPayload);
+        }
+
+        // Update cache for library stats (if successful).
         if (statsRes.ok) {
-          client.setQueryData(["lib", "stats", stableUserId], await statsRes.json());
+          const statsPayload = await statsRes.json();
+          client.setQueryData(["lib", "stats", stableUserId], statsPayload);
         }
       } catch {
         // Background refresh is best effort. Visible queries still surface their
@@ -95,23 +150,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const timer = window.setTimeout(() => void refreshTrackingState(), 100);
-    const interval = window.setInterval(() => void refreshTrackingState(), 5 * 60 * 1000);
-    const onFocus = () => void refreshTrackingState();
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") void refreshTrackingState();
-    };
+    // 15-minute interval — slow-changing data only.
+    const interval = window.setInterval(
+      () => void refreshSlowChangingData(),
+      BACKGROUND_REFRESH_INTERVAL_MS,
+    );
 
-    window.addEventListener("focus", onFocus);
-    window.addEventListener("online", onFocus);
-    document.addEventListener("visibilitychange", onVisibility);
+    // Reconnect handler — fires when network comes back online.
+    // Debounced via MIN_REFRESH_GAP_MS to avoid rapid-fire when the OS
+    // flaps the connection.
+    const onOnline = () => void refreshSlowChangingData();
+    window.addEventListener("online", onOnline);
 
     return () => {
-      window.clearTimeout(timer);
       window.clearInterval(interval);
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener("online", onFocus);
-      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("online", onOnline);
     };
   }, [client, userId]);
 
