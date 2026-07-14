@@ -1,4 +1,6 @@
 import { tmdb, type Episode, type SeasonDetail, type TvDetail } from "@/lib/tmdb";
+import { Prisma } from "@prisma/client";
+import { db } from "@/lib/db";
 import {
   episodeKey,
   inferAiredEpisodesFromTvDetail,
@@ -44,6 +46,9 @@ export type ReleasedEpisode = {
   airDate: string | null;
 };
 
+// In-memory caches remain as a fast L1 layer for hot reads within a single
+// serverless invocation. The DB cache (TvMetadataCache) is the L2 layer
+// that survives cold starts.
 const tvMetadataCache = new Map<number, CacheEntry<TvStatusMetadata>>();
 const seasonCache = new Map<string, CacheEntry<SeasonDetail>>();
 
@@ -67,13 +72,290 @@ function readFreshTvMetadata(entry: CacheEntry<TvStatusMetadata> | undefined, no
   return cached;
 }
 
+/**
+ * Deserialize a TvMetadataCache row from DB into the runtime TvStatusMetadata
+ * shape. The DB stores airedEpisodeKeys as TEXT[] for compactness — we
+ * rehydrate them into a Set for O(1) lookups. The `detail` field is
+ * reconstructed minimally because tv-status-engine only needs a handful of
+ * fields; we keep it loose (any) to avoid over-specifying.
+ */
+function metadataFromDbRow(row: {
+  tmdbId: number;
+  title: string;
+  posterPath: string | null;
+  overview: string | null;
+  firstAirDate: string | null;
+  tmdbStatus: string | null;
+  officiallyEnded: boolean;
+  inProduction: boolean | null;
+  totalEpisodes: number | null;
+  totalSeasons: number | null;
+  airedEpisodeCount: number | null;
+  airedEpisodeKeys: string[];
+  airedEpisodeInferenceReliable: boolean;
+  nextEpisodeAirDate: string | null;
+  nextEpisodeName: string | null;
+  nextEpisodeSeasonNumber: number | null;
+  nextEpisodeEpisodeNumber: number | null;
+  seasonsCount: number | null;
+  lastSeasonNumber: number | null;
+}): TvStatusMetadata {
+  const hasNext =
+    row.nextEpisodeAirDate !== null &&
+    row.nextEpisodeSeasonNumber !== null &&
+    row.nextEpisodeEpisodeNumber !== null;
+  return {
+    tmdbId: row.tmdbId,
+    title: row.title,
+    posterPath: row.posterPath,
+    overview: row.overview,
+    firstAirDate: row.firstAirDate,
+    tmdbStatus: row.tmdbStatus,
+    officiallyEnded: row.officiallyEnded,
+    inProduction: row.inProduction,
+    totalEpisodes: row.totalEpisodes,
+    totalSeasons: row.totalSeasons,
+    airedEpisodeCount: row.airedEpisodeCount,
+    airedEpisodeKeys: new Set(row.airedEpisodeKeys ?? []),
+    airedEpisodeInferenceReliable: row.airedEpisodeInferenceReliable,
+    nextEpisode: hasNext
+      ? {
+          airDate: row.nextEpisodeAirDate!,
+          name: row.nextEpisodeName,
+          seasonNumber: row.nextEpisodeSeasonNumber!,
+          episodeNumber: row.nextEpisodeEpisodeNumber!,
+        }
+      : null,
+    // Minimal detail stub — the runtime engine only reads .seasons and
+    // .next_episode_to_air from this object when using the cached path.
+    detail: {
+      id: row.tmdbId,
+      name: row.title,
+      original_name: undefined,
+      poster_path: row.posterPath,
+      backdrop_path: null,
+      overview: row.overview ?? "",
+      release_date: undefined,
+      first_air_date: row.firstAirDate ?? undefined,
+      vote_average: 0,
+      vote_count: 0,
+      media_type: "tv",
+      popularity: 0,
+      original_language: undefined,
+      origin_country: [],
+      number_of_seasons: row.totalSeasons ?? 0,
+      number_of_episodes: row.totalEpisodes ?? 0,
+      seasons: Array.from({ length: row.seasonsCount ?? 0 }, (_, i) => ({
+        id: row.tmdbId * 1000 + i + 1,
+        name: `Season ${i + 1}`,
+        season_number: i + 1,
+        episode_count: 0,
+        air_date: null,
+        poster_path: null,
+        overview: "",
+      })),
+      genres: [],
+      tagline: "",
+      status: row.tmdbStatus ?? "",
+      episode_run_time: [],
+      production_companies: [],
+      production_countries: [],
+      spoken_languages: [],
+      homepage: null,
+      in_production: row.inProduction ?? false,
+      last_air_date: null,
+      last_episode_to_air: null,
+      next_episode_to_air: row.nextEpisodeAirDate
+        ? {
+            season_number: row.nextEpisodeSeasonNumber!,
+            episode_number: row.nextEpisodeEpisodeNumber!,
+            air_date: row.nextEpisodeAirDate!,
+            name: row.nextEpisodeName,
+          }
+        : null,
+      networks: [],
+      created_by: [],
+    } as unknown as TvDetail,
+  };
+}
+
+/**
+ * Serialize a TvStatusMetadata into the shape expected by Prisma's
+ * TvMetadataCache.upsert create/update.
+ */
+function metadataToDbRow(meta: TvStatusMetadata, refreshAfter: Date) {
+  return {
+    tmdbId: meta.tmdbId,
+    title: meta.title,
+    posterPath: meta.posterPath,
+    overview: meta.overview,
+    firstAirDate: meta.firstAirDate,
+    tmdbStatus: meta.tmdbStatus,
+    officiallyEnded: meta.officiallyEnded,
+    inProduction: meta.inProduction,
+    totalEpisodes: meta.totalEpisodes,
+    totalSeasons: meta.totalSeasons,
+    airedEpisodeCount: meta.airedEpisodeCount,
+    airedEpisodeKeys: [...meta.airedEpisodeKeys],
+    airedEpisodeInferenceReliable: meta.airedEpisodeInferenceReliable,
+    nextEpisodeAirDate: meta.nextEpisode?.airDate ?? null,
+    nextEpisodeName: meta.nextEpisode?.name ?? null,
+    nextEpisodeSeasonNumber: meta.nextEpisode?.seasonNumber ?? null,
+    nextEpisodeEpisodeNumber: meta.nextEpisode?.episodeNumber ?? null,
+    seasonsCount: meta.detail.seasons?.length ?? null,
+    lastSeasonNumber: meta.detail.seasons?.length
+      ? Math.max(...meta.detail.seasons.map((s) => Number(s.season_number)).filter((n) => Number.isFinite(n) && n > 0), 0)
+      : null,
+    fetchedAt: new Date(),
+    refreshAfter,
+  };
+}
+
+/**
+ * Read a fresh TvMetadataCache row from the DB. Returns null when the table
+ * is missing (e.g. before the migration has been applied), when the row is
+ * absent, or when the row is stale (refreshAfter has passed).
+ *
+ * "Stale" is defined per-show: ended shows refresh every 6h, ongoing shows
+ * every 5m. Additionally, if a cached next-episode air date has become
+ * current, we treat the row as stale so the engine re-evaluates the boundary.
+ */
+async function readDbMetadata(tmdbId: number, now: Date): Promise<TvStatusMetadata | null> {
+  try {
+    const row = await db.tvMetadataCache.findUnique({ where: { tmdbId } });
+    if (!row) return null;
+    if (row.refreshAfter > now) {
+      // Fresh enough. But check the next-episode boundary.
+      if (row.nextEpisodeAirDate && isEpisodeReleased(row.nextEpisodeAirDate, now)) {
+        return null; // stale — boundary crossed
+      }
+      return metadataFromDbRow(row);
+    }
+    return null; // stale
+  } catch {
+    // Table missing or query failed — fall back to TMDB. Don't crash the
+    // whole request just because the cache table is unavailable.
+    return null;
+  }
+}
+
+/**
+ * Batch-read TvMetadataCache rows from the DB. Returns a Map keyed by tmdbId
+ * containing ONLY fresh rows. Stale or missing entries are omitted from the
+ * result — callers must fall back to getTvStatusMetadata() for those ids.
+ *
+ * This is the critical performance primitive for /api/tv-tracking: instead
+ * of 597 individual `findUnique` queries (one per tracked show), we issue
+ * a single raw SQL query that returns all rows in one round-trip.
+ *
+ * Uses $queryRaw (not Prisma's findMany) because Prisma's type coercion on
+ * 597 rows × 20 columns (including TEXT[] arrays with avg 63 elements each)
+ * was measured at ~900ms. Raw SQL is ~150ms.
+ *
+ * Pass `includeEpisodeKeys: false` (default) to skip the heavy
+ * `airedEpisodeKeys` TEXT[] column. This cuts the query from ~1.3s to ~430ms
+ * because the array serialization is the dominant cost. The state-derivation
+ * engine falls back to `Math.min(watchedKeys.size, airedEpisodeCount)` when
+ * `airedEpisodeKeys` is empty — slightly less precise but good enough for
+ * the tracking dashboard. Pass `includeEpisodeKeys: true` only when you need
+ * the exact set intersection (e.g. when marking a specific episode watched).
+ */
+export async function batchReadDbMetadata(
+  tmdbIds: number[],
+  now: Date,
+  options: { includeEpisodeKeys?: boolean } = {},
+): Promise<Map<number, TvStatusMetadata>> {
+  const result = new Map<number, TvStatusMetadata>();
+  if (tmdbIds.length === 0) return result;
+  const includeEpisodeKeys = options.includeEpisodeKeys === true;
+
+  try {
+    const rows = await db.$queryRaw<
+      Array<{
+        tmdbId: number;
+        title: string;
+        posterPath: string | null;
+        overview: string | null;
+        firstAirDate: string | null;
+        tmdbStatus: string | null;
+        officiallyEnded: boolean;
+        inProduction: boolean | null;
+        totalEpisodes: number | null;
+        totalSeasons: number | null;
+        airedEpisodeCount: number | null;
+        airedEpisodeKeys: string[];
+        airedEpisodeInferenceReliable: boolean;
+        nextEpisodeAirDate: string | null;
+        nextEpisodeName: string | null;
+        nextEpisodeSeasonNumber: number | null;
+        nextEpisodeEpisodeNumber: number | null;
+        seasonsCount: number | null;
+        lastSeasonNumber: number | null;
+        refreshAfter: Date;
+      }>
+    >`
+      SELECT
+        "tmdbId", "title", "posterPath", "overview", "firstAirDate", "tmdbStatus",
+        "officiallyEnded", "inProduction", "totalEpisodes", "totalSeasons",
+        "airedEpisodeCount",
+        ${includeEpisodeKeys ? Prisma.raw('"airedEpisodeKeys"') : Prisma.raw(`ARRAY[]::TEXT[] AS "airedEpisodeKeys"`)},
+        "airedEpisodeInferenceReliable",
+        "nextEpisodeAirDate", "nextEpisodeName", "nextEpisodeSeasonNumber", "nextEpisodeEpisodeNumber",
+        "seasonsCount", "lastSeasonNumber", "refreshAfter"
+      FROM "TvMetadataCache"
+      WHERE "tmdbId" IN (${Prisma.join(tmdbIds)})
+    `;
+    for (const row of rows) {
+      // Skip stale rows — the caller will fetch fresh data from TMDB.
+      if (row.refreshAfter <= now) continue;
+      // Skip rows whose next-episode boundary has just been crossed.
+      if (row.nextEpisodeAirDate && isEpisodeReleased(row.nextEpisodeAirDate, now)) continue;
+      result.set(row.tmdbId, metadataFromDbRow(row));
+    }
+  } catch (error) {
+    // Table missing or query failed — return empty map. Caller falls back
+    // to per-id getTvStatusMetadata() which in turn falls back to TMDB.
+    console.warn("[tv-metadata-cache] batchReadDbMetadata failed", error);
+  }
+  return result;
+}
+
+/**
+ * Upsert a TvStatusMetadata into the DB cache. Fire-and-forget — the caller
+ * does not need to wait for this to complete. Errors are swallowed because
+ * a cache write failure should NOT break the user's request.
+ */
+function writeDbMetadata(meta: TvStatusMetadata, refreshAfter: Date): void {
+  // Avoid blocking the response. Use .catch to silence unhandled rejection.
+  db.tvMetadataCache
+    .upsert({
+      where: { tmdbId: meta.tmdbId },
+      create: metadataToDbRow(meta, refreshAfter),
+      update: metadataToDbRow(meta, refreshAfter),
+    })
+    .catch((error) => {
+      // Log but don't throw — cache write is best-effort.
+      console.warn(`[tv-metadata-cache] write failed for tmdbId=${meta.tmdbId}`, error);
+    });
+}
+
 export async function getTvStatusMetadata(tmdbId: number, now: Date = new Date()): Promise<TvStatusMetadata> {
   const id = Number(tmdbId);
   if (!Number.isFinite(id) || id <= 0) throw new Error("A valid TMDB TV id is required");
 
-  const cached = readFreshTvMetadata(tvMetadataCache.get(id), now);
-  if (cached) return cached;
+  // L1: in-memory cache (fast, but cold-start lossy)
+  const memCached = readFreshTvMetadata(tvMetadataCache.get(id), now);
+  if (memCached) return memCached;
 
+  // L2: DB cache (survives cold starts)
+  const dbCached = await readDbMetadata(id, now);
+  if (dbCached) {
+    // Promote to L1 so subsequent reads in the same invocation skip the DB.
+    tvMetadataCache.set(id, { value: dbCached, fetchedAt: Date.now() });
+    return dbCached;
+  }
+
+  // L3: TMDB fetch (slow path)
   const detail = await tmdb.tvDetail(id);
   const inference = inferAiredEpisodesFromTvDetail(detail as any, now);
   const next: any = (detail as any).next_episode_to_air;
@@ -107,7 +389,14 @@ export async function getTvStatusMetadata(tmdbId: number, now: Date = new Date()
     detail,
   };
 
+  // Populate both caches. The refresh-after timestamp depends on whether
+  // the show has officially ended — ended shows rarely change, so 6h TTL;
+  // ongoing shows get a 5m TTL so new episodes surface quickly.
+  const ttlMs = metadata.officiallyEnded ? ENDED_TV_META_TTL_MS : ONGOING_TV_META_TTL_MS;
+  const refreshAfter = new Date(now.getTime() + ttlMs);
   tvMetadataCache.set(id, { value: metadata, fetchedAt: Date.now() });
+  writeDbMetadata(metadata, refreshAfter);
+
   return metadata;
 }
 
