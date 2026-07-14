@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { tmdb, tmdbArabic } from "@/lib/tmdb";
+import { isOfficiallyEndedTvStatus } from "@/lib/tv-status-engine";
 
 type RecentlyItem = {
   id: string;
@@ -8,6 +10,8 @@ type RecentlyItem = {
   tmdbId: number | null;
   title: string;
   posterPath: string | null;
+  backdropPath: string | null;
+  overview: string | null;
   watchedAt: string;
   subtitle?: string | null;
   seasonNumber?: number | null;
@@ -44,14 +48,41 @@ function deriveCategory(kind: "movie" | "tv", isArabic: boolean, isAnime: boolea
   return kind === "movie" ? "movie" : "tv";
 }
 
+/**
+ * Fetch backdrop_path + overview from TMDB for a movie or TV show.
+ * Uses tmdbArabic for Arabic items to get Arabic overview.
+ * Returns null on failure (the caller falls back to poster only).
+ */
+async function fetchTmdbBackdrop(
+  tmdbId: number,
+  kind: "movie" | "tv",
+  isArabic: boolean
+): Promise<{ backdropPath: string | null; overview: string | null }> {
+  try {
+    const client = isArabic ? tmdbArabic : tmdb;
+    if (kind === "movie") {
+      const detail = await client.movieDetail(tmdbId);
+      return {
+        backdropPath: detail.backdrop_path || null,
+        overview: detail.overview || null,
+      };
+    } else {
+      const detail = await client.tvDetail(tmdbId);
+      return {
+        backdropPath: detail.backdrop_path || null,
+        overview: detail.overview || null,
+      };
+    }
+  } catch {
+    return { backdropPath: null, overview: null };
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
     const limit = Math.min(Math.max(Number(new URL(req.url).searchParams.get("limit")) || 12, 1), 50);
 
-    // Fetch ALL watched media (movies + series) regardless of Arabic/Anime flags.
-    // The category is derived per-item so the home page can show one slide
-    // per category (movie, tv, anime, arabic-movie, arabic-tv).
     const [mediaMovies, mediaShows] = await Promise.all([
       db.media.findMany({
         where: { userId: user.id, type: "movie", watched: true },
@@ -92,6 +123,8 @@ export async function GET(req: NextRequest) {
         tmdbId,
         title: movie.title,
         posterPath: movie.poster ?? null,
+        backdropPath: null,
+        overview: null,
         watchedAt: toIso(movie.watchedAt ?? movie.updatedAt),
         hasProfile: tmdbId != null,
         source: "media",
@@ -112,6 +145,8 @@ export async function GET(req: NextRequest) {
         tmdbId,
         title: meta?.title ?? `TV Show #${episode.showId}`,
         posterPath: meta?.posterPath ?? null,
+        backdropPath: null,
+        overview: null,
         watchedAt: toIso(episode.watchedAt),
         subtitle: `S${episode.seasonNumber} • E${episode.episodeNumber}`,
         seasonNumber: episode.seasonNumber,
@@ -129,7 +164,28 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => new Date(b.watchedAt).getTime() - new Date(a.watchedAt).getTime())
       .slice(0, limit);
 
-    return NextResponse.json({ items: sorted, total: sorted.length, source: "AllMedia+WatchedEpisode" });
+    // ── Fetch backdrop_path + overview from TMDB for the top items ──────
+    // We only fetch for the first 6 unique items (one per category) to avoid
+    // hammering TMDB. These are the ones that appear in the Featured carousel.
+    const seenCats = new Set<string>();
+    const toEnrich: RecentlyItem[] = [];
+    for (const item of sorted) {
+      if (!item.tmdbId || seenCats.has(item.category)) continue;
+      seenCats.add(item.category);
+      toEnrich.push(item);
+      if (toEnrich.length >= 6) break;
+    }
+
+    // Fetch in parallel (max 6 TMDB calls)
+    await Promise.all(
+      toEnrich.map(async (item) => {
+        const result = await fetchTmdbBackdrop(item.tmdbId!, item.kind, item.isArabic);
+        item.backdropPath = result.backdropPath;
+        item.overview = result.overview;
+      })
+    );
+
+    return NextResponse.json({ items: sorted, total: sorted.length, source: "AllMedia+WatchedEpisode+TMDB" });
   } catch (error) {
     console.error("[media:recently]", error);
     return NextResponse.json({ error: "Failed to load recently watched" }, { status: 500 });

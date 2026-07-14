@@ -563,6 +563,8 @@ export type RecentlyWatchedItem = {
   tmdbId: number | null;
   title: string;
   posterPath: string | null;
+  backdropPath?: string | null;
+  overview?: string | null;
   watchedAt: string;
   subtitle?: string | null;
   seasonNumber?: number | null;

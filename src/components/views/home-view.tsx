@@ -253,8 +253,8 @@ function buildFeaturedSlides(trending: any[], recentlyItems: any[]): FeaturedSli
     slides.push({
       id: item.tmdbId,
       title: item.title,
-      overview: item.episodeName ? `S${item.seasonNumber}E${item.episodeNumber} — ${item.episodeName}` : "",
-      backdropPath: item.posterPath ? item.posterPath.replace("w500", "w1280") : null,
+      overview: item.overview || (item.episodeName ? `S${item.seasonNumber}E${item.episodeNumber} — ${item.episodeName}` : ""),
+      backdropPath: item.backdropPath || null,
       posterPath: item.posterPath,
       year: "",
       voteAverage: 0,
