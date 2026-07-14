@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMediaMany } from "@/lib/media-normalize";
+import { handleError } from "@/lib/api-error";
 
 const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
@@ -60,7 +61,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ items: normalizeMediaMany(items), total, limit, offset });
   } catch (error) {
-    console.error("[media:list]", error);
-    return NextResponse.json({ error: "Failed to load media library" }, { status: 500 });
+    return handleError(error);
   }
 }

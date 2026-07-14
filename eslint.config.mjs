@@ -43,6 +43,8 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-undef": "off",
     "no-unreachable": "warn",
     "no-useless-escape": "off",
+    // Catch empty catch blocks that silently swallow errors.
+    "no-empty": ["warn", { allowEmptyCatch: false }],
   },
 }, {
   ignores: [
