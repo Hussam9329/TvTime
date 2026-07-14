@@ -39,11 +39,11 @@ export function imgOrPlaceholder(path: string | null | undefined, size: string =
  */
 const TMDB_TIMEOUT_MS = 8_000;
 
-async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
+async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number | boolean> = {}, language: string = "en-US"): Promise<T> {
   const apiKey = requireTmdbKey();
   const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
   url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("language", "en-US");
+  url.searchParams.set("language", language);
   for (const [k, v] of Object.entries(params)) {
     url.searchParams.set(k, String(v));
   }
@@ -289,8 +289,71 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/on_the_air`, { page }),
 };
 
+// ── Arabic-language TMDB calls ─────────────────────────────────────────
+// These functions fetch the SAME data as their English counterparts but
+// with language=ar so TMDB returns Arabic titles, overviews, and taglines.
+// Used by the Arabic Movies / Arabic TV worlds to show "ولاد رزق" instead
+// of "Welad Rezk".
+//
+// Fallback strategy: if the Arabic title is empty (TMDB has no Arabic
+// translation for this item), getTitle() falls back to the English title
+// via the original_title/original_name fields.
+export const tmdbArabic = {
+  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string } = {}) => {
+    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": params.vote_count_gte ?? 10 };
+    if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
+    if (params.year) p.primary_release_year = params.year;
+    if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
+    if (params.release_date_gte) p["primary_release_date.gte"] = params.release_date_gte;
+    if (params.release_date_lte) p["primary_release_date.lte"] = params.release_date_lte;
+    p.with_original_language = "ar";
+    return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p, "ar-SA");
+  },
+
+  discoverTv: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; vote_count_gte?: number } = {}) => {
+    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": params.vote_count_gte ?? 10 };
+    if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
+    if (params.year) p.first_air_date_year = params.year;
+    if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
+    p.with_original_language = "ar";
+    return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p, "ar-SA");
+  },
+
+  movieDetail: (id: number) =>
+    tmdbFetch<MovieDetail>(`/movie/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,release_dates" }, "ar-SA"),
+
+  tvDetail: (id: number) =>
+    tmdbFetch<TvDetail>(`/tv/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,external_ids,content_ratings" }, "ar-SA"),
+};
+
+/**
+ * Get the best available title for a media item.
+ *
+ * For Arabic items (detected via isArabic flag or original_language === "ar"),
+ * TMDB with language=ar returns the Arabic title in the `title`/`name` field
+ * and the original (transliterated) title in `original_title`/`original_name`.
+ *
+ * For non-Arabic items, `title`/`name` is the English title.
+ *
+ * This function returns the localized title, falling back to the original
+ * title if the localized one is missing (e.g. TMDB has no Arabic translation).
+ */
 export function getTitle(m: MediaItem): string {
   return m.title || m.name || m.original_title || m.original_name || "Untitled";
+}
+
+/**
+ * Get the original (non-localized) title — useful as a subtitle when the
+ * main title is in Arabic and you want to show the transliterated version
+ * underneath (e.g. "ولاد رزق" as h1, "Welad Rezk" as subtitle).
+ */
+export function getOriginalTitle(m: MediaItem): string | null {
+  const orig = m.original_title || m.original_name;
+  const local = m.title || m.name;
+  // Only show original title if it differs from the localized one
+  // (avoids redundant display for English items where title === original_title).
+  if (orig && orig !== local) return orig;
+  return null;
 }
 
 export function getReleaseDate(m: MediaItem): string {

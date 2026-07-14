@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { tmdb } from "@/lib/tmdb";
+import { tmdb, tmdbArabic } from "@/lib/tmdb";
 
 const handler = async (
   req: NextRequest,
@@ -77,13 +77,45 @@ const handler = async (
       case "search":
         data = await tmdb.searchMulti(queryParams.q || "", Number(queryParams.page) || 1);
         break;
+      // Arabic-language discover endpoints — return Arabic titles/overviews
+      case "arabic/movies/discover":
+        data = await tmdbArabic.discoverMovies({
+          genres: queryParams.genre ? queryParams.genre.split(",").map(Number).filter(Boolean) : undefined,
+          year: queryParams.year ? Number(queryParams.year) : undefined,
+          sort_by: queryParams.sort_by,
+          page: Number(queryParams.page) || 1,
+          vote_average_gte: queryParams.rating ? Number(queryParams.rating) : undefined,
+          vote_count_gte: queryParams.vote_count ? Number(queryParams.vote_count) : undefined,
+          release_date_gte: queryParams.release_date_gte || undefined,
+          release_date_lte: queryParams.release_date_lte || undefined,
+        });
+        break;
+      case "arabic/tv/discover":
+        data = await tmdbArabic.discoverTv({
+          genres: queryParams.genre ? queryParams.genre.split(",").map(Number).filter(Boolean) : undefined,
+          year: queryParams.year ? Number(queryParams.year) : undefined,
+          sort_by: queryParams.sort_by,
+          page: Number(queryParams.page) || 1,
+          vote_average_gte: queryParams.rating ? Number(queryParams.rating) : undefined,
+          vote_count_gte: queryParams.vote_count ? Number(queryParams.vote_count) : undefined,
+        });
+        break;
       default:
         if (segments.match(/^movie\/\d+$/)) {
           const id = Number(segments.split("/")[1]);
-          data = await tmdb.movieDetail(id);
+          // Use Arabic detail for Arabic movies (detected via query param)
+          if (queryParams.arabic === "true") {
+            data = await tmdbArabic.movieDetail(id);
+          } else {
+            data = await tmdb.movieDetail(id);
+          }
         } else if (segments.match(/^tv\/\d+$/)) {
           const id = Number(segments.split("/")[1]);
-          data = await tmdb.tvDetail(id);
+          if (queryParams.arabic === "true") {
+            data = await tmdbArabic.tvDetail(id);
+          } else {
+            data = await tmdb.tvDetail(id);
+          }
         } else if (segments.match(/^tv\/\d+\/season\/\d+$/)) {
           const parts = segments.split("/");
           data = await tmdb.seasonDetail(Number(parts[1]), Number(parts[3]));
