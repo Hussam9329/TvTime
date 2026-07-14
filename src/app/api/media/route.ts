@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMediaMany } from "@/lib/media-normalize";
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 100, 1), 500);
     const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
 
-    const where: any = { userId: user.id };
+    const where: Prisma.MediaWhereInput = { userId: user.id };
     if (type && type !== "undefined" && type !== "all") where.type = type;
     if (status && status !== "all" && status !== "undefined") {
       // Support comma-separated statuses when callers intentionally request multiple states.

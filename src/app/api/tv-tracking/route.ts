@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import { Prisma, type Media } from "@prisma/client";
 import { db } from "@/lib/db";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
@@ -108,7 +108,7 @@ function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc"
 // applies the derived state patch IN MEMORY only (for display), without
 // persisting to DB. A separate sync endpoint can persist repairs if needed.
 async function repairShowIfNeeded(
-  show: any,
+  show: Media,
   state: TvTrackingState,
   metadata: TvStatusMetadata | null,
   lastWatchedAt: Date | null,
@@ -117,7 +117,7 @@ async function repairShowIfNeeded(
   const patch = tvStateToMediaPatch(state, lastWatchedAt ?? show.watchedAt);
 
   // Apply patch in-memory only — no db.media.update during GET
-  const patched: any = { ...show };
+  const patched: Media & { _serverTrackingStatus?: TvTrackingState } = { ...show };
 
   if (stateVerified) {
     if (show.status !== patch.status) patched.status = patch.status;
@@ -199,7 +199,7 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
   // to getTvStatusMetadata() for those, which lazily fetches from TMDB and
   // populates the cache for next time.
   const trackedTmdbIds = series
-    .map((s: any) => Number(s.tmdbId))
+    .map((s: Media) => Number(s.tmdbId))
     .filter((id: number) => Number.isFinite(id) && id > 0);
   const metadataByTmdbId = await batchReadDbMetadata(trackedTmdbIds, now);
 
@@ -233,7 +233,7 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
     }
   }
 
-  const decorated = await mapWithConcurrency(series as any[], STATUS_REPAIR_CONCURRENCY, async (show: any) => {
+  const decorated = await mapWithConcurrency(series, STATUS_REPAIR_CONCURRENCY, async (show: Media) => {
     const tmdbId = Number(show.tmdbId || 0);
     const watched = watchedByShow.get(tmdbId) ?? emptyWatchedMeta();
     let metadata: TvStatusMetadata | null = null;

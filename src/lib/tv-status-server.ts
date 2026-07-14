@@ -357,8 +357,18 @@ export async function getTvStatusMetadata(tmdbId: number, now: Date = new Date()
 
   // L3: TMDB fetch (slow path)
   const detail = await tmdb.tvDetail(id);
-  const inference = inferAiredEpisodesFromTvDetail(detail as any, now);
-  const next: any = (detail as any).next_episode_to_air;
+  // TvDetail's next_episode_to_air field is optional in the TMDB response.
+  // Cast to a narrow shape rather than 'any' so we keep type safety on the
+  // fields we actually read.
+  type NextEpisode = {
+    season_number: number;
+    episode_number: number;
+    air_date: string | null;
+    name: string | null;
+  };
+  const detailWithNext = detail as TvDetail & { next_episode_to_air?: NextEpisode | null };
+  const inference = inferAiredEpisodesFromTvDetail(detailWithNext, now);
+  const next = detailWithNext.next_episode_to_air;
   const nextEpisode = next
     && Number(next.season_number) >= 1
     && Number(next.episode_number) >= 1
