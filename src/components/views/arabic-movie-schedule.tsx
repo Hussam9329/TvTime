@@ -106,7 +106,7 @@ export function ArabicMovieReleaseSchedule() {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {releases.map((movie) => (
                   <button key={movie.id} onClick={() => goMovie(movie.id)} className="text-left">
-                    <Card className="flex gap-3 p-3 transition-all hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5">
+                    <Card className="flex gap-3 p-3 transition-all hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 active:border-emerald-500/60 active:scale-[0.98]">
                       <div className="h-24 w-16 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                         <SafeImage src={imgOrPlaceholder(movie.poster_path, "w185")} alt={getTitle(movie)} className="h-full w-full object-cover" />
                       </div>

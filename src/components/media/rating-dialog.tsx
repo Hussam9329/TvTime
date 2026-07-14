@@ -15,6 +15,7 @@ interface RatingDialogProps {
   title: string;
   poster: string | null;
   onRate: (rating: number) => Promise<void> | void;
+  onRemove?: () => Promise<void> | void;
   initialRating?: number | null;
   description?: string;
   submitLabel?: string;
@@ -26,6 +27,7 @@ export function RatingDialog({
   title,
   poster,
   onRate,
+  onRemove,
   initialRating = null,
   description = "This saves only your rating out of 100. It does not change Watchlist or Watched status.",
   submitLabel = "Save Rating",
@@ -129,7 +131,7 @@ export function RatingDialog({
 
         {/* Quick presets */}
         <div className="flex gap-2 flex-wrap justify-center">
-          {[20, 40, 60, 80, 100].map((v) => (
+          {[20, 40, 50, 60, 80, 100].map((v) => (
             <Button
               key={v}
               variant={rating === v ? "default" : "outline"}
@@ -143,6 +145,24 @@ export function RatingDialog({
         </div>
 
         <DialogFooter>
+          {isRerating && onRemove && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-rose-400 hover:text-rose-300 mr-auto"
+              disabled={submitting}
+              onClick={async () => {
+                try {
+                  await onRemove();
+                  onOpenChange(false);
+                } catch {
+                  toast.error("Failed to remove rating");
+                }
+              }}
+            >
+              Remove rating
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting ? "Saving..." : submitLabel}

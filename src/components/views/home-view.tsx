@@ -31,17 +31,15 @@ export function HomeView() {
   const standardTrending = (trending.data?.results ?? []).filter((media) => !isArabicMediaItem(media));
   const heroItem = standardTrending.find((media) => media.backdrop_path && (media.overview?.length || 0) > 100) || standardTrending[0];
 
-  const [greeting, setGreeting] = useState("Good evening");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const h = new Date().getHours();
-      if (h < 12) setGreeting("Good morning");
-      else if (h < 18) setGreeting("Good afternoon");
-      else setGreeting("Good evening");
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+  // Compute greeting directly from current hour — no setTimeout(0) delay
+  // that caused a flash from "Good evening" to the correct greeting.
+  const [greeting, setGreeting] = useState(() => {
+    if (typeof window === "undefined") return "Good evening";
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
+  });
 
   return (
     <div className="space-y-6">
