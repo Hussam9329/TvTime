@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { enforceAdminSecret } from "@/lib/admin-guard";
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "8265bd1679663a7ea12ac168da84d2e8";
+const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim();
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
 async function tmdbMovie(tmdbId: number) {
+  if (!TMDB_API_KEY) throw new Error("TMDB_API_KEY is not configured");
   const url = new URL(`${TMDB_BASE_URL}/movie/${tmdbId}`);
   url.searchParams.set("api_key", TMDB_API_KEY);
   url.searchParams.set("language", "en-US");

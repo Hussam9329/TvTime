@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "8265bd1679663a7ea12ac168da84d2e8";
+const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim();
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
 async function tmdbMovie(tmdbId) {

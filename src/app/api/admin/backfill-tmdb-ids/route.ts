@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { enforceAdminSecret } from "@/lib/admin-guard";
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "8265bd1679663a7ea12ac168da84d2e8";
+const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim();
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
 /**
@@ -18,6 +18,7 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3";
  */
 
 async function searchTmdb(title: string, year: string | null): Promise<{ tmdbId: number; poster: string | null; overview: string | null; voteAverage: number | null } | null> {
+  if (!TMDB_API_KEY) throw new Error("TMDB_API_KEY is not configured");
   try {
     const params = new URLSearchParams({
       api_key: TMDB_API_KEY,

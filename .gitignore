@@ -82,6 +82,19 @@ server.log
 /worklog.md
 /*.trace.zip
 
+# Internal agent artifacts — never commit these to a public repo.
+/delivery/
+/agent-ctx/
+/examples/
+/examples/**
+
+# PID files (dev server state)
+*.pid
+
+# Local audit artifacts (never committed)
+/audit/
+/.audit/
+
 # Emergency recovery safety
 .env
 .env.local

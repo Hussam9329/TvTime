@@ -5,6 +5,15 @@ const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim() || "";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 export const TMDB_IMG_BASE = "https://image.tmdb.org/t/p";
 
+// Internal helper that surfaces a clear error when the key is missing instead
+// of letting TMDB return a generic 401.
+function requireTmdbKey(): string {
+  if (!TMDB_API_KEY) {
+    throw new Error("TMDB_API_KEY is not configured. Set it in your environment variables.");
+  }
+  return TMDB_API_KEY;
+}
+
 export function img(path: string | null | undefined, size: string = "w500"): string {
   if (!path) return "";
   // If it's already a full URL (e.g. from Neon DB), return it as-is
@@ -22,9 +31,9 @@ export function imgOrPlaceholder(path: string | null | undefined, size: string =
 }
 
 async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
-  if (!TMDB_API_KEY) throw new Error("TMDB_API_KEY is not configured");
+  const apiKey = requireTmdbKey();
   const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
-  url.searchParams.set("api_key", TMDB_API_KEY);
+  url.searchParams.set("api_key", apiKey);
   url.searchParams.set("language", "en-US");
   for (const [k, v] of Object.entries(params)) {
     url.searchParams.set(k, String(v));

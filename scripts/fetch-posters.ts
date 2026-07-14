@@ -1,7 +1,7 @@
 // Fetch posters from TMDB for movies that don't have them
 import { db } from '../src/lib/db';
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "8265bd1679663a7ea12ac168da84d2e8";
+const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim();
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
 
