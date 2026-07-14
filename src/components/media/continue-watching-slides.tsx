@@ -56,6 +56,24 @@ export function ContinueWatchingSlides() {
     return ai - bi;
   });
 
+  if (recently.isLoading) {
+    return (
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Play className="w-5 h-5 text-primary" />
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">Continue Watching</h2>
+        </div>
+        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-[280px] sm:w-[340px]">
+              <div className="aspect-video shimmer rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   if (slides.length === 0) return null;
 
   const handleGo = (item: RecentlyWatchedItem) => {
