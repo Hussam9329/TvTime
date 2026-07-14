@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import {
-  useDiscoverMovies,
-  useDiscoverTv,
+  useArabicDiscoverMovies,
+  useArabicDiscoverTv,
   useMovieGenres,
   useTvGenres,
 } from "@/hooks/use-tmdb";
@@ -43,23 +43,21 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
   const year = releaseYear === "any" ? undefined : Number(releaseYear);
   const rating = minimumRating === "any" ? undefined : Number(minimumRating);
 
-  const movieQuery = useDiscoverMovies({
+  const movieQuery = useArabicDiscoverMovies({
     genres: selectedGenres,
     year,
     rating,
     sort_by: sortBy,
     page,
-    originalLanguage: "ar",
     voteCount: 0,
     enabled: kind === "movie",
   });
-  const tvQuery = useDiscoverTv({
+  const tvQuery = useArabicDiscoverTv({
     genres: selectedGenres,
     year,
     rating,
     sort_by: sortBy,
     page,
-    originalLanguage: "ar",
     voteCount: 0,
     enabled: kind === "tv",
   });
