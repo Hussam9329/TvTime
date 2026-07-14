@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
 import { SafeImage } from "@/components/media/safe-image";
-import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward, ListChecks, Clapperboard, BookOpen, Sparkles, Trophy, Star, Zap, Layers } from "lucide-react";
+import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward, ListChecks, Clapperboard, BookOpen, Sparkles, Trophy, Star, Zap, Layers, History } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -136,7 +136,7 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
 function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void; globalCounts?: any; world: "standard" | "arabic" }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<TvTrackingCategory>("all");
-  const limit = 60;
+  const limit = 24;
   const tracking = useTvTracking({ category: filter, sortBy: "title", order: "asc", limit, offset: page * limit, world });
 
   const items = tracking.data?.items ?? [];

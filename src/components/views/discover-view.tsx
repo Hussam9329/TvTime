@@ -115,7 +115,7 @@ export function DiscoverView() {
                 ];
                 setSortBy(randomSort);
                 setPage(randomPage);
-                toast.success("🎲 Surprise! Here are some random picks");
+                toast.success("Surprise! Here are some random picks");
               }}
             >
               <Dices className="w-4 h-4 mr-1.5" /> Surprise Me
