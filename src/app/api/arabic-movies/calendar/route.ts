@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { tmdb, type MediaItem } from "@/lib/tmdb";
+import { tmdbArabic, type MediaItem } from "@/lib/tmdb";
 import { parseDateOnly } from "@/lib/date-only";
 
 const MAX_RANGE_DAYS = 370;
@@ -23,20 +23,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: `A valid from/to range of 1-${MAX_RANGE_DAYS} days is required.` }, { status: 400 });
     }
 
-    const first = await tmdb.discoverMovies({
+    const first = await tmdbArabic.discoverMovies({
       page: 1,
       sort_by: "primary_release_date.asc",
-      original_language: "ar",
       vote_count_gte: 0,
       release_date_gte: from,
       release_date_lte: to,
     });
     const pages = Math.min(first.total_pages || 1, MAX_PAGES);
     const rest = pages > 1
-      ? await Promise.all(Array.from({ length: pages - 1 }, (_, index) => tmdb.discoverMovies({
+      ? await Promise.all(Array.from({ length: pages - 1 }, (_, index) => tmdbArabic.discoverMovies({
           page: index + 2,
           sort_by: "primary_release_date.asc",
-          original_language: "ar",
           vote_count_gte: 0,
           release_date_gte: from,
           release_date_lte: to,

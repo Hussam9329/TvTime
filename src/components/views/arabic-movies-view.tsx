@@ -16,11 +16,11 @@ export function ArabicMoviesView() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-              <Languages className="h-3.5 w-3.5" /> Independent Arabic cinema world
+              <Languages className="h-3.5 w-3.5" /> عالم السينما العربية المستقل
             </div>
-            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Arabic Movies</h1>
+            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">الأفلام العربية</h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Your Arabic film library and discovery catalogue, kept separate from the standard Movies, TV Shows and Anime collections while remaining available in global search.
+              مكتبتك لأفلام العالم العربي وكتالوج الاكتشاف، منفصلة عن الأفلام والمسلسلات والأنمي العالمية مع إتاحتها في البحث الشامل.
             </p>
           </div>
         </div>
@@ -29,13 +29,13 @@ export function ArabicMoviesView() {
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
         <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
           <TabsTrigger value="library" className="gap-2 py-2.5">
-            <Library className="h-4 w-4" /> My Arabic Movies
+            <Library className="h-4 w-4" /> مكتبتي
           </TabsTrigger>
           <TabsTrigger value="discover" className="gap-2 py-2.5">
-            <Sparkles className="h-4 w-4" /> Discover
+            <Sparkles className="h-4 w-4" /> استكشاف
           </TabsTrigger>
           <TabsTrigger value="schedule" className="gap-2 py-2.5">
-            <CalendarDays className="h-4 w-4" /> Releases
+            <CalendarDays className="h-4 w-4" /> الإصدارات
           </TabsTrigger>
         </TabsList>
 

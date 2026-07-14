@@ -71,6 +71,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const setView = useNav((s) => s.setView);
   const [tab, setTab] = useState<CollectionTab>("watchlist");
   const [search, setSearch] = useState("");
+  const isArabicWorld = world === "arabic-movies";
   const [sortBy, setSortBy] = useState("addedAt");
   const [page, setPage] = useState(0);
   const limit = 60;
@@ -210,28 +211,49 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
           icon={<WorldIcon className="w-12 h-12" />}
           title={
             search
-              ? "لا توجد نتائج مطابقة"
+              ? isArabicWorld
+                ? "لا توجد نتائج مطابقة"
+                : "No matching results"
               : tab === "watchlist"
-                ? `قائمة المشاهدة فارغة`
+                ? isArabicWorld
+                  ? "قائمة المشاهدة فارغة"
+                  : "Your watchlist is empty"
                 : tab === "not-started"
-                  ? "لا توجد مسلسلات لم تبدأها بعد"
+                  ? isArabicWorld
+                    ? "لا توجد مسلسلات لم تبدأها بعد"
+                    : "No shows you haven't started yet"
                   : tab === "watching"
-                    ? "لا توجد مسلسلات قيد المشاهدة حالياً"
-                    : "لم تتم مشاهدته أي شيء بعد"
+                    ? isArabicWorld
+                      ? "لا توجد مسلسلات قيد المشاهدة حالياً"
+                      : "No shows in progress right now"
+                    : isArabicWorld
+                      ? "لم تتم مشاهدته أي شيء بعد"
+                      : "Nothing watched yet"
           }
           description={
             search
-              ? `لم نجد أي عنصر يطابق "${search}". جرب كلمات مختلفة أو امسح البحث.`
+              ? isArabicWorld
+                ? `لم نجد أي عنصر يطابق "${search}". جرب كلمات مختلفة أو امسح البحث.`
+                : `No items matched "${search}". Try different keywords or clear the search.`
               : tab === "watchlist"
-                ? `ابدأ بإضافة ${world === "movies" ? "أفلام" : world === "arabic-movies" ? "أفلام عربية" : "أنمي"} من صفحة الاستكشاف.`
+                ? isArabicWorld
+                  ? `ابدأ بإضافة ${world === "arabic-movies" ? "أفلام عربية" : "أنمي"} من صفحة الاستكشاف.`
+                  : `Start adding ${world === "movies" ? "movies" : "anime"} from the Discover page.`
                 : tab === "watched"
-                  ? "اضغط زر 'Mark watched' على أي فيلم لتظهره هنا."
-                  : "أضف مسلسلات من صفحة الاستكشاف لتظهر هنا."
+                  ? isArabicWorld
+                    ? "اضغط زر 'Mark watched' على أي فيلم لتظهره هنا."
+                    : "Tap 'Mark watched' on any movie to see it here."
+                  : isArabicWorld
+                    ? "أضف مسلسلات من صفحة الاستكشاف لتظهر هنا."
+                    : "Add shows from Discover to see them here."
           }
           action={
             !search && (
-              <Button onClick={() => setView("discover")} size="sm">
-                استكشاف المزيد
+              <Button
+                onClick={() => setView(isArabicWorld ? (world === "arabic-movies" ? "arabic-movies" : "arabic-tv") : "discover")}
+                size="sm"
+              >
+                {isArabicWorld ? "استكشاف المزيد" : "Explore more"}
               </Button>
             )
           }
