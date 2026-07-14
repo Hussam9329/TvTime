@@ -570,6 +570,9 @@ export type RecentlyWatchedItem = {
   episodeName?: string | null;
   hasProfile: boolean;
   source: "media" | "watched-episode";
+  isArabic?: boolean;
+  isAnime?: boolean;
+  category?: "movie" | "tv" | "anime" | "arabic-movie" | "arabic-tv";
 };
 
 export function useRecentlyWatched(limit = 12) {
