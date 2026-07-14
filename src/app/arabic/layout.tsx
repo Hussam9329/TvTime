@@ -3,14 +3,13 @@ import type { Metadata } from "next";
 /**
  * Layout for /arabic/* routes.
  *
- * Sets lang="ar" and dir="rtl" on the page wrapper so:
- * - Screen readers pronounce Arabic content correctly
- * - Search engines understand the content language
- * - Future RTL-aware CSS can target [dir="rtl"]
+ * Sets lang="ar" on the page wrapper so search engines and screen readers
+ * understand the content language. We do NOT set dir="rtl" here because
+ * the AppShell (header, footer, nav) is shared and designed LTR.
  *
- * Note: we DON'T set <html dir> because the rest of the app is LTR English.
- * The dir="rtl" wrapper scopes RTL to the arabic section only. The header
- * and footer remain LTR for consistency with the rest of the app.
+ * dir="rtl" is applied INSIDE the Arabic view components themselves
+ * (arabic-movies-view.tsx, arabic-tv-view.tsx) so only the Arabic content
+ * section flips, while the app chrome stays LTR.
  */
 export const metadata: Metadata = {
   title: "المحتوى العربي — TvTime",
@@ -34,7 +33,7 @@ export default function ArabicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div dir="rtl" lang="ar">
+    <div lang="ar">
       {children}
     </div>
   );

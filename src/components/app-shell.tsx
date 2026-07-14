@@ -42,9 +42,6 @@ const StatsView = lazy(() =>
 const TvShowsView = lazy(() =>
   import("@/components/views/tv-tracking-view").then((m) => ({ default: m.TvShowsView })),
 );
-const MediaView = lazy(() =>
-  import("@/components/views/media-view").then((m) => ({ default: m.MediaView })),
-);
 const ArabicMoviesView = lazy(() =>
   import("@/components/views/arabic-movies-view").then((m) => ({ default: m.ArabicMoviesView })),
 );
@@ -131,7 +128,6 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
                 {view === "movies" && <MoviesView />}
                 {view === "anime" && <AnimeView />}
                 {view === "stats" && <StatsView />}
-                {view === "media" && <MediaView />}
                 {view === "tv-shows" && <TvShowsView />}
                 {view === "arabic-movies" && <ArabicMoviesView />}
                 {view === "arabic-tv" && <ArabicTvView />}

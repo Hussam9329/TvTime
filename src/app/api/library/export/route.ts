@@ -18,7 +18,7 @@ import { normalizeMedia } from "@/lib/media-normalize";
  * {
  *   version: 4,
  *   exportedAt: string,
- *   app: "CineTrack",
+ *   app: "TvTime",
  *   source: string,
  *   user: { name, avatar, createdAt },
  *   library: { media: [...], watchedEpisodes: [...], episodeRatings: [...] }
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
         const headerScalars = [
           `"version":4`,
           `"exportedAt":${JSON.stringify(new Date().toISOString())}`,
-          `"app":${JSON.stringify("CineTrack")}`,
+          `"app":${JSON.stringify("TvTime")}`,
           `"source":${JSON.stringify("Media+WatchedEpisode+Rating:episode-only")}`,
           `"user":${JSON.stringify({ name: user.name, avatar: user.avatar, createdAt: user.createdAt })}`,
         ];

@@ -99,7 +99,7 @@ export function Header() {
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                   <Film className="w-5 h-5 text-primary-foreground" />
                 </div>
-                <span className="text-gradient font-extrabold text-lg">CineTrack</span>
+                <span className="text-gradient font-extrabold text-lg">TvTime</span>
               </SheetTitle>
             </SheetHeader>
             <nav className="p-3 flex flex-col gap-1">
@@ -126,12 +126,12 @@ export function Header() {
         <button
           onClick={() => setView("home")}
           className="flex items-center gap-2 flex-shrink-0"
-          aria-label="CineTrack home"
+          aria-label="TvTime home"
         >
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
             <Film className="w-5 h-5 sm:w-5 sm:h-5 text-primary-foreground" />
           </div>
-          <span className="text-gradient font-extrabold text-lg sm:text-xl hidden sm:block">CineTrack</span>
+          <span className="text-gradient font-extrabold text-lg sm:text-xl hidden sm:block">TvTime</span>
         </button>
 
         {/* Desktop nav */}
