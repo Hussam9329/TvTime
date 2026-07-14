@@ -1,16 +1,16 @@
 "use client";
 
-import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useFollowing, useStats, useShowProgress, useWatchedMovieToggle } from "@/hooks/use-tmdb";
+import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useFollowing, useStats, useShowProgress, useWatchedMovieToggle, useRecentlyWatched } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { ContinueWatchingSlides } from "@/components/media/continue-watching-slides";
-import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X, Languages } from "lucide-react";
+import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X, Languages, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
 import { SafeImage } from "@/components/media/safe-image";
-import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 
@@ -30,7 +30,10 @@ export function HomeView() {
   const userName = useNav((s) => s.userName);
 
   const standardTrending = (trending.data?.results ?? []).filter((media) => !isArabicMediaItem(media));
-  const heroItem = standardTrending.find((media) => media.backdrop_path && (media.overview?.length || 0) > 100) || standardTrending[0];
+
+  // Build Featured slides: one from each watched category + trending
+  const recently = useRecentlyWatched(50);
+  const featuredSlides = buildFeaturedSlides(standardTrending, recently.data?.items ?? []);
 
   // Compute greeting directly from current hour — no setTimeout(0) delay
   // that caused a flash from "Good evening" to the correct greeting.
@@ -58,8 +61,8 @@ export function HomeView() {
         )}
       </div>
 
-      {/* Hero featured */}
-      {heroItem && <Hero item={heroItem} />}
+      {/* Hero featured — rotating carousel from watched + trending */}
+      {featuredSlides.length > 0 && <FeaturedCarousel slides={featuredSlides} />}
 
       {/* Quick stats */}
       {stats.data && (
@@ -189,70 +192,193 @@ function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactN
     </button>
   );
 }
+// ── Featured Carousel ────────────────────────────────────────────────────
+type FeaturedSlide = {
+  id: number;
+  title: string;
+  overview: string;
+  backdropPath: string | null;
+  posterPath: string | null;
+  year: string;
+  voteAverage: number;
+  mediaType: "movie" | "tv";
+  badge: string;
+  badgeIcon: React.ElementType;
+  badgeColor: string;
+};
 
-function Hero({ item }: { item: any }) {
+const CATEGORY_BADGE_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  trending: { label: "Trending", icon: Flame, color: "bg-primary/20 text-primary" },
+  movie: { label: "Last Movie Watched", icon: Film, color: "bg-blue-500/20 text-blue-400" },
+  tv: { label: "Last TV Watched", icon: Tv, color: "bg-purple-500/20 text-purple-400" },
+  anime: { label: "Last Anime Watched", icon: Sparkles, color: "bg-fuchsia-500/20 text-fuchsia-400" },
+  "arabic-movie": { label: "آخر فيلم عربي", icon: Film, color: "bg-emerald-500/20 text-emerald-400" },
+  "arabic-tv": { label: "آخر مسلسل عربي", icon: Tv, color: "bg-amber-500/20 text-amber-400" },
+};
+
+function buildFeaturedSlides(trending: any[], recentlyItems: any[]): FeaturedSlide[] {
+  const slides: FeaturedSlide[] = [];
+  const seenIds = new Set<number>();
+
+  // 1. Trending
+  const trendingItem = trending.find((m) => m.backdrop_path && (m.overview?.length || 0) > 80);
+  if (trendingItem) {
+    const isTv = trendingItem.media_type === "tv" || !trendingItem.title;
+    slides.push({
+      id: trendingItem.id,
+      title: getTitle(trendingItem),
+      overview: trendingItem.overview || "",
+      backdropPath: trendingItem.backdrop_path,
+      posterPath: trendingItem.poster_path,
+      year: getYear(trendingItem),
+      voteAverage: trendingItem.vote_average || 0,
+      mediaType: isTv ? "tv" : "movie",
+      badge: "Trending",
+      badgeIcon: Flame,
+      badgeColor: "bg-primary/20 text-primary",
+    });
+    seenIds.add(trendingItem.id);
+  }
+
+  // 2. One per recently-watched category
+  const seenCats = new Set<string>();
+  for (const item of recentlyItems) {
+    const cat = item.category;
+    if (!cat || seenCats.has(cat) || seenIds.has(item.tmdbId)) continue;
+    seenCats.add(cat);
+
+    const meta = CATEGORY_BADGE_META[cat];
+    if (!meta) continue;
+
+    slides.push({
+      id: item.tmdbId,
+      title: item.title,
+      overview: item.episodeName ? `S${item.seasonNumber}E${item.episodeNumber} — ${item.episodeName}` : "",
+      backdropPath: item.posterPath ? item.posterPath.replace("w500", "w1280") : null,
+      posterPath: item.posterPath,
+      year: "",
+      voteAverage: 0,
+      mediaType: item.kind,
+      badge: meta.label,
+      badgeIcon: meta.icon,
+      badgeColor: meta.color,
+    });
+    seenIds.add(item.tmdbId);
+  }
+
+  return slides.slice(0, 6);
+}
+
+function FeaturedCarousel({ slides }: { slides: FeaturedSlide[] }) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
-  const setView = useNav((s) => s.setView);
-  const mediaType = item.media_type === "tv" || !item.title ? "tv" : "movie";
-  
+  const [current, setCurrent] = useState(0);
+
+  const next = useCallback(() => setCurrent((c) => (c + 1) % slides.length), [slides.length]);
+  const prev = useCallback(() => setCurrent((c) => (c - 1 + slides.length) % slides.length), [slides.length]);
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const timer = setInterval(next, 6000);
+    return () => clearInterval(timer);
+  }, [next, slides.length]);
+
+  const slide = slides[current];
+  if (!slide) return null;
+  const BadgeIcon = slide.badgeIcon;
 
   return (
     <motion.section
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
-      className="relative rounded-2xl overflow-hidden border border-border/50 mb-0"
+      transition={{ duration: 0.4 }}
+      className="relative rounded-2xl overflow-hidden border border-border/50"
     >
-      <div className="relative aspect-[16/10] sm:aspect-[21/9] w-full">
-        <SafeImage
-          src={img(item.backdrop_path, "w1280")}
-          alt={getTitle(item)}
-          fill
-          variant="backdrop"
-          priority
-          className="absolute inset-0"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative aspect-[16/10] sm:aspect-[21/9] w-full"
+        >
+          <SafeImage
+            src={slide.backdropPath ? img(slide.backdropPath, "w1280") : imgOrPlaceholder(slide.posterPath, "w500")}
+            alt={slide.title}
+            fill
+            variant="backdrop"
+            priority={current === 0}
+            className="absolute inset-0"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
 
-        <div className="absolute inset-0 flex items-end p-4 sm:p-8 lg:p-12">
-          <div className="max-w-2xl">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/20 backdrop-blur text-primary text-xs font-bold uppercase tracking-wide">
-                <Flame className="w-3 h-3" /> Featured
-              </span>
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                {mediaType === "movie" ? "Movie" : "TV Show"}
-              </span>
-              {getYear(item) && <span className="text-xs text-muted-foreground">{getYear(item)}</span>}
-              {item.vote_average > 0 && (
-                <span className="flex items-center gap-1 text-xs text-amber-400">
-                  <Star className="w-3 h-3 fill-amber-400" /> {item.vote_average.toFixed(1)}
+          <div className="absolute inset-0 flex items-end p-4 sm:p-8 lg:p-12">
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full backdrop-blur text-xs font-bold uppercase tracking-wide ${slide.badgeColor}`}>
+                  <BadgeIcon className="w-3 h-3" /> {slide.badge}
                 </span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                  {slide.mediaType === "movie" ? "Movie" : "TV Show"}
+                </span>
+                {slide.year && <span className="text-xs text-muted-foreground">{slide.year}</span>}
+                {slide.voteAverage > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-amber-400">
+                    <Star className="w-3 h-3 fill-amber-400" /> {slide.voteAverage.toFixed(1)}
+                  </span>
+                )}
+              </div>
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground drop-shadow-lg mb-2 sm:mb-4">
+                {slide.title}
+              </h1>
+              {slide.overview && (
+                <p className="text-sm sm:text-base text-foreground/80 line-clamp-2 sm:line-clamp-3 mb-4 max-w-xl">
+                  {slide.overview}
+                </p>
               )}
-            </div>
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground drop-shadow-lg mb-0 sm:mb-4">
-              {getTitle(item)}
-            </h1>
-            <p className="text-sm sm:text-base text-foreground/80 line-clamp-2 sm:line-clamp-3 mb-4 max-w-xl">
-              {item.overview}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button className="h-10" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
-                <Play className="w-4 h-4 mr-1.5 fill-current" /> View Details
-              </Button>
-              <Button size="sm" variant="secondary" className="h-9" onClick={() => setView("discover")}>
-                <Clock className="w-4 h-4 mr-1.5" /> Browse More
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button className="h-10" onClick={() => (slide.mediaType === "movie" ? goMovie(slide.id) : goTv(slide.id))}>
+                  <Play className="w-4 h-4 mr-1.5 fill-current" /> View Details
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {slides.length > 1 && (
+        <>
+          <button
+            onClick={prev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10"
+            aria-label="Previous"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={next}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10"
+            aria-label="Next"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrent(i)}
+                className={`h-1.5 rounded-full transition-all ${i === current ? "w-6 bg-primary" : "w-1.5 bg-white/40"}`}
+                aria-label={`Slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </motion.section>
   );
 }
-
 function WatchNextCTA() {
   const following = useFollowing();
   const setView = useNav((s) => s.setView);
