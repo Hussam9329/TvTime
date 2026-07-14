@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
-import { issueSession, getOwnerPassword } from "@/lib/auth";
+import { timingSafeEqual, createHash } from "node:crypto";
+import { issueSession, getOwnerPassword, getOwnerUsername } from "@/lib/auth";
 
 /**
  * POST /api/auth/login
- * Body: { "password": string }
+ * Body: { "username": string, "password": string }
  *
  * Sets an httpOnly JWT cookie on success.
- * Returns 401 for wrong password, 503 when auth is not configured.
+ * Returns 401 for wrong credentials, 503 when auth is not configured.
  */
 export async function POST(req: NextRequest) {
   const ownerPassword = getOwnerPassword();
+  const ownerUsername = getOwnerUsername();
+
   if (!ownerPassword) {
     return NextResponse.json(
       {
@@ -21,7 +23,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { password?: unknown } = {};
+  let body: { username?: unknown; password?: unknown } = {};
   try {
     body = await req.json();
   } catch {
@@ -31,7 +33,28 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { password } = body;
+  const { username, password } = body;
+
+  // If APP_USERNAME is configured, the request must include a matching username.
+  if (ownerUsername) {
+    if (typeof username !== "string" || username.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Username is required.", code: "USERNAME_REQUIRED" },
+        { status: 400 }
+      );
+    }
+    // Constant-time username comparison.
+    const uHash = createHash("sha256").update(String(username).trim().normalize("NFC"), "utf8").digest();
+    const oHash = createHash("sha256").update(ownerUsername.normalize("NFC"), "utf8").digest();
+    if (!timingSafeEqual(uHash, oHash)) {
+      await new Promise((r) => setTimeout(r, 400));
+      return NextResponse.json(
+        { error: "Invalid credentials.", code: "INVALID_CREDENTIALS" },
+        { status: 401 }
+      );
+    }
+  }
+
   if (typeof password !== "string" || password.length === 0) {
     return NextResponse.json(
       { error: "Password is required.", code: "PASSWORD_REQUIRED" },
@@ -39,19 +62,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Constant-time comparison to mitigate timing attacks. We hash both sides
-  // with SHA-256 first so the lengths always match — leaking the password
-  // length via early return is otherwise unavoidable with raw timingSafeEqual.
-  const { createHash } = await import("node:crypto");
-  const hash = (s: string) => createHash("sha256").update(s.normalize("NFC"), "utf8").digest();
-  const a = hash(password);
-  const b = hash(ownerPassword);
-  const equals = timingSafeEqual(a, b);
-  if (!equals) {
-    // Tiny delay to slow brute force without locking out the single legit user.
+  // Constant-time password comparison.
+  const pHash = createHash("sha256").update(password.normalize("NFC"), "utf8").digest();
+  const oPHash = createHash("sha256").update(ownerPassword.normalize("NFC"), "utf8").digest();
+  const passwordOk = timingSafeEqual(pHash, oPHash);
+  if (!passwordOk) {
     await new Promise((r) => setTimeout(r, 400));
     return NextResponse.json(
-      { error: "Invalid password.", code: "INVALID_CREDENTIALS" },
+      { error: "Invalid credentials.", code: "INVALID_CREDENTIALS" },
       { status: 401 }
     );
   }
