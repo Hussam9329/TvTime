@@ -4,6 +4,8 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -98,6 +100,12 @@ export default function RootLayout({
         <Providers>{children}</Providers>
         <Toaster />
         <SonnerToaster position="top-center" richColors />
+        {/* Vercel Analytics — page views, unique visitors, Web Vitals.
+            No env vars needed; auto-detects the Vercel project. */}
+        <Analytics />
+        {/* Vercel Speed Insights — Core Web Vitals (LCP, FID, CLS, INP)
+            per route. Visible in Vercel dashboard → Speed Insights tab. */}
+        <SpeedInsights />
       </body>
     </html>
   );
