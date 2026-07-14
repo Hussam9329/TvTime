@@ -207,10 +207,13 @@ function Hero({ item }: { item: any }) {
       className="relative rounded-2xl overflow-hidden border border-border/50 mb-2"
     >
       <div className="relative aspect-[16/10] sm:aspect-[21/9] w-full">
-        <img
-          src={img(item.backdrop_path, "original")}
+        <SafeImage
+          src={img(item.backdrop_path, "w1280")}
           alt={getTitle(item)}
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          variant="backdrop"
+          priority
+          className="absolute inset-0"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
@@ -286,7 +289,7 @@ function FollowedShowCard({ tmdbId, title, posterPath, onClick }: { tmdbId: numb
     >
       <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
         {posterPath ? (
-          <img src={img(posterPath, "w185")} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+          <SafeImage src={img(posterPath, "w185")} alt={title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs p-2 text-center">{title}</div>
         )}
@@ -411,10 +414,12 @@ function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
         <SafeImage
           src={posterSrc}
           alt={title}
+          fill
+          variant="poster"
           loading="eager"
           decoding="async"
           fetchPriority="high"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          className="group-hover:scale-105 transition-transform"
         />
         <div className="absolute top-1.5 right-1.5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center gap-1 px-1.5 h-5 text-white pointer-events-none">
           <Check className="w-3 h-3" />

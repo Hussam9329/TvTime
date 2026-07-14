@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SafeImage } from "@/components/media/safe-image";
 import {
   Sheet,
   SheetContent,
@@ -569,8 +570,8 @@ function AgendaEpisode({ episode, onClick }: { episode: CalendarScheduleEpisode;
   return (
     <Card className="overflow-hidden p-0 transition-colors hover:border-primary/40">
       <button type="button" onClick={onClick} className="flex w-full items-center gap-3 p-3 text-left">
-        <div className="h-16 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
-          <img src={imgOrPlaceholder(episode.showPoster, "w92")} alt={episode.showTitle} className="h-full w-full object-cover" loading="lazy" />
+        <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
+          <SafeImage src={imgOrPlaceholder(episode.showPoster, "w92")} alt={episode.showTitle} fill variant="poster" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -639,8 +640,8 @@ function UpcomingPanel({ episodes, todayKey, onEpisode }: {
                     onClick={() => onEpisode(episode)}
                     className="flex w-full items-center gap-3 rounded-lg border border-border/50 p-2 text-left transition-colors hover:bg-accent/50"
                   >
-                    <div className="h-10 w-8 shrink-0 overflow-hidden rounded bg-muted">
-                      <img src={imgOrPlaceholder(episode.showPoster, "w92")} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    <div className="relative h-10 w-8 shrink-0 overflow-hidden rounded bg-muted">
+                      <SafeImage src={imgOrPlaceholder(episode.showPoster, "w92")} alt="" fill variant="poster" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-semibold">{episode.showTitle}</p>
@@ -675,8 +676,8 @@ function YourSchedulePanel({ shows, onShow, onDiscover }: {
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-4">
         {shows.slice(0, 8).map((show) => (
           <button key={show.tmdbId} type="button" onClick={() => onShow(show.tmdbId)} className="group text-left">
-            <div className="aspect-[2/3] overflow-hidden rounded-md bg-muted ring-1 ring-border/50 transition group-hover:ring-primary/60">
-              <img src={imgOrPlaceholder(show.poster, "w185")} alt={show.title} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+            <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-muted ring-1 ring-border/50 transition group-hover:ring-primary/60">
+              <SafeImage src={imgOrPlaceholder(show.poster, "w185")} alt={show.title} fill variant="poster" className="transition-transform group-hover:scale-105" />
             </div>
             <p className="mt-1 truncate text-[10px] font-medium">{show.title}</p>
           </button>

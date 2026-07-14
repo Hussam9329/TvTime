@@ -11,6 +11,7 @@ import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useState } from "react";
+import { SafeImage } from "@/components/media/safe-image";
 import {
   buildEpisodeWatchPlan,
   buildSeasonWatchPlan,
@@ -166,7 +167,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
           <div className="flex">
             <button onClick={onGo} className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-muted">
               {poster ? (
-                <img src={img(poster, "w185")} alt={title} className="w-full h-full object-cover" loading="lazy" />
+                <SafeImage src={img(poster, "w185")} alt={title} fill variant="poster" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>
               )}
@@ -201,8 +202,8 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
         className="flex-shrink-0 w-[280px] sm:w-[320px]"
       >
         <Card className="p-3 h-[140px] flex items-center gap-3 hover:border-primary/40 transition-colors">
-          <button onClick={onGo} className="w-16 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
-            {poster ? <img src={img(poster, "w92")} alt={title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
+          <button onClick={onGo} className="relative w-16 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+            {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
           </button>
           <div>
             <p className="text-sm font-semibold line-clamp-1">{title}</p>
@@ -228,9 +229,9 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
         <div className="flex">
           <button onClick={onGo} className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-muted">
             {ep.still_path ? (
-              <img src={img(ep.still_path, "w300")} alt={ep.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+              <SafeImage src={img(ep.still_path, "w300")} alt={ep.name} fill variant="still" className="group-hover:scale-105 transition-transform" />
             ) : poster ? (
-              <img src={img(poster, "w185")} alt={title} className="w-full h-full object-cover" loading="lazy" />
+              <SafeImage src={img(poster, "w185")} alt={title} fill variant="poster" />
             ) : (
               <div className="w-full h-full flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>
             )}

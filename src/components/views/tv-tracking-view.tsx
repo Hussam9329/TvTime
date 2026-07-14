@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
+import { SafeImage } from "@/components/media/safe-image";
 import { Play, ChevronRight, Tv, Loader2, CheckCircle2, Clock, Calendar, SkipForward, ListChecks, Clapperboard, BookOpen, Sparkles, Trophy, Star, Zap, Layers } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
@@ -280,7 +281,7 @@ function AllShowCard({ show, onGo, world }: { show: any; onGo: () => void; world
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
         <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
-            <img src={img(show.poster, "w92")} alt={show.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
           )}
@@ -542,7 +543,7 @@ function UpToDateShowCard({ show, onGo }: { show: any; onGo: () => void }) {
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
         <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
-            <img src={img(show.poster, "w92")} alt={show.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
           )}
@@ -593,7 +594,7 @@ function FinishedShowCard({ show, onGo }: { show: any; onGo: () => void }) {
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
         <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
-            <img src={img(show.poster, "w92")} alt={show.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
           )}
@@ -805,7 +806,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
         <Card className="overflow-hidden p-0 border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 transition-all group">
           <div className="flex">
             <button onClick={onGo} className="relative w-28 h-28 flex-shrink-0 overflow-hidden bg-muted">
-              {poster ? <img src={img(poster, "w185")} alt={title} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>}
+              {poster ? <SafeImage src={img(poster, "w185")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>}
               <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
                 <CheckCircle2 className="w-8 h-8 text-emerald-400" />
               </div>
@@ -830,8 +831,8 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
   if (!nextEp) {
     return (
       <Card className="p-3 h-[140px] flex items-center gap-3">
-        <button onClick={onGo} className="w-16 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
-          {poster ? <img src={img(poster, "w92")} alt={title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
+        <button onClick={onGo} className="relative w-16 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+          {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
         </button>
         <div>
           <p className="text-sm font-semibold line-clamp-1">{title}</p>
@@ -852,9 +853,9 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
           <div className="flex">
             <button onClick={onGo} className="relative w-28 h-28 flex-shrink-0 overflow-hidden bg-muted">
               {ep.still_path ? (
-                <img src={img(ep.still_path, "w300")} alt={ep.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+                <SafeImage src={img(ep.still_path, "w300")} alt={ep.name} fill variant="still" className="group-hover:scale-105 transition-transform" />
               ) : poster ? (
-                <img src={img(poster, "w185")} alt={title} className="w-full h-full object-cover" loading="lazy" />
+                <SafeImage src={img(poster, "w185")} alt={title} fill variant="poster" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>
               )}
@@ -939,9 +940,9 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
-        <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+        <div className="relative w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
           {poster ? (
-            <img src={img(poster, "w92")} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+            <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
           )}
@@ -1013,8 +1014,8 @@ function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
-        <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
-          {poster ? <img src={img(poster, "w92")} alt={title} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
+        <div className="relative w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+          {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{title}</h4>
@@ -1083,8 +1084,8 @@ function HaventWatchedCard({ showId, title, poster, onGo, type }: { showId: numb
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
-        <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
-          {poster ? <img src={img(poster, "w92")} alt={title} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
+        <div className="relative w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+          {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{title}</h4>
