@@ -212,18 +212,18 @@ export function useSearchAccumulated(query: string) {
   };
 }
 
-export function useMovieDetail(id: number | null) {
+export function useMovieDetail(id: number | null, arabic: boolean = false) {
   return useQuery({
-    queryKey: ["tmdb", "movie", id],
-    queryFn: () => tmdbGet<MovieDetail>(`movie/${id}`),
+    queryKey: ["tmdb", "movie", id, arabic ? "ar" : "en"],
+    queryFn: () => tmdbGet<MovieDetail>(`movie/${id}`, arabic ? { arabic: "true" } : {}),
     enabled: id != null,
   });
 }
 
-export function useTvDetail(id: number | null) {
+export function useTvDetail(id: number | null, arabic: boolean = false) {
   return useQuery({
-    queryKey: ["tmdb", "tv", id],
-    queryFn: () => tmdbGet<TvDetail>(`tv/${id}`),
+    queryKey: ["tmdb", "tv", id, arabic ? "ar" : "en"],
+    queryFn: () => tmdbGet<TvDetail>(`tv/${id}`, arabic ? { arabic: "true" } : {}),
     enabled: id != null,
   });
 }
