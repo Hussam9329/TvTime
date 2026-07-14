@@ -1,8 +1,9 @@
 "use client";
 
-import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useFollowing, useStats, useShowProgress, useWatchedMovieToggle, useRecentlyWatched } from "@/hooks/use-tmdb";
+import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useFollowing, useStats, useShowProgress, useWatchedMovieToggle } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
+import { ContinueWatchingSlides } from "@/components/media/continue-watching-slides";
 import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
@@ -115,8 +116,8 @@ export function HomeView() {
         </div>
       )}
 
-      {/* Recently watched movies and shows */}
-      <RecentlyWatched />
+      {/* Continue Watching — one slide per category (movie, TV, anime, Arabic) */}
+      <ContinueWatchingSlides />
 
       <MediaRow
         title="Trending Now"
@@ -249,140 +250,6 @@ function Hero({ item }: { item: any }) {
         </div>
       </div>
     </motion.section>
-  );
-}
-
-function RecentlyWatched() {
-  const recently = useRecentlyWatched(12);
-  const goMovie = useNav((state) => state.goMovie);
-  const goTv = useNav((state) => state.goTv);
-  const items = recently.data?.items ?? [];
-
-  const handleGo = (item: any) => {
-    const tmdbId = Number(item.tmdbId);
-    if (!Number.isFinite(tmdbId) || tmdbId <= 0 || !item.hasProfile) {
-      toast.error("This recently watched item is missing a valid TMDB profile id.");
-      return;
-    }
-    if (item.kind === "tv") goTv(tmdbId);
-    else goMovie(tmdbId);
-  };
-
-  if (recently.isLoading) {
-    return (
-      <section className="mb-0">
-        <div className="flex items-center gap-2 mb-3 px-1">
-          <Clock className="w-5 h-5 text-primary" />
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight">Recently Watched</h2>
-        </div>
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="flex-shrink-0 w-[130px] sm:w-[160px]">
-              <div className="aspect-[2/3] shimmer rounded-lg" />
-              <div className="h-3 shimmer rounded mt-2" /><div className="h-2.5 shimmer rounded mt-1 w-3/4" />
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  if (items.length === 0) return null;
-
-  return (
-    <section className="mb-0">
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <Clock className="w-5 h-5 text-primary" />
-        <h2 className="text-lg sm:text-xl font-bold tracking-tight">Recently Watched</h2>
-        <span className="text-xs text-muted-foreground ml-1">({recently.data?.total ?? items.length})</span>
-      </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-        {items.map((item) => (
-          <RecentlyWatchedCard key={`${item.kind}-${item.tmdbId ?? item.id}-${item.watchedAt}`} item={item} onGo={() => handleGo(item)} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
-  const unwatchToggle = useWatchedMovieToggle();
-  const title = item.title || "Untitled";
-  const posterSrc = imgOrPlaceholder(item.posterPath || null, "w342");
-  const isMovie = item.kind === "movie";
-
-  const handleUnwatch = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!isMovie || !item.tmdbId) {
-      toast.info(isMovie ? "This movie is missing a valid TMDB id." : "Episode unwatching is handled from the TV profile.");
-      return;
-    }
-    unwatchToggle.mutate(
-      {
-        action: "remove",
-        tmdbId: Number(item.tmdbId),
-        title,
-        posterPath: item.posterPath,
-      },
-      {
-        onSuccess: () => {
-          toast.success(`Removed "${title}" from watched`);
-        },
-        onError: () => {
-          toast.error("Failed to unwatch");
-        },
-      }
-    );
-  };
-
-  return (
-    <div
-      role="button"
-      tabIndex={item.hasProfile ? 0 : -1}
-      aria-disabled={!item.hasProfile}
-      onClick={item.hasProfile ? onGo : undefined}
-      onKeyDown={(event) => {
-        if (item.hasProfile && (event.key === "Enter" || event.key === " ")) {
-          event.preventDefault();
-          onGo();
-        }
-      }}
-      className="flex-shrink-0 w-[130px] sm:w-[160px] group cursor-pointer relative text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
-      title={title}
-    >
-      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
-        <SafeImage
-          src={posterSrc}
-          alt={title}
-          fill
-          variant="poster"
-          loading="lazy"
-          decoding="async"
-          className="group-hover:scale-105 transition-transform"
-        />
-        <div className="absolute top-1.5 right-1.5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center gap-1 px-1.5 h-5 text-white pointer-events-none">
-          <Check className="w-3 h-3" />
-          <span className="text-[9px] font-bold uppercase">{isMovie ? "Movie" : "TV"}</span>
-        </div>
-        {isMovie && (
-          <button
-            type="button"
-            onClick={handleUnwatch}
-            disabled={unwatchToggle.isPending}
-            aria-label="Remove from watched"
-            title="Remove from watched"
-            className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-black/70 backdrop-blur flex items-center justify-center text-white/90 hover:bg-rose-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-      <p className="mt-1.5 text-xs font-semibold line-clamp-1">{title}</p>
-      <p className="text-[10px] text-muted-foreground line-clamp-1">
-        {item.subtitle ? `${item.subtitle} • ` : ""}{item.watchedAt ? new Date(item.watchedAt).toLocaleDateString() : "—"}
-      </p>
-    </div>
   );
 }
 
