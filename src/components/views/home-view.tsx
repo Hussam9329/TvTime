@@ -201,7 +201,7 @@ function Hero({ item }: { item: any }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="relative rounded-2xl overflow-hidden border border-border/50 mb-2"
+      className="relative rounded-2xl overflow-hidden border border-border/50 mb-0"
     >
       <div className="relative aspect-[16/10] sm:aspect-[21/9] w-full">
         <SafeImage
@@ -231,7 +231,7 @@ function Hero({ item }: { item: any }) {
                 </span>
               )}
             </div>
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground drop-shadow-lg mb-2 sm:mb-4">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground drop-shadow-lg mb-0 sm:mb-4">
               {getTitle(item)}
             </h1>
             <p className="text-sm sm:text-base text-foreground/80 line-clamp-2 sm:line-clamp-3 mb-4 max-w-xl">
@@ -270,14 +270,14 @@ function RecentlyWatched() {
 
   if (recently.isLoading) {
     return (
-      <section className="mb-8">
+      <section className="mb-0">
         <div className="flex items-center gap-2 mb-3 px-1">
           <Clock className="w-5 h-5 text-primary" />
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">Recently Watched</h2>
         </div>
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="flex-shrink-0 w-[110px] sm:w-[130px]">
+            <div key={index} className="flex-shrink-0 w-[130px] sm:w-[160px]">
               <div className="aspect-[2/3] shimmer rounded-lg" />
               <div className="h-3 shimmer rounded mt-2" />
             </div>
@@ -290,7 +290,7 @@ function RecentlyWatched() {
   if (items.length === 0) return null;
 
   return (
-    <section className="mb-8">
+    <section className="mb-0">
       <div className="flex items-center gap-2 mb-3 px-1">
         <Clock className="w-5 h-5 text-primary" />
         <h2 className="text-lg sm:text-xl font-bold tracking-tight">Recently Watched</h2>
@@ -348,7 +348,7 @@ function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
           onGo();
         }
       }}
-      className="flex-shrink-0 w-[110px] sm:w-[130px] group cursor-pointer relative text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+      className="flex-shrink-0 w-[130px] sm:w-[160px] group cursor-pointer relative text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
       title={title}
     >
       <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
@@ -378,7 +378,7 @@ function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
           </button>
         )}
       </div>
-      <p className="mt-1.5 text-xs font-medium line-clamp-1">{title}</p>
+      <p className="mt-1.5 text-xs font-semibold line-clamp-1">{title}</p>
       <p className="text-[10px] text-muted-foreground line-clamp-1">
         {item.subtitle ? `${item.subtitle} • ` : ""}{item.watchedAt ? new Date(item.watchedAt).toLocaleDateString() : "—"}
       </p>

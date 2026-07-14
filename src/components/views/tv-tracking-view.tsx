@@ -39,18 +39,18 @@ function deriveTrackingStatus(show: any): TrackingStatus {
 
 function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
   if (status === "finished") {
-    return <Badge className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0"><Trophy className="w-2.5 h-2.5 mr-1" /> Finished</Badge>;
+    return <Badge className="text-[11px] bg-emerald-500/20 text-emerald-400 border-0"><Trophy className="w-2.5 h-2.5 mr-1" /> Finished</Badge>;
   }
   if (status === "uptodate") {
-    return <Badge className="text-[9px] bg-cyan-500/20 text-cyan-400 border-0"><Zap className="w-2.5 h-2.5 mr-1" /> Up To Date</Badge>;
+    return <Badge className="text-[11px] bg-cyan-500/20 text-cyan-400 border-0"><Zap className="w-2.5 h-2.5 mr-1" /> Up To Date</Badge>;
   }
   if (status === "watching") {
-    return <Badge className="text-[9px] bg-blue-500/20 text-blue-400 border-0"><Play className="w-2.5 h-2.5 mr-1" /> Watching</Badge>;
+    return <Badge className="text-[11px] bg-blue-500/20 text-blue-400 border-0"><Play className="w-2.5 h-2.5 mr-1" /> Watching</Badge>;
   }
   if (status === "planned") {
-    return <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0"><BookOpen className="w-2.5 h-2.5 mr-1" /> Planned</Badge>;
+    return <Badge className="text-[11px] bg-purple-500/20 text-purple-400 border-0"><BookOpen className="w-2.5 h-2.5 mr-1" /> Planned</Badge>;
   }
-  return <Badge className="text-[9px] bg-slate-500/20 text-slate-300 border-0"><Clock className="w-2.5 h-2.5 mr-1" /> Not Started</Badge>;
+  return <Badge className="text-[11px] bg-slate-500/20 text-slate-300 border-0"><Clock className="w-2.5 h-2.5 mr-1" /> Not Started</Badge>;
 }
 
 export function TvShowsView({ world = "standard", embedded = false }: { world?: "standard" | "arabic"; embedded?: boolean }) {
@@ -81,7 +81,7 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {!embedded && (
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
@@ -99,7 +99,7 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
       )}
 
       {/* TV Shows filters, all backed by full-collection counters. */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
         <StatCard icon={<Layers className="w-5 h-5" />} label="All" value={counts?.all ?? "…"} color="from-purple-500/20 to-purple-500/5" />
         <StatCard icon={<BookOpen className="w-5 h-5" />} label="Watchlist" value={counts?.watchlist ?? counts?.planned ?? "…"} color="from-violet-500/20 to-violet-500/5" />
         <StatCard icon={<Zap className="w-5 h-5" />} label="Up To Date" value={counts?.uptodate ?? "…"} color="from-cyan-500/20 to-cyan-500/5" />
@@ -206,7 +206,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       </div>
 
       {tracking.isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {Array.from({ length: 12 }).map((_, i) => (
             <div key={i} className="h-[110px] shimmer rounded-lg" />
           ))}
@@ -219,7 +219,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
         />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {items.map((s: any) => (
               <AllShowCard key={s.id} show={{ ...s, _trackingStatus: s._trackingStatus ?? deriveTrackingStatus(s) }} onGo={() => s.tmdbId && onGo(s.tmdbId)} world={world} />
             ))}
@@ -290,7 +290,7 @@ function AllShowCard({ show, onGo, world }: { show: any; onGo: () => void; world
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{show.title}</h4>
           <div className="flex items-center gap-1 mt-1 flex-wrap">
             <TrackingStatusBadge status={trackingStatus} />
-            {show.isAnime && <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
+            {show.isAnime && <Badge className="text-[11px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
             {seasons != null && seasons > 0 && <Badge variant="secondary" className="text-[10px]">{seasons} season{seasons > 1 ? "s" : ""}</Badge>}
           </div>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -390,12 +390,12 @@ function UpToDateShowCard({ show, onGo }: { show: any; onGo: () => void }) {
         <div className="flex-1 min-w-0 flex flex-col">
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{show.title}</h4>
           <div className="flex items-center gap-1 mt-1 flex-wrap">
-            <Badge className="text-[9px] bg-cyan-500/20 text-cyan-400 border-0">
+            <Badge className="text-[11px] bg-cyan-500/20 text-cyan-400 border-0">
               <Zap className="w-2.5 h-2.5 mr-1" /> Up To Date
             </Badge>
-            {show.isAnime && <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
+            {show.isAnime && <Badge className="text-[11px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
             {show.seasons && <Badge variant="secondary" className="text-[10px]">{show.seasons} season{show.seasons > 1 ? "s" : ""}</Badge>}
-            <Badge className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0">Returning</Badge>
+            <Badge className="text-[11px] bg-emerald-500/20 text-emerald-400 border-0">Returning</Badge>
           </div>
           <div className="flex items-center gap-3 mt-1">
             {totalEps && <span className="text-[10px] text-muted-foreground">{totalEps} episodes watched</span>}
@@ -421,7 +421,7 @@ function UpToDateShowCard({ show, onGo }: { show: any; onGo: () => void }) {
 function FinishedShowCard({ show, onGo }: { show: any; onGo: () => void }) {
   const status = show.status;
   // For finished shows, we always show "Ended" badge
-  const statusBadge = <Badge className="text-[9px] bg-rose-500/20 text-rose-400 border-0">Ended</Badge>;
+  const statusBadge = <Badge className="text-[11px] bg-rose-500/20 text-rose-400 border-0">Ended</Badge>;
   const userRating = show.userRating;
   const totalEps = show.episodes;
 
@@ -441,10 +441,10 @@ function FinishedShowCard({ show, onGo }: { show: any; onGo: () => void }) {
         <div className="flex-1 min-w-0 flex flex-col">
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{show.title}</h4>
           <div className="flex items-center gap-1 mt-1 flex-wrap">
-            <Badge className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0">
+            <Badge className="text-[11px] bg-emerald-500/20 text-emerald-400 border-0">
               <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> Finished
             </Badge>
-            {show.isAnime && <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
+            {show.isAnime && <Badge className="text-[11px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
             {show.seasons && <Badge variant="secondary" className="text-[10px]">{show.seasons} season{show.seasons > 1 ? "s" : ""}</Badge>}
             {statusBadge}
           </div>
@@ -624,8 +624,8 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
               <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wide">All caught up!</p>
               <p className="text-sm font-semibold line-clamp-1 mt-0.5">{title}</p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="text-[9px] bg-emerald-500/15 text-emerald-400">{watchedCount}/{totalEpisodes} eps</Badge>
-                <Badge variant="secondary" className="text-[9px]">100%</Badge>
+                <Badge variant="secondary" className="text-[11px] bg-emerald-500/15 text-emerald-400">{watchedCount}/{totalEpisodes} eps</Badge>
+                <Badge variant="secondary" className="text-[11px]">100%</Badge>
               </div>
               <Button size="sm" variant="outline" className="h-9 text-xs mt-auto w-fit" onClick={onGo}>
                 View details <ChevronRight className="w-3 h-3 ml-1" />
@@ -672,7 +672,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
                 S{nextEp.seasonNumber}E{ep.episode_number}
               </span>
               {featured && (
-                <span className="absolute bottom-1 right-1 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                <span className="absolute bottom-1 right-1 bg-primary text-primary-foreground text-[11px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
                   Watch Next
                 </span>
               )}
@@ -743,7 +743,7 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
   // Not Started badge if 0 watched
   const notStarted = watchedCount === 0 && !isLoading;
   const watchBadge = notStarted
-    ? <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">Not Started</Badge>
+    ? <Badge className="text-[11px] bg-purple-500/20 text-purple-400 border-0">Not Started</Badge>
     : null;
 
   return (
@@ -793,7 +793,7 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
 
 function UpcomingList({ shows, onGo }: { shows: any[]; onGo: (id: number) => void }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {shows.map((s) => (
         <UpcomingCard key={s.id} showId={s.tmdbId} title={s.title} poster={s.poster} onGo={() => onGo(s.tmdbId)} />
       ))}
@@ -829,7 +829,7 @@ function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: 
         <div className="flex-1 min-w-0 flex flex-col">
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{title}</h4>
           <div className="flex items-center gap-1 mt-1 flex-wrap">
-            <Badge className="text-[9px] bg-amber-500/20 text-amber-400 border-0">
+            <Badge className="text-[11px] bg-amber-500/20 text-amber-400 border-0">
               <Calendar className="w-2.5 h-2.5 mr-1" /> In {daysUntil} day{daysUntil !== 1 ? "s" : ""}
             </Badge>
             {statusBadge}
@@ -851,19 +851,19 @@ function getStatusBadge(status?: string | null): React.ReactNode {
   if (!status) return null;
   const s = status.toLowerCase();
   if (s.includes("ended") || s.includes("canceled")) {
-    return <Badge className="text-[9px] bg-rose-500/20 text-rose-400 border-0">Ended</Badge>;
+    return <Badge className="text-[11px] bg-rose-500/20 text-rose-400 border-0">Ended</Badge>;
   }
   if (s.includes("returning") || s.includes("continuous") || s.includes("production")) {
-    return <Badge className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0">Returning</Badge>;
+    return <Badge className="text-[11px] bg-emerald-500/20 text-emerald-400 border-0">Returning</Badge>;
   }
-  return <Badge variant="secondary" className="text-[9px]">{status}</Badge>;
+  return <Badge variant="secondary" className="text-[11px]">{status}</Badge>;
 }
 
 // ============ HAVEN'T WATCHED / HAVEN'T STARTED LIST ============
 
 function HaventWatchedList({ shows, onGo, type }: { shows: any[]; onGo: (id: number) => void; type: "while" | "started" }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {shows.map((s) => (
         <HaventWatchedCard key={s.id} showId={s.tmdbId} title={s.title} poster={s.poster} onGo={() => onGo(s.tmdbId)} type={type} />
       ))}
@@ -900,11 +900,11 @@ function HaventWatchedCard({ showId, title, poster, onGo, type }: { showId: numb
           <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{title}</h4>
           <div className="flex items-center gap-1 mt-1 flex-wrap">
             {type === "started" ? (
-              <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">
+              <Badge className="text-[11px] bg-purple-500/20 text-purple-400 border-0">
                 <Sparkles className="w-2.5 h-2.5 mr-1" /> Not started
               </Badge>
             ) : (
-              <Badge className="text-[9px] bg-amber-500/20 text-amber-400 border-0">
+              <Badge className="text-[11px] bg-amber-500/20 text-amber-400 border-0">
                 <Clock className="w-2.5 h-2.5 mr-1" /> {daysSinceLastWatch} days ago
               </Badge>
             )}
