@@ -71,7 +71,20 @@ function LoginPageInner() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || "Login failed.");
+        // For rate-limited responses, show the message but keep the form
+        // disabled briefly so the user doesn't immediately retry.
+        if (data?.code === "RATE_LIMITED") {
+          setError(data?.error || "تم تجاوز عدد المحاولات. حاول لاحقاً.");
+        } else if (data?.code === "INVALID_CREDENTIALS") {
+          const remaining = data?.remainingAttempts;
+          setError(
+            typeof remaining === "number" && remaining > 0
+              ? `بيانات الدخول غير صحيحة. ${remaining} محاولات متبقية.`
+              : "بيانات الدخول غير صحيحة."
+          );
+        } else {
+          setError(data?.error || "فشل تسجيل الدخول.");
+        }
         return;
       }
       const next = search.get("next") || "/";

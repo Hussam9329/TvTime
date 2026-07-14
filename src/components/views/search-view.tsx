@@ -5,6 +5,7 @@ import { useSearchAccumulated } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Search as SearchIcon, X, Loader2, AlertCircle, Users, ChevronDown, Languages } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -137,11 +138,11 @@ export function SearchView() {
               {filtered.length > 0 ? (
                 <MediaGrid items={filtered} />
               ) : !search.isLoading && !search.isError ? (
-                <div className="text-center py-16 text-muted-foreground">
-                  <SearchIcon className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">No {filter === "all" ? "" : filter.replace("arabic-", "Arabic ") + " "}results found</p>
-                  <p className="text-sm mt-1">Try a different search term or filter.</p>
-                </div>
+                <EmptyState
+                  icon={<SearchIcon className="w-12 h-12" />}
+                  title="لا توجد نتائج"
+                  description={`لم نجد نتائج لـ "${searchQuery}"${filter !== "all" ? ` في فلتر "${filter}"` : ""}. جرب كلمات مختلفة أو غيّر الفلتر.`}
+                />
               ) : null}
             </>
           )}

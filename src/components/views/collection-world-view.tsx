@@ -5,6 +5,7 @@ import { useNav } from "@/lib/store";
 import { useMedia, useMediaUpdate, useLibraryCounts, type MediaItemDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -67,6 +68,7 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
 export function CollectionWorldView({ world, embedded = false }: { world: CollectionWorld; embedded?: boolean }) {
   const config = WORLD_CONFIG[world];
   const WorldIcon = config.icon;
+  const setView = useNav((s) => s.setView);
   const [tab, setTab] = useState<CollectionTab>("watchlist");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("addedAt");
@@ -204,11 +206,36 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
           <Button variant="outline" className="mt-4" onClick={() => media.refetch()}>Retry</Button>
         </Card>
       ) : items.length === 0 ? (
-        <Card className="p-12 text-center text-muted-foreground">
-          <WorldIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">No {tab === "watchlist" ? "watchlist" : tab === "not-started" ? "not-started" : tab === "watching" ? "in-progress" : "watched"} {world === "movies" ? "movies" : world === "arabic-movies" ? "Arabic movies" : "anime"} found</p>
-          <p className="text-sm mt-1">Try adjusting your search or add something new</p>
-        </Card>
+        <EmptyState
+          icon={<WorldIcon className="w-12 h-12" />}
+          title={
+            search
+              ? "لا توجد نتائج مطابقة"
+              : tab === "watchlist"
+                ? `قائمة المشاهدة فارغة`
+                : tab === "not-started"
+                  ? "لا توجد مسلسلات لم تبدأها بعد"
+                  : tab === "watching"
+                    ? "لا توجد مسلسلات قيد المشاهدة حالياً"
+                    : "لم تتم مشاهدته أي شيء بعد"
+          }
+          description={
+            search
+              ? `لم نجد أي عنصر يطابق "${search}". جرب كلمات مختلفة أو امسح البحث.`
+              : tab === "watchlist"
+                ? `ابدأ بإضافة ${world === "movies" ? "أفلام" : world === "arabic-movies" ? "أفلام عربية" : "أنمي"} من صفحة الاستكشاف.`
+                : tab === "watched"
+                  ? "اضغط زر 'Mark watched' على أي فيلم لتظهره هنا."
+                  : "أضف مسلسلات من صفحة الاستكشاف لتظهر هنا."
+          }
+          action={
+            !search && (
+              <Button onClick={() => setView("discover")} size="sm">
+                استكشاف المزيد
+              </Button>
+            )
+          }
+        />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {items.map((item, index) => (

@@ -30,6 +30,15 @@ export function imgOrPlaceholder(path: string | null | undefined, size: string =
   return `${TMDB_IMG_BASE}/${size}${path}`;
 }
 
+/**
+ * Timeout for TMDB API requests. 8 seconds is generous enough for normal
+ * operation but short enough that a hung TMDB server doesn't block the
+ * whole request. Vercel's default function timeout is 10s (Hobby) / 60s
+ * (Pro) — we want to fail BEFORE that so the user sees a clear error
+ * instead of a 502 from Vercel.
+ */
+const TMDB_TIMEOUT_MS = 8_000;
+
 async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
   const apiKey = requireTmdbKey();
   const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
@@ -39,15 +48,35 @@ async function tmdbFetch<T>(endpoint: string, params: Record<string, string | nu
     url.searchParams.set(k, String(v));
   }
 
-  const res = await fetch(url, {
-    next: { revalidate: 300 }, // cache 5 minutes
-  });
+  // AbortController gives us a hard timeout. Without it, a slow TMDB
+  // response can hang the request until Vercel's function timeout,
+  // producing a confusing 502 instead of a clear "TMDB timed out" error.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TMDB_TIMEOUT_MS);
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`TMDB error ${res.status}: ${text}`);
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: 300 }, // cache 5 minutes
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      // Read the body for error context, but cap it so a huge error page
+      // doesn't blow up memory.
+      const text = (await res.text().catch(() => "")).slice(0, 500);
+      throw new Error(`TMDB error ${res.status}: ${text}`);
+    }
+    return res.json() as Promise<T>;
+  } catch (error) {
+    // Distinguish timeout from other network errors so callers can show
+    // a "TMDB is slow right now" message instead of a generic failure.
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`TMDB timed out after ${TMDB_TIMEOUT_MS / 1000}s for ${endpoint}`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json() as Promise<T>;
 }
 
 // ---------- Types ----------
