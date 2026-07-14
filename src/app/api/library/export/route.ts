@@ -53,21 +53,22 @@ export async function GET(req: NextRequest) {
     async start(controller) {
       try {
         // ── Header ───────────────────────────────────────────────
-        // Open the top-level object and the "library" object. We write
-        // arrays element-by-element with manual comma management.
+        // Write the top-level object OPEN and its scalar keys, then open
+        // the "library" object. We do NOT close the top-level object here
+        // — that happens at the very end after all arrays are streamed.
+        //
+        // Manual JSON construction (not JSON.stringify) because we need to
+        // leave the object open for streaming. Each scalar value is still
+        // JSON-encoded individually for safety (escapes quotes, etc.).
+        const headerScalars = [
+          `"version":4`,
+          `"exportedAt":${JSON.stringify(new Date().toISOString())}`,
+          `"app":${JSON.stringify("CineTrack")}`,
+          `"source":${JSON.stringify("Media+WatchedEpisode+Rating:episode-only")}`,
+          `"user":${JSON.stringify({ name: user.name, avatar: user.avatar, createdAt: user.createdAt })}`,
+        ];
         controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
-              version: 4,
-              exportedAt: new Date().toISOString(),
-              app: "CineTrack",
-              source: "Media+WatchedEpisode+Rating:episode-only",
-              user: { name: user.name, avatar: user.avatar, createdAt: user.createdAt },
-            }) +
-              // Open library object. We'll write each array key manually
-              // so we can stream the array elements in batches.
-              '"library":{',
-          ),
+          encoder.encode("{" + headerScalars.join(",") + ',"library":{'),
         );
 
         // ── media array (streamed in batches of 500) ─────────────
