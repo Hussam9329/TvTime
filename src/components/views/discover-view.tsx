@@ -31,14 +31,13 @@ const SORT_OPTIONS_TV = [
   { value: "first_air_date.asc", label: "Oldest" },
 ];
 
-const DECADE_OPTIONS = [
-  { value: "", label: "Any decade" },
-  { value: "2020", label: "2020s" },
-  { value: "2010", label: "2010s" },
-  { value: "2000", label: "2000s" },
-  { value: "1990", label: "1990s" },
-  { value: "1980", label: "1980s" },
-  { value: "1970", label: "1970s" },
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = [
+  { value: "", label: "Any year" },
+  ...Array.from({ length: 60 }, (_, i) => ({
+    value: String(CURRENT_YEAR - i),
+    label: String(CURRENT_YEAR - i),
+  })),
 ];
 
 export function DiscoverView({ forceTab, embedded = false }: { forceTab?: "movies" | "tv" | "anime"; embedded?: boolean }) {
@@ -51,7 +50,7 @@ export function DiscoverView({ forceTab, embedded = false }: { forceTab?: "movie
 
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("popularity.desc");
-  const [decade, setDecade] = useState<string>("");
+  const [year, setYear] = useState<string>("");
   const [minRating, setMinRating] = useState<string>("");
   // TVM-33: Multi-genre selection
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
@@ -60,14 +59,14 @@ export function DiscoverView({ forceTab, embedded = false }: { forceTab?: "movie
   const tvGenres = useTvGenres();
   const genres = discoverTab === "movies" ? movieGenres.data : tvGenres.data;
 
-  // Compute year from decade (pick middle year for primary_release_year filter)
-  const year = decade ? Number(decade) + 5 : undefined;
+  // Year filter — direct year value (e.g. 2024, 2023, etc.)
+  const yearValue = year ? Number(year) : undefined;
 
   const discover = useDiscoverMovies({
     genres: selectedGenres.length > 0 ? selectedGenres : undefined,
     sort_by: sortBy,
     page,
-    year,
+    year: yearValue,
     rating: minRating ? Number(minRating) : undefined,
     originalLanguage: isAnimeMode ? "ja" : undefined,
     enabled: discoverTab === "movies",
@@ -76,7 +75,7 @@ export function DiscoverView({ forceTab, embedded = false }: { forceTab?: "movie
     genres: selectedGenres.length > 0 ? selectedGenres : undefined,
     sort_by: sortBy,
     page,
-    year,
+    year: yearValue,
     rating: minRating ? Number(minRating) : undefined,
     originalLanguage: isAnimeMode ? "ja" : undefined,
     enabled: discoverTab === "tv",
@@ -233,12 +232,12 @@ export function DiscoverView({ forceTab, embedded = false }: { forceTab?: "movie
               </SelectContent>
             </Select>
 
-            <Select value={decade} onValueChange={(v) => { setDecade(v); setPage(1); }}>
+            <Select value={year} onValueChange={(v) => { setYear(v); setPage(1); }}>
               <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Decade" />
+                <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>
-                {DECADE_OPTIONS.map((d) => (
+                {YEAR_OPTIONS.map((d) => (
                   <SelectItem key={d.value || "any"} value={d.value || "any"}>{d.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -275,13 +274,13 @@ export function DiscoverView({ forceTab, embedded = false }: { forceTab?: "movie
         <div className="text-center py-16 text-muted-foreground">
           <SlidersHorizontal className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="font-medium">No results match your filters</p>
-          <p className="text-sm mt-1">Try removing some genres or changing the decade/rating.</p>
-          {(selectedGenres.length > 0 || decade || minRating) && (
+          <p className="text-sm mt-1">Try removing some genres or changing the year/rating.</p>
+          {(selectedGenres.length > 0 || year || minRating) && (
             <Button
               variant="outline"
               size="sm"
               className="mt-4"
-              onClick={() => { clearGenres(); setDecade(""); setMinRating(""); setPage(1); }}
+              onClick={() => { clearGenres(); setYear(""); setMinRating(""); setPage(1); }}
             >
               Reset all filters
             </Button>
