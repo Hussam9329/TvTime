@@ -33,12 +33,24 @@ export interface SessionPayload {
 }
 
 /**
+ * Resolve the configured owner username from the environment.
+ * Returns null when APP_USERNAME is not set. Auth is still enabled
+ * without it — but login requires only the password (legacy behavior).
+ */
+export function getOwnerUsername(): string | null {
+  const value = process.env.APP_USERNAME;
+  if (!value) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+/**
  * Resolve the configured owner password from the environment.
  * Returns null when auth is not configured (PUBLIC mode).
  */
 export function getOwnerPassword(): string | null {
   const value = process.env.APP_PASSWORD;
-  if (!value || value.trim().length < 6) return null;
+  if (!value || value.trim().length < 4) return null;
   return value;
 }
 

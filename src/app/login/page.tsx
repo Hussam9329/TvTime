@@ -5,15 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Lock, Film } from "lucide-react";
+import { Loader2, Lock, Film, User } from "lucide-react";
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
       <LoginPageInner />
     </Suspense>
   );
@@ -22,11 +24,13 @@ export default function LoginPage() {
 function LoginPageInner() {
   const router = useRouter();
   const search = useSearchParams();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [authEnabled, setAuthEnabled] = useState(true);
+  const [requiresUsername, setRequiresUsername] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,8 +41,8 @@ function LoginPageInner() {
         const data = await res.json();
         if (cancelled) return;
         setAuthEnabled(Boolean(data?.authEnabled));
-        // If auth is disabled, the middleware already let the request through
-        // to this page only because the user typed /login. Bounce to next.
+        setRequiresUsername(Boolean(data?.requiresUsername));
+        // If auth is disabled, redirect to where the user wanted to go.
         if (!data?.authEnabled) {
           const next = search.get("next") || "/";
           router.replace(next);
@@ -57,14 +61,13 @@ function LoginPageInner() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!password) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -110,8 +113,36 @@ function LoginPageInner() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {requiresUsername && (
+              <div className="space-y-2">
+                <label
+                  htmlFor="username"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                >
+                  Username
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                    className="pl-9 h-10"
+                    autoComplete="username"
+                    disabled={loading}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <label htmlFor="password" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <label
+                htmlFor="password"
+                className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+              >
                 Password
               </label>
               <div className="relative">
@@ -123,7 +154,7 @@ function LoginPageInner() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter password"
                   className="pl-9 h-10"
-                  autoFocus
+                  autoFocus={!requiresUsername}
                   autoComplete="current-password"
                   disabled={loading}
                   required
@@ -137,7 +168,7 @@ function LoginPageInner() {
               </p>
             )}
 
-            <Button type="submit" className="w-full h-10" disabled={loading || !password}>
+            <Button type="submit" className="w-full h-10" disabled={loading || !password || (requiresUsername && !username)}>
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               {loading ? "Signing in..." : "Sign in"}
             </Button>

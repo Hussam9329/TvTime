@@ -7,7 +7,10 @@ import { getSession, isAuthEnabled } from "@/lib/auth";
  * - Protects every non-public route when APP_PASSWORD is set.
  * - In PUBLIC mode (no APP_PASSWORD) the middleware is a no-op so the legacy
  *   personal-app behavior is preserved.
- * - Public assets (`/_next/*`, static files, /api/auth/*, /login) are always allowed.
+ * - Public assets (`/_next/*`, static files, /api/auth/*, /login) are always
+ *   allowed. The root path "/" is NOT public when auth is enabled — without
+ *   this, an unauthenticated user could render the home page shell even
+ *   though every API call would 401 (the original "empty page" bug).
  */
 
 const PUBLIC_PREFIXES = [
@@ -18,17 +21,16 @@ const PUBLIC_PREFIXES = [
   "/login",
 ];
 
-const PUBLIC_EXACT = new Set<string>(["/"]);
-
 function isPublicPath(pathname: string): boolean {
-  if (PUBLIC_EXACT.has(pathname)) return true;
-  return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p));
+  return PUBLIC_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p)
+  );
 }
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Always allow public paths.
+  // Always allow public paths (auth-endpoints, login page, static assets).
   if (isPublicPath(pathname)) return NextResponse.next();
 
   // When auth is disabled, the middleware must not interfere.
@@ -49,6 +51,8 @@ export async function middleware(req: NextRequest) {
     );
   }
 
+  // Non-API, non-public path with no session → redirect to /login.
+  // Preserve the original URL via ?next= so login can bounce back.
   const loginUrl = new URL("/login", req.url);
   loginUrl.searchParams.set("next", pathname + (req.nextUrl.search || ""));
   return NextResponse.redirect(loginUrl);
