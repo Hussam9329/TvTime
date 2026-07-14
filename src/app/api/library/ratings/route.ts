@@ -22,7 +22,10 @@ function canonicalType(mediaType: string) {
 function titleRatingValueOutOf100(value: unknown) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return null;
-  return Math.max(0, Math.min(100, numeric <= 10 ? numeric * 10 : numeric));
+  // Always treat as 0-100. The old heuristic (≤10 → ×10) silently
+  // corrupted ratings: a user rating 5/100 (bad) got stored as 50/100
+  // (average). The client now always sends 0-100 values.
+  return Math.max(0, Math.min(100, Math.round(numeric)));
 }
 
 function titleRatingCompat(item: any) {

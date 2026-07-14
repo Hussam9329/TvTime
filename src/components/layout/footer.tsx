@@ -22,7 +22,7 @@ export function Footer() {
               </div>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="font-extrabold text-gradient text-base">CineTrack</span>
+              <span className="font-extrabold text-gradient text-base">TvTime</span>
               <span className="text-muted-foreground/40 hidden sm:inline">·</span>
               <span className="text-muted-foreground hidden sm:inline">Your personal cinema companion</span>
             </div>

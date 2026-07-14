@@ -11,7 +11,7 @@ export function ArabicMoviesView() {
   const [tab, setTab] = useState<"library" | "discover" | "schedule">("library");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       <section className="overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/15 via-card to-card p-5 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl">

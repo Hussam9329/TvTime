@@ -117,8 +117,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       lastRefreshAt = now;
       try {
         // Fetch both endpoints in parallel — they're independent.
+        const countsUrl = withUserId(new URL("/api/tv-tracking", window.location.origin));
+        countsUrl.searchParams.set("countsOnly", "true");
         const [countsRes, statsRes] = await Promise.all([
-          fetch(withUserId(new URL("/api/tv-tracking", window.location.origin)) + "&countsOnly=true", {
+          fetch(countsUrl, {
             headers: userHeaders(),
             cache: "no-store",
           }),

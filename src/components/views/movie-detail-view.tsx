@@ -334,7 +334,7 @@ export function MovieDetailView() {
         <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="cast">Cast</TabsTrigger>
-          {m.budget > 0 && <TabsTrigger value="details">Details</TabsTrigger>}
+          <TabsTrigger value="details">Details</TabsTrigger>
           {trailer && <TabsTrigger value="videos">Videos</TabsTrigger>}
         </TabsList>
 
@@ -379,11 +379,10 @@ export function MovieDetailView() {
           )}
         </TabsContent>
 
-        {m.budget > 0 && (
-          <TabsContent value="details" className="mt-4">
+        <TabsContent value="details" className="mt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label="Budget" value={`$${m.budget.toLocaleString()}`} />
-              <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label="Revenue" value={`$${m.revenue.toLocaleString()}`} />
+              {m.budget > 0 && <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label="Budget" value={`$${m.budget.toLocaleString()}`} />}
+              {m.revenue > 0 && <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label="Revenue" value={`$${m.revenue.toLocaleString()}`} />}
               <DetailCard icon={<Calendar className="w-5 h-5 text-primary" />} label="Release date" value={releaseDate?.full || "—"} />
               <DetailCard icon={<Clock className="w-5 h-5 text-primary" />} label="Runtime" value={runtime || "—"} />
               <DetailCard icon={<Film className="w-5 h-5 text-primary" />} label="Status" value={m.status || "—"} />
@@ -400,7 +399,6 @@ export function MovieDetailView() {
               </div>
             )}
           </TabsContent>
-        )}
 
         {trailer && (
           <TabsContent value="videos" className="mt-4">

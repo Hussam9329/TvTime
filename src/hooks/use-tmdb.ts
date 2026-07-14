@@ -1201,7 +1201,7 @@ export function useStats() {
     queryKey: ["lib", "stats", userId || getClientUserId()],
     queryFn: async () => {
       const res = await fetch(withUserId(new URL("/api/library/stats", window.location.origin)), { headers: userHeaders() });
-      if (!res.ok) return null;
+      if (!res.ok) throw new Error(`Stats ${res.status}`);
       return res.json();
     },
     staleTime: 0,
