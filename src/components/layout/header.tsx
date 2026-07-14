@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Home,
-  Compass,
   Search,
   CalendarDays,
   BarChart3,
@@ -63,7 +62,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     items: [
       { view: "home", label: "Home", shortLabel: "Home", icon: Home },
-      { view: "discover", label: "Discover", shortLabel: "Discover", icon: Compass },
     ],
   },
   {
@@ -95,7 +93,7 @@ const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 
 // Mobile menu groups with labels
 const MOBILE_GROUPS: { label: string; items: NavItem[] }[] = [
-  { label: "Navigate", items: NAV_GROUPS[0].items },
+  { label: "Home", items: NAV_GROUPS[0].items },
   { label: "Library", items: NAV_GROUPS[1].items },
   { label: "Arabic", items: NAV_GROUPS[2].items },
   { label: "Tools", items: NAV_GROUPS[3].items },

@@ -41,9 +41,13 @@ const DECADE_OPTIONS = [
   { value: "1970", label: "1970s" },
 ];
 
-export function DiscoverView() {
-  const discoverTab = useNav((s) => s.discoverTab);
+export function DiscoverView({ forceTab, embedded = false }: { forceTab?: "movies" | "tv" | "anime"; embedded?: boolean }) {
+  const storeTab = useNav((s) => s.discoverTab);
   const setDiscoverTab = useNav((s) => s.setDiscoverTab);
+
+  // When forceTab is set (embedded mode), override the store tab.
+  const discoverTab = forceTab === "anime" ? "tv" : (forceTab ?? storeTab);
+  const isAnimeMode = forceTab === "anime";
 
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("popularity.desc");
@@ -65,6 +69,7 @@ export function DiscoverView() {
     page,
     year,
     rating: minRating ? Number(minRating) : undefined,
+    originalLanguage: isAnimeMode ? "ja" : undefined,
     enabled: discoverTab === "movies",
   });
   const discoverTv = useDiscoverTv({
@@ -73,6 +78,7 @@ export function DiscoverView() {
     page,
     year,
     rating: minRating ? Number(minRating) : undefined,
+    originalLanguage: isAnimeMode ? "ja" : undefined,
     enabled: discoverTab === "tv",
   });
 
@@ -97,12 +103,44 @@ export function DiscoverView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Discover</h1>
-            <p className="text-sm text-muted-foreground mt-1">Find your next favorite non-Arabic {discoverTab === "movies" ? "movie" : "show"}; Arabic titles have their own dedicated worlds</p>
+      {!embedded && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Discover</h1>
+              <p className="text-sm text-muted-foreground mt-1">Find your next favorite {isAnimeMode ? "anime" : discoverTab === "movies" ? "movie" : "show"}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 border-primary/40 text-primary hover:bg-primary/10"
+                onClick={() => {
+                  const randomPage = Math.floor(Math.random() * 20) + 1;
+                  const randomSort = ["popularity.desc", "vote_average.desc", "primary_release_date.desc", "revenue.desc"][
+                    Math.floor(Math.random() * 4)
+                  ];
+                  setSortBy(randomSort);
+                  setPage(randomPage);
+                  toast.success("Surprise! Here are some random picks");
+                }}
+              >
+                <Dices className="w-4 h-4 mr-1.5" /> Surprise Me
+              </Button>
+              {!forceTab && (
+                <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); setPage(1); clearGenres(); }}>
+                  <TabsList>
+                    <TabsTrigger value="movies">Movies</TabsTrigger>
+                    <TabsTrigger value="tv">TV Shows</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
+            </div>
           </div>
+        </div>
+      )}
+      {embedded && (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -120,16 +158,11 @@ export function DiscoverView() {
             >
               <Dices className="w-4 h-4 mr-1.5" /> Surprise Me
             </Button>
-            <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); setPage(1); clearGenres(); }}>
-              <TabsList>
-                <TabsTrigger value="movies">Movies</TabsTrigger>
-                <TabsTrigger value="tv">TV Shows</TabsTrigger>
-              </TabsList>
-            </Tabs>
           </div>
         </div>
+      )}
 
-        {/* TVM-33: Multi-Genre Filters */}
+      {/* TVM-33: Multi-Genre Filters */}
         <div className="glass rounded-xl p-3 sm:p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -224,7 +257,6 @@ export function DiscoverView() {
             </Select>
           </div>
         </div>
-      </div>
 
       {/* TVM-30: Error state */}
       {current.isError && (
