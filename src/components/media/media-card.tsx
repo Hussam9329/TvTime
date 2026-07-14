@@ -96,9 +96,15 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             {showMediaType && (
               <Badge
                 variant="secondary"
-                className="bg-black/60 backdrop-blur text-white border-0 text-[10px] h-6 px-2"
+                className={cn(
+                  "backdrop-blur border-0 text-[10px] h-6 px-2",
+                  isArabic
+                    ? "bg-emerald-500/20 text-emerald-300"
+                    : "bg-black/60 text-white"
+                )}
               >
-                {mediaType === "movie" ? <Film className="w-3 h-3 mr-1" /> : <Tv className="w-3 h-3 mr-1" />}
+                {isArabic && <span className="mr-0.5 text-[11px] font-black">ع</span>}
+                {!isArabic && (mediaType === "movie" ? <Film className="w-3 h-3 mr-1" /> : <Tv className="w-3 h-3 mr-1" />)}
                 {typeLabel}
               </Badge>
             )}

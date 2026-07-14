@@ -147,7 +147,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
   if (isLoading) {
     return (
       <div className={featured ? "flex-shrink-0 w-[340px] sm:w-[400px]" : "flex-shrink-0 w-[280px] sm:w-[320px]"}>
-        <Card className="p-3 h-[140px] flex items-center gap-3">
+        <Card className="p-3 h-[180px] flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Loading episodes...</span>
         </Card>
@@ -201,7 +201,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
         animate={{ opacity: 1, x: 0 }}
         className="flex-shrink-0 w-[280px] sm:w-[320px]"
       >
-        <Card className="p-3 h-[140px] flex items-center gap-3 hover:border-primary/40 transition-colors">
+        <Card className="p-3 h-[180px] flex items-center gap-3 hover:border-primary/40 transition-colors">
           <button onClick={onGo} className="relative w-16 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
             {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
           </button>

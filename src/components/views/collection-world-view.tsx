@@ -9,10 +9,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3 } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreVertical, Languages } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SafeImage } from "@/components/media/safe-image";
 
 export type CollectionWorld = "movies" | "anime" | "arabic-movies";
@@ -414,7 +420,7 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
             <div className="absolute top-2 left-2">
               <Badge variant="secondary" className="bg-black/60 backdrop-blur border-0 text-[10px] h-6 px-2">
                 {item.isArabic ? (
-                  <><span className="mr-1 text-[11px] font-black">ع</span>{item.type === "movie" ? "Arabic Movie" : "Arabic TV"}</>
+                  <><span className="mr-1 text-[11px] font-black text-emerald-400">ع</span><span className="text-emerald-300">{item.type === "movie" ? "Arabic Movie" : "Arabic TV"}</span></>
                 ) : item.isAnime ? (
                   <><Sparkles className="w-3 h-3 mr-1 text-purple-400" />Anime</>
                 ) : item.type === "movie" ? (
@@ -505,50 +511,48 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
                   )}
                 </>
               )}
-              {world !== "anime" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("anime"); }}
-                  title="Move to Anime"
-                >
-                  To Anime
-                </Button>
-              )}
-              {world !== "arabic-movies" && item.type === "movie" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("arabic"); }}
-                  title="Move to Arabic Movies"
-                >
-                  To Arabic Movies
-                </Button>
-              )}
-              {world === "anime" && item.type === "series" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("arabic"); }}
-                  title="Move to Arabic TV"
-                >
-                  To Arabic TV
-                </Button>
-              )}
-              {(world === "anime" || world === "arabic-movies") && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("standard"); }}
-                  title="Move to the standard collection"
-                >
-                  {item.type === "movie" ? "To Movies" : "To TV Shows"}
-                </Button>
-              )}
+              {/* Move-to-world actions consolidated into a single dropdown
+                  to reduce visual clutter. Previously 4 separate buttons. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label="More actions"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  {world !== "anime" && (
+                    <DropdownMenuItem onClick={() => void handleMoveWorld("anime")}>
+                      <Sparkles className="w-4 h-4 mr-2" /> To Anime
+                    </DropdownMenuItem>
+                  )}
+                  {world !== "arabic-movies" && item.type === "movie" && (
+                    <DropdownMenuItem onClick={() => void handleMoveWorld("arabic")}>
+                      <Languages className="w-4 h-4 mr-2" /> To Arabic Movies
+                    </DropdownMenuItem>
+                  )}
+                  {world === "anime" && item.type === "series" && (
+                    <DropdownMenuItem onClick={() => void handleMoveWorld("arabic")}>
+                      <Languages className="w-4 h-4 mr-2" /> To Arabic TV
+                    </DropdownMenuItem>
+                  )}
+                  {(world === "anime" || world === "arabic-movies") && (
+                    <DropdownMenuItem onClick={() => void handleMoveWorld("standard")}>
+                      <Film className="w-4 h-4 mr-2" /> {item.type === "movie" ? "To Movies" : "To TV Shows"}
+                    </DropdownMenuItem>
+                  )}
+                  {userRating != null && (
+                    <DropdownMenuItem onClick={() => void handleRemoveRating()} className="text-rose-400">
+                      <Star className="w-4 h-4 mr-2" /> Remove rating
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </Card>

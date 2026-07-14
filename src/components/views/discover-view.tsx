@@ -139,7 +139,7 @@ export function DiscoverView() {
               )}
             </div>
             {selectedGenres.length > 0 && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearGenres}>
+              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={clearGenres}>
                 <X className="w-3 h-3 mr-1" /> Clear genres
               </Button>
             )}
@@ -150,7 +150,7 @@ export function DiscoverView() {
             <Button
               variant={selectedGenres.length === 0 ? "default" : "outline"}
               size="sm"
-              className="h-7 text-xs"
+              className="h-9 text-xs"
               onClick={clearGenres}
             >
               All
@@ -162,7 +162,7 @@ export function DiscoverView() {
                   key={g.id}
                   variant={isSelected ? "default" : "outline"}
                   size="sm"
-                  className={`h-7 text-xs ${isSelected ? "ring-2 ring-primary/40" : ""}`}
+                  className={`h-9 text-xs ${isSelected ? "ring-2 ring-primary/40" : ""}`}
                   onClick={() => toggleGenre(g.id)}
                 >
                   {g.name}

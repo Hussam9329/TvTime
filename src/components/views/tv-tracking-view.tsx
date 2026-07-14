@@ -279,7 +279,7 @@ function AllShowCard({ show, onGo, world }: { show: any; onGo: () => void; world
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
-        <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
+        <div className="w-20 h-28 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
             <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
           ) : (
@@ -328,7 +328,7 @@ function AllShowCard({ show, onGo, world }: { show: any; onGo: () => void; world
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 text-[10px]"
+                  className="h-9 text-[11px]"
                   onClick={(event) => {
                     event.stopPropagation();
                     void update.mutateAsync({ id: show.id, isAnime: true, isArabic: false }).then(() => toast.success("Moved to Anime"));
@@ -340,7 +340,7 @@ function AllShowCard({ show, onGo, world }: { show: any; onGo: () => void; world
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 text-[10px]"
+                  className="h-9 text-[11px]"
                   onClick={(event) => {
                     event.stopPropagation();
                     void update.mutateAsync({ id: show.id, isArabic: true, isAnime: false }).then(() => toast.success("Moved to Arabic TV"));
@@ -354,7 +354,7 @@ function AllShowCard({ show, onGo, world }: { show: any; onGo: () => void; world
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 text-[10px]"
+                className="h-9 text-[11px]"
                 onClick={(event) => {
                   event.stopPropagation();
                   void update.mutateAsync({ id: show.id, isArabic: false, isAnime: false }).then(() => toast.success("Moved to TV Shows"));
@@ -377,7 +377,7 @@ function UpToDateShowCard({ show, onGo }: { show: any; onGo: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
-        <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
+        <div className="w-20 h-28 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
             <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
           ) : (
@@ -428,7 +428,7 @@ function FinishedShowCard({ show, onGo }: { show: any; onGo: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
-        <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
+        <div className="w-20 h-28 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
             <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
           ) : (
@@ -465,7 +465,7 @@ function FinishedShowCard({ show, onGo }: { show: any; onGo: () => void }) {
               <Button
                 size="sm"
                 variant="outline"
-                className="h-6 text-[10px] px-2"
+                className="h-9 text-[11px] px-2"
                 onClick={(e) => { e.stopPropagation(); onGo(); }}
               >
                 <Star className="w-2.5 h-2.5 mr-1" /> Rate this show
@@ -627,7 +627,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
                 <Badge variant="secondary" className="text-[9px] bg-emerald-500/15 text-emerald-400">{watchedCount}/{totalEpisodes} eps</Badge>
                 <Badge variant="secondary" className="text-[9px]">100%</Badge>
               </div>
-              <Button size="sm" variant="outline" className="h-7 text-xs mt-auto w-fit" onClick={onGo}>
+              <Button size="sm" variant="outline" className="h-9 text-xs mt-auto w-fit" onClick={onGo}>
                 View details <ChevronRight className="w-3 h-3 ml-1" />
               </Button>
             </div>
@@ -640,7 +640,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
   if (!nextEp) {
     return (
       <Card className="p-3 h-[140px] flex items-center gap-3">
-        <button onClick={onGo} className="relative w-16 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+        <button onClick={onGo} className="relative w-20 h-28 rounded-md overflow-hidden bg-muted flex-shrink-0">
           {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
         </button>
         <div>
@@ -699,10 +699,10 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
             </div>
           </div>
           <div className="flex items-center gap-1.5 p-2.5 pt-2 border-t border-border/40">
-            <Button size="sm" className="h-7 text-xs flex-1" onClick={markWatched} disabled={episodeToggle.isPending || bulkToggle.isPending}>
+            <Button size="sm" className="h-9 text-xs flex-1" onClick={markWatched} disabled={episodeToggle.isPending || bulkToggle.isPending}>
               <Play className="w-3 h-3 mr-1 fill-current" /> Mark watched
             </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={markAllSeason} title="Mark rest of season watched">
+            <Button size="sm" variant="outline" className="h-9 text-xs" onClick={markAllSeason} title="Mark rest of season watched">
               <SkipForward className="w-3 h-3 mr-1" /> Season
             </Button>
             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={onGo} aria-label="Open show">
@@ -749,7 +749,7 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
-        <div className="relative w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+        <div className="relative w-20 h-28 rounded-md overflow-hidden bg-muted flex-shrink-0">
           {poster ? (
             <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
           ) : (
@@ -823,7 +823,7 @@ function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
-        <div className="relative w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+        <div className="relative w-20 h-28 rounded-md overflow-hidden bg-muted flex-shrink-0">
           {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
@@ -893,7 +893,7 @@ function HaventWatchedCard({ showId, title, poster, onGo, type }: { showId: numb
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
-        <div className="relative w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
+        <div className="relative w-20 h-28 rounded-md overflow-hidden bg-muted flex-shrink-0">
           {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
