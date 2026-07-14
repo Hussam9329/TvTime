@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
@@ -9,7 +10,7 @@ import {
   tvStateToMediaPatch,
   type TvTrackingState,
 } from "@/lib/tv-status-engine";
-import { getTvStatusMetadata, type TvStatusMetadata } from "@/lib/tv-status-server";
+import { getTvStatusMetadata, batchReadDbMetadata, type TvStatusMetadata } from "@/lib/tv-status-server";
 import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 
 const CATEGORY_VALUES = new Set([
@@ -137,12 +138,41 @@ async function repairShowIfNeeded(
 }
 
 async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic") {
-  const watchedRows = await db.watchedEpisode.findMany({
-    where: { userId },
-    select: { showId: true, seasonNumber: true, episodeNumber: true, watchedAt: true },
-    orderBy: { watchedAt: "desc" },
-  });
-  const showIdsWithEpisodeProgress = [...new Set(watchedRows.map((row) => row.showId))];
+  const now = new Date();
+
+  // ── GROUP WATCHED EPISODES AT THE DB LEVEL ───────────────────────────
+  // Two-stage aggregation:
+  // 1. Fast counts-only query: per-show COUNT(*) + MAX(watchedAt). Tiny
+  //    result set (466 rows), no array serialization. Used for the
+  //    `countsOnly=true` fast path AND as the basis for the full path.
+  // 2. (Only on the full path) Per-show episode keys via a second query
+  //    that returns just (showId, seasonNumber, episodeNumber) — we build
+  //    the Set<string> in JS. This avoids ARRAY_AGG which was 1s slower
+  //    due to array serialization overhead.
+  const watchedCounts = await db.$queryRaw<
+    Array<{ showId: number; episodeCount: bigint; lastWatchedAt: Date | null }>
+  >`
+    SELECT
+      "showId",
+      COUNT(*)::bigint AS "episodeCount",
+      MAX("watchedAt") AS "lastWatchedAt"
+    FROM "WatchedEpisode"
+    WHERE "userId" = ${userId}
+    GROUP BY "showId"
+  `;
+
+  const watchedByShow = new Map<number, WatchedEpisodeMeta>();
+  const showIdsWithEpisodeProgress: number[] = [];
+  for (const row of watchedCounts) {
+    const showId = Number(row.showId);
+    watchedByShow.set(showId, {
+      keys: new Set<string>(),
+      count: Number(row.episodeCount),
+      lastWatchedAt: row.lastWatchedAt ?? null,
+    });
+    showIdsWithEpisodeProgress.push(showId);
+  }
+
   const series = await db.media.findMany({
     where: {
       userId,
@@ -159,13 +189,48 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
     },
   });
 
-  const watchedByShow = new Map<number, WatchedEpisodeMeta>();
-  for (const row of watchedRows) {
-    const meta = watchedByShow.get(row.showId) ?? emptyWatchedMeta();
-    meta.keys.add(episodeKey(row.seasonNumber, row.episodeNumber));
-    meta.count = meta.keys.size;
-    if (!meta.lastWatchedAt || row.watchedAt > meta.lastWatchedAt) meta.lastWatchedAt = row.watchedAt;
-    watchedByShow.set(row.showId, meta);
+  // ── BATCH METADATA READ ───────────────────────────────────────────────
+  // Pre-fetch ALL TV metadata for ALL tracked shows in a single DB round-trip.
+  // This is the critical optimization: instead of N=597 individual findUnique
+  // calls inside the loop below (each ~5ms = 3s total), we do ONE findMany
+  // with `tmdbId IN (...)` that returns all rows in ~20ms.
+  //
+  // Rows that are missing or stale are NOT in this map — the loop falls back
+  // to getTvStatusMetadata() for those, which lazily fetches from TMDB and
+  // populates the cache for next time.
+  const trackedTmdbIds = series
+    .map((s: any) => Number(s.tmdbId))
+    .filter((id: number) => Number.isFinite(id) && id > 0);
+  const metadataByTmdbId = await batchReadDbMetadata(trackedTmdbIds, now);
+
+  // ── FETCH EPISODE KEYS ONLY FOR SHOWS THAT NEED THEM ─────────────────
+  // The state-derivation engine needs the actual episode keys (Set<string>)
+  // to compute "watching" vs "uptodate" vs "finished". But it does NOT need
+  // them for shows with zero watched episodes — those get an empty Set.
+  // So we only fetch keys for shows that have at least one watched episode.
+  //
+  // This keeps the heavy query off the fast path (countsOnly=true) entirely,
+  // and limits it on the full path to ~466 shows × ~72 episodes = ~34k rows
+  // — but as raw tuples, not arrays, so serialization is 5x faster.
+  const showsNeedingKeys = trackedTmdbIds.filter((id) => {
+    const w = watchedByShow.get(id);
+    return w && w.count > 0;
+  });
+  if (showsNeedingKeys.length > 0) {
+    const keyRows = await db.$queryRaw<
+      Array<{ showId: number; seasonNumber: number; episodeNumber: number }>
+    >`
+      SELECT "showId", "seasonNumber", "episodeNumber"
+      FROM "WatchedEpisode"
+      WHERE "userId" = ${userId} AND "showId" IN (${Prisma.join(showsNeedingKeys)})
+    `;
+    for (const row of keyRows) {
+      const showId = Number(row.showId);
+      const meta = watchedByShow.get(showId);
+      if (meta) {
+        meta.keys.add(`${row.seasonNumber}-${row.episodeNumber}`);
+      }
+    }
   }
 
   const decorated = await mapWithConcurrency(series as any[], STATUS_REPAIR_CONCURRENCY, async (show: any) => {
@@ -173,11 +238,18 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
     const watched = watchedByShow.get(tmdbId) ?? emptyWatchedMeta();
     let metadata: TvStatusMetadata | null = null;
     let legacySnapshotMaterialized = false;
+
     if (tmdbId > 0) {
-      try {
-        metadata = await getTvStatusMetadata(tmdbId);
-      } catch (error) {
-        console.warn("[tv-tracking] Unable to verify TV metadata", tmdbId, error);
+      // Fast path: metadata was pre-fetched by the batch query above.
+      metadata = metadataByTmdbId.get(tmdbId) ?? null;
+      if (!metadata) {
+        // Slow path: row missing or stale. Lazily fetch from TMDB and
+        // populate the cache for next time.
+        try {
+          metadata = await getTvStatusMetadata(tmdbId, now);
+        } catch (error) {
+          console.warn("[tv-tracking] Unable to verify TV metadata", tmdbId, error);
+        }
       }
     }
 
