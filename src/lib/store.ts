@@ -1,239 +1,164 @@
 "use client";
 
 import { create } from "zustand";
-import type {
-  MediaItem,
-  MediaStatus,
-  MediaType,
-  SearchFilters,
-  WatchSession,
-  Notification,
-  CustomList,
-} from "./types";
-import { allMedia, watchSessions, notifications as initialNotifications, customLists as initialCustomLists } from "./mock-data";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { DEFAULT_USER_ID } from "@/lib/user-id";
+import {
+  HOME_NAVIGATION_ENTRY,
+  navigationEntryFromView,
+  navigationEntryToHref,
+  normalizeNavigationEntry,
+  sameNavigationEntry,
+  type NavigationEntry,
+  type ViewName,
+} from "@/lib/navigation";
 
-export type ViewKey =
-  | "home"
-  | "movies"
-  | "tvshows"
-  | "anime"
-  | "arabic_movies"
-  | "arabic_tv"
-  | "search"
-  | "stats"
-  | "diary"
-  | "lists";
+export type { NavigationEntry, ViewName } from "@/lib/navigation";
+export type DiscoverTab = "movies" | "tv";
 
-interface AppState {
-  // Navigation
-  currentView: ViewKey;
-  setView: (v: ViewKey) => void;
+type RouteSyncMode = "reset" | "pop";
 
-  // Library
-  media: MediaItem[];
-  updateMediaStatus: (id: string, status: MediaStatus) => void;
-  updateMediaRating: (id: string, rating: number) => void;
-  toggleFavorite: (id: string) => void;
-  markEpisodeWatched: (mediaId: string, season: number, episode: number, watched: boolean) => void;
-  toggleNotifyOnNewEpisode: (id: string) => void;
+interface NavState extends NavigationEntry {
+  discoverTab: DiscoverTab;
+  discoverGenre: number | null;
+  searchQuery: string;
+  history: NavigationEntry[];
+  navigationIndex: number;
+  routeReady: boolean;
+  userId: string;
+  userName: string;
 
-  // Watch sessions (Diary)
-  sessions: WatchSession[];
-  addSession: (s: WatchSession) => void;
-  updateSessionDate: (id: string, watchedAt: string) => void;
-  deleteSession: (id: string) => void;
-  rewatchMedia: (mediaId: string) => void;
-
-  // Notifications
-  notifications: Notification[];
-  markNotificationRead: (id: string) => void;
-  markAllNotificationsRead: () => void;
-  deleteNotification: (id: string) => void;
-  clearAllNotifications: () => void;
-
-  // Custom Lists
-  lists: CustomList[];
-  createList: (name: string, description: string, color: string, isPublic: boolean) => string;
-  deleteList: (id: string) => void;
-  updateList: (id: string, updates: Partial<Pick<CustomList, "name" | "description" | "color" | "isPublic">>) => void;
-  addToList: (listId: string, item: { tmdbId: number; mediaType: MediaType; title: string; posterPath?: string }) => void;
-  removeFromList: (listId: string, tmdbId: number, mediaType: MediaType) => void;
-
-  // Search filters
-  searchFilters: SearchFilters;
-  setSearchFilters: (f: Partial<SearchFilters>) => void;
-  resetSearchFilters: () => void;
-
-  // Theme
-  theme: "light" | "dark";
-  toggleTheme: () => void;
+  setView: (v: ViewName) => void;
+  goMovie: (id: number) => void;
+  goTv: (id: number) => void;
+  goPerson: (id: number) => void;
+  back: () => void;
+  syncRoute: (entry: NavigationEntry, mode: RouteSyncMode, browserIndex?: number) => void;
+  setDiscoverTab: (t: DiscoverTab) => void;
+  setDiscoverGenre: (g: number | null) => void;
+  setSearchQuery: (q: string) => void;
+  setUserName: (n: string) => void;
+  ensureUserId: () => void;
 }
 
-const defaultSearchFilters: SearchFilters = {
-  query: "",
-  types: ["movie", "tv", "anime", "arabic_movie", "arabic_tv"],
-  genres: [],
-  sortBy: "relevance",
-};
+const HISTORY_LIMIT = 30;
+const NAV_INDEX_KEY = "__tvTimeNavigationIndex";
 
-// Default: notify on new episode for currently watching items
-const mediaWithDefaults = allMedia.map((m) =>
-  m.status === "watching" && (m.mediaType === "tv" || m.mediaType === "anime" || m.mediaType === "arabic_tv")
-    ? { ...m, notifyOnNewEpisode: m.notifyOnNewEpisode ?? true }
-    : m
-);
+function currentEntry(state: Pick<NavState, keyof NavigationEntry>): NavigationEntry {
+  return normalizeNavigationEntry({
+    view: state.view,
+    movieId: state.movieId,
+    tvId: state.tvId,
+    personId: state.personId,
+  });
+}
 
-let listCounter = 100;
-let sessionCounter = 10000;
-let notificationCounter = 100;
+function writeBrowserEntry(entry: NavigationEntry, index: number, mode: "push" | "replace") {
+  if (typeof window === "undefined") return;
+  const state = { ...(window.history.state || {}), [NAV_INDEX_KEY]: index };
+  const href = navigationEntryToHref(entry);
+  if (mode === "replace") window.history.replaceState(state, "", href);
+  else window.history.pushState(state, "", href);
+}
 
-export const useAppStore = create<AppState>((set, get) => ({
-  currentView: "home",
-  setView: (v) => set({ currentView: v }),
+export function getBrowserNavigationIndex(): number | undefined {
+  if (typeof window === "undefined") return undefined;
+  const value = Number(window.history.state?.[NAV_INDEX_KEY]);
+  return Number.isInteger(value) && value >= 0 ? value : undefined;
+}
 
-  media: mediaWithDefaults,
-  updateMediaStatus: (id, status) =>
-    set((s) => ({
-      media: s.media.map((m) => (m.id === id ? { ...m, status } : m)),
-    })),
-  updateMediaRating: (id, rating) =>
-    set((s) => ({
-      media: s.media.map((m) => (m.id === id ? { ...m, userRating: rating } : m)),
-    })),
-  toggleFavorite: (id) =>
-    set((s) => ({
-      media: s.media.map((m) => (m.id === id ? { ...m, favorite: !m.favorite } : m)),
-    })),
-  markEpisodeWatched: (mediaId, season, episode, watched) =>
-    set((s) => ({
-      media: s.media.map((m) => {
-        if (m.id !== mediaId) return m;
-        const newProgress = watched
-          ? Math.min((m.progress || 0) + 1, m.totalEpisodes || 1)
-          : Math.max((m.progress || 0) - 1, 0);
-        return { ...m, progress: newProgress };
-      }),
-    })),
-  toggleNotifyOnNewEpisode: (id) =>
-    set((s) => ({
-      media: s.media.map((m) =>
-        m.id === id ? { ...m, notifyOnNewEpisode: !m.notifyOnNewEpisode } : m
-      ),
-    })),
+export function initializeBrowserNavigation(entry: NavigationEntry): number {
+  const existing = getBrowserNavigationIndex();
+  const index = existing ?? 0;
+  if (existing == null) writeBrowserEntry(entry, index, "replace");
+  return index;
+}
 
-  // Sessions
-  sessions: watchSessions,
-  addSession: (sess) => set((s) => ({ sessions: [sess, ...s.sessions] })),
-  updateSessionDate: (id, watchedAt) =>
-    set((s) => ({
-      sessions: s.sessions.map((sess) => (sess.id === id ? { ...sess, watchedAt } : sess)),
-    })),
-  deleteSession: (id) =>
-    set((s) => ({ sessions: s.sessions.filter((sess) => sess.id !== id) })),
-  rewatchMedia: (mediaId) => {
-    const state = get();
-    const media = state.media.find((m) => m.id === mediaId);
-    if (!media) return;
-    // Increment rewatchCount on the media
-    set((s) => ({
-      media: s.media.map((m) =>
-        m.id === mediaId ? { ...m, rewatchCount: (m.rewatchCount || 0) + 1 } : m
-      ),
-      // Add a new session marked as rewatch
-      sessions: [
-        {
-          id: `s-${sessionCounter++}`,
-          mediaId,
-          mediaType: media.mediaType,
-          tmdbId: media.tmdbId,
-          title: media.title,
-          season: media.currentSeason,
-          episode: media.currentEpisode,
-          watchedAt: new Date().toISOString(),
-          duration: media.runtime || 45,
-          rewatch: true,
-          rating: media.userRating,
-          source: media.providers?.[0] || "Unknown",
+export const useNav = create<NavState>()(
+  persist(
+    (set, get) => {
+      const navigate = (entry: NavigationEntry) => {
+        const next = normalizeNavigationEntry(entry);
+        const state = get();
+        const current = currentEntry(state);
+        if (sameNavigationEntry(current, next)) return;
+        const nextIndex = state.navigationIndex + 1;
+        writeBrowserEntry(next, nextIndex, "push");
+        set({
+          ...next,
+          navigationIndex: nextIndex,
+          history: [...state.history, current].slice(-HISTORY_LIMIT),
+        });
+      };
+
+      return {
+        ...HOME_NAVIGATION_ENTRY,
+        discoverTab: "movies",
+        discoverGenre: null,
+        searchQuery: "",
+        history: [],
+        navigationIndex: 0,
+        routeReady: false,
+        userId: DEFAULT_USER_ID,
+        userName: "Cinephile",
+
+        setView: (view) => navigate(navigationEntryFromView(view)),
+        goMovie: (movieId) => navigate({ view: "movie-detail", movieId, tvId: null, personId: null }),
+        goTv: (tvId) => navigate({ view: "tv-detail", movieId: null, tvId, personId: null }),
+        goPerson: (personId) => navigate({ view: "person-detail", movieId: null, tvId: null, personId }),
+
+        back: () => {
+          const state = get();
+          if (state.history.length > 0 && typeof window !== "undefined") {
+            window.history.back();
+            return;
+          }
+          const home = HOME_NAVIGATION_ENTRY;
+          writeBrowserEntry(home, state.navigationIndex, "replace");
+          set({ ...home, history: [] });
         },
-        ...state.sessions,
-      ],
-    }));
-  },
 
-  // Notifications
-  notifications: initialNotifications,
-  markNotificationRead: (id) =>
-    set((s) => ({
-      notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    })),
-  markAllNotificationsRead: () =>
-    set((s) => ({
-      notifications: s.notifications.map((n) => ({ ...n, read: true })),
-    })),
-  deleteNotification: (id) =>
-    set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
-  clearAllNotifications: () => set({ notifications: [] }),
+        syncRoute: (entry, mode, browserIndex) => {
+          const next = normalizeNavigationEntry(entry);
+          const state = get();
+          const targetIndex = Number.isInteger(browserIndex) && Number(browserIndex) >= 0
+            ? Number(browserIndex)
+            : state.navigationIndex;
 
-  // Custom Lists
-  lists: initialCustomLists,
-  createList: (name, description, color, isPublic) => {
-    const id = `cl-${listCounter++}`;
-    const slug = name
-      .trim()
-      .toLowerCase()
-      .replace(/[^\w\u0600-\u06FF]+/g, "-")
-      .replace(/^-+|-+$/g, "") + "-" + Date.now().toString(36);
-    const newList: CustomList = {
-      id,
-      name,
-      description,
-      color,
-      isPublic,
-      slug,
-      items: [],
-      createdAt: new Date().toISOString(),
-    };
-    set((s) => ({ lists: [newList, ...s.lists] }));
-    return id;
-  },
-  deleteList: (id) => set((s) => ({ lists: s.lists.filter((l) => l.id !== id) })),
-  updateList: (id, updates) =>
-    set((s) => ({
-      lists: s.lists.map((l) => (l.id === id ? { ...l, ...updates } : l)),
-    })),
-  addToList: (listId, item) =>
-    set((s) => ({
-      lists: s.lists.map((l) => {
-        if (l.id !== listId) return l;
-        if (l.items.some((i) => i.tmdbId === item.tmdbId && i.mediaType === item.mediaType)) return l;
-        return {
-          ...l,
-          items: [
-            ...l.items,
-            {
-              tmdbId: item.tmdbId,
-              mediaType: item.mediaType,
-              title: item.title,
-              posterPath: item.posterPath,
-              addedAt: new Date().toISOString(),
-            },
-          ],
-        };
+          if (mode === "reset") {
+            set({ ...next, history: [], navigationIndex: targetIndex, routeReady: true });
+            return;
+          }
+
+          let history = [...state.history];
+          if (targetIndex < state.navigationIndex) {
+            const distance = Math.max(1, state.navigationIndex - targetIndex);
+            history = history.slice(0, Math.max(0, history.length - distance));
+          } else if (targetIndex > state.navigationIndex) {
+            history = [...history, currentEntry(state)].slice(-HISTORY_LIMIT);
+          } else if (history.length > 0 && sameNavigationEntry(history[history.length - 1], next)) {
+            history.pop();
+          }
+
+          set({ ...next, history, navigationIndex: targetIndex });
+        },
+
+        setDiscoverTab: (discoverTab) => set({ discoverTab, discoverGenre: null }),
+        setDiscoverGenre: (discoverGenre) => set({ discoverGenre }),
+        setSearchQuery: (searchQuery) => set({ searchQuery }),
+        setUserName: (userName) => set({ userName }),
+        ensureUserId: () => set((state) => (state.userId === DEFAULT_USER_ID ? {} : { userId: DEFAULT_USER_ID })),
+      };
+    },
+    {
+      name: "cinetrack-nav",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ userName: state.userName }),
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<NavState>),
+        userId: DEFAULT_USER_ID,
       }),
-    })),
-  removeFromList: (listId, tmdbId, mediaType) =>
-    set((s) => ({
-      lists: s.lists.map((l) =>
-        l.id === listId
-          ? { ...l, items: l.items.filter((i) => !(i.tmdbId === tmdbId && i.mediaType === mediaType)) }
-          : l
-      ),
-    })),
-
-  searchFilters: defaultSearchFilters,
-  setSearchFilters: (f) => set((s) => ({ searchFilters: { ...s.searchFilters, ...f } })),
-  resetSearchFilters: () => set({ searchFilters: defaultSearchFilters }),
-
-  theme: "dark",
-  toggleTheme: () => set((s) => ({ theme: s.theme === "dark" ? "light" : "dark" })),
-}));
+    },
+  ),
+);

@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -40,7 +41,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-local-*
+local-*.log
+local-*.env
 .claude
 .z-ai-config
 *.log
@@ -52,16 +54,50 @@ prompt
 server.log
 # Skills directory
 /skills/
-# Local sandbox files
-/.zscripts/
+
+# Database
 /db/
-/tool-results/
-/upload/
-/scripts/live-audit.sh
-/scripts/db-audit.py
-/scripts/live-audit-results.log
-/scripts/db-audit-results.log
-/scripts/export-test.json
-/scripts/remove-hardcoded-tmdb-key.py
+*.db
+*.db-journal
+
+# Dev scripts
+/.zscripts/
 /download/
+/upload/
+/mini-services/
+/screenshot-*.png
+
+# QA / local test artifacts
+/tool-results/
+/playwright-report/
+/test-results/
+/coverage/
+/.nyc_output/
+/screenshot-*.jpg
+/screenshot-*.jpeg
+/screenshot-*.webp
+/qa*.png
+/qa*.jpg
+/qa*.jpeg
+/qa*.webp
+/worklog.md
+/*.trace.zip
+
+# Internal agent artifacts — never commit these to a public repo.
+/delivery/
+/agent-ctx/
 /examples/
+/examples/**
+
+# PID files (dev server state)
+*.pid
+
+# Local audit artifacts (never committed)
+/audit/
+/.audit/
+
+# Emergency recovery safety
+.env
+.env.local
+db/*.db
+db/backups/

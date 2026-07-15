@@ -1,7 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { Providers } from "@/components/providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,9 +15,74 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = "https://tvtime-iota.vercel.app";
+
 export const metadata: Metadata = {
-  title: "TvTime+ — نظام تتبع المشاهدة الذكي",
-  description: "نظام متكامل لتتبع الأفلام والمسلسلات والأنمي مع تحليل شخصي عميق",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "TvTime — Movies, TV Shows & Anime",
+    template: "%s — TvTime",
+  },
+  description:
+    "Your personal cinema companion with separate spaces for movies, TV shows, anime, and Arabic content. Track what you watch, rate what you love.",
+  keywords: [
+    "movies",
+    "tv shows",
+    "anime",
+    "arabic movies",
+    "arabic tv",
+    "tracking",
+    "cinema",
+    "watchlist",
+    "TMDB",
+    "tv time",
+  ],
+  authors: [{ name: "TvTime" }],
+  creator: "TvTime",
+  icons: {
+    icon: "/placeholder-poster.svg",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: "TvTime",
+    title: "TvTime — Movies, TV Shows & Anime",
+    description:
+      "Your personal cinema companion with separate spaces for movies, TV shows, anime, and Arabic content.",
+    images: [
+      {
+        url: "/placeholder-poster.svg",
+        width: 1200,
+        height: 630,
+        alt: "TvTime",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TvTime — Movies, TV Shows & Anime",
+    description:
+      "Your personal cinema companion with separate spaces for movies, TV shows, anime, and Arabic content.",
+    images: ["/placeholder-poster.svg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+  ],
 };
 
 export default function RootLayout({
@@ -24,12 +91,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        {children}
+        <Providers>{children}</Providers>
         <Toaster />
+        <SonnerToaster position="top-center" richColors />
       </body>
     </html>
   );

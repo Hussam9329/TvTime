@@ -1,6 +1,5 @@
-// TvTime-like tracking system — comprehensive schema
-// Supports: Movies, TV Shows, Anime, Arabic Movies, Arabic TV
-// Features: tracking, diary, rewatch, tags, notes, custom lists, notifications, settings
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -12,159 +11,171 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String           @id @default(cuid())
+  name            String           @default("Cinephile")
+  avatar          String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  settings     UserSettings?
-  media        Media[]
-  sessions     WatchSession[]
-  lists        CustomList[]
-  notifications Notification[]
+  media           Media[]
+  watchlistItems  WatchlistItem[]
+  watchedMovies   WatchedMovie[]
+  watchedEpisodes WatchedEpisode[]
+  followingShows  FollowingShow[]
+  ratings         Rating[]
 }
 
-model UserSettings {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  country         String   @default("IQ") // ISO-3166-1 alpha-2
-  timezone        String   @default("Asia/Baghdad")
-  preferredPlatforms String // comma-separated: "Netflix,Prime Video"
-  theme           String   @default("dark")
-  notificationsEnabled Boolean @default(true)
-  episodeAlerts   Boolean  @default(true)
-  movieAlerts     Boolean  @default(true)
-  quietHours      String?  // "22:00-08:00"
-  updatedAt       DateTime @updatedAt
-}
-
-// Unified media model — covers movies, tv, anime, arabic movies, arabic tv
+/// Canonical media record - tracks all types of media (movies, TV, books, games)
 model Media {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tmdbId      Int
-  mediaType   String   // "movie" | "tv" | "anime" | "arabic_movie" | "arabic_tv"
-  title       String
-  posterPath  String?
-  backdropPath String?
-  overview    String?
-  releaseDate String?  // YYYY-MM-DD
-  runtime     Int?     // minutes (movie) or episode runtime (tv)
-  genres      String   // comma-separated
-  voteAverage Float?
-  voteCount   Int?
-  status      String   @default("plan_to_watch") // plan_to_watch | watching | completed | on_hold | dropped | watchlist
-  progress    Int      @default(0) // episodes watched (tv) or 0/1 (movie)
-  totalEpisodes Int?   // for tv/anime
-  currentSeason Int?   @default(1)
-  currentEpisode Int?  @default(0)
-  userRating  Int?     // 0-100
-  favorite    Boolean  @default(false)
-  rewatchCount Int     @default(0)
-  notes       String?
-  tags        String?  // comma-separated
-  lastWatchedAt DateTime?
-  addedAt     DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String   @default("cinetrack_default")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  episodes    Episode[]
-  sessions    WatchSession[]
+  tmdbId         Int?
+  title          String
+  originalTitle  String?
+  year           String?
+  type           String   // "movie" | "series" | "book" | "game"
+  poster         String?
+  rating         String?
+  overview       String?
+  genres         String[] @default([])
+  episodes       Int?
+  seasons        Int?
+  duration       String?
+  status         String?  // list/progress state; independent from isFollowing
+  author         String?
+  pages          Int?
+  tags           String[] @default([])
+  notes          String?
+  watched        Boolean  @default(false)
+  watchedAt      DateTime?
+  userRating     Int?     // 0-100
+  rewatch        Boolean  @default(false)
+  runtime        Int?
+  ratingStatus   String?
+  isAnime        Boolean  @default(false)
+  isArabic       Boolean  @default(false)
+  originalLanguage String?
+  originCountries String[] @default([])
+  isFollowing    Boolean  @default(false)
+  addedAt        DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  @@unique([userId, tmdbId, mediaType])
-  @@index([userId, mediaType, status])
+  @@unique([userId, type, tmdbId], map: "Media_userId_type_tmdbId_key")
+  @@index([userId])
+  @@index([userId, type])
   @@index([userId, status])
+  @@index([userId, watched])
+  @@index([userId, userRating])
+  @@index([userId, isAnime])
+  @@index([userId, isArabic])
+  @@index([tmdbId])
 }
 
-model Episode {
-  id          String   @id @default(cuid())
-  mediaId     String
-  media       Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  season      Int
-  episode     Int
-  name        String?
-  overview    String?
-  stillPath   String?
-  airDate     String?  // YYYY-MM-DD
-  runtime     Int?
-  watched     Boolean  @default(false)
-  watchedAt   DateTime?
-  userRating  Int?     // 0-100
-  rewatched   Int      @default(0)
-  createdAt   DateTime @default(now())
+model WatchlistItem {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaType    String   // "movie" | "tv"
+  tmdbId       Int
+  title        String
+  posterPath   String?
+  backdropPath String?
+  overview     String?
+  releaseDate  String?
+  voteAverage  Float?
+  addedAt      DateTime @default(now())
 
-  @@unique([mediaId, season, episode])
-  @@index([mediaId, watched])
-  @@index([airDate])
-}
-
-model WatchSession {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mediaId     String?
-  media       Media?   @relation(fields: [mediaId], references: [id], onDelete: SetNull)
-  mediaType   String   // movie | tv | anime | arabc_movie | arabic_tv
-  tmdbId      Int
-  title       String
-  season      Int?
-  episode     Int?
-  watchedAt   DateTime @default(now())
-  duration    Int?     // minutes
-  rewatch     Boolean  @default(false)
-  rating      Int?     // 0-100 — rating given at the time
-  notes       String?
-  source      String?  // "Netflix" | "Cinema" | "Torrent" etc.
-
-  @@index([userId, watchedAt])
-  @@index([userId, mediaType])
-}
-
-model CustomList {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  isPublic    Boolean  @default(false)
-  slug        String   @unique
-  color       String   @default("#f59e0b")
-  items       CustomListItem[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  @@unique([userId, mediaType, tmdbId])
   @@index([userId])
 }
 
-model CustomListItem {
-  id          String   @id @default(cuid())
-  listId      String
-  list        CustomList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  tmdbId      Int
-  mediaType   String
-  title       String
-  posterPath  String?
-  addedAt     DateTime @default(now())
-  order       Int      @default(0)
+model WatchedMovie {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  title     String
+  posterPath String?
+  runtime   Int?
+  watchedAt DateTime @default(now())
 
-  @@unique([listId, tmdbId, mediaType])
+  @@unique([userId, tmdbId])
+  @@index([userId])
 }
 
-model Notification {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String   // "new_episode" | "movie_available" | "season_return" | "backlog_alert" | "custom"
-  title       String
-  body        String
-  tmdbId      Int?
-  mediaType   String?
-  read        Boolean  @default(false)
-  scheduledFor DateTime?
-  createdAt   DateTime @default(now())
+model WatchedEpisode {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  showId        Int
+  seasonNumber  Int
+  episodeNumber Int
+  episodeName   String?
+  runtime       Int?
+  watchedAt     DateTime @default(now())
 
-  @@index([userId, read])
+  @@unique([userId, showId, seasonNumber, episodeNumber])
+  @@index([userId])
+  @@index([userId, showId])
+}
+
+model FollowingShow {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId     Int
+  title      String
+  posterPath String?
+  followedAt DateTime @default(now())
+
+  @@unique([userId, tmdbId])
+  @@index([userId])
+}
+
+model Rating {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaType  String   // "movie" | "tv"
+  tmdbId     Int
+  title      String
+  posterPath String?
+  value      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, mediaType, tmdbId])
+  @@index([userId])
+}
+
+/// Persistent server-side cache of TV show metadata from TMDB.
+/// Populated lazily by src/lib/tv-status-server.ts to avoid re-fetching
+/// every tracked show from TMDB on every /api/tv-tracking request.
+/// Keyed by tmdbId (no userId — TMDB metadata is global, not per-user).
+model TvMetadataCache {
+  tmdbId                      Int      @id
+  title                       String
+  posterPath                  String?
+  overview                    String?
+  firstAirDate                String?
+  tmdbStatus                  String?
+  officiallyEnded             Boolean
+  inProduction                Boolean?
+  totalEpisodes               Int?
+  totalSeasons                Int?
+  airedEpisodeCount           Int?
+  airedEpisodeKeys            String[] @default([])
+  airedEpisodeInferenceReliable Boolean @default(false)
+  nextEpisodeAirDate          String?
+  nextEpisodeName             String?
+  nextEpisodeSeasonNumber     Int?
+  nextEpisodeEpisodeNumber    Int?
+  seasonsCount                Int?
+  lastSeasonNumber            Int?
+  fetchedAt                   DateTime @default(now())
+  refreshAfter                DateTime
+
+  @@index([refreshAfter])
 }

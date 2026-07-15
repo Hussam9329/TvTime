@@ -8,14 +8,15 @@ const __dirname = dirname(__filename);
 
 const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
   rules: {
-    // TypeScript rules
+    // TypeScript rules — kept lenient to avoid a massive refactor, but
+    // `no-debugger` and `no-console` are now warnings so they surface in CI.
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     "@typescript-eslint/no-non-null-assertion": "off",
     "@typescript-eslint/ban-ts-comment": "off",
     "@typescript-eslint/prefer-as-const": "off",
     "@typescript-eslint/no-unused-disable-directive": "off",
-    
+
     // React rules
     "react-hooks/exhaustive-deps": "off",
     "react-hooks/purity": "off",
@@ -23,16 +24,16 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "react/display-name": "off",
     "react/prop-types": "off",
     "react-compiler/react-compiler": "off",
-    
+
     // Next.js rules
     "@next/next/no-img-element": "off",
     "@next/next/no-html-link-for-pages": "off",
-    
-    // General JavaScript rules
+
+    // General JavaScript rules — surface debug leftovers as warnings.
     "prefer-const": "off",
     "no-unused-vars": "off",
-    "no-console": "off",
-    "no-debugger": "off",
+    "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+    "no-debugger": "error",
     "no-empty": "off",
     "no-irregular-whitespace": "off",
     "no-case-declarations": "off",
@@ -40,17 +41,23 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-mixed-spaces-and-tabs": "off",
     "no-redeclare": "off",
     "no-undef": "off",
-    "no-unreachable": "off",
+    "no-unreachable": "warn",
     "no-useless-escape": "off",
-    
-    // ESLint v9 / TypeScript ESLint
-    "@typescript-eslint/no-require-imports": "off",
-    
-    // React Hooks
-    "react-hooks/set-state-in-effect": "off",
   },
 }, {
-  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills"]
+  ignores: [
+    "node_modules/**",
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "examples/**",
+    "skills/**",
+    "delivery/**",
+    "agent-ctx/**",
+    "tool-results/**",
+    "scripts/**",
+  ],
 }];
 
 export default eslintConfig;
