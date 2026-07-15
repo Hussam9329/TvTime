@@ -1,0 +1,1588 @@
+     1→"use client";
+     2→
+     3→import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+     4→import { useState, useEffect } from "react";
+     5→import { useNav } from "@/lib/store";
+     6→import type { MediaItem, MovieDetail, TvDetail, PaginatedResponse, SeasonDetail, Genre } from "@/lib/tmdb";
+     7→import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
+     8→import {
+     9→  deriveTvTrackingState,
+    10→  episodeKey,
+    11→  isEpisodeReleased,
+    12→  isFutureEpisode,
+    13→  isOfficiallyEndedTvStatus,
+    14→  type TvTrackingState,
+    15→} from "@/lib/tv-status-engine";
+    16→
+    17→// ---------- TMDB fetchers ----------
+    18→async function tmdbGet<T>(path: string, params?: Record<string, string | number | boolean>): Promise<T> {
+    19→  const url = new URL("/api/tmdb/" + path, window.location.origin);
+    20→  if (params) {
+    21→    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+    22→  }
+    23→  const res = await fetch(url.toString());
+    24→  if (!res.ok) throw new Error(`TMDB ${res.status}`);
+    25→  return res.json();
+    26→}
+    27→
+    28→// Home / Trending
+    29→export function useTrending(window: "day" | "week" = "week", type: "all" | "movie" | "tv" = "all") {
+    30→  return useQuery({
+    31→    queryKey: ["tmdb", "trending", window, type],
+    32→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("trending", { window, type }),
+    33→  });
+    34→}
+    35→
+    36→export function usePopularMovies(page = 1) {
+    37→  return useQuery({
+    38→    queryKey: ["tmdb", "movies", "popular", page],
+    39→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("movies/popular", { page }),
+    40→  });
+    41→}
+    42→
+    43→export function useTopRatedMovies(page = 1) {
+    44→  return useQuery({
+    45→    queryKey: ["tmdb", "movies", "top-rated", page],
+    46→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("movies/top-rated", { page }),
+    47→  });
+    48→}
+    49→
+    50→export function useNowPlayingMovies(page = 1) {
+    51→  return useQuery({
+    52→    queryKey: ["tmdb", "movies", "now-playing", page],
+    53→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("movies/now-playing", { page }),
+    54→  });
+    55→}
+    56→
+    57→export function useUpcomingMovies(page = 1) {
+    58→  return useQuery({
+    59→    queryKey: ["tmdb", "movies", "upcoming", page],
+    60→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("movies/upcoming", { page }),
+    61→  });
+    62→}
+    63→
+    64→export function usePopularTv(page = 1) {
+    65→  return useQuery({
+    66→    queryKey: ["tmdb", "tv", "popular", page],
+    67→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("tv/popular", { page }),
+    68→  });
+    69→}
+    70→
+    71→export function useTopRatedTv(page = 1) {
+    72→  return useQuery({
+    73→    queryKey: ["tmdb", "tv", "top-rated", page],
+    74→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("tv/top-rated", { page }),
+    75→  });
+    76→}
+    77→
+    78→export function useOnTheAirTv(page = 1) {
+    79→  return useQuery({
+    80→    queryKey: ["tmdb", "tv", "on-the-air", page],
+    81→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("tv/on-the-air", { page }),
+    82→  });
+    83→}
+    84→
+    85→export function useAiringTodayTv(page = 1) {
+    86→  return useQuery({
+    87→    queryKey: ["tmdb", "tv", "airing-today", page],
+    88→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("tv/airing-today", { page }),
+    89→  });
+    90→}
+    91→
+    92→export function useMovieGenres() {
+    93→  return useQuery({
+    94→    queryKey: ["tmdb", "movies", "genres"],
+    95→    queryFn: async () => (await tmdbGet<{ genres: Genre[] }>("movies/genres")).genres,
+    96→    staleTime: Infinity,
+    97→  });
+    98→}
+    99→
+   100→export function useTvGenres() {
+   101→  return useQuery({
+   102→    queryKey: ["tmdb", "tv", "genres"],
+   103→    queryFn: async () => (await tmdbGet<{ genres: Genre[] }>("tv/genres")).genres,
+   104→    staleTime: Infinity,
+   105→  });
+   106→}
+   107→
+   108→export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; enabled?: boolean }) {
+   109→  return useQuery({
+   110→    queryKey: ["tmdb", "movies", "discover", params],
+   111→    queryFn: () =>
+   112→      tmdbGet<PaginatedResponse<MediaItem>>("movies/discover", {
+   113→        ...(params.genres && params.genres.length > 0 ? { genre: params.genres.join(",") } : {}),
+   114→        ...(params.year ? { year: params.year } : {}),
+   115→        ...(params.sort_by ? { sort_by: params.sort_by } : {}),
+   116→        page: params.page || 1,
+   117→        ...(params.rating ? { rating: params.rating } : {}),
+   118→        ...(params.originalLanguage ? { original_language: params.originalLanguage } : {}),
+   119→        ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
+   120→        ...(params.releaseDateFrom ? { release_date_gte: params.releaseDateFrom } : {}),
+   121→        ...(params.releaseDateTo ? { release_date_lte: params.releaseDateTo } : {}),
+   122→      }),
+   123→    enabled: params.enabled !== false,
+   124→  });
+   125→}
+   126→
+   127→export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; enabled?: boolean }) {
+   128→  return useQuery({
+   129→    queryKey: ["tmdb", "tv", "discover", params],
+   130→    queryFn: () =>
+   131→      tmdbGet<PaginatedResponse<MediaItem>>("tv/discover", {
+   132→        ...(params.genres && params.genres.length > 0 ? { genre: params.genres.join(",") } : {}),
+   133→        ...(params.year ? { year: params.year } : {}),
+   134→        ...(params.sort_by ? { sort_by: params.sort_by } : {}),
+   135→        page: params.page || 1,
+   136→        ...(params.rating ? { rating: params.rating } : {}),
+   137→        ...(params.originalLanguage ? { original_language: params.originalLanguage } : {}),
+   138→        ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
+   139→      }),
+   140→    enabled: params.enabled !== false,
+   141→  });
+   142→}
+   143→
+   144→export function useSearch(query: string, page = 1) {
+   145→  return useQuery({
+   146→    queryKey: ["tmdb", "search", query, page],
+   147→    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("search", { q: query, page }),
+   148→    enabled: query.trim().length > 0,
+   149→  });
+   150→}
+   151→
+   152→// TVM-31/32: Multi-page search with accumulated results + separate People results.
+   153→// Returns accumulated movie/tv results across all loaded pages, plus a separate
+   154→// people array. Supports Load More via nextPage.
+   155→// Uses refs + "adjust state during render" pattern to avoid setState-in-effect.
+   156→export function useSearchAccumulated(query: string) {
+   157→  const [page, setPage] = useState(1);
+   158→  const [accumulated, setAccumulated] = useState<MediaItem[]>([]);
+   159→  const [people, setPeople] = useState<MediaItem[]>([]);
+   160→  const [lastQuery, setLastQuery] = useState(query);
+   161→  const [lastPage, setLastPage] = useState(0);
+   162→
+   163→  const search = useSearch(query.trim().length > 0 ? query : "", page);
+   164→
+   165→  // Reset accumulation when query changes (adjust state during render pattern)
+   166→  if (query !== lastQuery) {
+   167→    setLastQuery(query);
+   168→    setAccumulated([]);
+   169→    setPeople([]);
+   170→    setPage(1);
+   171→    setLastPage(0);
+   172→  }
+   173→
+   174→  // Accumulate results when new page data arrives (adjust state during render)
+   175→  const dataPage = search.data?.results;
+   176→  const currentPage = page;
+   177→  if (search.data && currentPage !== lastPage) {
+   178→    setLastPage(currentPage);
+   179→    const newMedia = (dataPage ?? []).filter((r) => r.media_type !== "person" && (r.poster_path || r.backdrop_path));
+   180→    const newPeople = (dataPage ?? []).filter((r) => r.media_type === "person");
+   181→    setAccumulated((prev) => {
+   182→      const seen = new Set(prev.map((r) => `${r.media_type}-${r.id}`));
+   183→      const unique = newMedia.filter((r) => !seen.has(`${r.media_type}-${r.id}`));
+   184→      return [...prev, ...unique];
+   185→    });
+   186→    setPeople((prev) => {
+   187→      const seen = new Set(prev.map((r) => `person-${r.id}`));
+   188→      const unique = newPeople.filter((r) => !seen.has(`person-${r.id}`));
+   189→      return [...prev, ...unique];
+   190→    });
+   191→  }
+   192→
+   193→  const totalPages = Math.min(search.data?.total_pages ?? 1, 500);
+   194→  const totalResults = search.data?.total_results ?? 0;
+   195→  const hasMore = page < totalPages;
+   196→
+   197→  const loadMore = () => {
+   198→    if (hasMore && !search.isFetching) setPage((p) => p + 1);
+   199→  };
+   200→
+   201→  return {
+   202→    accumulated,
+   203→    people,
+   204→    isLoading: search.isLoading,
+   205→    isFetching: search.isFetching && page > 1,
+   206→    isError: search.isError,
+   207→    hasMore,
+   208→    loadMore,
+   209→    totalResults,
+   210→    currentPage: page,
+   211→    totalPages,
+   212→  };
+   213→}
+   214→
+   215→export function useMovieDetail(id: number | null) {
+   216→  return useQuery({
+   217→    queryKey: ["tmdb", "movie", id],
+   218→    queryFn: () => tmdbGet<MovieDetail>(`movie/${id}`),
+   219→    enabled: id != null,
+   220→  });
+   221→}
+   222→
+   223→export function useTvDetail(id: number | null) {
+   224→  return useQuery({
+   225→    queryKey: ["tmdb", "tv", id],
+   226→    queryFn: () => tmdbGet<TvDetail>(`tv/${id}`),
+   227→    enabled: id != null,
+   228→  });
+   229→}
+   230→
+   231→export function useSeasonDetail(tvId: number | null, seasonNumber: number | null) {
+   232→  return useQuery({
+   233→    queryKey: ["tmdb", "tv", tvId, "season", seasonNumber],
+   234→    queryFn: () => tmdbGet<SeasonDetail>(`tv/${tvId}/season/${seasonNumber}`),
+   235→    enabled: tvId != null && seasonNumber != null,
+   236→  });
+   237→}
+   238→
+   239→export function usePersonDetail(id: number | null) {
+   240→  return useQuery({
+   241→    queryKey: ["tmdb", "person", id],
+   242→    queryFn: () => tmdbGet<any>(`person/${id}`),
+   243→    enabled: id != null,
+   244→  });
+   245→}
+   246→
+   247→// ---------- Library (Neon PostgreSQL backend) ----------
+   248→// All tracking actions write directly to the Neon database via API routes.
+   249→// This unifies the Home/Discover browsing with the Library view.
+   250→
+   251→// Re-export types for backwards compatibility
+   252→export type WatchlistItemDB = MediaItemDB;
+   253→export type WatchedMovieDB = MediaItemDB;
+   254→export type WatchedEpisodeDB = {
+   255→  id: string;
+   256→  showId: number;
+   257→  seasonNumber: number;
+   258→  episodeNumber: number;
+   259→  episodeName: string | null;
+   260→  runtime: number | null;
+   261→  watchedAt: string;
+   262→};
+   263→export type FollowingShowDB = MediaItemDB;
+   264→export type RatingDB = MediaItemDB;
+   265→
+   266→// Episode tracking is now server-backed via API
+   267→
+   268→// Helper: find-or-create a Media item from TMDB data
+   269→async function findOrCreateMedia(args: {
+   270→  tmdbId: number;
+   271→  title: string;
+   272→  type: "movie" | "tv";
+   273→  poster?: string | null;
+   274→  year?: string;
+   275→  overview?: string;
+   276→  rating?: number;
+   277→  runtime?: number | null;
+   278→  genres?: string[];
+   279→  originCountry?: string[] | null;
+   280→  originalLanguage?: string | null;
+   281→  seasons?: number | null;
+   282→  episodes?: number | null;
+   283→}): Promise<string> {
+   284→  const posterUrl = args.poster
+   285→    ? (args.poster.startsWith("http")
+   286→      ? args.poster
+   287→      : `https://image.tmdb.org/t/p/w500${args.poster}`)
+   288→    : null;
+   289→  const res = await fetch(withUserId(new URL("/api/media/find-or-create", window.location.origin)), {
+   290→    method: "POST",
+   291→    headers: { "Content-Type": "application/json", ...userHeaders() },
+   292→    body: JSON.stringify({
+   293→      tmdbId: args.tmdbId,
+   294→      title: args.title,
+   295→      type: args.type === "tv" ? "series" : "movie",
+   296→      poster: posterUrl,
+   297→      year: args.year,
+   298→      overview: args.overview,
+   299→      rating: args.rating,
+   300→      runtime: args.runtime,
+   301→      genres: args.genres,
+   302→      originCountry: args.originCountry,
+   303→      originalLanguage: args.originalLanguage,
+   304→      seasons: args.seasons,
+   305→      episodes: args.episodes,
+   306→    }),
+   307→  });
+   308→  if (!res.ok) throw new Error("Failed to find-or-create media");
+   309→  const data = await res.json();
+   310→  return data.item.id;
+   311→}
+   312→
+   313→async function ensureApiOk(res: Response, fallback: string): Promise<Response> {
+   314→  if (res.ok) return res;
+   315→  const errorBody = await res.json().catch(() => ({}));
+   316→  throw new Error(errorBody?.error || fallback);
+   317→}
+   318→
+   319→/**
+   320→ * TVM Fix: Direct state lookup by tmdbId + type — NO pagination.
+   321→ * Returns the media item's DB id, or null if not found.
+   322→ * Throws on server error (not silent return null).
+   323→ */
+   324→async function getMediaIdByTmdbId(tmdbId: number, mediaType: "movie" | "tv"): Promise<string | null> {
+   325→  const url = withUserId(new URL("/api/media/state", window.location.origin));
+   326→  url.searchParams.set("tmdbId", String(tmdbId));
+   327→  url.searchParams.set("type", mediaType);
+   328→  const res = await fetch(url, { headers: userHeaders() });
+   329→  if (!res.ok) throw new Error(`Failed to load media state (${res.status})`);
+   330→  const data = await res.json();
+   331→  return data.item?.id ?? null;
+   332→}
+   333→
+   334→/**
+   335→ * TVM Fix: useMediaState — fetch a single item's state by tmdbId.
+   336→ * Used by detail pages to know if a movie is in watchlist/watched/rated
+   337→ * without paginating through the entire library.
+   338→ */
+   339→export function useMediaState(tmdbId: number | null, mediaType: "movie" | "tv") {
+   340→  return useQuery({
+   341→    queryKey: ["media", "state", getClientUserId(), mediaType, tmdbId],
+   342→    queryFn: async () => {
+   343→      if (!tmdbId) return null;
+   344→      const url = withUserId(new URL("/api/media/state", window.location.origin));
+   345→      url.searchParams.set("tmdbId", String(tmdbId));
+   346→      url.searchParams.set("type", mediaType);
+   347→      const res = await fetch(url, { headers: userHeaders() });
+   348→      if (!res.ok) throw new Error(`Failed to load media state (${res.status})`);
+   349→      const data = await res.json();
+   350→      return data.item;
+   351→    },
+   352→    enabled: tmdbId != null && tmdbId > 0,
+   353→    staleTime: 0,
+   354→  });
+   355→}
+   356→
+   357→export type MediaBatchState = {
+   358→  id: string;
+   359→  tmdbId: number;
+   360→  type: "movie" | "series";
+   361→  status: string | null;
+   362→  watched: boolean;
+   363→  userRating: number | null;
+   364→  isAnime: boolean;
+   365→  isArabic: boolean;
+   366→  originalLanguage: string | null;
+   367→  originCountries: string[];
+   368→  isFollowing: boolean;
+   369→  inWatchlist: boolean;
+   370→};
+   371→
+   372→export function mediaStateKey(mediaType: "movie" | "tv", tmdbId: number): string {
+   373→  return `${mediaType}:${tmdbId}`;
+   374→}
+   375→
+   376→/**
+   377→ * Loads only the state for cards currently rendered on screen. This avoids
+   378→ * deriving badges from the first page of a globally paginated library.
+   379→ */
+   380→export function useMediaStates(items: { tmdbId: number; mediaType: "movie" | "tv" }[]) {
+   381→  const normalized = Array.from(
+   382→    new Map(
+   383→      items
+   384→        .filter((item) => Number.isInteger(item.tmdbId) && item.tmdbId > 0)
+   385→        .map((item) => [mediaStateKey(item.mediaType, item.tmdbId), item]),
+   386→    ).values(),
+   387→  ).sort((a, b) => mediaStateKey(a.mediaType, a.tmdbId).localeCompare(mediaStateKey(b.mediaType, b.tmdbId)));
+   388→  const signature = normalized.map((item) => mediaStateKey(item.mediaType, item.tmdbId)).join("|");
+   389→
+   390→  return useQuery({
+   391→    queryKey: ["media", "states", getClientUserId(), signature],
+   392→    queryFn: async () => {
+   393→      if (normalized.length === 0) return {} as Record<string, MediaBatchState>;
+   394→
+   395→      // The API deliberately caps each request. Large grids are split into
+   396→      // bounded batches so a page with more than 200 rendered cards never
+   397→      // falls back to missing badges or a 413 response.
+   398→      const chunks: typeof normalized[] = [];
+   399→      for (let index = 0; index < normalized.length; index += 200) {
+   400→        chunks.push(normalized.slice(index, index + 200));
+   401→      }
+   402→
+   403→      const responses = await Promise.all(chunks.map(async (chunk) => {
+   404→        const res = await fetch(withUserId(new URL("/api/media/states", window.location.origin)), {
+   405→          method: "POST",
+   406→          headers: { "Content-Type": "application/json", ...userHeaders() },
+   407→          body: JSON.stringify({ items: chunk }),
+   408→        });
+   409→        await ensureApiOk(res, "Failed to load media card states");
+   410→        const data = await res.json();
+   411→        return (data.states || {}) as Record<string, MediaBatchState>;
+   412→      }));
+   413→
+   414→      return Object.assign({}, ...responses) as Record<string, MediaBatchState>;
+   415→    },
+   416→    enabled: normalized.length > 0,
+   417→    staleTime: 0,
+   418→  });
+   419→}
+   420→
+   421→// Compatibility mapper: converts a Media DB item to the shape that the
+   422→// TMDB-style library hooks (useWatchlist, useWatchedMovies, etc.) used to
+   423→// return when backed by localStorage. This keeps existing consumers working
+   424→// without having to rewrite every call site.
+   425→function mediaToLibraryCompat(m: any) {
+   426→  const mediaType = m.type === "series" ? "tv" : m.type;
+   427→  return {
+   428→    ...m,
+   429→    mediaType,
+   430→    posterPath: m.posterPath ?? m.poster ?? null,
+   431→    backdropPath: m.backdropPath ?? null,
+   432→    releaseDate: m.releaseDate ?? (m.year ? `${m.year}-01-01` : null),
+   433→    voteAverage: m.voteAverage ?? (m.rating ? Number(m.rating) : null),
+   434→    followedAt: m.followedAt ?? m.addedAt ?? m.updatedAt,
+   435→    watchedAt: m.watchedAt ?? null,
+   436→    value: m.value ?? (m.userRating == null ? undefined : (m.userRating > 10 ? Math.round(m.userRating / 10) : m.userRating)),
+   437→  };
+   438→}
+   439→
+   440→// Watchlist - reads from Neon (status="planned")
+   441→export function useWatchlist(mediaType?: "movie" | "tv") {
+   442→  const type = mediaType === "tv" ? "series" : mediaType || undefined;
+   443→  return useQuery({
+   444→    queryKey: ["media", "watchlist", type],
+   445→    queryFn: async () => {
+   446→      const url = withUserId(new URL("/api/media", window.location.origin));
+   447→      url.searchParams.set("status", "planned");
+   448→      if (type) url.searchParams.set("type", type);
+   449→      const res = await fetch(url, { headers: userHeaders() });
+   450→      if (!res.ok) throw new Error("Failed to load");
+   451→      const data = await res.json();
+   452→      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
+   453→    },
+   454→    staleTime: 0,
+   455→  });
+   456→}
+   457→
+   458→export function useWatchlistToggle() {
+   459→  const qc = useQueryClient();
+   460→  return useMutation({
+   461→    mutationFn: async (args: {
+   462→      action: "add" | "remove";
+   463→      mediaType: "movie" | "tv";
+   464→      tmdbId: number;
+   465→      title: string;
+   466→      posterPath?: string | null;
+   467→      backdropPath?: string | null;
+   468→      overview?: string;
+   469→      releaseDate?: string;
+   470→      voteAverage?: number;
+   471→      runtime?: number | null;
+   472→      genres?: string[];
+   473→      originCountry?: string[] | null;
+   474→      originalLanguage?: string | null;
+   475→      seasons?: number | null;
+   476→      episodes?: number | null;
+   477→    }) => {
+   478→      if (args.action === "add") {
+   479→        // Find-or-create, then set status to "planned"
+   480→        const id = await findOrCreateMedia({
+   481→          tmdbId: args.tmdbId,
+   482→          title: args.title,
+   483→          type: args.mediaType,
+   484→          poster: args.posterPath,
+   485→          year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
+   486→          overview: args.overview,
+   487→          rating: args.voteAverage,
+   488→          runtime: args.runtime,
+   489→          genres: args.genres,
+   490→          originCountry: args.originCountry,
+   491→          originalLanguage: args.originalLanguage,
+   492→          seasons: args.seasons,
+   493→          episodes: args.episodes,
+   494→        });
+   495→        const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+   496→          method: "PATCH",
+   497→          headers: { "Content-Type": "application/json", ...userHeaders() },
+   498→          body: JSON.stringify({ status: "planned" }),
+   499→        });
+   500→        await ensureApiOk(patchRes, "Failed to add to watchlist");
+   501→      } else {
+   502→        // Remove from watchlist: find by tmdbId DIRECTLY (not via paginated list .find())
+   503→        const id = await getMediaIdByTmdbId(args.tmdbId, args.mediaType);
+   504→        if (id) {
+   505→          const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+   506→            method: "PATCH",
+   507→            headers: { "Content-Type": "application/json", ...userHeaders() },
+   508→            body: JSON.stringify({ status: null }),
+   509→          });
+   510→          await ensureApiOk(patchRes, "Failed to remove from watchlist");
+   511→        }
+   512→      }
+   513→    },
+   514→    onSuccess: () => {
+   515→      qc.invalidateQueries({ queryKey: ["media"] });
+   516→      qc.invalidateQueries({ queryKey: ["library-counts"] });
+   517→      qc.invalidateQueries({ queryKey: ["lib"] });
+   518→      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+   519→      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+   520→    },
+   521→  });
+   522→}
+   523→
+   524→
+   525→export type RecentlyWatchedItem = {
+   526→  id: string;
+   527→  kind: "movie" | "tv";
+   528→  tmdbId: number | null;
+   529→  title: string;
+   530→  posterPath: string | null;
+   531→  watchedAt: string;
+   532→  subtitle?: string | null;
+   533→  seasonNumber?: number | null;
+   534→  episodeNumber?: number | null;
+   535→  episodeName?: string | null;
+   536→  hasProfile: boolean;
+   537→  source: "media" | "watched-episode";
+   538→};
+   539→
+   540→export function useRecentlyWatched(limit = 12) {
+   541→  return useQuery({
+   542→    queryKey: ["media", "recently", limit],
+   543→    queryFn: async () => {
+   544→      const url = withUserId(new URL("/api/media/recently", window.location.origin));
+   545→      url.searchParams.set("limit", String(limit));
+   546→      const res = await fetch(url, { headers: userHeaders() });
+   547→      if (!res.ok) throw new Error("Failed to load recently watched");
+   548→      const data = await res.json();
+   549→      return {
+   550→        items: (data.items || []) as RecentlyWatchedItem[],
+   551→        total: Number(data.total || data.items?.length || 0),
+   552→      };
+   553→    },
+   554→    staleTime: 30_000,
+   555→    refetchOnWindowFocus: false,
+   556→  });
+   557→}
+   558→
+   559→// Watched Movies - reads from Neon (watched=true)
+   560→export function useWatchedMovies() {
+   561→  return useQuery({
+   562→    queryKey: ["media", "watched-movies"],
+   563→    queryFn: async () => {
+   564→      const url = withUserId(new URL("/api/media", window.location.origin));
+   565→      url.searchParams.set("type", "movie");
+   566→      url.searchParams.set("watched", "true");
+   567→      // Sort by watchedAt desc so the "Recently Watched" row reflects recency,
+   568→      // matching the section name on the home page.
+   569→      url.searchParams.set("sortBy", "watchedAt");
+   570→      url.searchParams.set("order", "desc");
+   571→      const res = await fetch(url, { headers: userHeaders() });
+   572→      if (!res.ok) throw new Error("Failed to load");
+   573→      const data = await res.json();
+   574→      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
+   575→    },
+   576→    staleTime: 0,
+   577→  });
+   578→}
+   579→
+   580→export function useWatchedMovieToggle() {
+   581→  const qc = useQueryClient();
+   582→  return useMutation({
+   583→    mutationFn: async (args: {
+   584→      action: "add" | "remove";
+   585→      tmdbId: number;
+   586→      title: string;
+   587→      posterPath?: string | null;
+   588→      runtime?: number | null;
+   589→      releaseDate?: string;
+   590→      voteAverage?: number;
+   591→      overview?: string;
+   592→      genres?: string[];
+   593→      originCountry?: string[] | null;
+   594→      originalLanguage?: string | null;
+   595→      seasons?: number | null;
+   596→      episodes?: number | null;
+   597→    }) => {
+   598→      if (args.action === "add") {
+   599→        // Find-or-create, then mark as watched (without rating - will be rated via rating dialog)
+   600→        const id = await findOrCreateMedia({
+   601→          tmdbId: args.tmdbId,
+   602→          title: args.title,
+   603→          type: "movie",
+   604→          poster: args.posterPath,
+   605→          year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
+   606→          overview: args.overview,
+   607→          rating: args.voteAverage,
+   608→          runtime: args.runtime,
+   609→          genres: args.genres,
+   610→          originCountry: args.originCountry,
+   611→          originalLanguage: args.originalLanguage,
+   612→          seasons: args.seasons,
+   613→          episodes: args.episodes,
+   614→        });
+   615→        const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+   616→          method: "PATCH",
+   617→          headers: { "Content-Type": "application/json", ...userHeaders() },
+   618→          body: JSON.stringify({ watched: true, watchedAt: new Date().toISOString(), status: "watched" }),
+   619→        });
+   620→        await ensureApiOk(patchRes, "Failed to mark movie watched");
+   621→      } else {
+   622→        // Remove from watched without touching the independent rating
+   623→        // TVM Fix: find by tmdbId DIRECTLY (not via paginated list .find())
+   624→        const id = await getMediaIdByTmdbId(args.tmdbId, "movie");
+   625→        if (id) {
+   626→          const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+   627→            method: "PATCH",
+   628→            headers: { "Content-Type": "application/json", ...userHeaders() },
+   629→            body: JSON.stringify({ watched: false, watchedAt: null, status: null }),
+   630→          });
+   631→          await ensureApiOk(patchRes, "Failed to remove movie from watched");
+   632→        }
+   633→      }
+   634→    },
+   635→    onSuccess: () => {
+   636→      qc.invalidateQueries({ queryKey: ["media"] });
+   637→      qc.invalidateQueries({ queryKey: ["library-counts"] });
+   638→      qc.invalidateQueries({ queryKey: ["lib"] });
+   639→      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+   640→      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+   641→    },
+   642→  });
+   643→}
+   644→
+   645→// ---------- Episode completion info ----------
+   646→// Returned by /api/library/watched-episodes after marking/unmarking episodes.
+   647→// The client uses this to decide whether to open the RatingDialog.
+   648→export type EpisodeCompletion = {
+   649→  newStatus: TvTrackingState;
+   650→  isEnded: boolean | null;
+   651→  showTmdbId: number;
+   652→  mediaId: string;
+   653→  needsRating: boolean;
+   654→  airedEpisodeCount: number | null;
+   655→  watchedAiredEpisodeCount: number;
+   656→  ignoredFutureEpisodeCount: number;
+   657→  verified: boolean;
+   658→};
+   659→
+   660→// Watched Episodes - server-backed via /api/library/watched-episodes
+   661→export function useWatchedEpisodes(showId?: number) {
+   662→  const userId = useNav((s) => s.userId);
+   663→  return useQuery({
+   664→    queryKey: ["lib", "watched-episodes", userId || getClientUserId(), showId],
+   665→    queryFn: async () => {
+   666→      const url = withUserId(new URL("/api/library/watched-episodes", window.location.origin));
+   667→      if (showId != null) url.searchParams.set("showId", String(showId));
+   668→      const res = await fetch(url, { headers: userHeaders() });
+   669→      if (!res.ok) {
+   670→        const errorBody = await res.json().catch(() => ({}));
+   671→        throw new Error(errorBody?.error || "Failed to load watched episodes");
+   672→      }
+   673→      return res.json();
+   674→    },
+   675→    staleTime: 0,
+   676→  });
+   677→}
+   678→
+   679→export type EpisodeWatchTimeline = {
+   680→  releasedEpisodes: Array<{
+   681→    seasonNumber: number;
+   682→    episodeNumber: number;
+   683→    episodeName?: string | null;
+   684→  }>;
+   685→  watchedKeys: string[];
+   686→  source: string;
+   687→};
+   688→
+   689→export function useEpisodeWatchTimeline(showId?: number | null) {
+   690→  const userId = useNav((s) => s.userId);
+   691→  const numericShowId = Number(showId || 0);
+   692→  return useQuery({
+   693→    queryKey: ["episode-watch-plan", userId || getClientUserId(), numericShowId],
+   694→    enabled: numericShowId > 0,
+   695→    queryFn: async () => {
+   696→      const url = withUserId(new URL("/api/library/watched-episodes/plan", window.location.origin));
+   697→      url.searchParams.set("showId", String(numericShowId));
+   698→      const res = await fetch(url, { headers: userHeaders() });
+   699→      await ensureApiOk(res, "Failed to verify earlier episode progress");
+   700→      return res.json() as Promise<EpisodeWatchTimeline>;
+   701→    },
+   702→    staleTime: 0,
+   703→    refetchOnWindowFocus: false,
+   704→  });
+   705→}
+   706→
+   707→export function useEpisodeToggle() {
+   708→  const qc = useQueryClient();
+   709→  return useMutation({
+   710→    mutationFn: async (args: {
+   711→      action: "add" | "remove";
+   712→      showId: number;
+   713→      seasonNumber: number;
+   714→      episodeNumber: number;
+   715→      episodeName?: string;
+   716→    }): Promise<{ item?: any; ok?: boolean; completion?: EpisodeCompletion | null }> => {
+   717→      if (args.action === "add") {
+   718→        const res = await fetch(withUserId(new URL("/api/library/watched-episodes", window.location.origin)), {
+   719→          method: "POST",
+   720→          headers: { "Content-Type": "application/json", ...userHeaders() },
+   721→          body: JSON.stringify({
+   722→            showId: args.showId,
+   723→            seasonNumber: args.seasonNumber,
+   724→            episodeNumber: args.episodeNumber,
+   725→            episodeName: args.episodeName,
+   726→          }),
+   727→        });
+   728→        if (!res.ok) {
+   729→          const errorBody = await res.json().catch(() => ({}));
+   730→          throw new Error(errorBody?.error || "Failed to mark episode watched");
+   731→        }
+   732→        return res.json();
+   733→      } else {
+   734→        const url = withUserId(new URL("/api/library/watched-episodes", window.location.origin));
+   735→        url.searchParams.set("showId", String(args.showId));
+   736→        url.searchParams.set("seasonNumber", String(args.seasonNumber));
+   737→        url.searchParams.set("episodeNumber", String(args.episodeNumber));
+   738→        const res = await fetch(url, { method: "DELETE", headers: userHeaders() });
+   739→        if (!res.ok) {
+   740→          const errorBody = await res.json().catch(() => ({}));
+   741→          throw new Error(errorBody?.error || "Failed to unmark episode");
+   742→        }
+   743→        return res.json();
+   744→      }
+   745→    },
+   746→    onSuccess: () => {
+   747→      qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
+   748→      qc.invalidateQueries({ queryKey: ["lib", "stats"] });
+   749→      // Also invalidate media/TV tracking queries so every counter updates immediately.
+   750→      qc.invalidateQueries({ queryKey: ["media"] });
+   751→      qc.invalidateQueries({ queryKey: ["library-counts"] });
+   752→      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+   753→      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+   754→      qc.invalidateQueries({ queryKey: ["calendar"] });
+   755→      qc.invalidateQueries({ queryKey: ["episode-watch-plan"] });
+   756→    },
+   757→  });
+   758→}
+   759→
+   760→export function useBulkEpisodeToggle() {
+   761→  const qc = useQueryClient();
+   762→  return useMutation({
+   763→    mutationFn: async (args: {
+   764→      showId: number;
+   765→      episodes: { seasonNumber: number; episodeNumber: number; episodeName?: string | null }[];
+   766→    }): Promise<{ ok?: boolean; count?: number; completion?: EpisodeCompletion | null }> => {
+   767→      const res = await fetch(withUserId(new URL("/api/library/watched-episodes", window.location.origin)), {
+   768→        method: "POST",
+   769→        headers: { "Content-Type": "application/json", ...userHeaders() },
+   770→        body: JSON.stringify({ showId: args.showId, episodes: args.episodes }),
+   771→      });
+   772→      if (!res.ok) {
+   773→        const errorBody = await res.json().catch(() => ({}));
+   774→        throw new Error(errorBody?.error || "Failed to mark episodes watched");
+   775→      }
+   776→      return res.json();
+   777→    },
+   778→    onSuccess: () => {
+   779→      qc.invalidateQueries({ queryKey: ["lib", "watched-episodes"] });
+   780→      qc.invalidateQueries({ queryKey: ["lib", "stats"] });
+   781→      qc.invalidateQueries({ queryKey: ["media"] });
+   782→      qc.invalidateQueries({ queryKey: ["library-counts"] });
+   783→      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+   784→      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+   785→      qc.invalidateQueries({ queryKey: ["calendar"] });
+   786→      qc.invalidateQueries({ queryKey: ["episode-watch-plan"] });
+   787→    },
+   788→  });
+   789→}
+   790→
+   791→// ---------- Calendar schedule ----------
+   792→export type CalendarScheduleEpisode = {
+   793→  id: string;
+   794→  date: string;
+   795→  showId: number;
+   796→  showTitle: string;
+   797→  showPoster: string | null;
+   798→  showBackdrop: string | null;
+   799→  isAnime: boolean;
+   800→  isArabic: boolean;
+   801→  seasonNumber: number;
+   802→  episodeNumber: number;
+   803→  episodeName: string;
+   804→  overview: string | null;
+   805→  stillPath: string | null;
+   806→  runtime: number | null;
+   807→  watched: boolean;
+   808→  trailerKey: string | null;
+   809→  networkNames: string[];
+   810→};
+   811→
+   812→export type CalendarScheduleResponse = {
+   813→  from: string;
+   814→  to: string;
+   815→  episodes: CalendarScheduleEpisode[];
+   816→  shows: Array<{
+   817→    id: string;
+   818→    tmdbId: number;
+   819→    title: string;
+   820→    poster: string | null;
+   821→    isAnime: boolean;
+   822→    isArabic: boolean;
+   823→  }>;
+   824→  warnings: string[];
+   825→  partial: boolean;
+   826→  world?: "general" | "arabic-tv";
+   827→};
+   828→
+   829→export type ArabicMovieScheduleResponse = {
+   830→  from: string;
+   831→  to: string;
+   832→  items: MediaItem[];
+   833→  total: number;
+   834→  pagesFetched: number;
+   835→  truncated: boolean;
+   836→};
+   837→
+   838→export function useArabicMovieSchedule(from: string, to: string) {
+   839→  return useQuery({
+   840→    queryKey: ["arabic-movies", "release-schedule", from, to],
+   841→    queryFn: async (): Promise<ArabicMovieScheduleResponse> => {
+   842→      const url = new URL("/api/arabic-movies/calendar", window.location.origin);
+   843→      url.searchParams.set("from", from);
+   844→      url.searchParams.set("to", to);
+   845→      const res = await fetch(url, { cache: "no-store" });
+   846→      if (!res.ok) {
+   847→        const errorBody = await res.json().catch(() => ({}));
+   848→        throw new Error(errorBody?.error || "Failed to load Arabic movie releases");
+   849→      }
+   850→      return res.json();
+   851→    },
+   852→    staleTime: 15 * 60 * 1000,
+   853→    refetchOnWindowFocus: false,
+   854→  });
+   855→}
+   856→
+   857→export function useCalendarSchedule(from: string, to: string, world: "general" | "arabic-tv" = "general") {
+   858→  const userId = useNav((state) => state.userId);
+   859→  return useQuery({
+   860→    queryKey: ["calendar", userId || getClientUserId(), world, from, to],
+   861→    queryFn: async (): Promise<CalendarScheduleResponse> => {
+   862→      const url = withUserId(new URL("/api/calendar", window.location.origin));
+   863→      url.searchParams.set("from", from);
+   864→      url.searchParams.set("to", to);
+   865→      url.searchParams.set("world", world);
+   866→      const res = await fetch(url, { headers: userHeaders(), cache: "no-store" });
+   867→      if (!res.ok) {
+   868→        const errorBody = await res.json().catch(() => ({}));
+   869→        throw new Error(errorBody?.error || "Failed to load your episode calendar");
+   870→      }
+   871→      return res.json();
+   872→    },
+   873→    staleTime: 5 * 60 * 1000,
+   874→    refetchOnWindowFocus: true,
+   875→  });
+   876→}
+   877→
+   878→// Following - active TV tracking only; Planned remains a list-only state
+   879→export function useFollowing() {
+   880→  return useQuery({
+   881→    queryKey: ["media", "following"],
+   882→    queryFn: async () => {
+   883→      const url = withUserId(new URL("/api/media", window.location.origin));
+   884→      url.searchParams.set("type", "series");
+   885→      url.searchParams.set("tracked", "true");
+   886→      url.searchParams.set("isAnime", "false");
+   887→      url.searchParams.set("isArabic", "false");
+   888→      url.searchParams.set("limit", "500");
+   889→      const res = await fetch(url, { headers: userHeaders() });
+   890→      if (!res.ok) throw new Error("Failed to load");
+   891→      const data = await res.json();
+   892→      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
+   893→    },
+   894→    staleTime: 0,
+   895→  });
+   896→}
+   897→
+   898→// Tracked Shows - ALL series in the database (watched + unwatched, anime + non-anime)
+   899→// Used to check if a show is already tracked (for Follow/Following button state)
+   900→export function useTrackedShows() {
+   901→  return useQuery({
+   902→    queryKey: ["media", "tracked-shows"],
+   903→    queryFn: async () => {
+   904→      const url = withUserId(new URL("/api/media", window.location.origin));
+   905→      url.searchParams.set("type", "series");
+   906→      url.searchParams.set("tracked", "true");
+   907→      url.searchParams.set("limit", "500");
+   908→      const res = await fetch(url, { headers: userHeaders() });
+   909→      if (!res.ok) throw new Error("Failed to load");
+   910→      const data = await res.json();
+   911→      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
+   912→    },
+   913→    staleTime: 0,
+   914→  });
+   915→}
+   916→
+   917→export type FollowingToggleResult = {
+   918→  ok?: boolean;
+   919→  changed: boolean;
+   920→  action: string;
+   921→  item?: any;
+   922→  deletedEpisodes?: number;
+   923→  deletedRatings?: number;
+   924→  message?: string;
+   925→};
+   926→
+   927→export function useFollowingToggle() {
+   928→  const qc = useQueryClient();
+   929→  return useMutation({
+   930→    mutationFn: async (args: {
+   931→      action: "add" | "remove";
+   932→      tmdbId: number;
+   933→      title: string;
+   934→      posterPath?: string | null;
+   935→      releaseDate?: string;
+   936→      overview?: string;
+   937→      voteAverage?: number;
+   938→      genres?: string[];
+   939→      originCountry?: string[] | null;
+   940→      originalLanguage?: string | null;
+   941→      seasons?: number | null;
+   942→      episodes?: number | null;
+   943→      keepProgress?: boolean;
+   944→    }): Promise<FollowingToggleResult> => {
+   945→      if (args.action === "remove") {
+   946→        const res = await fetch(withUserId(new URL("/api/tv-tracking/unfollow", window.location.origin)), {
+   947→          method: "POST",
+   948→          headers: { "Content-Type": "application/json", ...userHeaders() },
+   949→          body: JSON.stringify({
+   950→            tmdbId: args.tmdbId,
+   951→            keepProgress: args.keepProgress !== false,
+   952→          }),
+   953→        });
+   954→        await ensureApiOk(res, "Failed to unfollow TV show");
+   955→        return res.json();
+   956→      }
+   957→
+   958→      await findOrCreateMedia({
+   959→        tmdbId: args.tmdbId,
+   960→        title: args.title,
+   961→        type: "tv",
+   962→        poster: args.posterPath,
+   963→        year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
+   964→        overview: args.overview,
+   965→        rating: args.voteAverage,
+   966→        genres: args.genres,
+   967→        originCountry: args.originCountry,
+   968→        originalLanguage: args.originalLanguage,
+   969→        seasons: args.seasons,
+   970→        episodes: args.episodes,
+   971→      });
+   972→
+   973→      const stateUrl = withUserId(new URL("/api/media/state", window.location.origin));
+   974→      stateUrl.searchParams.set("tmdbId", String(args.tmdbId));
+   975→      stateUrl.searchParams.set("type", "tv");
+   976→      const stateRes = await fetch(stateUrl, { headers: userHeaders() });
+   977→      await ensureApiOk(stateRes, "Failed to verify TV show state");
+   978→      const stateData = await stateRes.json();
+   979→      const item = stateData.item;
+   980→      if (!item) throw new Error("TV show state was not found after saving it");
+   981→
+   982→      if (item.isFollowing === true) {
+   983→        return { changed: false, action: "already_following", item };
+   984→      }
+   985→
+   986→      const followRes = await fetch(withUserId(new URL("/api/library/following", window.location.origin)), {
+   987→        method: "POST",
+   988→        headers: { "Content-Type": "application/json", ...userHeaders() },
+   989→        body: JSON.stringify({
+   990→          tmdbId: args.tmdbId,
+   991→          title: args.title,
+   992→          posterPath: args.posterPath,
+   993→        }),
+   994→      });
+   995→      await ensureApiOk(followRes, "Failed to follow TV show");
+   996→      const followData = await followRes.json();
+   997→      return {
+   998→        ...followData,
+   999→        changed: Boolean(followData.changed),
+  1000→        action: followData.changed ? "follow" : "already_following",
+  1001→      };
+  1002→    },
+  1003→    onSuccess: () => {
+  1004→      qc.invalidateQueries({ queryKey: ["media"] });
+  1005→      qc.invalidateQueries({ queryKey: ["library-counts"] });
+  1006→      qc.invalidateQueries({ queryKey: ["lib"] });
+  1007→      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+  1008→      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+  1009→    },
+  1010→  });
+  1011→}
+  1012→
+  1013→// Ratings - reads from Neon (userRating != null)
+  1014→export function useRatings(mediaType?: "movie" | "tv") {
+  1015→  const type = mediaType === "tv" ? "series" : mediaType || undefined;
+  1016→  return useQuery({
+  1017→    queryKey: ["media", "ratings", type],
+  1018→    queryFn: async () => {
+  1019→      const url = withUserId(new URL("/api/media", window.location.origin));
+  1020→      url.searchParams.set("rated", "true");
+  1021→      if (type) url.searchParams.set("type", type);
+  1022→      const res = await fetch(url, { headers: userHeaders() });
+  1023→      if (!res.ok) throw new Error("Failed to load");
+  1024→      const data = await res.json();
+  1025→      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
+  1026→    },
+  1027→    staleTime: 0,
+  1028→  });
+  1029→}
+  1030→
+  1031→export interface EpisodeRatingDB {
+  1032→  id: string;
+  1033→  showId: number;
+  1034→  seasonNumber: number;
+  1035→  episodeNumber: number;
+  1036→  title: string;
+  1037→  posterPath: string | null;
+  1038→  value: number;
+  1039→  updatedAt: string;
+  1040→  scope: "episode";
+  1041→}
+  1042→
+  1043→export function useEpisodeRatings(showId: number | null | undefined) {
+  1044→  const numericShowId = Number(showId || 0);
+  1045→  return useQuery({
+  1046→    queryKey: ["episode-ratings", numericShowId],
+  1047→    enabled: numericShowId > 0,
+  1048→    queryFn: async () => {
+  1049→      const url = withUserId(new URL("/api/library/ratings", window.location.origin));
+  1050→      url.searchParams.set("mediaType", "episode");
+  1051→      url.searchParams.set("showId", String(numericShowId));
+  1052→      const res = await fetch(url, { headers: userHeaders() });
+  1053→      await ensureApiOk(res, "Failed to load episode ratings");
+  1054→      return res.json() as Promise<{ items: EpisodeRatingDB[] }>;
+  1055→    },
+  1056→    staleTime: 30_000,
+  1057→    refetchOnWindowFocus: true,
+  1058→  });
+  1059→}
+  1060→
+  1061→export function useEpisodeRatingMutate(showId: number) {
+  1062→  const qc = useQueryClient();
+  1063→  return useMutation({
+  1064→    mutationFn: async (args: {
+  1065→      action: "set" | "remove";
+  1066→      seasonNumber: number;
+  1067→      episodeNumber: number;
+  1068→      value?: number;
+  1069→      showTitle?: string;
+  1070→      episodeName?: string;
+  1071→      posterPath?: string | null;
+  1072→    }) => {
+  1073→      const url = withUserId(new URL("/api/library/ratings", window.location.origin));
+  1074→      if (args.action === "remove") {
+  1075→        url.searchParams.set("mediaType", "episode");
+  1076→        url.searchParams.set("showId", String(showId));
+  1077→        url.searchParams.set("seasonNumber", String(args.seasonNumber));
+  1078→        url.searchParams.set("episodeNumber", String(args.episodeNumber));
+  1079→        const res = await fetch(url, { method: "DELETE", headers: userHeaders() });
+  1080→        await ensureApiOk(res, "Failed to remove episode rating");
+  1081→        return res.json();
+  1082→      }
+  1083→
+  1084→      const res = await fetch(url, {
+  1085→        method: "POST",
+  1086→        headers: { "Content-Type": "application/json", ...userHeaders() },
+  1087→        body: JSON.stringify({
+  1088→          mediaType: "episode",
+  1089→          showId,
+  1090→          seasonNumber: args.seasonNumber,
+  1091→          episodeNumber: args.episodeNumber,
+  1092→          value: args.value,
+  1093→          showTitle: args.showTitle,
+  1094→          episodeName: args.episodeName,
+  1095→          posterPath: args.posterPath,
+  1096→        }),
+  1097→      });
+  1098→      await ensureApiOk(res, "Failed to save episode rating");
+  1099→      return res.json();
+  1100→    },
+  1101→    onSuccess: () => {
+  1102→      qc.invalidateQueries({ queryKey: ["episode-ratings", showId] });
+  1103→    },
+  1104→  });
+  1105→}
+  1106→
+  1107→export function useRatingMutate() {
+  1108→  const qc = useQueryClient();
+  1109→  return useMutation({
+  1110→    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null; genres?: string[]; originCountry?: string[] | null; originalLanguage?: string | null; seasons?: number | null; episodes?: number | null }) => {
+  1111→      if (args.action === "set") {
+  1112→        // Find-or-create, then save only the independent rating
+  1113→        const id = await findOrCreateMedia({
+  1114→          tmdbId: args.tmdbId,
+  1115→          title: args.title || "Unknown",
+  1116→          type: args.mediaType,
+  1117→          poster: args.posterPath,
+  1118→          year: args.releaseDate ? args.releaseDate.slice(0, 4) : undefined,
+  1119→          overview: args.overview,
+  1120→          rating: args.voteAverage,
+  1121→          runtime: args.runtime,
+  1122→          genres: args.genres,
+  1123→          originCountry: args.originCountry,
+  1124→          originalLanguage: args.originalLanguage,
+  1125→          seasons: args.seasons,
+  1126→          episodes: args.episodes,
+  1127→        });
+  1128→        const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+  1129→          method: "PATCH",
+  1130→          headers: { "Content-Type": "application/json", ...userHeaders() },
+  1131→          body: JSON.stringify({
+  1132→            userRating: args.value, // stored as 0-100 directly
+  1133→          }),
+  1134→        });
+  1135→        if (!patchRes.ok) {
+  1136→          const errorBody = await patchRes.json().catch(() => ({}));
+  1137→          throw new Error(errorBody?.error || "Failed to save rating");
+  1138→        }
+  1139→      } else {
+  1140→        // Remove rating: find by tmdbId DIRECTLY (not via paginated list .find())
+  1141→        const id = await getMediaIdByTmdbId(args.tmdbId, args.mediaType);
+  1142→        if (id) {
+  1143→          const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
+  1144→            method: "PATCH",
+  1145→            headers: { "Content-Type": "application/json", ...userHeaders() },
+  1146→            body: JSON.stringify({ userRating: null }),
+  1147→          });
+  1148→          await ensureApiOk(patchRes, "Failed to remove rating");
+  1149→        }
+  1150→      }
+  1151→    },
+  1152→    onSuccess: () => {
+  1153→      qc.invalidateQueries({ queryKey: ["media"] });
+  1154→      qc.invalidateQueries({ queryKey: ["library-counts"] });
+  1155→      qc.invalidateQueries({ queryKey: ["lib"] });
+  1156→      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+  1157→      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+  1158→    },
+  1159→  });
+  1160→}
+  1161→
+  1162→// Stats - reads from Neon via library/stats endpoint (includes Media + watched episodes)
+  1163→export function useStats() {
+  1164→  const userId = useNav((s) => s.userId);
+  1165→  return useQuery({
+  1166→    queryKey: ["lib", "stats", userId || getClientUserId()],
+  1167→    queryFn: async () => {
+  1168→      const res = await fetch(withUserId(new URL("/api/library/stats", window.location.origin)), { headers: userHeaders() });
+  1169→      if (!res.ok) return null;
+  1170→      return res.json();
+  1171→    },
+  1172→    staleTime: 0,
+  1173→  });
+  1174→}
+  1175→
+  1176→
+  1177→// TV Tracking - global counts + filtered lists for the TV Tracking/All view.
+  1178→// Counts are calculated server-side across the whole library, never from the current page.
+  1179→export type TvTrackingCategory =
+  1180→  | "all"
+  1181→  | "watchlist"
+  1182→  | "uptodate"
+  1183→  | "finished"
+  1184→  | "upcoming"
+  1185→  | "havent-watched"
+  1186→  | "havent-started";
+  1187→
+  1188→export interface TvTrackingCounts {
+  1189→  all: number;
+  1190→  planned: number;
+  1191→  watchlist: number;
+  1192→  notStarted: number;
+  1193→  haventStarted: number;
+  1194→  watching: number;
+  1195→  uptodate: number;
+  1196→  finished: number;
+  1197→  upcoming: number;
+  1198→  haventWatched: number;
+  1199→}
+  1200→
+  1201→export interface TvTrackingItem extends MediaItemDB {
+  1202→  _trackingStatus: TvTrackingState;
+  1203→  _watchedEpisodeCount: number;
+  1204→  _watchedAiredEpisodeCount: number;
+  1205→  _airedEpisodeCount: number | null;
+  1206→  _ignoredFutureEpisodeCount: number;
+  1207→  _legacyCompletionAssumed: boolean;
+  1208→  _legacySnapshotMaterialized?: boolean;
+  1209→  _stateVerified: boolean;
+  1210→  _lastWatchedAt: string | null;
+  1211→  _daysSinceLastWatch: number | null;
+  1212→  _hasUnwatchedReleasedEpisode: boolean;
+  1213→  _isStaleWatching: boolean;
+  1214→  _nextEpisodeAirDate: string | null;
+  1215→  _nextEpisodeName: string | null;
+  1216→  _nextEpisodeSeasonNumber: number | null;
+  1217→  _nextEpisodeNumber: number | null;
+  1218→}
+  1219→
+  1220→export interface TvTrackingResponse {
+  1221→  items: TvTrackingItem[];
+  1222→  total: number;
+  1223→  limit: number;
+  1224→  offset: number;
+  1225→  category: TvTrackingCategory;
+  1226→  counts: TvTrackingCounts;
+  1227→  countsAreGlobal: boolean;
+  1228→  repairedOnRead?: boolean;
+  1229→  world?: "standard" | "arabic";
+  1230→}
+  1231→
+  1232→export interface TvTrackingCountsResponse {
+  1233→  counts: TvTrackingCounts;
+  1234→  countsAreGlobal: boolean;
+  1235→  repairedOnRead?: boolean;
+  1236→  world?: "standard" | "arabic";
+  1237→}
+  1238→
+  1239→async function tvTrackingGet<T>(params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+  1240→  const url = withUserId(new URL("/api/tv-tracking", window.location.origin));
+  1241→  if (params) {
+  1242→    for (const [k, v] of Object.entries(params)) {
+  1243→      if (v != null && v !== undefined && String(v) !== "undefined" && String(v) !== "") {
+  1244→        url.searchParams.set(k, String(v));
+  1245→      }
+  1246→    }
+  1247→  }
+  1248→  const res = await fetch(url.toString(), { headers: userHeaders() });
+  1249→  if (!res.ok) throw new Error(`TV Tracking API ${res.status}`);
+  1250→  return res.json();
+  1251→}
+  1252→
+  1253→export function useTvTrackingCounts(world: "standard" | "arabic" = "standard") {
+  1254→  const userId = useNav((s) => s.userId);
+  1255→  return useQuery({
+  1256→    queryKey: ["tv-tracking-counts", userId || getClientUserId(), world],
+  1257→    queryFn: () => tvTrackingGet<TvTrackingCountsResponse>({ countsOnly: true, world }),
+  1258→    staleTime: 0,
+  1259→    refetchInterval: 5 * 60 * 1000,
+  1260→    refetchOnWindowFocus: true,
+  1261→    refetchOnReconnect: true,
+  1262→  });
+  1263→}
+  1264→
+  1265→export function useTvTracking(params: {
+  1266→  category?: TvTrackingCategory;
+  1267→  search?: string;
+  1268→  sortBy?: string;
+  1269→  order?: string;
+  1270→  limit?: number;
+  1271→  offset?: number;
+  1272→  world?: "standard" | "arabic";
+  1273→} = {}) {
+  1274→  const userId = useNav((s) => s.userId);
+  1275→  return useQuery({
+  1276→    queryKey: ["tv-tracking", userId || getClientUserId(), params],
+  1277→    queryFn: () => tvTrackingGet<TvTrackingResponse>(params),
+  1278→    staleTime: 0,
+  1279→    refetchInterval: 5 * 60 * 1000,
+  1280→    refetchOnWindowFocus: true,
+  1281→    refetchOnReconnect: true,
+  1282→    placeholderData: (previousData) => previousData,
+  1283→  });
+  1284→}
+  1285→
+  1286→// Show progress fetches every regular season, then separates released episodes
+  1287→// from future episodes. Only released episodes can affect completion or "next".
+  1288→export function useShowProgress(showId: number | null | undefined) {
+  1289→  const detail = useTvDetail(showId ?? null);
+  1290→  const watched = useWatchedEpisodes(showId ?? undefined);
+  1291→  const mediaState = useMediaState(showId ?? null, "tv");
+  1292→  const watchedItems = watched.data?.items ?? [];
+  1293→  const watchedSignature = watchedItems
+  1294→    .map((episode: any) => `${episode.showId}-${episode.seasonNumber}-${episode.episodeNumber}-${episode.watchedAt || ""}`)
+  1295→    .sort()
+  1296→    .join("|");
+  1297→  const trackedShow = mediaState.data ?? undefined;
+  1298→  const isFollowing = Boolean(trackedShow?.isFollowing);
+  1299→
+  1300→  const seasonsQuery = useQuery({
+  1301→    queryKey: ["tmdb", "show-progress-seasons", showId, detail.data?.number_of_seasons ?? 0, watchedSignature, trackedShow?.status, trackedShow?.watched],
+  1302→    enabled: showId != null && !!detail.data,
+  1303→    queryFn: async () => {
+  1304→      const show = detail.data!;
+  1305→      const regularSeasons = (show.seasons ?? [])
+  1306→        .filter((season) => season.season_number >= 1 && (season.episode_count ?? 0) > 0)
+  1307→        .sort((a, b) => a.season_number - b.season_number);
+  1308→      const seasonDetails = await Promise.all(
+  1309→        regularSeasons.map((season) => tmdbGet<SeasonDetail>(`tv/${showId}/season/${season.season_number}`)),
+  1310→      );
+  1311→
+  1312→      const now = new Date();
+  1313→      const officiallyEnded = isOfficiallyEndedTvStatus(show.status);
+  1314→      const allEpisodesIncludingFuture = seasonDetails.flatMap((season) =>
+  1315→        (season.episodes ?? [])
+  1316→          .filter((episode) => episode.season_number >= 1)
+  1317→          .map((episode) => ({ seasonNumber: season.season_number, episode, seasonName: season.name })),
+  1318→      );
+  1319→      const allEpisodes = allEpisodesIncludingFuture.filter(({ episode }) =>
+  1320→        isEpisodeReleased(episode.air_date, now) || (officiallyEnded && !episode.air_date),
+  1321→      );
+  1322→      const futureEpisodes = allEpisodesIncludingFuture.filter(({ episode }) => isFutureEpisode(episode.air_date, now));
+  1323→      const airedKeys = new Set<string>(allEpisodes.map(({ episode }) => episodeKey(episode.season_number, episode.episode_number)));
+  1324→      const actualWatchedSet = new Set<string>(watchedItems.map((episode: any) => episodeKey(episode.seasonNumber, episode.episodeNumber)));
+  1325→      const persistedState = String(trackedShow?.status || "");
+  1326→      const legacyCompleted = actualWatchedSet.size === 0 && Boolean(
+  1327→        trackedShow?.watched || persistedState === "finished" || persistedState === "uptodate" || persistedState === "watched",
+  1328→      );
+  1329→      const derived = deriveTvTrackingState({
+  1330→        persistedStatus: trackedShow?.status,
+  1331→        officiallyEnded,
+  1332→        airedEpisodeCount: allEpisodes.length,
+  1333→        airedEpisodeKeys: airedKeys,
+  1334→        watchedEpisodeKeys: actualWatchedSet,
+  1335→        legacyCompleted,
+  1336→      });
+  1337→      const watchedSet = new Set(actualWatchedSet);
+  1338→
+  1339→      const nextEp = allEpisodes.find(({ episode }) => !watchedSet.has(episodeKey(episode.season_number, episode.episode_number))) ?? null;
+  1340→      const nextUpcomingEpisode = futureEpisodes
+  1341→        .sort((a, b) => Date.parse(a.episode.air_date || "") - Date.parse(b.episode.air_date || ""))[0] ?? null;
+  1342→      const lastWatchedDate = watchedItems.length > 0
+  1343→        ? new Date(watchedItems.reduce((latest: string, episode: any) => episode.watchedAt > latest ? episode.watchedAt : latest, watchedItems[0].watchedAt))
+  1344→        : null;
+  1345→      const daysSinceLastWatch = lastWatchedDate
+  1346→        ? Math.floor((Date.now() - lastWatchedDate.getTime()) / (1000 * 60 * 60 * 24))
+  1347→        : null;
+  1348→
+  1349→      return {
+  1350→        showDetail: show,
+  1351→        watchedSet,
+  1352→        actualWatchedSet,
+  1353→        watchedItems,
+  1354→        totalEpisodes: allEpisodes.length,
+  1355→        totalKnownEpisodes: allEpisodesIncludingFuture.length,
+  1356→        watchedCount: derived.watchedAiredEpisodeCount,
+  1357→        ignoredFutureWatchedCount: derived.futureOrUnknownWatchedEpisodeCount,
+  1358→        trackingState: trackedShow?.isFollowing
+  1359→          || trackedShow?.status
+  1360→          || trackedShow?.watched
+  1361→          || actualWatchedSet.size > 0
+  1362→          ? derived.state
+  1363→          : null,
+  1364→        stateVerified: derived.verified,
+  1365→        legacyCompletionAssumed: derived.legacyCompletionAssumed,
+  1366→        nextEp,
+  1367→        nextUpcomingEpisode,
+  1368→        allEpisodes,
+  1369→        allEpisodesIncludingFuture,
+  1370→        futureEpisodes,
+  1371→        seasons: seasonDetails.map((season) => ({
+  1372→          seasonNumber: season.season_number,
+  1373→          episodes: season.episodes ?? [],
+  1374→          seasonName: season.name,
+  1375→        })),
+  1376→        lastWatchedDate,
+  1377→        daysSinceLastWatch,
+  1378→        nextEpAirDate: nextEp?.episode?.air_date ? new Date(nextEp.episode.air_date) : null,
+  1379→        isUpcoming: Boolean(nextUpcomingEpisode && nextEp == null),
+  1380→      };
+  1381→    },
+  1382→    staleTime: 0,
+  1383→    refetchInterval: 5 * 60 * 1000,
+  1384→    refetchOnWindowFocus: true,
+  1385→    refetchOnReconnect: true,
+  1386→  });
+  1387→
+  1388→  return {
+  1389→    showDetail: detail.data,
+  1390→    watchedSet: new Set<string>(watchedItems.map((episode: any) => episodeKey(episode.seasonNumber, episode.episodeNumber))),
+  1391→    actualWatchedSet: new Set<string>(watchedItems.map((episode: any) => episodeKey(episode.seasonNumber, episode.episodeNumber))),
+  1392→    watchedItems,
+  1393→    totalEpisodes: 0,
+  1394→    totalKnownEpisodes: detail.data?.number_of_episodes ?? 0,
+  1395→    watchedCount: 0,
+  1396→    ignoredFutureWatchedCount: 0,
+  1397→    trackingState: (trackedShow?.status || (watchedItems.length > 0 ? "watching" : null)) as TvTrackingState | null,
+  1398→    isFollowing,
+  1399→    stateVerified: false,
+  1400→    legacyCompletionAssumed: false,
+  1401→    nextEp: null,
+  1402→    nextUpcomingEpisode: null,
+  1403→    allEpisodes: [],
+  1404→    allEpisodesIncludingFuture: [],
+  1405→    futureEpisodes: [],
+  1406→    seasons: [],
+  1407→    lastWatchedDate: null,
+  1408→    daysSinceLastWatch: null,
+  1409→    nextEpAirDate: null,
+  1410→    isUpcoming: false,
+  1411→    ...(seasonsQuery.data ?? {}),
+  1412→    mediaItem: trackedShow,
+  1413→    isLoading: detail.isLoading || watched.isLoading || mediaState.isLoading || seasonsQuery.isLoading,
+  1414→    isError: detail.isError || watched.isError || mediaState.isError || seasonsQuery.isError,
+  1415→  };
+  1416→}
+  1417→
+  1418→// ---------- Media (Neon PostgreSQL backend) ----------
+  1419→export interface MediaItemDB {
+  1420→  id: string;
+  1421→  tmdbId: number | null;
+  1422→  title: string;
+  1423→  originalTitle: string | null;
+  1424→  year: string | null;
+  1425→  type: string;
+  1426→  poster: string | null;
+  1427→  rating: string | null;
+  1428→  overview: string | null;
+  1429→  genres: string[];
+  1430→  episodes: number | null;
+  1431→  seasons: number | null;
+  1432→  duration: string | null;
+  1433→  status: string | null;
+  1434→  author: string | null;
+  1435→  pages: number | null;
+  1436→  tags: string[];
+  1437→  notes: string | null;
+  1438→  watched: boolean;
+  1439→  watchedAt: string | null;
+  1440→  userRating: number | null;
+  1441→  rewatch: boolean;
+  1442→  runtime: number | null;
+  1443→  ratingStatus: string | null;
+  1444→  addedAt: string;
+  1445→  updatedAt: string;
+  1446→  isAnime: boolean;
+  1447→  isArabic: boolean;
+  1448→  originalLanguage: string | null;
+  1449→  originCountries: string[];
+  1450→  isFollowing: boolean;
+  1451→}
+  1452→
+  1453→export interface MediaStats {
+  1454→  counts: {
+  1455→    total: number;
+  1456→    movies: number;
+  1457→    series: number;
+  1458→    books: number;
+  1459→    games: number;
+  1460→    rated: number;
+  1461→    ratedMovies?: number;
+  1462→    ratedShows?: number;
+  1463→    ratedAnime?: number;
+  1464→    watched: number;
+  1465→    planned: number;
+  1466→    watchlist?: number;
+  1467→    watchlistMovies?: number;
+  1468→    watchlistShows?: number;
+  1469→    watchlistAnime?: number;
+  1470→    watchedMovies?: number;
+  1471→    watchedShows?: number;
+  1472→    watchedAnime?: number;
+  1473→    notStartedAnime?: number;
+  1474→    watchingAnime?: number;
+  1475→    watchlistArabicMovies?: number;
+  1476→    watchedArabicMovies?: number;
+  1477→    watchlistArabicShows?: number;
+  1478→    notStartedArabicShows?: number;
+  1479→    watchingArabicShows?: number;
+  1480→    finishedArabicShows?: number;
+  1481→    followingArabicShows?: number;
+  1482→    watchedEpisodes?: number;
+  1483→    following?: number;
+  1484→    ratings?: number;
+  1485→  };
+  1486→  ratingDist: { value: number; count: number }[];
+  1487→  typeDist: { type: string; count: number }[];
+  1488→  topRated: { id: string; title: string; poster: string | null; userRating: number | null; type: string; year: string | null }[];
+  1489→  recentlyAdded: { id: string; title: string; poster: string | null; type: string; year: string | null; addedAt: string }[];
+  1490→  avgRating: number;
+  1491→}
+  1492→
+  1493→async function mediaGet<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+  1494→  const url = withUserId(new URL("/api/media/" + path, window.location.origin));
+  1495→  if (params) {
+  1496→    for (const [k, v] of Object.entries(params)) {
+  1497→      if (v != null && v !== undefined && String(v) !== "undefined" && String(v) !== "") {
+  1498→        url.searchParams.set(k, String(v));
+  1499→      }
+  1500→    }
+  1501→  }
+  1502→  const res = await fetch(url.toString(), { headers: userHeaders() });
+  1503→  if (!res.ok) throw new Error(`Media API ${res.status}`);
+  1504→  return res.json();
+  1505→}
+  1506→
+  1507→export function useMedia(params: {
+  1508→  type?: string;
+  1509→  status?: string;
+  1510→  watched?: string;
+  1511→  rated?: string;
+  1512→  tracked?: string;
+  1513→  isAnime?: string;
+  1514→  isArabic?: string;
+  1515→  search?: string;
+  1516→  sortBy?: string;
+  1517→  order?: string;
+  1518→  limit?: number;
+  1519→  offset?: number;
+  1520→}) {
+  1521→  return useQuery({
+  1522→    queryKey: ["media", "list", params],
+  1523→    queryFn: () => mediaGet<{ items: MediaItemDB[]; total: number; limit: number; offset: number }>("", params),
+  1524→  });
+  1525→}
+  1526→
+  1527→export function useMediaStats() {
+  1528→  return useQuery({
+  1529→    queryKey: ["media", "stats"],
+  1530→    queryFn: () => mediaGet<MediaStats>("stats"),
+  1531→  });
+  1532→}
+  1533→
+  1534→
+  1535→export interface GlobalLibraryCountsResponse {
+  1536→  counts: MediaStats["counts"];
+  1537→  countsAreGlobal: true;
+  1538→  source: "Media";
+  1539→}
+  1540→
+  1541→export function useLibraryCounts() {
+  1542→  const userId = useNav((s) => s.userId);
+  1543→  return useQuery({
+  1544→    queryKey: ["library-counts", userId || getClientUserId()],
+  1545→    queryFn: async () => {
+  1546→      const res = await fetch(withUserId(new URL("/api/library/counts", window.location.origin)), { headers: userHeaders() });
+  1547→      await ensureApiOk(res, "Failed to load global library counts");
+  1548→      return res.json() as Promise<GlobalLibraryCountsResponse>;
+  1549→    },
+  1550→    staleTime: 0,
+  1551→    refetchOnWindowFocus: true,
+  1552→    refetchOnReconnect: true,
+  1553→  });
+  1554→}
+  1555→
+  1556→// Update media item (rate, mark watched, toggle anime)
+  1557→export function useMediaUpdate() {
+  1558→  const qc = useQueryClient();
+  1559→  return useMutation({
+  1560→    mutationFn: async (args: {
+  1561→      id: string;
+  1562→      userRating?: number | null;
+  1563→      watched?: boolean;
+  1564→      watchedAt?: string | null;
+  1565→      isAnime?: boolean;
+  1566→      isArabic?: boolean;
+  1567→      status?: string | null;
+  1568→    }) => {
+  1569→      const res = await fetch(withUserId(new URL(`/api/media/${args.id}`, window.location.origin)), {
+  1570→        method: "PATCH",
+  1571→        headers: { "Content-Type": "application/json", ...userHeaders() },
+  1572→        body: JSON.stringify(args),
+  1573→      });
+  1574→      if (!res.ok) {
+  1575→        const errorBody = await res.json().catch(() => ({}));
+  1576→        throw new Error(errorBody?.error || "Failed to update");
+  1577→      }
+  1578→      return res.json();
+  1579→    },
+  1580→    onSuccess: () => {
+  1581→      qc.invalidateQueries({ queryKey: ["media"] });
+  1582→      qc.invalidateQueries({ queryKey: ["library-counts"] });
+  1583→      qc.invalidateQueries({ queryKey: ["tv-tracking"] });
+  1584→      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+  1585→    },
+  1586→  });
+  1587→}
+  1588→

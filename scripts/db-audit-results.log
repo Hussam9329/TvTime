@@ -1,0 +1,101 @@
+=== TABLE ROW COUNTS ===
+Users: 5
+Media: 4043
+WatchedEpisode: 33688
+Rating: 0
+Legacy WatchlistItem: 0
+Legacy WatchedMovie: 0
+Legacy FollowingShow: 0
+
+=== MEDIA BREAKDOWN BY TYPE ===
+  movie: 3301
+  series: 704
+  book: 23
+  game: 15
+
+=== MEDIA BY STATUS ===
+  watched: 2176
+  planned: 1299
+  finished: 423
+  not_started: 54
+  None: 43
+  uptodate: 24
+  watching: 19
+  : 5
+
+=== MEDIA NULL tmdbId (data integrity issue) ===
+  Media with NULL tmdbId: 39
+
+=== TOP 10 USERS BY MEDIA COUNT ===
+  cinetrack_default: 4043
+
+=== INDEX CHECK ===
+  FollowingShow_pkey: CREATE UNIQUE INDEX "FollowingShow_pkey" ON public."FollowingShow" USING btree (id)
+  FollowingShow_userId_idx: CREATE INDEX "FollowingShow_userId_idx" ON public."FollowingShow" USING btree ("userId")
+  FollowingShow_userId_tmdbId_key: CREATE UNIQUE INDEX "FollowingShow_userId_tmdbId_key" ON public."FollowingShow" USING btree ("userId", "tmdbId")
+  Media_pkey: CREATE UNIQUE INDEX "Media_pkey" ON public."Media" USING btree (id)
+  Media_tmdbId_idx: CREATE INDEX "Media_tmdbId_idx" ON public."Media" USING btree ("tmdbId")
+  Media_userId_idx: CREATE INDEX "Media_userId_idx" ON public."Media" USING btree ("userId")
+  Media_userId_isAnime_idx: CREATE INDEX "Media_userId_isAnime_idx" ON public."Media" USING btree ("userId", "isAnime")
+  Media_userId_isArabic_idx: CREATE INDEX "Media_userId_isArabic_idx" ON public."Media" USING btree ("userId", "isArabic")
+  Media_userId_status_idx: CREATE INDEX "Media_userId_status_idx" ON public."Media" USING btree ("userId", status)
+  Media_userId_type_idx: CREATE INDEX "Media_userId_type_idx" ON public."Media" USING btree ("userId", type)
+  Media_userId_type_tmdbId_key: CREATE UNIQUE INDEX "Media_userId_type_tmdbId_key" ON public."Media" USING btree ("userId", type, "tmdbId")
+  Media_userId_userRating_idx: CREATE INDEX "Media_userId_userRating_idx" ON public."Media" USING btree ("userId", "userRating")
+  Media_userId_watched_idx: CREATE INDEX "Media_userId_watched_idx" ON public."Media" USING btree ("userId", watched)
+  Rating_pkey: CREATE UNIQUE INDEX "Rating_pkey" ON public."Rating" USING btree (id)
+  Rating_userId_idx: CREATE INDEX "Rating_userId_idx" ON public."Rating" USING btree ("userId")
+  Rating_userId_mediaType_tmdbId_key: CREATE UNIQUE INDEX "Rating_userId_mediaType_tmdbId_key" ON public."Rating" USING btree ("userId", "mediaType", "tmdbId")
+  User_pkey: CREATE UNIQUE INDEX "User_pkey" ON public."User" USING btree (id)
+  WatchedEpisode_pkey: CREATE UNIQUE INDEX "WatchedEpisode_pkey" ON public."WatchedEpisode" USING btree (id)
+  WatchedEpisode_userId_idx: CREATE INDEX "WatchedEpisode_userId_idx" ON public."WatchedEpisode" USING btree ("userId")
+  WatchedEpisode_userId_showId_idx: CREATE INDEX "WatchedEpisode_userId_showId_idx" ON public."WatchedEpisode" USING btree ("userId", "showId")
+  WatchedEpisode_userId_showId_seasonNumber_episodeNumber_key: CREATE UNIQUE INDEX "WatchedEpisode_userId_showId_seasonNumber_episodeNumber_key" ON public."WatchedEpisode" USING btree ("userId", "showId", "seasonNumber", "episodeNumber")
+  WatchedMovie_pkey: CREATE UNIQUE INDEX "WatchedMovie_pkey" ON public."WatchedMovie" USING btree (id)
+  WatchedMovie_userId_idx: CREATE INDEX "WatchedMovie_userId_idx" ON public."WatchedMovie" USING btree ("userId")
+  WatchedMovie_userId_tmdbId_key: CREATE UNIQUE INDEX "WatchedMovie_userId_tmdbId_key" ON public."WatchedMovie" USING btree ("userId", "tmdbId")
+  WatchlistItem_pkey: CREATE UNIQUE INDEX "WatchlistItem_pkey" ON public."WatchlistItem" USING btree (id)
+  WatchlistItem_userId_idx: CREATE INDEX "WatchlistItem_userId_idx" ON public."WatchlistItem" USING btree ("userId")
+  WatchlistItem_userId_mediaType_tmdbId_key: CREATE UNIQUE INDEX "WatchlistItem_userId_mediaType_tmdbId_key" ON public."WatchlistItem" USING btree ("userId", "mediaType", "tmdbId")
+  _prisma_migrations_pkey: CREATE UNIQUE INDEX _prisma_migrations_pkey ON public._prisma_migrations USING btree (id)
+
+=== DB SIZE ===
+  Database size: 22 MB
+
+=== TABLE SIZES ===
+  WatchedEpisode: 9120 kB (0 rows)
+  Media: 4776 kB (2 rows)
+  _prisma_migrations: 32 kB (0 rows)
+  FollowingShow: 32 kB (0 rows)
+  User: 32 kB (2 rows)
+  WatchedMovie: 32 kB (0 rows)
+  Rating: 32 kB (0 rows)
+  WatchlistItem: 32 kB (0 rows)
+
+=== DUPLICATE MEDIA CHECK (should be 0 due to unique constraint) ===
+  Duplicate groups: 0
+
+=== WATCHED EPISODES FOR NON-EXISTENT SHOWS (orphan check) ===
+  Orphan watched episodes: 0
+
+=== USERS TABLE CONTENT (any sensitive data?) ===
+  id=u_mknva3nnz1mrcen5oa name=Cinephile avatar=None createdAt=2026-07-08 21:55:04.758000
+  id=u_a93hau4o8cmrb4r88x name=Hussam avatar=None createdAt=2026-07-10 22:49:37.981000
+  id=HACKED_USER_ID name=Cinephile avatar=None createdAt=2026-07-14 01:46:06.403000
+  id=EVIL_USER name=Cinephile avatar=None createdAt=2026-07-14 01:46:11.611000
+  id=cinetrack_default name=Hussam avatar=None createdAt=2026-07-08 21:34:13.879000
+
+=== RLS POLICY CHECK (should be empty - no RLS!) ===
+  RLS policies found: 0
+
+=== TABLE ROW-LEVEL SECURITY STATUS ===
+  FollowingShow: rls_enabled=False rls_forced=False
+  Media: rls_enabled=False rls_forced=False
+  Rating: rls_enabled=False rls_forced=False
+  User: rls_enabled=False rls_forced=False
+  WatchedEpisode: rls_enabled=False rls_forced=False
+  WatchedMovie: rls_enabled=False rls_forced=False
+  WatchlistItem: rls_enabled=False rls_forced=False
+  _prisma_migrations: rls_enabled=False rls_forced=False
+
+=== AUDIT COMPLETE ===
