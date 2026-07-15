@@ -101,3 +101,4 @@ server.log
 .env.local
 db/*.db
 db/backups/
+/db-backups/

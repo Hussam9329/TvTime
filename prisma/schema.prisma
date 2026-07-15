@@ -23,6 +23,9 @@ model User {
   watchedEpisodes WatchedEpisode[]
   followingShows  FollowingShow[]
   ratings         Rating[]
+  watchSessions   WatchSession[]
+  notifications   Notification[]
+  customLists     CustomList[]
 }
 
 /// Canonical media record - tracks all types of media (movies, TV, books, games)
@@ -59,8 +62,12 @@ model Media {
   originalLanguage String?
   originCountries String[] @default([])
   isFollowing    Boolean  @default(false)
+  notifyOnNewEpisode Boolean?
+  rewatchCount   Int      @default(0)
   addedAt        DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  watchSessions  WatchSession[]
 
   @@unique([userId, type, tmdbId], map: "Media_userId_type_tmdbId_key")
   @@index([userId])
@@ -178,4 +185,86 @@ model TvMetadataCache {
   refreshAfter                DateTime
 
   @@index([refreshAfter])
+}
+
+// ─────────────────────────────────────────────────────────────
+// NEW ADDITIVE MODELS — TvTime+ features
+// Added: Diary (WatchSession), Notifications, Custom Lists
+// All defaults are safe — no migration of existing data needed.
+// ─────────────────────────────────────────────────────────────
+
+/// Diary entries — every watch session (movie or episode)
+model WatchSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId     String?
+  media       Media?   @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  mediaType   String   // "movie" | "tv" | "anime" | "arabic_movie" | "arabic_tv"
+  tmdbId      Int
+  title       String
+  season      Int?
+  episode     Int?
+  watchedAt   DateTime @default(now())
+  duration    Int?     // minutes
+  rewatch     Boolean  @default(false)
+  rating      Int?     // 0-100 — rating at the time of session
+  source      String?  // "Netflix" | "Cinema" etc.
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, watchedAt])
+  @@index([userId, mediaType])
+  @@index([mediaId])
+}
+
+/// In-app notifications — episode alerts, movie availability, etc.
+model Notification {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String   // "new_episode" | "movie_available" | "season_return" | "backlog_alert"
+  title         String
+  body          String
+  tmdbId        Int?
+  mediaType     String?
+  read          Boolean  @default(false)
+  scheduledFor  DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+/// User-defined custom lists (e.g., "أفلام رمضان", "Best Horror")
+model CustomList {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  color       String   @default("#f59e0b")
+  slug        String   @unique
+  items       CustomListItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+/// Items inside a CustomList
+model CustomListItem {
+  id          String   @id @default(cuid())
+  listId      String
+  list        CustomList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  tmdbId      Int
+  mediaType   String
+  title       String
+  posterPath  String?
+  addedAt     DateTime @default(now())
+  order       Int      @default(0)
+
+  @@unique([listId, tmdbId, mediaType])
+  @@index([listId])
 }

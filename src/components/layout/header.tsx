@@ -20,6 +20,9 @@ import {
   Sparkles,
   Languages,
   ChevronDown,
+  BookOpen,
+  List as ListIcon,
+  Bell,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -34,6 +37,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ProfileDialog } from "@/components/profile/profile-dialog";
 import { ShortcutsHelpDialog } from "@/components/layout/keyboard-shortcuts";
+import { NotificationCenter } from "@/components/views/notification-center";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -50,6 +54,8 @@ const primaryNavItems: { view: ViewName; label: string; icon: React.ElementType 
   { view: "tv-shows", label: "TV Shows", icon: Clapperboard },
   { view: "anime", label: "Anime", icon: Sparkles },
   { view: "calendar", label: "Calendar", icon: CalendarDays },
+  { view: "diary", label: "Diary", icon: BookOpen },
+  { view: "lists", label: "Lists", icon: ListIcon },
   { view: "stats", label: "Stats", icon: BarChart3 },
 ];
 
@@ -68,11 +74,29 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifUnread, setNotifUnread] = useState(0);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
+
+  // Fetch notification unread count (polling every 60s)
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch("/api/notifications?filter=unread");
+        if (res.ok) {
+          const data = await res.json();
+          setNotifUnread(data.unreadCount || 0);
+        }
+      } catch {}
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 60000);
+    return () => clearInterval(interval);
+  }, [notifOpen]);
 
   const onSubmitSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,6 +227,22 @@ export function Header() {
           </Button>
         )}
 
+        {/* Notifications */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setNotifOpen(true)}
+          aria-label="Notifications"
+          className="relative"
+        >
+          <Bell className="h-5 w-5" />
+          {notifUnread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+              {notifUnread > 9 ? "9+" : notifUnread}
+            </span>
+          )}
+        </Button>
+
         {/* Theme toggle */}
         <Button
           variant="ghost"
@@ -250,6 +290,18 @@ export function Header() {
 
       <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
       <ShortcutsHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      {notifOpen && (
+        <NotificationCenter
+          onClose={() => {
+            setNotifOpen(false);
+            // Refresh unread count after closing
+            fetch("/api/notifications?filter=unread")
+              .then((r) => r.json())
+              .then((d) => setNotifUnread(d.unreadCount || 0))
+              .catch(() => {});
+          }}
+        />
+      )}
     </header>
   );
 }
