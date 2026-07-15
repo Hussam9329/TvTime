@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useAppStore } from "@/lib/store";
-import { watchSessions } from "@/lib/mock-data";
 import { computeStats, formatWatchTime, formatMinutes } from "@/lib/stats";
 import { cn } from "@/lib/utils";
 import { pickGradient } from "@/lib/mock-data";
@@ -47,10 +46,10 @@ import {
 const PIE_COLORS = ["#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444", "#14b8a6", "#f97316"];
 
 export function StatsView() {
-  const { media } = useAppStore();
+  const { media, sessions } = useAppStore();
 
-  // Combine store media with watch sessions for stats
-  const stats = useMemo(() => computeStats(media, watchSessions), [media]);
+  // Combine store media with watch sessions for stats (use live sessions from store)
+  const stats = useMemo(() => computeStats(media, sessions), [media, sessions]);
 
   // Watch time formatting
   const watchTimeFormatted = formatWatchTime(stats.totalWatchTimeMinutes);

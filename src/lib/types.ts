@@ -59,6 +59,8 @@ export interface MediaItem {
   rewatchCount: number;
   notes?: string;
   tags?: string[];
+  // Per-show notification toggle (DB has it via UserSettings, but per-item override)
+  notifyOnNewEpisode?: boolean;
   lastWatchedAt?: string;
   addedAt: string;
   // For TV/Anime
@@ -91,6 +93,7 @@ export interface NextEpisode {
 
 export interface WatchSession {
   id: string;
+  mediaId?: string;
   mediaType: MediaType;
   tmdbId: number;
   title: string;
@@ -101,6 +104,7 @@ export interface WatchSession {
   rewatch: boolean;
   rating?: number;
   source?: string;
+  notes?: string;
 }
 
 export interface CalendarEntry {
@@ -144,6 +148,7 @@ export interface CustomList {
   description?: string;
   isPublic: boolean;
   color: string;
+  slug: string;
   items: CustomListItem[];
   createdAt: string;
 }

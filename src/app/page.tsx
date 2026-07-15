@@ -7,6 +7,8 @@ import { HomeView } from "@/components/home-view";
 import { SearchView } from "@/components/search-view";
 import { StatsView } from "@/components/stats-view";
 import { LibrarySection } from "@/components/library-section";
+import { DiaryView } from "@/components/diary-view";
+import { ListsView } from "@/components/lists-view";
 import {
   discoverMovies,
   discoverTV,
@@ -133,6 +135,10 @@ export default function Home() {
             }}
           />
         );
+      case "diary":
+        return <DiaryView />;
+      case "lists":
+        return <ListsView />;
       default:
         return <HomeView />;
     }

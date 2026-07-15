@@ -18,6 +18,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
+  Bell,
+  RefreshCw,
+  ListPlus,
+  Check,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
@@ -438,7 +442,17 @@ function MediaDetailDrawer({
   onStatusChange: (status: MediaStatus) => void;
 }) {
   const gradient = pickGradient(media.tmdbId);
-  const { updateMediaRating, toggleFavorite } = useAppStore();
+  const {
+    updateMediaRating,
+    toggleFavorite,
+    toggleNotifyOnNewEpisode,
+    rewatchMedia,
+    lists,
+    addToList,
+  } = useAppStore();
+  const [showListPicker, setShowListPicker] = useState(false);
+
+  const isSeriesType = media.mediaType === "tv" || media.mediaType === "anime" || media.mediaType === "arabic_tv";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
@@ -458,10 +472,15 @@ function MediaDetailDrawer({
           </button>
           <div className="absolute bottom-0 left-0 right-0 p-4">
             <h2 className="text-white text-xl font-bold">{media.title}</h2>
-            <div className="flex items-center gap-3 mt-1 text-xs text-white/80">
+            <div className="flex items-center gap-3 mt-1 text-xs text-white/80 flex-wrap">
               {media.releaseDate && <span>{new Date(media.releaseDate).getFullYear()}</span>}
               {media.runtime && <span>{media.runtime} دقيقة</span>}
               {media.voteAverage && <span className="flex items-center gap-0.5"><Star size={11} /> {media.voteAverage.toFixed(1)}</span>}
+              {media.rewatchCount > 0 && (
+                <span className="flex items-center gap-0.5 text-purple-300">
+                  <RefreshCw size={11} /> {media.rewatchCount} إعادة
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -489,7 +508,7 @@ function MediaDetailDrawer({
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full bg-primary"
-                  style={{ width: `${Math.min(100, (media.progress / media.totalEpisodes) * 100)}%` }}
+                  style={{ width: Math.min(100, (media.progress / media.totalEpisodes) * 100) + "%" }}
                 />
               </div>
             </div>
@@ -543,19 +562,106 @@ function MediaDetailDrawer({
             </div>
           )}
 
-          {/* Favorite toggle */}
+          {/* Action buttons row */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Favorite toggle */}
+            <button
+              onClick={() => toggleFavorite(media.id)}
+              className={cn(
+                "py-2 rounded-md text-sm font-medium border transition-colors flex items-center justify-center gap-2",
+                media.favorite
+                  ? "border-rose-500 bg-rose-500/10 text-rose-500"
+                  : "border-border hover:bg-accent"
+              )}
+            >
+              <span>{media.favorite ? "♥" : "♡"}</span>
+              {media.favorite ? "في المفضلة" : "أضف للمفضلة"}
+            </button>
+
+            {/* Rewatch */}
+            <button
+              onClick={() => rewatchMedia(media.id)}
+              className="py-2 rounded-md text-sm font-medium border border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 transition-colors flex items-center justify-center gap-2"
+            >
+              <RefreshCw size={15} />
+              إعادة مشاهدة
+            </button>
+          </div>
+
+          {/* Add to list */}
           <button
-            onClick={() => toggleFavorite(media.id)}
-            className={cn(
-              "w-full py-2 rounded-md text-sm font-medium border transition-colors flex items-center justify-center gap-2",
-              media.favorite
-                ? "border-rose-500 bg-rose-500/10 text-rose-500"
-                : "border-border hover:bg-accent"
-            )}
+            onClick={() => setShowListPicker(!showListPicker)}
+            className="w-full py-2 rounded-md text-sm font-medium border border-border hover:bg-accent transition-colors flex items-center justify-center gap-2"
           >
-            <span>{media.favorite ? "♥" : "♡"}</span>
-            {media.favorite ? "في المفضلة" : "أضف للمفضلة"}
+            <ListPlus size={15} />
+            {showListPicker ? "إخفاء القوائم" : "أضف إلى قائمة"}
           </button>
+
+          {showListPicker && (
+            <div className="bg-background border border-border rounded-md p-2 space-y-1 max-h-48 overflow-y-auto scroll-thin">
+              {lists.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-3">لا توجد قوائم. أنشئ قائمة من صفحة القوائم.</p>
+              ) : (
+                lists.map((l) => {
+                  const isInList = l.items.some((i) => i.tmdbId === media.tmdbId && i.mediaType === media.mediaType);
+                  return (
+                    <button
+                      key={l.id}
+                      onClick={() => {
+                        if (!isInList) {
+                          addToList(l.id, {
+                            tmdbId: media.tmdbId,
+                            mediaType: media.mediaType,
+                            title: media.title,
+                            posterPath: media.posterPath,
+                          });
+                        }
+                      }}
+                      disabled={isInList}
+                      className={cn(
+                        "w-full flex items-center gap-2 p-2 rounded-md text-sm text-right",
+                        isInList ? "opacity-50 cursor-not-allowed" : "hover:bg-accent"
+                      )}
+                    >
+                      <div className="w-3 h-3 rounded shrink-0" style={{ background: l.color }} />
+                      <span className="flex-1 truncate">{l.name}</span>
+                      <span className="text-xs text-muted-foreground">{l.items.length}</span>
+                      {isInList && <Check size={13} className="text-emerald-500" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {/* Per-show notification toggle (for series only) */}
+          {isSeriesType && (
+            <div className="bg-accent/50 rounded-md p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell size={15} className="text-muted-foreground" />
+                <div>
+                  <div className="text-sm font-medium">تنبيهات الحلقات الجديدة</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {media.notifyOnNewEpisode ? "ستصلك تنبيهات عند صدور حلقة جديدة" : "التنبيهات متوقفة لهذا العمل"}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => toggleNotifyOnNewEpisode(media.id)}
+                className={cn(
+                  "relative w-10 h-6 rounded-full transition-colors",
+                  media.notifyOnNewEpisode ? "bg-primary" : "bg-muted-foreground/30"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                    media.notifyOnNewEpisode ? "right-0.5" : "right-4"
+                  )}
+                />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

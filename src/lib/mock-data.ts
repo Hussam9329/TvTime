@@ -1638,7 +1638,7 @@ const generateSessions = () => {
   for (let dayOffset = 0; dayOffset < 180; dayOffset++) {
     const date = new Date(today);
     date.setDate(date.getDate() - dayOffset);
-    const dateStr = date.toISOString();
+    // Set a realistic evening hour (so hourly-activity stats look right)
     const dayOfWeek = date.getDay(); // 0 = Sunday
 
     // Watch activity varies by day of week
@@ -1650,16 +1650,20 @@ const generateSessions = () => {
     for (let i = 0; i < sessionCount; i++) {
       const pool = allMedia.filter((m) => m.status === "watching" || m.status === "completed");
       const media = pool[Math.floor(Math.random() * pool.length)];
-      const hour = [19, 20, 21, 22, 23, 0, 1][Math.floor(Math.random() * 7)] + Math.floor(Math.random() * 2);
+      const hourChoice = [19, 20, 21, 22, 23, 0, 1][Math.floor(Math.random() * 7)];
+      const minChoice = Math.floor(Math.random() * 60);
+      const sessionDate = new Date(date);
+      sessionDate.setHours(hourChoice, minChoice, 0, 0);
 
       sessions.push({
         id: `s-${sessionCounter++}`,
+        mediaId: media.id,
         mediaType: media.mediaType,
         tmdbId: media.tmdbId,
         title: media.title,
         season: media.currentSeason,
-        episode: (media.currentEpisode || 0) - i,
-        watchedAt: dateStr,
+        episode: Math.max(1, (media.currentEpisode || 1) - i),
+        watchedAt: sessionDate.toISOString(),
         duration: media.runtime || 45,
         rewatch: Math.random() < 0.05,
         rating: media.userRating,
@@ -1728,12 +1732,43 @@ export const customLists: CustomList[] = [
     description: "أفلام هذا العام التي أعجبتني",
     isPublic: false,
     color: "#f59e0b",
+    slug: "best-2024-movies",
     items: [
       { tmdbId: 693134, mediaType: "movie", title: "Dune: Part Two", addedAt: daysAgo(60) },
       { tmdbId: 872585, mediaType: "movie", title: "Oppenheimer", addedAt: daysAgo(120) },
       { tmdbId: 569094, mediaType: "movie", title: "Spider-Man: Across the Spider-Verse", addedAt: daysAgo(100) },
     ],
     createdAt: daysAgo(60),
+  },
+  {
+    id: "cl-2",
+    name: "مسلسلات رمضان",
+    description: "قائمة المسلسلات لمتابعتها في رمضان",
+    isPublic: true,
+    color: "#10b981",
+    slug: "ramadan-shows",
+    items: [
+      { tmdbId: 100001, mediaType: "arabic_tv", title: "العهد", addedAt: daysAgo(40) },
+      { tmdbId: 100002, mediaType: "arabic_tv", title: "جعفر العمدة", addedAt: daysAgo(40) },
+      { tmdbId: 100004, mediaType: "arabic_tv", title: "ضرب نار", addedAt: daysAgo(40) },
+      { tmdbId: 100005, mediaType: "arabic_tv", title: "الحشاشين", addedAt: daysAgo(40) },
+    ],
+    createdAt: daysAgo(40),
+  },
+  {
+    id: "cl-3",
+    name: "أنمي أكشن",
+    description: "أفضل أنميات الأكشن",
+    isPublic: true,
+    color: "#ec4899",
+    slug: "action-anime",
+    items: [
+      { tmdbId: 1429, mediaType: "anime", title: "Attack on Titan", addedAt: daysAgo(30) },
+      { tmdbId: 95479, mediaType: "anime", title: "Jujutsu Kaisen", addedAt: daysAgo(30) },
+      { tmdbId: 85937, mediaType: "anime", title: "Demon Slayer: Kimetsu no Yaiba", addedAt: daysAgo(30) },
+      { tmdbId: 114410, mediaType: "anime", title: "Chainsaw Man", addedAt: daysAgo(30) },
+    ],
+    createdAt: daysAgo(30),
   },
 ];
 

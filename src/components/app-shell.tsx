@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useAppStore, type ViewKey } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { NotificationCenter } from "./notification-center";
 import {
   Home,
   Search,
@@ -12,8 +14,10 @@ import {
   Tv,
   Sparkles,
   Clapperboard,
+  Bell,
+  List as ListIcon,
+  BookOpen,
 } from "lucide-react";
-import { useState } from "react";
 
 const PRIMARY_NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { key: "home", label: "الرئيسية", icon: Home },
@@ -29,11 +33,19 @@ const LIBRARY_TABS: { key: ViewKey; label: string; icon: React.ComponentType<{ s
   { key: "arabic_movies", label: "أفلام عربية", icon: Clapperboard },
 ];
 
+const SECONDARY_NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
+  { key: "diary", label: "سجل المشاهدة", icon: BookOpen },
+  { key: "lists", label: "القوائم", icon: ListIcon },
+];
+
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { currentView, setView } = useAppStore();
+  const { currentView, setView, notifications } = useAppStore();
   const [libOpen, setLibOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const isLibraryView = LIBRARY_TABS.some((t) => t.key === currentView);
+  const isSecondaryView = SECONDARY_NAV.some((t) => t.key === currentView);
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div dir="rtl" className="min-h-screen flex flex-col bg-background text-foreground">
@@ -66,6 +78,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {n.label}
               </button>
             ))}
+
+            {/* Library dropdown */}
             <button
               onClick={() => setLibOpen(!libOpen)}
               className={cn(
@@ -78,11 +92,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Library size={15} />
               مكتبتي
             </button>
+
+            {/* Secondary nav (Diary + Lists) */}
+            {SECONDARY_NAV.map((n) => (
+              <button
+                key={n.key}
+                onClick={() => setView(n.key)}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5",
+                  currentView === n.key
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                )}
+              >
+                <n.icon size={15} />
+                {n.label}
+              </button>
+            ))}
           </nav>
 
-          {/* User avatar placeholder */}
+          {/* Right side: notifications + avatar */}
           <div className="flex items-center gap-2">
-            <button className="relative w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm">
+            <button
+              onClick={() => setNotifOpen(true)}
+              className="relative w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center hover:bg-accent"
+              title="الإشعارات"
+            >
+              <Bell size={17} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+            <button className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm">
               M
             </button>
           </div>
@@ -124,9 +167,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-md border-t border-border">
         <div className="grid grid-cols-5 h-16">
           {[
-            ...PRIMARY_NAV.slice(0, 2),
+            { key: "home" as ViewKey, label: "الرئيسية", icon: Home },
+            { key: "search" as ViewKey, label: "بحث", icon: Search },
             { key: "library" as ViewKey, label: "مكتبتي", icon: Library },
-            ...PRIMARY_NAV.slice(2),
+            { key: "diary" as ViewKey, label: "السجل", icon: BookOpen },
+            { key: "stats" as ViewKey, label: "إحصائي", icon: BarChart3 },
           ].map((n) => {
             const isActive =
               n.key === "library" ? isLibraryView : currentView === n.key;
@@ -141,17 +186,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   }
                 }}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5",
+                  "flex flex-col items-center justify-center gap-0.5 relative",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 <n.icon size={20} />
                 <span className="text-[10px] font-medium">{n.label}</span>
+                {n.key === "library" && isLibraryView && (
+                  <span className="absolute bottom-0 w-8 h-0.5 bg-primary rounded-full" />
+                )}
               </button>
             );
           })}
         </div>
       </nav>
+
+      {/* Notification center */}
+      {notifOpen && <NotificationCenter onClose={() => setNotifOpen(false)} />}
     </div>
   );
 }
