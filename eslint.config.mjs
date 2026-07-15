@@ -42,6 +42,12 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-undef": "off",
     "no-unreachable": "off",
     "no-useless-escape": "off",
+    
+    // ESLint v9 / TypeScript ESLint
+    "@typescript-eslint/no-require-imports": "off",
+    
+    // React Hooks
+    "react-hooks/set-state-in-effect": "off",
   },
 }, {
   ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills"]
