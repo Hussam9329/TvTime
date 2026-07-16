@@ -347,7 +347,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
               <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
               <SelectValue placeholder="From year" />
             </SelectTrigger>
-            <SelectContent className="max-h-72">
+            <SelectContent className="max-h-96">
               <SelectItem value="any">Any from year</SelectItem>
               {YEAR_OPTIONS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
             </SelectContent>
@@ -358,7 +358,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
               <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
               <SelectValue placeholder="To year" />
             </SelectTrigger>
-            <SelectContent className="max-h-72">
+            <SelectContent className="max-h-96">
               <SelectItem value="any">Any to year</SelectItem>
               {YEAR_OPTIONS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
             </SelectContent>
@@ -440,18 +440,28 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           </Select>
         </div>
 
-        {/* Runtime range + Keywords (row 3) */}
+        {/* Runtime range + Keywords (row 3)
+            Note: TMDB's with_runtime.gte/lte uses an internal runtime value that
+            may differ from the canonical runtime (theatrical vs director's cut).
+            We add an "approximate" badge to set user expectations. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Min runtime" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any min runtime</SelectItem>
-              {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1">
+            <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); setPage(1); }}>
+              <SelectTrigger className="h-9 text-sm">
+                <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
+                <SelectValue placeholder="Min runtime" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Any min runtime</SelectItem>
+                {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {(runtimeMin || runtimeMax) && (
+              <p className="text-[10px] text-amber-500/80 leading-tight px-1">
+                ⚠ Runtime filter is approximate (TMDB may store multiple cuts)
+              </p>
+            )}
+          </div>
 
           <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); setPage(1); }}>
             <SelectTrigger className="h-9 text-sm">
