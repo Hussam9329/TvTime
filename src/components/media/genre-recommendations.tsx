@@ -1,6 +1,7 @@
 "use client";
 
-import { useDiscoverMovies, useDiscoverTv, useMovieGenres, useTvGenres, useMedia } from "@/hooks/use-tmdb";
+import { useEffect, useRef, useState } from "react";
+import { useDiscoverMovies, useDiscoverTv, useMovieGenres, useTvGenres, useMedia, useMediaStates } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { Sparkles, Star } from "lucide-react";
 import { isArabicMediaItem } from "@/lib/arabic-media";
@@ -17,6 +18,37 @@ import { isArabicMediaItem } from "@/lib/arabic-media";
  * and pick the top 2 movie genres + top 1 TV genre.
  */
 export function GenreRecommendations() {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor || enabled) return;
+    if (!("IntersectionObserver" in window)) {
+      setEnabled(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setEnabled(true);
+        observer.disconnect();
+      },
+      { rootMargin: "700px 0px" },
+    );
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  }, [enabled]);
+
+  return (
+    <div ref={anchorRef} className="min-h-24">
+      {enabled ? <GenreRecommendationContent /> : <RecommendationPlaceholder />}
+    </div>
+  );
+}
+
+function GenreRecommendationContent() {
   const movieGenres = useMovieGenres();
   const tvGenres = useTvGenres();
 
@@ -43,9 +75,19 @@ export function GenreRecommendations() {
 
   const isPersonalized = userMovieGenres.length > 0 || userTvGenres.length > 0;
 
-  const rec1 = useDiscoverMovies({ genres: movieGenre1 ? [movieGenre1.id] : undefined, sort_by: "vote_average.desc", page: 1, rating: 7 });
-  const rec2 = useDiscoverMovies({ genres: movieGenre2 ? [movieGenre2.id] : undefined, sort_by: "popularity.desc", page: 1 });
-  const rec3 = useDiscoverTv({ genres: tvGenre1 ? [tvGenre1.id] : undefined, sort_by: "popularity.desc", page: 1 });
+  const rec1 = useDiscoverMovies({ genres: movieGenre1 ? [movieGenre1.id] : undefined, sort_by: "vote_average.desc", page: 1, rating: 7, enabled: Boolean(movieGenre1) });
+  const rec2 = useDiscoverMovies({ genres: movieGenre2 ? [movieGenre2.id] : undefined, sort_by: "popularity.desc", page: 1, enabled: Boolean(movieGenre2) });
+  const rec3 = useDiscoverTv({ genres: tvGenre1 ? [tvGenre1.id] : undefined, sort_by: "popularity.desc", page: 1, enabled: Boolean(tvGenre1) });
+
+  const rec1Items = (rec1.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20);
+  const rec2Items = (rec2.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20);
+  const rec3Items = (rec3.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20);
+  const recommendationStates = useMediaStates([
+    ...rec1Items.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
+    ...rec2Items.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
+    ...rec3Items.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
+  ]);
+  const libraryStateSource = { data: recommendationStates.data };
 
   return (
     <>
@@ -53,28 +95,40 @@ export function GenreRecommendations() {
         <MediaRow
           title={isPersonalized ? `Top ${movieGenre1.name} Movies • For You` : `Top ${movieGenre1.name} Movies`}
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
-          items={(rec1.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20)}
+          items={rec1Items}
           loading={rec1.isLoading}
+          libraryStateSource={libraryStateSource}
         />
       )}
       {tvGenre1 && (rec3.data?.results?.length ?? 0) > 0 && (
         <MediaRow
           title={isPersonalized ? `Popular ${tvGenre1.name} Shows • For You` : `Popular ${tvGenre1.name} Shows`}
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
-          items={(rec3.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20)}
+          items={rec3Items}
           loading={rec3.isLoading}
           forcedMediaType="tv"
+          libraryStateSource={libraryStateSource}
         />
       )}
       {movieGenre2 && (rec2.data?.results?.length ?? 0) > 0 && (
         <MediaRow
           title={isPersonalized ? `Trending ${movieGenre2.name} Movies • For You` : `Trending ${movieGenre2.name} Movies`}
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
-          items={(rec2.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20)}
+          items={rec2Items}
           loading={rec2.isLoading}
+          libraryStateSource={libraryStateSource}
         />
       )}
     </>
+  );
+}
+
+function RecommendationPlaceholder() {
+  return (
+    <div className="space-y-3 py-2" aria-hidden="true">
+      <div className="h-5 w-48 rounded-md bg-muted/35" />
+      <div className="h-16 rounded-xl border border-dashed border-border/45 bg-muted/10" />
+    </div>
   );
 }
 

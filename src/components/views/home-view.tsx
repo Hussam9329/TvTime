@@ -1,8 +1,7 @@
 "use client";
 
-import { useTrending, usePopularMovies, useTopRatedMovies, useUpcomingMovies, usePopularTv, useOnTheAirTv, useTopRatedTv, useFollowing, useStats, useShowProgress, useWatchedMovieToggle, useRecentlyWatched } from "@/hooks/use-tmdb";
+import { useFollowing, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useWatchedMovieToggle } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
-import { ContinueWatching } from "@/components/media/continue-watching";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,13 +14,7 @@ import { toast } from "sonner";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 
 export function HomeView() {
-  const trending = useTrending("week", "all");
-  const popularMovies = usePopularMovies();
-  const topMovies = useTopRatedMovies();
-  const upcoming = useUpcomingMovies();
-  const popularTv = usePopularTv();
-  const onAirTv = useOnTheAirTv();
-  const topTv = useTopRatedTv();
+  const homeFeed = useHomeFeed();
 
   const following = useFollowing();
   const stats = useStats();
@@ -29,7 +22,23 @@ export function HomeView() {
   const setView = useNav((s) => s.setView);
   const userName = useNav((s) => s.userName);
 
-  const standardTrending = (trending.data?.results ?? []).filter((media) => !isArabicMediaItem(media));
+  const standardTrending = (homeFeed.data?.trending.results ?? []).filter((media) => !isArabicMediaItem(media));
+  const popularMovieItems = (homeFeed.data?.popularMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
+  const onAirTvItems = (homeFeed.data?.onTheAirTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
+  const popularTvItems = (homeFeed.data?.popularTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
+  const topMovieItems = (homeFeed.data?.topRatedMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
+  const topTvItems = (homeFeed.data?.topRatedTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
+  const upcomingMovieItems = (homeFeed.data?.upcomingMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
+  const homeLibraryStates = useMediaStates([
+    ...standardTrending.map((item) => ({ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" as const : "movie" as const })),
+    ...popularMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
+    ...onAirTvItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
+    ...popularTvItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
+    ...topMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
+    ...topTvItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
+    ...upcomingMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
+  ]);
+  const sharedLibraryStateSource = { data: homeLibraryStates.data };
   const heroItem = standardTrending.find((media) => media.backdrop_path && (media.overview?.length || 0) > 100) || standardTrending[0];
 
   const [greeting, setGreeting] = useState("Good evening");
@@ -125,48 +134,55 @@ export function HomeView() {
         title="Trending Now"
         icon={<Flame className="w-5 h-5" />}
         items={standardTrending}
-        loading={trending.isLoading}
+        loading={homeFeed.isLoading}
+        libraryStateSource={sharedLibraryStateSource}
       />
       <MediaRow
         title="Popular Movies"
         icon={<TrendingUp className="w-5 h-5" />}
-        items={(popularMovies.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
-        loading={popularMovies.isLoading}
+        items={popularMovieItems}
+        loading={homeFeed.isLoading}
         onSeeAll={() => setView("discover")}
+        libraryStateSource={sharedLibraryStateSource}
       />
       <MediaRow
         title="On The Air"
         icon={<Tv className="w-5 h-5" />}
-        items={(onAirTv.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
-        loading={onAirTv.isLoading}
+        items={onAirTvItems}
+        loading={homeFeed.isLoading}
         forcedMediaType="tv"
+        libraryStateSource={sharedLibraryStateSource}
       />
       <MediaRow
         title="Popular TV Shows"
         icon={<Tv className="w-5 h-5" />}
-        items={(popularTv.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
-        loading={popularTv.isLoading}
+        items={popularTvItems}
+        loading={homeFeed.isLoading}
         onSeeAll={() => setView("discover")}
         forcedMediaType="tv"
+        libraryStateSource={sharedLibraryStateSource}
       />
       <MediaRow
         title="Top Rated Movies"
         icon={<Star className="w-5 h-5" />}
-        items={(topMovies.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
-        loading={topMovies.isLoading}
+        items={topMovieItems}
+        loading={homeFeed.isLoading}
+        libraryStateSource={sharedLibraryStateSource}
       />
       <MediaRow
         title="Top Rated TV Shows"
         icon={<Star className="w-5 h-5" />}
-        items={(topTv.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
-        loading={topTv.isLoading}
+        items={topTvItems}
+        loading={homeFeed.isLoading}
         forcedMediaType="tv"
+        libraryStateSource={sharedLibraryStateSource}
       />
       <MediaRow
         title="Upcoming Movies"
         icon={<Calendar className="w-5 h-5" />}
-        items={(upcoming.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media))}
-        loading={upcoming.isLoading}
+        items={upcomingMovieItems}
+        loading={homeFeed.isLoading}
+        libraryStateSource={sharedLibraryStateSource}
       />
 
       {/* Genre-based recommendations */}
@@ -197,8 +213,6 @@ function Hero({ item }: { item: any }) {
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
   const mediaType = item.media_type === "tv" || !item.title ? "tv" : "movie";
-  const [idx, setIdx] = useState(0);
-
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -252,62 +266,6 @@ function Hero({ item }: { item: any }) {
         </div>
       </div>
     </motion.section>
-  );
-}
-
-function FollowingSection() {
-  const following = useFollowing();
-  const goTv = useNav((s) => s.goTv);
-  const items = following.data?.items ?? [];
-
-  return (
-    <section className="mb-2">
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <Tv className="w-5 h-5 text-primary" />
-        <h2 className="text-lg sm:text-xl font-bold tracking-tight">Your Shows</h2>
-        <span className="text-xs text-muted-foreground ml-1">({items.length})</span>
-      </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-        {items.map((s) => (
-          <FollowedShowCard key={s.id} tmdbId={s.tmdbId} title={s.title} posterPath={(s as any).poster || (s as any).posterPath} onClick={() => goTv(s.tmdbId)} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function FollowedShowCard({ tmdbId, title, posterPath, onClick }: { tmdbId: number; title: string; posterPath: string | null; onClick: () => void }) {
-  const showProgress = useShowProgress(tmdbId);
-  const totalEpisodes = showProgress.totalEpisodes;
-  const watchedCount = showProgress.watchedCount;
-  const progress = totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
-
-  return (
-    <button
-      onClick={onClick}
-      className="flex-shrink-0 w-[110px] sm:w-[130px] group"
-    >
-      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
-        {posterPath ? (
-          <SafeImage src={img(posterPath, "w185")} alt={title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs p-2 text-center">{title}</div>
-        )}
-        {/* Progress overlay at bottom */}
-        {totalEpisodes > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-1.5 pt-4">
-            <div className="flex items-center justify-between text-[9px] text-white/90 mb-0.5">
-              <span>{watchedCount}/{totalEpisodes}</span>
-              <span className="font-bold">{progress}%</span>
-            </div>
-            <div className="h-1 rounded-full bg-white/20 overflow-hidden">
-              <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-        )}
-      </div>
-      <p className="mt-1.5 text-xs font-medium line-clamp-1">{title}</p>
-    </button>
   );
 }
 

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Star, Film, Tv, Check, ListPlus, Bell } from "lucide-react";
 import { useNav } from "@/lib/store";
 import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use-tmdb";
-import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { SafeImage } from "@/components/media/safe-image";
 import { isArabicMediaItem } from "@/lib/arabic-media";
@@ -73,15 +72,6 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
     >
       <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
-          {/* Blur-up placeholder: tiny image as background */}
-          {item.poster_path && (
-            <SafeImage
-              src={imgOrPlaceholder(item.poster_path, "w92")}
-              alt=""
-              aria-hidden
-              className="absolute inset-0 w-full h-full object-cover blur-xl scale-110"
-            />
-          )}
           <SafeImage
             src={imgOrPlaceholder(item.poster_path, "w342")}
             alt={title}

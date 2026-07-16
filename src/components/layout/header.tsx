@@ -1,307 +1,441 @@
 "use client";
 
-import { useNav, type ViewName } from "@/lib/store";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Home,
-  Compass,
-  Search,
-  CalendarDays,
-  BarChart3,
-  Film,
-  Menu,
-  X,
-  Sun,
-  Moon,
   ArrowLeft,
-  Keyboard,
-  Clapperboard,
-  Sparkles,
-  Languages,
-  ChevronDown,
-  BookOpen,
-  List as ListIcon,
+  BarChart3,
   Bell,
+  BookOpen,
+  CalendarDays,
+  ChevronDown,
+  Clapperboard,
+  Compass,
+  Film,
+  Home,
+  Keyboard,
+  Languages,
+  Library,
+  List as ListIcon,
+  Menu,
+  Moon,
+  Play,
+  Search,
+  Sparkles,
+  Sun,
+  X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useNav, type ViewName } from "@/lib/store";
+import { prefetchViewModule } from "@/lib/view-prefetch";
+import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sheet,
   SheetContent,
-  SheetTrigger,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ProfileDialog } from "@/components/profile/profile-dialog";
-import { ShortcutsHelpDialog } from "@/components/layout/keyboard-shortcuts";
-import { NotificationCenter } from "@/components/views/notification-center";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const primaryNavItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
+const ProfileDialog = dynamic(
+  () => import("@/components/profile/profile-dialog").then((module) => module.ProfileDialog),
+  { ssr: false },
+);
+const ShortcutsHelpDialog = dynamic(
+  () => import("@/components/layout/keyboard-shortcuts").then((module) => module.ShortcutsHelpDialog),
+  { ssr: false },
+);
+const NotificationCenter = dynamic(
+  () => import("@/components/views/notification-center").then((module) => module.NotificationCenter),
+  { ssr: false },
+);
+
+type NavItem = { view: ViewName; label: string; icon: React.ElementType };
+
+const coreNavItems: NavItem[] = [
   { view: "home", label: "Home", icon: Home },
   { view: "discover", label: "Discover", icon: Compass },
-  { view: "search", label: "Search", icon: Search },
   { view: "movies", label: "Movies", icon: Film },
   { view: "tv-shows", label: "TV Shows", icon: Clapperboard },
   { view: "anime", label: "Anime", icon: Sparkles },
+];
+
+const libraryNavItems: NavItem[] = [
   { view: "calendar", label: "Calendar", icon: CalendarDays },
   { view: "diary", label: "Diary", icon: BookOpen },
   { view: "lists", label: "Lists", icon: ListIcon },
   { view: "stats", label: "Stats", icon: BarChart3 },
 ];
 
-const arabicNavItems: { view: ViewName; label: string; icon: React.ElementType }[] = [
+const arabicNavItems: NavItem[] = [
   { view: "arabic-movies", label: "Arabic Movies", icon: Film },
   { view: "arabic-tv", label: "Arabic TV", icon: Clapperboard },
 ];
 
-const mobileNavItems = [...primaryNavItems, ...arabicNavItems];
+const allNavItems: NavItem[] = [
+  ...coreNavItems,
+  { view: "search", label: "Search", icon: Search },
+  ...libraryNavItems,
+  ...arabicNavItems,
+];
+
+const NOTIFICATION_QUERY_KEY = ["notifications", "unread-count", getClientUserId()] as const;
+
+function activeIn(view: ViewName, items: NavItem[]) {
+  return items.some((item) => item.view === view);
+}
 
 export function Header() {
-  const { view, setView, setSearchQuery, back, history, userName } = useNav();
-  const { theme, setTheme } = useTheme();
+  const view = useNav((state) => state.view);
+  const setView = useNav((state) => state.setView);
+  const setSearchQuery = useNav((state) => state.setSearchQuery);
+  const back = useNav((state) => state.back);
+  const historyLength = useNav((state) => state.history.length);
+  const userName = useNav((state) => state.userName);
+  const { resolvedTheme, setTheme } = useTheme();
+  const queryClient = useQueryClient();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = useState(false);
   const [searchVal, setSearchVal] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifUnread, setNotifUnread] = useState(0);
+
+  const notificationSummary = useQuery({
+    queryKey: NOTIFICATION_QUERY_KEY,
+    queryFn: async () => {
+      const url = withUserId(new URL("/api/notifications", window.location.origin));
+      url.searchParams.set("filter", "unread");
+      url.searchParams.set("countOnly", "true");
+      const response = await fetch(url, { headers: userHeaders() });
+      if (!response.ok) throw new Error("Failed to load notification count");
+      return response.json() as Promise<{ unreadCount: number }>;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+  });
+  const notifUnread = Math.max(0, Number(notificationSummary.data?.unreadCount || 0));
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
-  // Fetch notification unread count (polling every 60s)
   useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const res = await fetch("/api/notifications?filter=unread");
-        if (res.ok) {
-          const data = await res.json();
-          setNotifUnread(data.unreadCount || 0);
-        }
-      } catch {}
+    const handleShortcut = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
+      if (event.key === "/" && !typing) {
+        event.preventDefault();
+        prefetchViewModule("search");
+        setMobileSearchOpen(true);
+        window.requestAnimationFrame(() => searchInputRef.current?.focus());
+      }
+      if (event.key === "Escape" && document.activeElement === searchInputRef.current) {
+        searchInputRef.current?.blur();
+        setMobileSearchOpen(false);
+      }
     };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 60000);
-    return () => clearInterval(interval);
-  }, [notifOpen]);
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
 
-  const onSubmitSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchVal.trim()) {
-      setSearchQuery(searchVal.trim());
-      setView("search");
-      setMobileOpen(false);
+  const onSubmitSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    const query = searchVal.trim();
+    if (!query) {
+      searchInputRef.current?.focus();
+      return;
     }
+    setSearchQuery(query);
+    setView("search");
+    setMobileOpen(false);
+    setMobileSearchOpen(false);
+    searchInputRef.current?.blur();
   };
 
-  const goTo = (v: ViewName) => {
-    setView(v);
+  const goTo = useCallback((nextView: ViewName) => {
+    setView(nextView);
     setMobileOpen(false);
+  }, [setView]);
+
+  const syncUnreadCount = useCallback((unreadCount: number) => {
+    queryClient.setQueryData(NOTIFICATION_QUERY_KEY, { unreadCount: Math.max(0, unreadCount) });
+  }, [queryClient]);
+
+  const currentLabel = allNavItems.find((item) => item.view === view)?.label
+    ?? (view === "movie-detail" ? "Movie Details" : view === "tv-detail" ? "TV Details" : "TvTime");
+  const isDetailView = view === "movie-detail" || view === "tv-detail" || view === "person-detail";
+
+  const navButton = (item: NavItem, compact = false) => {
+    const active = item.view === view;
+    return (
+      <button
+        key={item.view}
+        type="button"
+        onClick={() => goTo(item.view)}
+        onPointerEnter={() => prefetchViewModule(item.view)}
+        onFocus={() => prefetchViewModule(item.view)}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "group relative inline-flex items-center rounded-xl font-semibold transition-[color,background-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
+          compact ? "w-full gap-3 px-3 py-2.5 text-sm" : "gap-2 px-3 py-2 text-[13px]",
+          active
+            ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+            : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
+        )}
+      >
+        <item.icon className={cn("shrink-0 transition-transform group-hover:scale-105", compact ? "h-4.5 w-4.5" : "h-4 w-4")} />
+        <span>{item.label}</span>
+        {!compact && active && <span className="absolute -bottom-[9px] left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-primary" />}
+      </button>
+    );
   };
 
   return (
-    <header className="sticky top-0 z-40 glass border-b border-border/60">
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 h-14 sm:h-16 flex items-center gap-2 sm:gap-4">
-        {/* Mobile menu */}
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/82 shadow-[0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72">
+      <div className="mx-auto flex h-15 max-w-[1600px] items-center gap-2 px-3 sm:h-16 sm:px-4 lg:px-6">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="xl:hidden">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl xl:hidden" aria-label="Open navigation">
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0">
-            <SheetHeader className="p-4 border-b border-border/60">
-              <SheetTitle className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                  <Film className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <span className="text-gradient font-extrabold text-lg">CineTrack</span>
+          <SheetContent side="left" className="w-[min(88vw,340px)] border-r-border/70 p-0">
+            <SheetHeader className="border-b border-border/60 p-5 text-left">
+              <SheetTitle className="flex items-center gap-3">
+                <BrandMark />
+                <span>
+                  <span className="block text-lg font-black tracking-tight">TvTime</span>
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Your watch universe</span>
+                </span>
               </SheetTitle>
             </SheetHeader>
-            <nav className="p-3 flex flex-col gap-1">
-              {mobileNavItems.map((item) => (
-                <button
-                  key={item.view}
-                  onClick={() => goTo(item.view)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    view === item.view
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-accent text-foreground/80"
-                  )}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
-                </button>
-              ))}
+            <nav className="flex max-h-[calc(100dvh-88px)] flex-col gap-5 overflow-y-auto p-4" aria-label="Mobile navigation">
+              <NavGroup label="Explore">{coreNavItems.map((item) => navButton(item, true))}</NavGroup>
+              <NavGroup label="Your Library">{libraryNavItems.map((item) => navButton(item, true))}</NavGroup>
+              <NavGroup label="Arabic World">{arabicNavItems.map((item) => navButton(item, true))}</NavGroup>
             </nav>
           </SheetContent>
         </Sheet>
 
-        {/* Logo */}
+        {isDetailView && historyLength > 0 && (
+          <Button variant="ghost" size="icon" onClick={back} className="h-10 w-10 rounded-xl" aria-label="Go back">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
+
         <button
-          onClick={() => setView("home")}
-          className="flex items-center gap-2 flex-shrink-0"
-          aria-label="CineTrack home"
+          type="button"
+          onClick={() => goTo("home")}
+          onPointerEnter={() => prefetchViewModule("home")}
+          className="group flex shrink-0 items-center gap-2.5 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+          aria-label="TvTime home"
         >
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-            <Film className="w-5 h-5 sm:w-5 sm:h-5 text-primary-foreground" />
-          </div>
-          <span className="text-gradient font-extrabold text-lg sm:text-xl hidden sm:block">CineTrack</span>
+          <BrandMark />
+          <span className="hidden sm:block">
+            <span className="block text-lg font-black leading-none tracking-[-0.04em]">Tv<span className="text-primary">Time</span></span>
+            <span className="mt-1 block text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Watch. Track. Love.</span>
+          </span>
         </button>
 
-        {/* Desktop nav */}
-        <nav className="hidden xl:flex items-center gap-1">
-          {primaryNavItems.map((item) => (
-            <button
-              key={item.view}
-              onClick={() => goTo(item.view)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                view === item.view
-                  ? "bg-primary/15 text-primary"
-                  : "hover:bg-accent text-foreground/70"
-              )}
-            >
-              <item.icon className="w-4 h-4" />
-              {item.label}
-            </button>
-          ))}
+        <nav className="ml-2 hidden xl:flex items-center gap-0.5" aria-label="Primary navigation">
+          {coreNavItems.map((item) => navButton(item))}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                type="button"
+                onPointerEnter={() => libraryNavItems.forEach((item) => prefetchViewModule(item.view))}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  view === "arabic-movies" || view === "arabic-tv"
-                    ? "bg-emerald-500/15 text-emerald-400"
-                    : "hover:bg-accent text-foreground/70"
+                  "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors",
+                  activeIn(view, libraryNavItems) ? "bg-primary/12 text-primary" : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
                 )}
-                aria-label="Open Arabic media navigation"
               >
-                <Languages className="w-4 h-4" />
-                Arabic
-                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                <Library className="h-4 w-4" /> Library <ChevronDown className="h-3.5 w-3.5 opacity-60" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-52">
+            <DropdownMenuContent align="start" className="w-56 rounded-xl p-1.5">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Your collection</DropdownMenuLabel>
+              {libraryNavItems.map((item) => (
+                <DropdownMenuItem key={item.view} onSelect={() => goTo(item.view)} onFocus={() => prefetchViewModule(item.view)} className={cn("gap-2.5 rounded-lg py-2", view === item.view && "bg-accent text-accent-foreground")}>
+                  <item.icon className="h-4 w-4" /> {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                onPointerEnter={() => arabicNavItems.forEach((item) => prefetchViewModule(item.view))}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors",
+                  activeIn(view, arabicNavItems) ? "bg-emerald-500/12 text-emerald-400" : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
+                )}
+              >
+                <Languages className="h-4 w-4" /> Arabic <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56 rounded-xl p-1.5">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Arabic world</DropdownMenuLabel>
               {arabicNavItems.map((item) => (
-                <DropdownMenuItem key={item.view} onSelect={() => goTo(item.view)} className={cn(view === item.view && "bg-accent text-accent-foreground")}>
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
+                <DropdownMenuItem key={item.view} onSelect={() => goTo(item.view)} onFocus={() => prefetchViewModule(item.view)} className={cn("gap-2.5 rounded-lg py-2", view === item.view && "bg-accent text-accent-foreground")}>
+                  <item.icon className="h-4 w-4" /> {item.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </nav>
 
-        {/* Search */}
-        <form onSubmit={onSubmitSearch} className="flex-1 max-w-md ml-auto">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <form onSubmit={onSubmitSearch} className="ml-auto hidden min-w-0 max-w-sm flex-1 md:block xl:max-w-[320px] 2xl:max-w-sm">
+          <div className="group relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <Input
+              ref={searchInputRef}
               value={searchVal}
-              onChange={(e) => setSearchVal(e.target.value)}
-              placeholder="Search movies, TV shows, anime, Arabic titles..."
-              className="pl-9 h-9 bg-muted/50 border-border/50 focus-visible:bg-background"
+              onChange={(event) => setSearchVal(event.target.value)}
+              onFocus={() => prefetchViewModule("search")}
+              placeholder="Search titles, people..."
+              aria-label="Search movies, shows, anime and people"
+              className="h-10 rounded-xl border-border/60 bg-muted/45 pl-9 pr-10 shadow-inner shadow-black/5 transition-all focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/35"
             />
+            {searchVal ? (
+              <button type="button" onClick={() => setSearchVal("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Clear search">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-border/70 bg-background/70 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">/</kbd>
+            )}
           </div>
         </form>
 
-        {/* Back button (shown on detail views) */}
-        {(view === "movie-detail" || view === "tv-detail") && history.length > 0 && (
-          <Button variant="ghost" size="icon" onClick={back} className="hidden sm:flex" aria-label="Go back">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        )}
+        <span className="hidden max-w-32 truncate text-xs font-semibold text-muted-foreground sm:block md:hidden">{currentLabel}</span>
 
-        {/* Notifications */}
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setNotifOpen(true)}
-          aria-label="Notifications"
-          className="relative"
+          onClick={() => {
+            setMobileSearchOpen((open) => !open);
+            prefetchViewModule("search");
+            window.requestAnimationFrame(() => searchInputRef.current?.focus());
+          }}
+          className="h-10 w-10 rounded-xl md:hidden"
+          aria-label="Open search"
         >
-          <Bell className="h-5 w-5" />
-          {notifUnread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-              {notifUnread > 9 ? "9+" : notifUnread}
-            </span>
-          )}
+          <Search className="h-5 w-5" />
         </Button>
 
-        {/* Theme toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          aria-label="Toggle theme"
-        >
-          {mounted && theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </Button>
-
-        {/* Keyboard shortcuts help */}
-        <TooltipProvider>
+        <TooltipProvider delayDuration={250}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setHelpOpen(true)}
-                aria-label="Keyboard shortcuts"
-                className="hidden sm:flex relative"
-              >
-                <Keyboard className="h-5 w-5" />
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <Button variant="ghost" size="icon" onClick={() => setNotifOpen(true)} aria-label="Notifications" className="relative h-10 w-10 rounded-xl">
+                <Bell className="h-5 w-5" />
+                {notifUnread > 0 && (
+                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black leading-none text-white ring-2 ring-background">
+                    {notifUnread > 9 ? "9+" : notifUnread}
+                  </span>
+                )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p className="text-xs">Keyboard shortcuts <kbd className="ml-1 px-1 py-0.5 bg-muted rounded text-[10px] font-mono">?</kbd></p>
-            </TooltipContent>
+            <TooltipContent side="bottom">Notifications</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} aria-label="Toggle theme" className="hidden h-10 w-10 rounded-xl sm:inline-flex">
+                {mounted && resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{resolvedTheme === "dark" ? "Light mode" : "Dark mode"}</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => setHelpOpen(true)} aria-label="Keyboard shortcuts" className="hidden h-10 w-10 rounded-xl lg:inline-flex">
+                <Keyboard className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Keyboard shortcuts</TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
-        {/* Avatar */}
-        <button
-          onClick={() => setProfileOpen(true)}
-          className="flex-shrink-0"
-          aria-label="Your profile"
-        >
-          <Avatar className="w-9 h-9 border-2 border-primary/40 hover:border-primary transition-colors">
-            <AvatarFallback className="bg-primary/15 text-primary text-xs font-bold">
+        <button type="button" onClick={() => setProfileOpen(true)} className="flex shrink-0 items-center gap-2 rounded-xl p-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70" aria-label="Open profile">
+          <Avatar className="h-9 w-9 border border-primary/40 shadow-sm shadow-primary/15">
+            <AvatarFallback className="bg-gradient-to-br from-primary/25 to-fuchsia-500/15 text-xs font-black text-primary">
               {userName.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
+          <span className="hidden max-w-24 pr-1 text-left 2xl:block">
+            <span className="block truncate text-xs font-bold">{userName}</span>
+            <span className="block text-[9px] text-muted-foreground">View profile</span>
+          </span>
         </button>
       </div>
 
-      <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
-      <ShortcutsHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      {mobileSearchOpen && (
+        <form onSubmit={onSubmitSearch} className="border-t border-border/50 px-3 py-2 md:hidden">
+          <div className="relative mx-auto max-w-xl">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+            <Input
+              ref={searchInputRef}
+              value={searchVal}
+              onChange={(event) => setSearchVal(event.target.value)}
+              placeholder="Search movies, shows, anime and people..."
+              aria-label="Search movies, shows, anime and people"
+              className="h-11 rounded-xl bg-muted/50 pl-9 pr-10"
+              autoFocus
+            />
+            <button type="button" onClick={() => { setSearchVal(""); setMobileSearchOpen(false); }} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent" aria-label="Close search">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </form>
+      )}
+
+      {profileOpen && <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />}
+      {helpOpen && <ShortcutsHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />}
       {notifOpen && (
         <NotificationCenter
-          onClose={() => {
-            setNotifOpen(false);
-            // Refresh unread count after closing
-            fetch("/api/notifications?filter=unread")
-              .then((r) => r.json())
-              .then((d) => setNotifUnread(d.unreadCount || 0))
-              .catch(() => {});
-          }}
+          onClose={() => setNotifOpen(false)}
+          onUnreadCountChange={syncUnreadCount}
         />
       )}
     </header>
+  );
+}
+
+function BrandMark() {
+  return (
+    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary via-rose-500 to-fuchsia-600 text-white shadow-lg shadow-primary/20 transition-transform duration-200 group-hover:scale-[1.03]">
+      <Play className="h-4 w-4 translate-x-px fill-current" />
+      <span className="absolute inset-x-1.5 top-1 h-px bg-white/45" />
+    </span>
+  );
+}
+
+function NavGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1.5 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <div className="space-y-1">{children}</div>
+    </div>
   );
 }

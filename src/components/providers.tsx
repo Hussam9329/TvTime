@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNav } from "@/lib/store";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
 
@@ -39,6 +39,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
             // background refresh below handles slow-changing data, and
             // individual views can opt in with their own refetchOnWindowFocus.
             refetchOnWindowFocus: false,
+            refetchOnReconnect: true,
+            gcTime: 30 * 60 * 1000,
             retry: 1,
           },
         },
@@ -112,13 +114,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
       const now = Date.now();
       if (now - lastRefreshAt < MIN_REFRESH_GAP_MS) return;
       if (running) return;
+      if (document.visibilityState !== "visible") return;
 
       running = true;
       lastRefreshAt = now;
       try {
+        const countsUrl = withUserId(new URL("/api/tv-tracking", window.location.origin));
+        countsUrl.searchParams.set("countsOnly", "true");
+        countsUrl.searchParams.set("world", "standard");
         // Fetch both endpoints in parallel — they're independent.
         const [countsRes, statsRes] = await Promise.all([
-          fetch(withUserId(new URL("/api/tv-tracking", window.location.origin)) + "&countsOnly=true", {
+          fetch(countsUrl, {
             headers: userHeaders(),
             cache: "no-store",
           }),
@@ -134,7 +140,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         // currently mounted will see the fresh data on their next render.
         if (countsRes.ok) {
           const countsPayload = await countsRes.json();
-          client.setQueryData(["tv-tracking-counts", stableUserId], countsPayload);
+          client.setQueryData(["tv-tracking-counts", stableUserId, "standard"], countsPayload);
         }
 
         // Update cache for library stats (if successful).

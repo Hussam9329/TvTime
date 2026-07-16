@@ -6,7 +6,7 @@ import type { MediaItem } from "@/lib/tmdb";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { mediaStateKey, useMediaStates } from "@/hooks/use-tmdb";
+import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use-tmdb";
 
 interface MediaRowProps {
   title: string;
@@ -15,15 +15,17 @@ interface MediaRowProps {
   icon?: React.ReactNode;
   onSeeAll?: () => void;
   forcedMediaType?: "movie" | "tv";
+  libraryStateSource?: { data?: Record<string, MediaBatchState> };
 }
 
-export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType }: MediaRowProps) {
+export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType, libraryStateSource }: MediaRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
     mediaType: forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
   }));
-  const states = useMediaStates(stateRequests);
+  const states = useMediaStates(stateRequests, { enabled: !libraryStateSource });
+  const stateMap = libraryStateSource ? libraryStateSource.data : states.data;
 
   const scroll = (dir: "left" | "right") => {
     if (!scrollRef.current) return;
@@ -83,7 +85,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
                   item={item}
                   index={i}
                   forcedMediaType={forcedMediaType}
-                  libraryState={states.data?.[mediaStateKey(
+                  libraryState={stateMap?.[mediaStateKey(
                     forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
                     Number(item.id),
                   )] ?? null}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNav } from "@/lib/store";
 import type { MediaItem, MovieDetail, TvDetail, PaginatedResponse, SeasonDetail, Genre } from "@/lib/tmdb";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
@@ -23,6 +23,25 @@ async function tmdbGet<T>(path: string, params?: Record<string, string | number 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`TMDB ${res.status}`);
   return res.json();
+}
+
+export type HomeFeedResponse = {
+  trending: PaginatedResponse<MediaItem>;
+  popularMovies: PaginatedResponse<MediaItem>;
+  topRatedMovies: PaginatedResponse<MediaItem>;
+  upcomingMovies: PaginatedResponse<MediaItem>;
+  popularTv: PaginatedResponse<MediaItem>;
+  onTheAirTv: PaginatedResponse<MediaItem>;
+  topRatedTv: PaginatedResponse<MediaItem>;
+};
+
+/** One browser request for every public catalogue row on the home screen. */
+export function useHomeFeed() {
+  return useQuery({
+    queryKey: ["tmdb", "home"],
+    queryFn: () => tmdbGet<HomeFeedResponse>("home"),
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 // Home / Trending
@@ -350,7 +369,7 @@ export function useMediaState(tmdbId: number | null, mediaType: "movie" | "tv") 
       return data.item;
     },
     enabled: tmdbId != null && tmdbId > 0,
-    staleTime: 0,
+    staleTime: 30_000,
   });
 }
 
@@ -377,7 +396,10 @@ export function mediaStateKey(mediaType: "movie" | "tv", tmdbId: number): string
  * Loads only the state for cards currently rendered on screen. This avoids
  * deriving badges from the first page of a globally paginated library.
  */
-export function useMediaStates(items: { tmdbId: number; mediaType: "movie" | "tv" }[]) {
+export function useMediaStates(
+  items: { tmdbId: number; mediaType: "movie" | "tv" }[],
+  options: { enabled?: boolean } = {},
+) {
   const normalized = Array.from(
     new Map(
       items
@@ -413,8 +435,8 @@ export function useMediaStates(items: { tmdbId: number; mediaType: "movie" | "tv
 
       return Object.assign({}, ...responses) as Record<string, MediaBatchState>;
     },
-    enabled: normalized.length > 0,
-    staleTime: 0,
+    enabled: options.enabled !== false && normalized.length > 0,
+    staleTime: 30_000,
   });
 }
 
@@ -451,7 +473,7 @@ export function useWatchlist(mediaType?: "movie" | "tv") {
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
-    staleTime: 0,
+    staleTime: 30_000,
   });
 }
 
@@ -573,7 +595,7 @@ export function useWatchedMovies() {
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
-    staleTime: 0,
+    staleTime: 30_000,
   });
 }
 
@@ -672,7 +694,7 @@ export function useWatchedEpisodes(showId?: number) {
       }
       return res.json();
     },
-    staleTime: 0,
+    staleTime: 30_000,
   });
 }
 
@@ -699,7 +721,7 @@ export function useEpisodeWatchTimeline(showId?: number | null) {
       await ensureApiOk(res, "Failed to verify earlier episode progress");
       return res.json() as Promise<EpisodeWatchTimeline>;
     },
-    staleTime: 0,
+    staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 }
@@ -842,7 +864,7 @@ export function useArabicMovieSchedule(from: string, to: string) {
       const url = new URL("/api/arabic-movies/calendar", window.location.origin);
       url.searchParams.set("from", from);
       url.searchParams.set("to", to);
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetch(url);
       if (!res.ok) {
         const errorBody = await res.json().catch(() => ({}));
         throw new Error(errorBody?.error || "Failed to load Arabic movie releases");
@@ -871,7 +893,7 @@ export function useCalendarSchedule(from: string, to: string, world: "general" |
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -891,7 +913,7 @@ export function useFollowing() {
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
-    staleTime: 0,
+    staleTime: 30_000,
   });
 }
 
@@ -910,7 +932,7 @@ export function useTrackedShows() {
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
-    staleTime: 0,
+    staleTime: 30_000,
   });
 }
 
@@ -1024,7 +1046,7 @@ export function useRatings(mediaType?: "movie" | "tv") {
       const data = await res.json();
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
-    staleTime: 0,
+    staleTime: 30_000,
   });
 }
 
@@ -1054,7 +1076,7 @@ export function useEpisodeRatings(showId: number | null | undefined) {
       return res.json() as Promise<{ items: EpisodeRatingDB[] }>;
     },
     staleTime: 30_000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -1169,7 +1191,7 @@ export function useStats() {
       if (!res.ok) return null;
       return res.json();
     },
-    staleTime: 0,
+    staleTime: 60_000,
   });
 }
 
@@ -1255,9 +1277,8 @@ export function useTvTrackingCounts(world: "standard" | "arabic" = "standard") {
   return useQuery({
     queryKey: ["tv-tracking-counts", userId || getClientUserId(), world],
     queryFn: () => tvTrackingGet<TvTrackingCountsResponse>({ countsOnly: true, world }),
-    staleTime: 0,
-    refetchInterval: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   });
 }
@@ -1275,9 +1296,8 @@ export function useTvTracking(params: {
   return useQuery({
     queryKey: ["tv-tracking", userId || getClientUserId(), params],
     queryFn: () => tvTrackingGet<TvTrackingResponse>(params),
-    staleTime: 0,
-    refetchInterval: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
     placeholderData: (previousData) => previousData,
   });
@@ -1379,9 +1399,8 @@ export function useShowProgress(showId: number | null | undefined) {
         isUpcoming: Boolean(nextUpcomingEpisode && nextEp == null),
       };
     },
-    staleTime: 0,
-    refetchInterval: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   });
 
@@ -1547,8 +1566,8 @@ export function useLibraryCounts() {
       await ensureApiOk(res, "Failed to load global library counts");
       return res.json() as Promise<GlobalLibraryCountsResponse>;
     },
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   });
 }

@@ -20,6 +20,27 @@ const handler = async (
           (queryParams.type as "all" | "movie" | "tv") || "all"
         );
         break;
+      case "home": {
+        const [trending, popularMovies, topRatedMovies, upcomingMovies, popularTv, onTheAirTv, topRatedTv] = await Promise.all([
+          tmdb.trending("week", "all"),
+          tmdb.popularMovies(1),
+          tmdb.topRatedMovies(1),
+          tmdb.upcomingMovies(1),
+          tmdb.popularTv(1),
+          tmdb.onTheAirTv(1),
+          tmdb.topRatedTv(1),
+        ]);
+        data = {
+          trending,
+          popularMovies,
+          topRatedMovies,
+          upcomingMovies,
+          popularTv,
+          onTheAirTv,
+          topRatedTv,
+        };
+        break;
+      }
       case "movies/popular":
         data = await tmdb.popularMovies(Number(queryParams.page) || 1);
         break;
@@ -95,7 +116,13 @@ const handler = async (
         }
     }
 
-    return NextResponse.json(data);
+    const response = NextResponse.json(data);
+    const browserMaxAge = segments === "search" ? 60 : 300;
+    response.headers.set(
+      "Cache-Control",
+      `public, max-age=${browserMaxAge}, s-maxage=${browserMaxAge}, stale-while-revalidate=900`,
+    );
+    return response;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     console.error("[TMDB API]", segments, msg);

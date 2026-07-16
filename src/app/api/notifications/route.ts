@@ -8,16 +8,31 @@ export async function GET(req: NextRequest) {
     const user = await getOrCreateUser(parseUserId(req));
     const { searchParams } = new URL(req.url);
     const filter = searchParams.get("filter"); // "unread" | "read" | null
+    const countOnly = searchParams.get("countOnly") === "true";
+
+    if (countOnly) {
+      const unreadCount = await db.notification.count({ where: { userId: user.id, read: false } });
+      return NextResponse.json(
+        { unreadCount },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+
     const where: any = { userId: user.id };
     if (filter === "unread") where.read = false;
     if (filter === "read") where.read = true;
-    const notifications = await db.notification.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    });
-    const unreadCount = await db.notification.count({ where: { userId: user.id, read: false } });
-    return NextResponse.json({ notifications, unreadCount });
+    const [notifications, unreadCount] = await Promise.all([
+      db.notification.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      }),
+      db.notification.count({ where: { userId: user.id, read: false } }),
+    ]);
+    return NextResponse.json(
+      { notifications, unreadCount },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (e) {
     console.error("[notifications] GET error:", e);
     return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });

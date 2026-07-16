@@ -12,6 +12,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { userHeaders, withUserId } from "@/lib/client-user";
 
 interface Notification {
   id: string;
@@ -32,7 +33,13 @@ const TYPE_META: Record<string, { icon: React.ComponentType<{ size?: number; cla
   backlog_alert: { icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-500/15", label: "تراكم حلقات" },
 };
 
-export function NotificationCenter({ onClose }: { onClose: () => void }) {
+export function NotificationCenter({
+  onClose,
+  onUnreadCountChange,
+}: {
+  onClose: () => void;
+  onUnreadCountChange?: (count: number) => void;
+}) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
@@ -40,17 +47,20 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/notifications");
+      const url = withUserId(new URL("/api/notifications", window.location.origin));
+      const res = await fetch(url, { headers: userHeaders() });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data.notifications || []);
+        const nextNotifications = data.notifications || [];
+        setNotifications(nextNotifications);
+        onUnreadCountChange?.(Number(data.unreadCount || 0));
       }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onUnreadCountChange]);
 
   useEffect(() => {
     fetchNotifications();
@@ -65,25 +75,60 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleMarkRead = async (id: string) => {
-    await fetch(`/api/notifications?id=${id}&action=read`, { method: "PATCH" });
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    const url = withUserId(new URL("/api/notifications", window.location.origin));
+    url.searchParams.set("id", id);
+    url.searchParams.set("action", "read");
+    const response = await fetch(url, { method: "PATCH", headers: userHeaders() });
+    if (!response.ok) {
+      toast.error("تعذر تحديث الإشعار");
+      return;
+    }
+    setNotifications((prev) => {
+      const next = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+      onUnreadCountChange?.(next.filter((n) => !n.read).length);
+      return next;
+    });
   };
 
   const handleMarkAllRead = async () => {
-    await fetch(`/api/notifications?action=all`, { method: "PATCH" });
+    const url = withUserId(new URL("/api/notifications", window.location.origin));
+    url.searchParams.set("action", "all");
+    const response = await fetch(url, { method: "PATCH", headers: userHeaders() });
+    if (!response.ok) {
+      toast.error("تعذر تحديث الإشعارات");
+      return;
+    }
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    onUnreadCountChange?.(0);
     toast.success("تم تعليم الكل كمقروء");
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/notifications?id=${id}`, { method: "DELETE" });
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    const url = withUserId(new URL("/api/notifications", window.location.origin));
+    url.searchParams.set("id", id);
+    const response = await fetch(url, { method: "DELETE", headers: userHeaders() });
+    if (!response.ok) {
+      toast.error("تعذر حذف الإشعار");
+      return;
+    }
+    setNotifications((prev) => {
+      const next = prev.filter((n) => n.id !== id);
+      onUnreadCountChange?.(next.filter((n) => !n.read).length);
+      return next;
+    });
   };
 
   const handleClearAll = async () => {
     if (!confirm("هل تريد مسح كل الإشعارات؟")) return;
-    await fetch(`/api/notifications?action=all`, { method: "DELETE" });
+    const url = withUserId(new URL("/api/notifications", window.location.origin));
+    url.searchParams.set("action", "all");
+    const response = await fetch(url, { method: "DELETE", headers: userHeaders() });
+    if (!response.ok) {
+      toast.error("تعذر مسح الإشعارات");
+      return;
+    }
     setNotifications([]);
+    onUnreadCountChange?.(0);
     toast.success("تم مسح كل الإشعارات");
   };
 
