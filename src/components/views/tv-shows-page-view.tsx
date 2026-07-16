@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { Library, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CollectionWorldView } from "@/components/views/collection-world-view";
+import { TvShowsView } from "@/components/views/tv-tracking-view";
 import { DiscoverView } from "@/components/views/discover-view";
 
-export function AnimeView() {
+export function TVShowsPageView() {
   const [tab, setTab] = useState<"library" | "discover">("library");
 
   return (
@@ -22,10 +22,10 @@ export function AnimeView() {
         </TabsList>
 
         <TabsContent value="library" className="mt-0">
-          <CollectionWorldView world="anime" embedded />
+          <TvShowsView embedded />
         </TabsContent>
         <TabsContent value="discover" className="mt-0">
-          <DiscoverView world="anime" embedded />
+          <DiscoverView world="tv" embedded />
         </TabsContent>
       </Tabs>
     </div>

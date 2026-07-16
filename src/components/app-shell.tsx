@@ -40,7 +40,7 @@ const StatsView = lazy(() =>
   import("@/components/views/stats-view").then((m) => ({ default: m.StatsView })),
 );
 const TvShowsView = lazy(() =>
-  import("@/components/views/tv-tracking-view").then((m) => ({ default: m.TvShowsView })),
+  import("@/components/views/tv-shows-page-view").then((m) => ({ default: m.TVShowsPageView })),
 );
 const MediaView = lazy(() =>
   import("@/components/views/media-view").then((m) => ({ default: m.MediaView })),

@@ -11,37 +11,60 @@ import { MediaGrid } from "@/components/media/media-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, ChevronLeft, ChevronRight, Languages, RotateCcw, SlidersHorizontal, X } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Languages, RotateCcw, SlidersHorizontal, X, Type, Star, TrendingUp, Calendar } from "lucide-react";
 
 const MOVIE_SORT_OPTIONS = [
   { value: "popularity.desc", label: "Most popular" },
+  { value: "popularity.asc", label: "Least popular" },
   { value: "vote_average.desc", label: "Highest rated" },
+  { value: "vote_average.asc", label: "Lowest rated" },
   { value: "primary_release_date.desc", label: "Newest" },
   { value: "primary_release_date.asc", label: "Oldest" },
 ];
 
 const TV_SORT_OPTIONS = [
   { value: "popularity.desc", label: "Most popular" },
+  { value: "popularity.asc", label: "Least popular" },
   { value: "vote_average.desc", label: "Highest rated" },
+  { value: "vote_average.asc", label: "Lowest rated" },
   { value: "first_air_date.desc", label: "Newest" },
   { value: "first_air_date.asc", label: "Oldest" },
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
-const RELEASE_YEARS = Array.from({ length: 57 }, (_, index) => CURRENT_YEAR - index);
+const RELEASE_YEARS = Array.from({ length: 80 }, (_, index) => CURRENT_YEAR - index);
+
+const LETTER_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "All" },
+  ...Array.from({ length: 26 }, (_, i) => {
+    const letter = String.fromCharCode(65 + i);
+    return { value: letter, label: letter };
+  }),
+  { value: "#", label: "#" },
+];
+
+const RATING_OPTIONS = [
+  { value: "", label: "Any rating" },
+  { value: "5", label: "5+ / 10" },
+  { value: "6", label: "6+ / 10" },
+  { value: "7", label: "7+ / 10" },
+  { value: "8", label: "8+ / 10" },
+  { value: "9", label: "9+ / 10" },
+];
 
 export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("popularity.desc");
-  const [releaseYear, setReleaseYear] = useState<string>("any");
-  const [minimumRating, setMinimumRating] = useState<string>("any");
+  const [releaseYear, setReleaseYear] = useState<string>("");
+  const [minimumRating, setMinimumRating] = useState<string>("");
+  const [letter, setLetter] = useState<string>("");
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
 
   const movieGenres = useMovieGenres();
   const tvGenres = useTvGenres();
   const genres = kind === "movie" ? movieGenres.data : tvGenres.data;
-  const year = releaseYear === "any" ? undefined : Number(releaseYear);
-  const rating = minimumRating === "any" ? undefined : Number(minimumRating);
+  const year = releaseYear === "" ? undefined : Number(releaseYear);
+  const rating = minimumRating === "" ? undefined : Number(minimumRating);
 
   const movieQuery = useDiscoverMovies({
     genres: selectedGenres,
@@ -64,12 +87,30 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
     enabled: kind === "tv",
   });
   const query = kind === "movie" ? movieQuery : tvQuery;
-  const items = useMemo(
-    () => (query.data?.results ?? []).filter((item) => item.poster_path && item.original_language === "ar"),
-    [query.data?.results],
-  );
+  const allItems = query.data?.results ?? [];
+  
+  // Filter Arabic + letter (client-side)
+  const items = useMemo(() => {
+    let filtered = allItems.filter((item) => item.poster_path && item.original_language === "ar");
+    if (letter) {
+      const titleKey = kind === "movie" ? "title" : "name";
+      if (letter === "#") {
+        filtered = filtered.filter((m) => {
+          const t = (m as any)[titleKey] || "";
+          return t && !/^[a-zA-Z\u0600-\u06FF]/.test(t[0]);
+        });
+      } else {
+        filtered = filtered.filter((m) => {
+          const t = ((m as any)[titleKey] || "").toUpperCase();
+          return t.startsWith(letter);
+        });
+      }
+    }
+    return filtered;
+  }, [allItems, letter, kind]);
+
   const totalPages = Math.min(query.data?.total_pages ?? 1, 500);
-  const activeFilters = selectedGenres.length + Number(releaseYear !== "any") + Number(minimumRating !== "any");
+  const activeFilters = selectedGenres.length + Number(releaseYear !== "") + Number(minimumRating !== "") + Number(letter !== "");
 
   const toggleGenre = (genreId: number) => {
     setSelectedGenres((current) => current.includes(genreId)
@@ -80,8 +121,9 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
 
   const resetFilters = () => {
     setSelectedGenres([]);
-    setReleaseYear("any");
-    setMinimumRating("any");
+    setReleaseYear("");
+    setMinimumRating("");
+    setLetter("");
     setSortBy("popularity.desc");
     setPage(1);
   };
@@ -115,6 +157,7 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
           </div>
         </div>
 
+        {/* Genre chips */}
         <div className="flex flex-wrap gap-1.5">
           <Button
             variant={selectedGenres.length === 0 ? "default" : "outline"}
@@ -141,9 +184,13 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
           })}
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-3">
+        {/* Sort + Year + Rating + Letter */}
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <Select value={sortBy} onValueChange={(value) => { setSortBy(value); setPage(1); }}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Sort" /></SelectTrigger>
+            <SelectTrigger className="h-9">
+              <TrendingUp className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
             <SelectContent>
               {(kind === "movie" ? MOVIE_SORT_OPTIONS : TV_SORT_OPTIONS).map((option) => (
                 <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
@@ -151,23 +198,63 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
             </SelectContent>
           </Select>
 
-          <Select value={releaseYear} onValueChange={(value) => { setReleaseYear(value); setPage(1); }}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Release year" /></SelectTrigger>
+          <Select value={releaseYear || "any"} onValueChange={(value) => { setReleaseYear(value === "any" ? "" : value); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="Release year" />
+            </SelectTrigger>
             <SelectContent className="max-h-72">
               <SelectItem value="any">Any release year</SelectItem>
               {RELEASE_YEARS.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
             </SelectContent>
           </Select>
 
-          <Select value={minimumRating} onValueChange={(value) => { setMinimumRating(value); setPage(1); }}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Minimum rating" /></SelectTrigger>
+          <Select value={minimumRating || "any"} onValueChange={(value) => { setMinimumRating(value === "any" ? "" : value); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <Star className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="Minimum rating" />
+            </SelectTrigger>
             <SelectContent>
-              <SelectItem value="any">Any rating</SelectItem>
-              <SelectItem value="6">6+ / 10</SelectItem>
-              <SelectItem value="7">7+ / 10</SelectItem>
-              <SelectItem value="8">8+ / 10</SelectItem>
+              {RATING_OPTIONS.map((r) => (
+                <SelectItem key={r.value || "any"} value={r.value || "any"}>{r.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
+
+          <Select value={letter || "any"} onValueChange={(value) => { setLetter(value === "any" ? "" : value); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <Type className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="Starts with" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {LETTER_OPTIONS.map((l) => (
+                <SelectItem key={l.value || "any"} value={l.value || "any"}>{l.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Letter quick chips */}
+        <div className="flex flex-wrap gap-1">
+          <Button
+            variant={letter === "" ? "default" : "outline"}
+            size="sm"
+            className="h-7 px-2 text-xs font-mono"
+            onClick={() => { setLetter(""); setPage(1); }}
+          >
+            All
+          </Button>
+          {LETTER_OPTIONS.slice(1).map((l) => (
+            <Button
+              key={l.value}
+              variant={letter === l.value ? "default" : "outline"}
+              size="sm"
+              className="h-7 w-7 p-0 text-xs font-mono"
+              onClick={() => { setLetter(l.value); setPage(1); }}
+            >
+              {l.label}
+            </Button>
+          ))}
         </div>
       </div>
 
