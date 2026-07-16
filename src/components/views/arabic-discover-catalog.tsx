@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import {
   AlertCircle, ChevronLeft, ChevronRight, Languages, RotateCcw, SlidersHorizontal, X,
-  Star, TrendingUp, Calendar, Search,
+  Star, TrendingUp, Calendar, Clock, Search, Type,
 } from "lucide-react";
 
 const MOVIE_SORT_OPTIONS = [
@@ -24,6 +24,8 @@ const MOVIE_SORT_OPTIONS = [
   { value: "vote_average.asc", label: "Lowest rated" },
   { value: "primary_release_date.desc", label: "Newest" },
   { value: "primary_release_date.asc", label: "Oldest" },
+  { value: "title.asc", label: "Alphabetical A-Z" },
+  { value: "title.desc", label: "Alphabetical Z-A" },
 ];
 
 const TV_SORT_OPTIONS = [
@@ -33,89 +35,69 @@ const TV_SORT_OPTIONS = [
   { value: "vote_average.asc", label: "Lowest rated" },
   { value: "first_air_date.desc", label: "Newest" },
   { value: "first_air_date.asc", label: "Oldest" },
+  { value: "name.asc", label: "Alphabetical A-Z" },
+  { value: "name.desc", label: "Alphabetical Z-A" },
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
 const RELEASE_YEARS = Array.from({ length: 80 }, (_, index) => CURRENT_YEAR - index);
-const LETTERS = ["#", ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
 
 export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("popularity.desc");
   const [fromYear, setFromYear] = useState("");
   const [toYear, setToYear] = useState("");
-  const [userScoreRange, setUserScoreRange] = useState<[number, number]>([0, 10]);
-  const [letter, setLetter] = useState("");
+  const [userScoreMin, setUserScoreMin] = useState("");
+  const [userScoreMax, setUserScoreMax] = useState("");
+  const [minVotes, setMinVotes] = useState("");
+  const [runtimeMin, setRuntimeMin] = useState("");
+  const [runtimeMax, setRuntimeMax] = useState("");
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
   const [keywords, setKeywords] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const PAGES_TO_FETCH = letter ? 5 : 1;
+  const [showMe, setShowMe] = useState<"all" | "unseen" | "seen">("all");
 
   const movieGenres = useMovieGenres();
   const tvGenres = useTvGenres();
   const genres = kind === "movie" ? movieGenres.data : tvGenres.data;
   const releaseDateFrom = fromYear ? `${fromYear}-01-01` : undefined;
   const releaseDateTo = toYear ? `${toYear}-12-31` : undefined;
-  const minRating = userScoreRange[0] > 0 ? userScoreRange[0] : undefined;
+  const minRating = userScoreMin ? Number(userScoreMin) : undefined;
+  const maxRating = userScoreMax ? Number(userScoreMax) : undefined;
+  const voteCount = minVotes ? Number(minVotes) : undefined;
+  const runtimeFrom = runtimeMin ? Number(runtimeMin) : undefined;
+  const runtimeTo = runtimeMax ? Number(runtimeMax) : undefined;
 
   const commonParams = {
     genres: selectedGenres,
     rating: minRating,
     sort_by: sortBy,
     originalLanguage: "ar",
-    voteCount: 0,
+    voteCount,
     releaseDateFrom,
     releaseDateTo,
   };
 
-  // Always 5 hooks unconditionally
-  const movieQ1 = useDiscoverMovies({ ...commonParams, page, enabled: kind === "movie" && PAGES_TO_FETCH >= 1 });
-  const movieQ2 = useDiscoverMovies({ ...commonParams, page: page + 1, enabled: kind === "movie" && PAGES_TO_FETCH >= 2 });
-  const movieQ3 = useDiscoverMovies({ ...commonParams, page: page + 2, enabled: kind === "movie" && PAGES_TO_FETCH >= 3 });
-  const movieQ4 = useDiscoverMovies({ ...commonParams, page: page + 3, enabled: kind === "movie" && PAGES_TO_FETCH >= 4 });
-  const movieQ5 = useDiscoverMovies({ ...commonParams, page: page + 4, enabled: kind === "movie" && PAGES_TO_FETCH >= 5 });
+  const movieQuery = useDiscoverMovies({ ...commonParams, page, enabled: kind === "movie" });
+  const tvQuery = useDiscoverTv({ ...commonParams, page, enabled: kind === "tv" });
+  const query = kind === "movie" ? movieQuery : tvQuery;
 
-  const tvQ1 = useDiscoverTv({ ...commonParams, page, enabled: kind === "tv" && PAGES_TO_FETCH >= 1 });
-  const tvQ2 = useDiscoverTv({ ...commonParams, page: page + 1, enabled: kind === "tv" && PAGES_TO_FETCH >= 2 });
-  const tvQ3 = useDiscoverTv({ ...commonParams, page: page + 2, enabled: kind === "tv" && PAGES_TO_FETCH >= 3 });
-  const tvQ4 = useDiscoverTv({ ...commonParams, page: page + 3, enabled: kind === "tv" && PAGES_TO_FETCH >= 4 });
-  const tvQ5 = useDiscoverTv({ ...commonParams, page: page + 4, enabled: kind === "tv" && PAGES_TO_FETCH >= 5 });
-
-  const movieQueries = [movieQ1, movieQ2, movieQ3, movieQ4, movieQ5].slice(0, PAGES_TO_FETCH);
-  const tvQueries = [tvQ1, tvQ2, tvQ3, tvQ4, tvQ5].slice(0, PAGES_TO_FETCH);
-  const queries = kind === "movie" ? movieQueries : tvQueries;
-
-  const allResults = useMemo(() => {
-    const combined: any[] = [];
-    queries.forEach((q: any) => {
-      if (q.data?.results) combined.push(...q.data.results);
-    });
-    return combined;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [PAGES_TO_FETCH, kind, page, sortBy, minRating, releaseDateFrom, releaseDateTo]);
-
-  const totalAvailable = queries[0]?.data?.total_results ?? 0;
-  const totalPages = Math.min(queries[0]?.data?.total_pages ?? 1, 500);
+  const allResults = query.data?.results ?? [];
+  const totalAvailable = query.data?.total_results ?? 0;
+  const totalPages = Math.min(query.data?.total_pages ?? 1, 500);
 
   const items = useMemo(() => {
     let filtered = allResults.filter((item) => item.poster_path && item.original_language === "ar");
-    if (letter) {
-      const titleKey = kind === "movie" ? "title" : "name";
-      if (letter === "#") {
-        filtered = filtered.filter((m) => {
-          const t = (m as any)[titleKey] || "";
-          return t && !/^[a-zA-Z\u0600-\u06FF]/.test(t[0]);
-        });
-      } else {
-        filtered = filtered.filter((m) => {
-          const t = ((m as any)[titleKey] || "").toUpperCase();
-          return t.startsWith(letter);
-        });
-      }
+    if (maxRating !== undefined) {
+      filtered = filtered.filter((m) => (m.vote_average || 0) <= maxRating);
     }
-    if (userScoreRange[1] < 10) {
-      filtered = filtered.filter((m) => (m.vote_average || 0) <= userScoreRange[1]);
+    if (runtimeFrom !== undefined || runtimeTo !== undefined) {
+      filtered = filtered.filter((m) => {
+        const rt = m.runtime || m.episode_run_time?.[0] || 0;
+        if (!rt) return true;
+        if (runtimeFrom !== undefined && rt < runtimeFrom) return false;
+        if (runtimeTo !== undefined && rt > runtimeTo) return false;
+        return true;
+      });
     }
     if (keywords.trim()) {
       const kw = keywords.trim().toLowerCase();
@@ -126,11 +108,7 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
       });
     }
     return filtered;
-  }, [allResults, letter, kind, userScoreRange, keywords]);
-
-  const isLoading = queries.some((q: any) => q.isLoading);
-  const isError = queries.some((q: any) => q.isError);
-  const isFetching = queries.some((q: any) => q.isFetching);
+  }, [allResults, maxRating, runtimeFrom, runtimeTo, keywords]);
 
   const toggleGenre = (genreId: number) => {
     setSelectedGenres((current) =>
@@ -142,9 +120,11 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
   const resetFilters = () => {
     setSelectedGenres([]);
     setFromYear(""); setToYear("");
-    setUserScoreRange([0, 10]);
-    setLetter("");
+    setUserScoreMin(""); setUserScoreMax("");
+    setMinVotes("");
+    setRuntimeMin(""); setRuntimeMax("");
     setKeywords("");
+    setShowMe("all");
     setSortBy("popularity.desc");
     setPage(1);
   };
@@ -152,9 +132,11 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
   const activeFilters =
     selectedGenres.length +
     Number(fromYear !== "") + Number(toYear !== "") +
-    Number(userScoreRange[0] > 0 || userScoreRange[1] < 10) +
-    Number(letter !== "") +
-    Number(keywords.trim() !== "");
+    Number(userScoreMin !== "") + Number(userScoreMax !== "") +
+    Number(minVotes !== "") +
+    Number(runtimeMin !== "") + Number(runtimeMax !== "") +
+    Number(keywords.trim() !== "") +
+    Number(showMe !== "all");
 
   const sortOptions = kind === "movie" ? MOVIE_SORT_OPTIONS : TV_SORT_OPTIONS;
 
@@ -179,187 +161,220 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
         </div>
       </div>
 
-      <div className="flex gap-5">
-        <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
-          <SlidersHorizontal className="w-4 h-4 mr-1.5" />
-          {sidebarOpen ? "Hide Filters" : "Show Filters"}
-          {activeFilters > 0 && <Badge variant="secondary" className="ml-1.5">{activeFilters}</Badge>}
-        </Button>
-
-        <aside className={`${sidebarOpen ? "block" : "hidden"} lg:block w-full lg:w-80 shrink-0 space-y-4`}>
-          <div className="glass rounded-xl p-4 space-y-4 sticky top-20">
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4" />
-                <span className="font-bold">Filters</span>
-                {activeFilters > 0 && <Badge variant="secondary" className="text-[10px]">{activeFilters}</Badge>}
-              </div>
-              {activeFilters > 0 && (
-                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={resetFilters}>
-                  <RotateCcw className="w-3 h-3 mr-1" /> Reset
-                </Button>
-              )}
-            </div>
-
-            <FilterSection title="Sort" icon={<TrendingUp className="w-3.5 h-3.5" />}>
-              <Select value={sortBy} onValueChange={(value) => { setSortBy(value); setPage(1); }}>
-                <SelectTrigger className="h-9 text-sm w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {sortOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </FilterSection>
-
-            <FilterSection title="Release Date" icon={<Calendar className="w-3.5 h-3.5" />}>
-              <div className="grid grid-cols-2 gap-2">
-                <Select value={fromYear || "any"} onValueChange={(v) => { setFromYear(v === "any" ? "" : v); setPage(1); }}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="From" /></SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    <SelectItem value="any">From</SelectItem>
-                    {RELEASE_YEARS.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={toYear || "any"} onValueChange={(v) => { setToYear(v === "any" ? "" : v); setPage(1); }}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="To" /></SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    <SelectItem value="any">To</SelectItem>
-                    {RELEASE_YEARS.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </FilterSection>
-
-            <FilterSection title={`Genres${selectedGenres.length > 0 ? ` (${selectedGenres.length})` : ""}`}>
-              <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
-                {genres?.map((genre) => {
-                  const selected = selectedGenres.includes(genre.id);
-                  return (
-                    <button
-                      key={genre.id}
-                      onClick={() => toggleGenre(genre.id)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                        selected ? "bg-primary text-primary-foreground" : "bg-accent text-foreground/80 hover:bg-accent/70"
-                      }`}
-                    >
-                      {genre.name}
-                      {selected && <X className="ml-1 h-3 w-3 inline" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </FilterSection>
-
-            <FilterSection title={`Starts With${letter ? `: ${letter}` : ""}`}>
-              <div className="flex flex-wrap gap-1">
-                <button
-                  onClick={() => { setLetter(""); setPage(1); }}
-                  className={`h-7 px-2 rounded text-xs font-mono ${letter === "" ? "bg-primary text-primary-foreground" : "bg-accent hover:bg-accent/70"}`}
-                >
-                  All
-                </button>
-                {LETTERS.map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => { setLetter(l); setPage(1); }}
-                    className={`h-7 w-7 rounded text-xs font-mono ${letter === l ? "bg-primary text-primary-foreground" : "bg-accent hover:bg-accent/70"}`}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
-              {letter && <p className="text-[10px] text-muted-foreground mt-1.5">Fetching 5 pages to compensate for letter filter</p>}
-            </FilterSection>
-
-            <FilterSection title={`User Score: ${userScoreRange[0]} - ${userScoreRange[1]}`}>
-              <div className="px-1">
-                <input
-                  type="range" min="0" max="10" step="0.5"
-                  value={userScoreRange[0]}
-                  onChange={(e) => { setUserScoreRange([Number(e.target.value), userScoreRange[1]]); setPage(1); }}
-                  className="w-full accent-primary"
-                />
-                <input
-                  type="range" min="0" max="10" step="0.5"
-                  value={userScoreRange[1]}
-                  onChange={(e) => { setUserScoreRange([userScoreRange[0], Number(e.target.value)]); setPage(1); }}
-                  className="w-full accent-primary mt-1"
-                />
-                <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-                  <span>0</span><span>5</span><span>10</span>
-                </div>
-              </div>
-            </FilterSection>
-
-            <FilterSection title="Keywords">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  value={keywords}
-                  onChange={(e) => { setKeywords(e.target.value); setPage(1); }}
-                  placeholder="Filter by keywords..."
-                  className="h-8 text-xs pl-7"
-                />
-              </div>
-            </FilterSection>
+      {/* Filters panel — horizontal layout */}
+      <div className="glass space-y-3 rounded-xl p-3 sm:p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <SlidersHorizontal className="h-4 w-4 text-primary" /> Independent Arabic filters
+            {activeFilters > 0 && <Badge variant="secondary">{activeFilters} active</Badge>}
           </div>
-        </aside>
+        </div>
 
-        <div className="flex-1 min-w-0 space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {isLoading ? "Loading..." : (
-              <>
-                Showing <span className="font-bold text-foreground">{items.length}</span>
-                {letter ? " (filtered)" : ""} of <span className="font-bold text-foreground">{totalAvailable.toLocaleString()}</span> results
-              </>
-            )}
-          </p>
+        {/* Show Me */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Show Me</span>
+          {[
+            { v: "all", l: "Everything" },
+            { v: "unseen", l: `${kind === "movie" ? "Movies" : "Shows"} I Haven't Seen` },
+            { v: "seen", l: `${kind === "movie" ? "Movies" : "Shows"} I Have Seen` },
+          ].map((opt) => (
+            <label key={opt.v} className="flex items-center gap-1.5 cursor-pointer text-sm">
+              <input
+                type="radio"
+                name="showme-ar"
+                checked={showMe === opt.v}
+                onChange={() => { setShowMe(opt.v as any); setPage(1); }}
+                className="accent-primary"
+              />
+              <span>{opt.l}</span>
+            </label>
+          ))}
+        </div>
 
-          {isLoading ? (
-            <MediaGrid items={[]} loading forcedMediaType={kind} />
-          ) : isError ? (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 py-16 text-center">
-              <AlertCircle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
-              <p className="font-semibold">Could not load the Arabic catalogue</p>
-              <p className="mt-1 text-sm text-muted-foreground">TMDB may be temporarily unavailable. Your library data was not affected.</p>
-              <Button variant="outline" className="mt-4" onClick={() => queries[0]?.refetch()}>Retry</Button>
-            </div>
-          ) : items.length === 0 ? (
-            <div className="rounded-xl border border-border/60 py-16 text-center text-muted-foreground">
-              <Languages className="mx-auto mb-3 h-10 w-10 opacity-40" />
-              <p className="font-medium">No Arabic titles match these filters</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>Clear filters</Button>
-            </div>
-          ) : (
-            <MediaGrid items={items} forcedMediaType={kind} />
-          )}
-
-          {items.length > 0 && totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <Button variant="outline" size="sm" disabled={page <= 1 || isFetching} onClick={() => setPage((value) => Math.max(1, value - 1))}>
-                <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+        {/* Genre chips */}
+        <div className="flex flex-wrap gap-1.5">
+          <Button
+            variant={selectedGenres.length === 0 ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => { setSelectedGenres([]); setPage(1); }}
+          >
+            All genres
+          </Button>
+          {genres?.map((genre) => {
+            const selected = selectedGenres.includes(genre.id);
+            return (
+              <Button
+                key={genre.id}
+                variant={selected ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => toggleGenre(genre.id)}
+              >
+                {genre.name}
+                {selected && <X className="ml-1 h-3 w-3" />}
               </Button>
-              <span className="px-3 text-sm text-muted-foreground">
-                Page <strong className="text-foreground">{page}</strong> of {totalPages}
-              </span>
-              <Button variant="outline" size="sm" disabled={page >= totalPages || isFetching} onClick={() => setPage((value) => value + 1)}>
-                Next <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-          )}
+            );
+          })}
+        </div>
+
+        {/* Row 1: Sort + From year + To year */}
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <Select value={sortBy} onValueChange={(value) => { setSortBy(value); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <TrendingUp className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              {sortOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label.includes("Alphabetical") && <Type className="w-3 h-3 mr-1 inline" />}
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={fromYear || "any"} onValueChange={(v) => { setFromYear(v === "any" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="From year" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              <SelectItem value="any">Any from year</SelectItem>
+              {RELEASE_YEARS.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={toYear || "any"} onValueChange={(v) => { setToYear(v === "any" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="To year" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              <SelectItem value="any">Any to year</SelectItem>
+              {RELEASE_YEARS.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Row 2: Min score + Max score + Min votes */}
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <Star className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="Min user score" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any min score</SelectItem>
+              {[5, 6, 7, 8, 9].map((r) => <SelectItem key={r} value={String(r)}>{r}+ / 10</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <Star className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="Max user score" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any max score</SelectItem>
+              {[5, 6, 7, 8, 9, 10].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} / 10</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Min votes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any votes</SelectItem>
+              {[
+                { v: "50", l: "50+ votes" },
+                { v: "100", l: "100+ votes" },
+                { v: "200", l: "200+ votes" },
+                { v: "500", l: "500+ votes" },
+                { v: "1000", l: "1000+ votes" },
+              ].map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Row 3: Min runtime + Max runtime + Keywords */}
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="Min runtime" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any min runtime</SelectItem>
+              {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="h-9">
+              <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
+              <SelectValue placeholder="Max runtime" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any max runtime</SelectItem>
+              {[60, 90, 120, 150, 180, 240].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} min</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              value={keywords}
+              onChange={(e) => { setKeywords(e.target.value); setPage(1); }}
+              placeholder="Filter by keywords..."
+              className="h-9 pl-8"
+            />
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function FilterSection({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-        {icon}
-        {title}
-      </h4>
-      {children}
+      <p className="text-sm text-muted-foreground">
+        {query.isLoading ? "Loading..." : (
+          <>
+            Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{totalAvailable.toLocaleString()}</span> results
+          </>
+        )}
+      </p>
+
+      {query.isLoading ? (
+        <MediaGrid items={[]} loading forcedMediaType={kind} />
+      ) : query.isError ? (
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 py-16 text-center">
+          <AlertCircle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
+          <p className="font-semibold">Could not load the Arabic catalogue</p>
+          <p className="mt-1 text-sm text-muted-foreground">TMDB may be temporarily unavailable. Your library data was not affected.</p>
+          <Button variant="outline" className="mt-4" onClick={() => query.refetch()}>Retry</Button>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-xl border border-border/60 py-16 text-center text-muted-foreground">
+          <Languages className="mx-auto mb-3 h-10 w-10 opacity-40" />
+          <p className="font-medium">No Arabic titles match these filters</p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>Clear filters</Button>
+        </div>
+      ) : (
+        <MediaGrid items={items} forcedMediaType={kind} />
+      )}
+
+      {items.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <Button variant="outline" size="sm" disabled={page <= 1 || query.isFetching} onClick={() => setPage((value) => Math.max(1, value - 1))}>
+            <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+          </Button>
+          <span className="px-3 text-sm text-muted-foreground">
+            Page <strong className="text-foreground">{page}</strong> of {totalPages}
+          </span>
+          <Button variant="outline" size="sm" disabled={page >= totalPages || query.isFetching} onClick={() => setPage((value) => value + 1)}>
+            Next <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
