@@ -2,14 +2,15 @@
 
 import { useState, useMemo } from "react";
 import { useNav } from "@/lib/store";
-import { useDiscoverMovies, useDiscoverTv, useMovieGenres, useTvGenres } from "@/hooks/use-tmdb";
+import { useDiscoverMovies, useDiscoverTv, useMovieGenres, useTvGenres, useWatchedMovies, useFollowing } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ChevronLeft, ChevronRight, SlidersHorizontal, Dices, AlertCircle, X,
+  ChevronLeft, ChevronRight, SlidersHorizontal, Dices, AlertCircle,
   Compass, Star, TrendingUp, Calendar, Clock, Search, RotateCcw, Type,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -111,6 +112,10 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const runtimeTo = runtimeMax ? Number(runtimeMax) : undefined;
   const keywordsParam = keywords.trim() || undefined;
 
+  // TMDB /discover/tv does NOT support certification/content_rating filter,
+  // so we only send it for movies. The dropdown is hidden in the UI for TV.
+  const certificationParam = !effectiveIsTV ? (certification || undefined) : undefined;
+
   const commonParams = {
     genres: selectedGenres.length > 0 ? selectedGenres : undefined,
     sort_by: sortBy,
@@ -119,11 +124,32 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     voteCount,
     releaseDateFrom,
     releaseDateTo,
+    runtimeGte: runtimeFrom,
+    runtimeLte: runtimeTo,
+    textQuery: keywordsParam,
   };
 
   // Single fetch (alphabetical sorting is handled by TMDB directly — no need for multi-page)
-  const movieQuery = useDiscoverMovies({ ...commonParams, page, enabled: !effectiveIsTV });
+  const movieQuery = useDiscoverMovies({ ...commonParams, certification: certificationParam, page, enabled: !effectiveIsTV });
   const tvQuery = useDiscoverTv({ ...commonParams, page, enabled: effectiveIsTV });
+
+  // Fetch the user's library so the "Show Me Seen / Unseen" filter can work.
+  // Only enabled when the user actually picks that filter (to avoid extra requests).
+  const watchedMoviesQuery = useWatchedMovies();
+  const followedShowsQuery = useFollowing();
+  const libraryTmdbIds = useMemo(() => {
+    const ids = new Set<number>();
+    if (effectiveIsTV) {
+      for (const it of followedShowsQuery.data?.items ?? []) {
+        if (typeof it.tmdbId === "number") ids.add(it.tmdbId);
+      }
+    } else {
+      for (const it of watchedMoviesQuery.data?.items ?? []) {
+        if (typeof it.tmdbId === "number") ids.add(it.tmdbId);
+      }
+    }
+    return ids;
+  }, [effectiveIsTV, watchedMoviesQuery.data, followedShowsQuery.data]);
 
   const query = effectiveIsTV ? tvQuery : movieQuery;
   const allResults = query.data?.results ?? [];
@@ -138,29 +164,19 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (forcedLang === "ja" && isAnime) {
       filtered = filtered.filter((m) => m.original_language === "ja");
     }
-    // Client-side filters for things TMDB doesn't support directly
+    // Client-side filters for things TMDB doesn't support directly:
+    //   - maxRating (vote_average.lte) — TMDB only exposes .gte on /discover
+    //   - showMe (seen / unseen) — needs user's library; TMDB has no notion of this
     if (maxRating !== undefined) {
       filtered = filtered.filter((m) => (m.vote_average || 0) <= maxRating);
     }
-    if (runtimeFrom !== undefined || runtimeTo !== undefined) {
-      filtered = filtered.filter((m) => {
-        const rt = (m as any).runtime || (m as any).episode_run_time?.[0] || 0;
-        if (!rt) return true;
-        if (runtimeFrom !== undefined && rt < runtimeFrom) return false;
-        if (runtimeTo !== undefined && rt > runtimeTo) return false;
-        return true;
-      });
-    }
-    if (keywordsParam) {
-      const kw = keywordsParam.toLowerCase();
-      filtered = filtered.filter((m) => {
-        const t = ((m.title || m.name) || "").toLowerCase();
-        const o = (m.overview || "").toLowerCase();
-        return t.includes(kw) || o.includes(kw);
-      });
+    if (showMe === "seen") {
+      filtered = filtered.filter((m) => libraryTmdbIds.has(m.id));
+    } else if (showMe === "unseen") {
+      filtered = filtered.filter((m) => !libraryTmdbIds.has(m.id));
     }
     return filtered;
-  }, [allResults, forcedLang, isAnime, maxRating, runtimeFrom, runtimeTo, keywordsParam]);
+  }, [allResults, forcedLang, isAnime, maxRating, showMe, libraryTmdbIds]);
 
   const toggleGenre = (genreId: number) => {
     setSelectedGenres((prev) => (prev.includes(genreId) ? prev.filter((g) => g !== genreId) : [...prev, genreId]));
@@ -348,27 +364,42 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             </SelectContent>
           </Select>
 
-          <Select value={certification || "any"} onValueChange={(v) => { setCertification(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Certification" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any certification</SelectItem>
-              {certOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {/* Certification — only shown for movies. TMDB /discover/tv has no
+              content-rating filter, so showing it there would be misleading. */}
+          {effectiveIsTV ? (
+            <Select value={language || "any"} onValueChange={(v) => { setLanguage(v === "any" ? "" : v); setPage(1); }}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Select value={certification || "any"} onValueChange={(v) => { setCertification(v === "any" ? "" : v); setPage(1); }}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Certification" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Any certification</SelectItem>
+                {certOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* Language + User Score + Min Votes (row 2 of selects) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          <Select value={language || "any"} onValueChange={(v) => { setLanguage(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Language" />
-            </SelectTrigger>
-            <SelectContent>
-              {LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${effectiveIsTV ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-2`}>
+          {!effectiveIsTV && (
+            <Select value={language || "any"} onValueChange={(v) => { setLanguage(v === "any" ? "" : v); setPage(1); }}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
 
           <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); setPage(1); }}>
             <SelectTrigger className="h-9 text-sm">
@@ -502,5 +533,3 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     </div>
   );
 }
-
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";

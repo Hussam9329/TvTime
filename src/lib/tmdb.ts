@@ -233,7 +233,7 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/movie/upcoming`, { page }),
   movieGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`),
-  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string } = {}) => {
+  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": params.vote_count_gte ?? 100 };
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.primary_release_year = params.year;
@@ -241,6 +241,17 @@ export const tmdb = {
     if (params.original_language) p.with_original_language = params.original_language;
     if (params.release_date_gte) p["primary_release_date.gte"] = params.release_date_gte;
     if (params.release_date_lte) p["primary_release_date.lte"] = params.release_date_lte;
+    // Certification: TMDB requires certification_country alongside the rating filter.
+    // We use 'certification_country=US&certification.gte=R' so it includes the
+    // picked rating AND anything stricter (e.g. picking PG-13 also shows R / NC-17).
+    // If you want EXACT match, switch 'certification.gte' -> 'certification'.
+    if (params.certification) {
+      p.certification_country = "US";
+      p["certification.gte"] = params.certification;
+    }
+    if (params.runtime_gte != null) p["with_runtime.gte"] = params.runtime_gte;
+    if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
+    if (params.text_query) p.with_text_query = params.text_query;
     return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p);
   },
 
@@ -255,12 +266,20 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/airing_today`, { page }),
   tvGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
-  discoverTv: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number } = {}) => {
+  discoverTv: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": params.vote_count_gte ?? 100 };
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.first_air_date_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
     if (params.original_language) p.with_original_language = params.original_language;
+    // Year-range filter (Bug fix: previously these were silently dropped for TV)
+    if (params.release_date_gte) p["first_air_date.gte"] = params.release_date_gte;
+    if (params.release_date_lte) p["first_air_date.lte"] = params.release_date_lte;
+    if (params.runtime_gte != null) p["with_runtime.gte"] = params.runtime_gte;
+    if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
+    if (params.text_query) p.with_text_query = params.text_query;
+    // Note: TMDB /discover/tv does NOT support certification/content_rating filter.
+    // To filter TV by content rating, you'd need to fetch /tv/{id}/content_ratings per item.
     return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p);
   },
 

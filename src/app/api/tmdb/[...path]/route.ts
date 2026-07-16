@@ -67,6 +67,10 @@ const handler = async (
           vote_count_gte: queryParams.vote_count ? Number(queryParams.vote_count) : undefined,
           release_date_gte: queryParams.release_date_gte || undefined,
           release_date_lte: queryParams.release_date_lte || undefined,
+          certification: queryParams.certification || undefined,
+          runtime_gte: queryParams.runtime_gte ? Number(queryParams.runtime_gte) : undefined,
+          runtime_lte: queryParams.runtime_lte ? Number(queryParams.runtime_lte) : undefined,
+          text_query: queryParams.text_query || undefined,
         });
         break;
       case "tv/popular":
@@ -93,6 +97,11 @@ const handler = async (
           vote_average_gte: queryParams.rating ? Number(queryParams.rating) : undefined,
           original_language: queryParams.original_language || undefined,
           vote_count_gte: queryParams.vote_count ? Number(queryParams.vote_count) : undefined,
+          release_date_gte: queryParams.release_date_gte || undefined,
+          release_date_lte: queryParams.release_date_lte || undefined,
+          runtime_gte: queryParams.runtime_gte ? Number(queryParams.runtime_gte) : undefined,
+          runtime_lte: queryParams.runtime_lte ? Number(queryParams.runtime_lte) : undefined,
+          text_query: queryParams.text_query || undefined,
         });
         break;
       case "search":

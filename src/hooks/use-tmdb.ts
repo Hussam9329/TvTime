@@ -124,7 +124,7 @@ export function useTvGenres() {
   });
 }
 
-export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; enabled?: boolean }) {
+export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; certification?: string; runtimeGte?: number; runtimeLte?: number; textQuery?: string; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "movies", "discover", params],
     queryFn: () =>
@@ -138,12 +138,16 @@ export function useDiscoverMovies(params: { genres?: number[]; year?: number; so
         ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
         ...(params.releaseDateFrom ? { release_date_gte: params.releaseDateFrom } : {}),
         ...(params.releaseDateTo ? { release_date_lte: params.releaseDateTo } : {}),
+        ...(params.certification ? { certification: params.certification } : {}),
+        ...(params.runtimeGte != null ? { runtime_gte: params.runtimeGte } : {}),
+        ...(params.runtimeLte != null ? { runtime_lte: params.runtimeLte } : {}),
+        ...(params.textQuery ? { text_query: params.textQuery } : {}),
       }),
     enabled: params.enabled !== false,
   });
 }
 
-export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; enabled?: boolean }) {
+export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; runtimeGte?: number; runtimeLte?: number; textQuery?: string; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "tv", "discover", params],
     queryFn: () =>
@@ -155,6 +159,12 @@ export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_b
         ...(params.rating ? { rating: params.rating } : {}),
         ...(params.originalLanguage ? { original_language: params.originalLanguage } : {}),
         ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
+        // Bug fix: previously TV discover silently dropped year-range filters.
+        ...(params.releaseDateFrom ? { release_date_gte: params.releaseDateFrom } : {}),
+        ...(params.releaseDateTo ? { release_date_lte: params.releaseDateTo } : {}),
+        ...(params.runtimeGte != null ? { runtime_gte: params.runtimeGte } : {}),
+        ...(params.runtimeLte != null ? { runtime_lte: params.runtimeLte } : {}),
+        ...(params.textQuery ? { text_query: params.textQuery } : {}),
       }),
     enabled: params.enabled !== false,
   });
