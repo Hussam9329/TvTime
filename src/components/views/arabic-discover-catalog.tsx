@@ -92,7 +92,7 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
     }
     if (runtimeFrom !== undefined || runtimeTo !== undefined) {
       filtered = filtered.filter((m) => {
-        const rt = m.runtime || m.episode_run_time?.[0] || 0;
+        const rt = (m as any).runtime || (m as any).episode_run_time?.[0] || 0;
         if (!rt) return true;
         if (runtimeFrom !== undefined && rt < runtimeFrom) return false;
         if (runtimeTo !== undefined && rt > runtimeTo) return false;
