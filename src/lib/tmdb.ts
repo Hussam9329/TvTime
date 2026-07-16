@@ -39,11 +39,27 @@ export function imgOrPlaceholder(path: string | null | undefined, size: string =
  */
 const TMDB_TIMEOUT_MS = 8_000;
 
-async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
+/**
+ * TMDB language hint. Most routes use en-US. Arabic-specific routes pass 'ar'
+ * so TMDB returns Arabic titles, Arabic overviews, and Arabic-market posters
+ * when available. We also pass include_image_language so poster artwork
+ * falls back to the original-language poster if no localized one exists.
+ */
+export type TmdbLanguage = "en-US" | "ar" | "ja" | undefined;
+
+async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number | boolean> = {}, language: TmdbLanguage = "en-US"): Promise<T> {
   const apiKey = requireTmdbKey();
   const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
   url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("language", "en-US");
+  url.searchParams.set("language", language || "en-US");
+  // For Arabic + Japanese requests, also ask TMDB to fall back to original-language
+  // posters when no localized poster exists. Without this, many Arabic films return
+  // null poster_path under language=ar even though they have Arabic posters under language=en-US.
+  if (language === "ar") {
+    url.searchParams.set("include_image_language", "ar,en,null");
+  } else if (language === "ja") {
+    url.searchParams.set("include_image_language", "ja,en,null");
+  }
   for (const [k, v] of Object.entries(params)) {
     url.searchParams.set(k, String(v));
   }
@@ -233,8 +249,17 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/movie/upcoming`, { page }),
   movieGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`),
-  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string } = {}) => {
-    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": params.vote_count_gte ?? 100 };
+  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string; language?: TmdbLanguage } = {}) => {
+    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
+    // For Arabic media, the default vote_count.gte=100 excludes most Arabic films
+    // (which have very few votes on TMDB). Only apply the floor when the caller
+    // didn't explicitly set one AND we're not filtering for Arabic.
+    const isArabic = params.original_language === "ar";
+    if (params.vote_count_gte != null) {
+      p["vote_count.gte"] = params.vote_count_gte;
+    } else if (!isArabic) {
+      p["vote_count.gte"] = 100;
+    }
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.primary_release_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
@@ -242,9 +267,6 @@ export const tmdb = {
     if (params.release_date_gte) p["primary_release_date.gte"] = params.release_date_gte;
     if (params.release_date_lte) p["primary_release_date.lte"] = params.release_date_lte;
     // Certification: TMDB requires certification_country alongside the rating filter.
-    // We use 'certification_country=US&certification.gte=R' so it includes the
-    // picked rating AND anything stricter (e.g. picking PG-13 also shows R / NC-17).
-    // If you want EXACT match, switch 'certification.gte' -> 'certification'.
     if (params.certification) {
       p.certification_country = "US";
       p["certification.gte"] = params.certification;
@@ -252,7 +274,7 @@ export const tmdb = {
     if (params.runtime_gte != null) p["with_runtime.gte"] = params.runtime_gte;
     if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
     if (params.text_query) p.with_text_query = params.text_query;
-    return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p);
+    return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p, params.language);
   },
 
   // TV
@@ -266,21 +288,24 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/airing_today`, { page }),
   tvGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
-  discoverTv: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string } = {}) => {
-    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc", "vote_count.gte": params.vote_count_gte ?? 100 };
+  discoverTv: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string; language?: TmdbLanguage } = {}) => {
+    const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
+    const isArabic = params.original_language === "ar";
+    if (params.vote_count_gte != null) {
+      p["vote_count.gte"] = params.vote_count_gte;
+    } else if (!isArabic) {
+      p["vote_count.gte"] = 100;
+    }
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.first_air_date_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
     if (params.original_language) p.with_original_language = params.original_language;
-    // Year-range filter (Bug fix: previously these were silently dropped for TV)
     if (params.release_date_gte) p["first_air_date.gte"] = params.release_date_gte;
     if (params.release_date_lte) p["first_air_date.lte"] = params.release_date_lte;
     if (params.runtime_gte != null) p["with_runtime.gte"] = params.runtime_gte;
     if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
     if (params.text_query) p.with_text_query = params.text_query;
-    // Note: TMDB /discover/tv does NOT support certification/content_rating filter.
-    // To filter TV by content rating, you'd need to fetch /tv/{id}/content_ratings per item.
-    return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p);
+    return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p, params.language);
   },
 
   // Details
@@ -309,6 +334,11 @@ export const tmdb = {
 };
 
 export function getTitle(m: MediaItem): string {
+  // For Arabic-language media, prefer the Arabic original_title/name over the
+  // English-localized title. For other media, keep the previous behavior.
+  if (m.original_language === "ar") {
+    return m.original_title || m.original_name || m.title || m.name || "Untitled";
+  }
   return m.title || m.name || m.original_title || m.original_name || "Untitled";
 }
 

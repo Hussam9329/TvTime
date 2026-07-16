@@ -72,9 +72,17 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
     rating: minRating,
     sort_by: sortBy,
     originalLanguage: "ar",
-    voteCount,
+    // TMDB's default vote_count.gte=100 excludes most Arabic films (they have
+    // very few votes on TMDB). Default to 0 so Arabic catalog shows real results.
+    voteCount: voteCount ?? 0,
     releaseDateFrom,
     releaseDateTo,
+    runtimeGte: runtimeFrom,
+    runtimeLte: runtimeTo,
+    textQuery: keywords.trim() || undefined,
+    // Pass language=ar so TMDB returns Arabic titles + Arabic posters (with
+    // fallback to original-language artwork via include_image_language).
+    language: "ar" as const,
   };
 
   const movieQuery = useDiscoverMovies({ ...commonParams, page, enabled: kind === "movie" });
@@ -86,29 +94,14 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
   const totalPages = Math.min(query.data?.total_pages ?? 1, 500);
 
   const items = useMemo(() => {
-    let filtered = allResults.filter((item) => item.poster_path && item.original_language === "ar");
+    // Note: server already filters by original_language=ar + text_query + runtime,
+    // so we only need client-side filtering for maxRating (TMDB only exposes .gte).
+    let filtered = allResults.filter((item) => item.poster_path);
     if (maxRating !== undefined) {
       filtered = filtered.filter((m) => (m.vote_average || 0) <= maxRating);
     }
-    if (runtimeFrom !== undefined || runtimeTo !== undefined) {
-      filtered = filtered.filter((m) => {
-        const rt = (m as any).runtime || (m as any).episode_run_time?.[0] || 0;
-        if (!rt) return true;
-        if (runtimeFrom !== undefined && rt < runtimeFrom) return false;
-        if (runtimeTo !== undefined && rt > runtimeTo) return false;
-        return true;
-      });
-    }
-    if (keywords.trim()) {
-      const kw = keywords.trim().toLowerCase();
-      filtered = filtered.filter((m) => {
-        const t = ((m.title || m.name) || "").toLowerCase();
-        const o = (m.overview || "").toLowerCase();
-        return t.includes(kw) || o.includes(kw);
-      });
-    }
     return filtered;
-  }, [allResults, maxRating, runtimeFrom, runtimeTo, keywords]);
+  }, [allResults, maxRating]);
 
   const toggleGenre = (genreId: number) => {
     setSelectedGenres((current) =>

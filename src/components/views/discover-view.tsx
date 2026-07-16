@@ -9,16 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { X } from "lucide-react";
 import {
   ChevronLeft, ChevronRight, SlidersHorizontal, Dices, AlertCircle,
   Compass, Star, TrendingUp, Calendar, Clock, Search, RotateCcw, Type,
+  Sparkles, Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 
 export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv";
 
-// Sort options — including alphabetical (A-Z / Z-A)
+// Sort options
 const SORT_OPTIONS_MOVIES = [
   { value: "popularity.desc", label: "Most Popular" },
   { value: "popularity.asc", label: "Least Popular" },
@@ -46,7 +50,6 @@ const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 80 }, (_, i) => CURRENT_YEAR - i);
 
 const CERTIFICATIONS_MOVIES = ["G", "PG", "PG-13", "R", "NC-17"];
-const CERTIFICATIONS_TV = ["TV-Y", "TV-Y7", "TV-G", "TV-PG", "TV-14", "TV-MA"];
 
 const LANGUAGES = [
   { code: "", label: "Any language" },
@@ -64,6 +67,15 @@ const LANGUAGES = [
   { code: "fa", label: "Persian" },
 ];
 
+// Quick preset combos for one-click filtering
+const PRESETS = [
+  { id: "trending", label: "🔥 Trending", sort: "popularity.desc", year: "" },
+  { id: "top2024", label: "🏆 Top 2024", sort: "vote_average.desc", year: "2024" },
+  { id: "hidden", label: "💎 Hidden gems", sort: "vote_average.desc", year: "" },
+  { id: "newest", label: "🆕 Newest", sort: "primary_release_date.desc", year: "" },
+  { id: "classic", label: "🎭 Classic", sort: "popularity.desc", year: String(CURRENT_YEAR - 30) },
+];
+
 interface DiscoverViewProps {
   world?: DiscoverWorld;
   embedded?: boolean;
@@ -76,6 +88,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";
   const forcedLang = isAnime ? "ja" : isArabic ? "ar" : undefined;
+  const tmdbLanguage = isArabic ? "ar" as const : isAnime ? "ja" as const : undefined;
 
   const discoverTab = useNav((s) => s.discoverTab);
   const setDiscoverTab = useNav((s) => s.setDiscoverTab);
@@ -85,16 +98,17 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const [sortBy, setSortBy] = useState("popularity.desc");
   const [fromYear, setFromYear] = useState("");
   const [toYear, setToYear] = useState("");
-  const [userScoreMin, setUserScoreMin] = useState<string>("");
-  const [userScoreMax, setUserScoreMax] = useState<string>("");
-  const [minVotes, setMinVotes] = useState<string>("");
-  const [runtimeMin, setRuntimeMin] = useState<string>("");
-  const [runtimeMax, setRuntimeMax] = useState<string>("");
+  const [userScoreMin, setUserScoreMin] = useState("");
+  const [userScoreMax, setUserScoreMax] = useState("");
+  const [minVotes, setMinVotes] = useState("");
+  const [runtimeMin, setRuntimeMin] = useState("");
+  const [runtimeMax, setRuntimeMax] = useState("");
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
   const [certification, setCertification] = useState("");
   const [language, setLanguage] = useState(forcedLang || "");
   const [keywords, setKeywords] = useState("");
   const [showMe, setShowMe] = useState<"all" | "unseen" | "seen">("all");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const movieGenres = useMovieGenres();
   const tvGenres = useTvGenres();
@@ -112,8 +126,10 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const runtimeTo = runtimeMax ? Number(runtimeMax) : undefined;
   const keywordsParam = keywords.trim() || undefined;
 
-  // TMDB /discover/tv does NOT support certification/content_rating filter,
-  // so we only send it for movies. The dropdown is hidden in the UI for TV.
+  // For Arabic world, set voteCount=0 default (Arabic films have few TMDB votes).
+  // For other worlds, leave undefined → lib default of 100.
+  const effectiveVoteCount = isArabic ? (voteCount ?? 0) : voteCount;
+
   const certificationParam = !effectiveIsTV ? (certification || undefined) : undefined;
 
   const commonParams = {
@@ -121,22 +137,22 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     sort_by: sortBy,
     rating: minRating,
     originalLanguage: language || undefined,
-    voteCount,
+    voteCount: effectiveVoteCount,
     releaseDateFrom,
     releaseDateTo,
     runtimeGte: runtimeFrom,
     runtimeLte: runtimeTo,
     textQuery: keywordsParam,
+    language: tmdbLanguage,
   };
 
-  // Single fetch (alphabetical sorting is handled by TMDB directly — no need for multi-page)
   const movieQuery = useDiscoverMovies({ ...commonParams, certification: certificationParam, page, enabled: !effectiveIsTV });
   const tvQuery = useDiscoverTv({ ...commonParams, page, enabled: effectiveIsTV });
 
-  // Fetch the user's library so the "Show Me Seen / Unseen" filter can work.
-  // Only enabled when the user actually picks that filter (to avoid extra requests).
-  const watchedMoviesQuery = useWatchedMovies();
-  const followedShowsQuery = useFollowing();
+  // Only fetch the user's library when the Show Me filter is actually active.
+  // This avoids 2 unnecessary network calls on every Discover render.
+  const watchedMoviesQuery = useWatchedMovies({ enabled: !effectiveIsTV && showMe !== "all" });
+  const followedShowsQuery = useFollowing({ enabled: effectiveIsTV && showMe !== "all" });
   const libraryTmdbIds = useMemo(() => {
     const ids = new Set<number>();
     if (effectiveIsTV) {
@@ -165,8 +181,6 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       filtered = filtered.filter((m) => m.original_language === "ja");
     }
     // Client-side filters for things TMDB doesn't support directly:
-    //   - maxRating (vote_average.lte) — TMDB only exposes .gte on /discover
-    //   - showMe (seen / unseen) — needs user's library; TMDB has no notion of this
     if (maxRating !== undefined) {
       filtered = filtered.filter((m) => (m.vote_average || 0) <= maxRating);
     }
@@ -197,6 +211,24 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     setPage(1);
   };
 
+  const applyPreset = (presetId: string) => {
+    const preset = PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    setSortBy(preset.sort);
+    setFromYear(preset.year);
+    setToYear("");
+    setUserScoreMin("");
+    setUserScoreMax("");
+    setMinVotes(preset.id === "hidden" ? "100" : "");
+    setRuntimeMin(""); setRuntimeMax("");
+    setSelectedGenres([]);
+    setCertification("");
+    setKeywords("");
+    setShowMe("all");
+    setPage(1);
+    toast.success(`Applied preset: ${preset.label}`);
+  };
+
   const activeFilters =
     selectedGenres.length +
     Number(fromYear !== "") + Number(toYear !== "") +
@@ -208,6 +240,26 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     Number(keywords.trim() !== "") +
     Number(showMe !== "all");
 
+  // Build active-filter chips for the trail below the filter panel header
+  const activeFilterChips = useMemo(() => {
+    const chips: { label: string; clear: () => void }[] = [];
+    if (fromYear) chips.push({ label: `From ${fromYear}`, clear: () => setFromYear("") });
+    if (toYear) chips.push({ label: `To ${toYear}`, clear: () => setToYear("") });
+    if (certification) chips.push({ label: `Rating: ${certification}`, clear: () => setCertification("") });
+    if (language && language !== forcedLang) {
+      const langLabel = LANGUAGES.find((l) => l.code === language)?.label || language;
+      chips.push({ label: `Lang: ${langLabel}`, clear: () => setLanguage(forcedLang || "") });
+    }
+    if (userScoreMin) chips.push({ label: `≥ ${userScoreMin}★`, clear: () => setUserScoreMin("") });
+    if (userScoreMax) chips.push({ label: `≤ ${userScoreMax}★`, clear: () => setUserScoreMax("") });
+    if (minVotes) chips.push({ label: `${minVotes}+ votes`, clear: () => setMinVotes("") });
+    if (runtimeMin) chips.push({ label: `≥ ${runtimeMin}min`, clear: () => setRuntimeMin("") });
+    if (runtimeMax) chips.push({ label: `≤ ${runtimeMax}min`, clear: () => setRuntimeMax("") });
+    if (keywords.trim()) chips.push({ label: `“${keywords.trim().slice(0, 20)}”`, clear: () => setKeywords("") });
+    if (showMe !== "all") chips.push({ label: showMe === "seen" ? "Seen" : "Unseen", clear: () => setShowMe("all") });
+    return chips;
+  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe]);
+
   const headerTitle = title || (embedded
     ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
     : "Discover");
@@ -216,7 +268,6 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     : `Find your next favorite ${effectiveIsTV ? "show" : "movie"}`);
 
   const sortOptions = effectiveIsTV ? SORT_OPTIONS_TV : SORT_OPTIONS_MOVIES;
-  const certOptions = effectiveIsTV ? CERTIFICATIONS_TV : CERTIFICATIONS_MOVIES;
 
   return (
     <div className="space-y-5">
@@ -252,18 +303,52 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
         </div>
       ) : (
         <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
-          <div className="flex items-center gap-3">
-            <Compass className="w-5 h-5 text-primary" />
-            <div>
-              <h2 className="text-xl font-extrabold tracking-tight">{headerTitle}</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">{headerSubtitle}</p>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <Compass className="w-5 h-5 text-primary" />
+              <div>
+                <h2 className="text-xl font-extrabold tracking-tight">{headerTitle}</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">{headerSubtitle}</p>
+              </div>
             </div>
+            {/* Lift Surprise Me into embedded view too (was missing before) */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 border-primary/40 text-primary hover:bg-primary/10"
+              onClick={() => {
+                const randomPage = Math.floor(Math.random() * 20) + 1;
+                const randomSort = ["popularity.desc", "vote_average.desc", "primary_release_date.desc", "revenue.desc"][Math.floor(Math.random() * 4)];
+                setSortBy(randomSort);
+                setPage(randomPage);
+                toast.success("🎲 Surprise! Here are some random picks");
+              }}
+            >
+              <Dices className="w-4 h-4 mr-1.5" /> Surprise Me
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Filters panel — horizontal layout, original design */}
+      {/* Quick Presets */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mr-1">Quick:</span>
+        {PRESETS.map((p) => (
+          <Button
+            key={p.id}
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs hover:border-primary/40 hover:bg-primary/5"
+            onClick={() => applyPreset(p.id)}
+          >
+            {p.label}
+          </Button>
+        ))}
+      </div>
+
+      {/* Filters panel */}
       <div className="glass rounded-xl p-3 sm:p-4 space-y-3">
+        {/* Filter header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <SlidersHorizontal className="w-4 h-4" /> Filters
@@ -278,28 +363,41 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           )}
         </div>
 
-        {/* Show Me — radio buttons */}
-        <div className="flex items-center gap-4 flex-wrap">
+        {/* Active filter chips trail */}
+        {activeFilterChips.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap pb-1">
+            {activeFilterChips.map((chip, i) => (
+              <Badge key={i} variant="default" className="text-[11px] py-0.5 pl-2 pr-1 gap-1">
+                {chip.label}
+                <button
+                  onClick={chip.clear}
+                  className="ml-0.5 hover:bg-foreground/20 rounded-full p-0.5"
+                  aria-label={`Clear ${chip.label}`}
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Show Me — segmented ToggleGroup */}
+        <div className="flex items-center gap-3 flex-wrap">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Show Me</span>
-          {[
-            { v: "all", l: "Everything" },
-            { v: "unseen", l: `${effectiveIsTV ? "Shows" : "Movies"} I Haven't Seen` },
-            { v: "seen", l: `${effectiveIsTV ? "Shows" : "Movies"} I Have Seen` },
-          ].map((opt) => (
-            <label key={opt.v} className="flex items-center gap-1.5 cursor-pointer text-sm">
-              <input
-                type="radio"
-                name="showme"
-                checked={showMe === opt.v}
-                onChange={() => { setShowMe(opt.v as any); setPage(1); }}
-                className="accent-primary"
-              />
-              <span>{opt.l}</span>
-            </label>
-          ))}
+          <ToggleGroup
+            type="single"
+            value={showMe}
+            onValueChange={(v) => { if (v) { setShowMe(v as any); setPage(1); } }}
+            className="rounded-md border border-border/60"
+            size="sm"
+          >
+            <ToggleGroupItem value="all" className="h-7 text-xs px-3">Everything</ToggleGroupItem>
+            <ToggleGroupItem value="unseen" className="h-7 text-xs px-3">{effectiveIsTV ? "Not Following" : "Haven't Seen"}</ToggleGroupItem>
+            <ToggleGroupItem value="seen" className="h-7 text-xs px-3">{effectiveIsTV ? "Following" : "Seen"}</ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
-        {/* Genre chips — multi-select */}
+        {/* Genre chips */}
         <div className="flex flex-wrap gap-1.5">
           <Button
             variant={selectedGenres.length === 0 ? "default" : "outline"}
@@ -325,7 +423,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           })}
         </div>
 
-        {/* Sort + Year range + Certification + Language (row 1 of selects) */}
+        {/* Primary row: Sort + Year range + Certification/Language */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(1); }}>
             <SelectTrigger className="h-9 text-sm">
@@ -364,8 +462,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             </SelectContent>
           </Select>
 
-          {/* Certification — only shown for movies. TMDB /discover/tv has no
-              content-rating filter, so showing it there would be misleading. */}
+          {/* Certification — only for movies. TV hides it and shows Language instead. */}
           {effectiveIsTV ? (
             <Select value={language || "any"} onValueChange={(v) => { setLanguage(v === "any" ? "" : v); setPage(1); }}>
               <SelectTrigger className="h-9 text-sm">
@@ -382,115 +479,133 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="any">Any certification</SelectItem>
-                {certOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {CERTIFICATIONS_MOVIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
         </div>
 
-        {/* Language + User Score + Min Votes (row 2 of selects) */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${effectiveIsTV ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-2`}>
-          {!effectiveIsTV && (
-            <Select value={language || "any"} onValueChange={(v) => { setLanguage(v === "any" ? "" : v); setPage(1); }}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
+        {/* Advanced filters (collapsible) */}
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground">
+              <Sparkles className="w-3 h-3 mr-1" />
+              {advancedOpen ? "Hide advanced filters" : "Show advanced filters"}
+              {(userScoreMin || userScoreMax || minVotes || runtimeMin || runtimeMax || (language && !forcedLang && effectiveIsTV) || keywords) && (
+                <Badge variant="secondary" className="text-[10px] ml-1.5">
+                  {(userScoreMin ? 1 : 0) + (userScoreMax ? 1 : 0) + (minVotes ? 1 : 0) + (runtimeMin ? 1 : 0) + (runtimeMax ? 1 : 0) + ((language && !forcedLang && effectiveIsTV) ? 1 : 0) + (keywords ? 1 : 0)}
+                </Badge>
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-3 space-y-2">
+            {/* Language (movies only — TV shows it in primary row) + Score range + Votes */}
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${effectiveIsTV ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-2`}>
+              {!effectiveIsTV && (
+                <Select value={language || "any"} onValueChange={(v) => { setLanguage(v === "any" ? "" : v); setPage(1); }}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
 
-          <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <Star className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Min user score" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any min score</SelectItem>
-              {[5, 6, 7, 8, 9].map((r) => <SelectItem key={r} value={String(r)}>{r}+ / 10</SelectItem>)}
-            </SelectContent>
-          </Select>
+              <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 text-sm">
+                  <Star className="w-3.5 h-3.5 mr-1.5 inline" />
+                  <SelectValue placeholder="Min user score" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any min score</SelectItem>
+                  {[5, 6, 7, 8, 9].map((r) => <SelectItem key={r} value={String(r)}>{r}+ / 10</SelectItem>)}
+                </SelectContent>
+              </Select>
 
-          <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <Star className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Max user score" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any max score</SelectItem>
-              {[5, 6, 7, 8, 9, 10].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} / 10</SelectItem>)}
-            </SelectContent>
-          </Select>
+              <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 text-sm">
+                  <Star className="w-3.5 h-3.5 mr-1.5 inline" />
+                  <SelectValue placeholder="Max user score" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any max score</SelectItem>
+                  {[5, 6, 7, 8, 9, 10].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} / 10</SelectItem>)}
+                </SelectContent>
+              </Select>
 
-          <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Min votes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any votes</SelectItem>
-              {[
-                { v: "50", l: "50+ votes" },
-                { v: "100", l: "100+ votes" },
-                { v: "200", l: "200+ votes" },
-                { v: "500", l: "500+ votes" },
-                { v: "1000", l: "1000+ votes" },
-              ].map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+              <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Min votes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any votes</SelectItem>
+                  {[
+                    { v: "50", l: "50+ votes" },
+                    { v: "100", l: "100+ votes" },
+                    { v: "200", l: "200+ votes" },
+                    { v: "500", l: "500+ votes" },
+                    { v: "1000", l: "1000+ votes" },
+                  ].map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Runtime range + Keywords (row 3)
-            Note: TMDB's with_runtime.gte/lte uses an internal runtime value that
-            may differ from the canonical runtime (theatrical vs director's cut).
-            We add an "approximate" badge to set user expectations. */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          <div className="space-y-1">
-            <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); setPage(1); }}>
-              <SelectTrigger className="h-9 text-sm">
-                <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
-                <SelectValue placeholder="Min runtime" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="any">Any min runtime</SelectItem>
-                {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {/* Runtime range (with tooltip disclaimer) + Keywords */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); setPage(1); }}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
+                    <SelectValue placeholder="Min runtime" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any min runtime</SelectItem>
+                    {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 text-sm">
+                  <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
+                  <SelectValue placeholder="Max runtime" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any max runtime</SelectItem>
+                  {[60, 90, 120, 150, 180, 240].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} min</SelectItem>)}
+                </SelectContent>
+              </Select>
+
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  value={keywords}
+                  onChange={(e) => { setKeywords(e.target.value); setPage(1); }}
+                  placeholder="Filter by keywords..."
+                  className="h-9 text-sm pl-8"
+                />
+              </div>
+            </div>
+
+            {/* Runtime disclaimer — shown only when a runtime filter is active */}
             {(runtimeMin || runtimeMax) && (
-              <p className="text-[10px] text-amber-500/80 leading-tight px-1">
-                ⚠ Runtime filter is approximate (TMDB may store multiple cuts)
-              </p>
+              <div className="flex items-center gap-1.5 text-[11px] text-amber-500/80 leading-tight">
+                <Info className="w-3 h-3" />
+                <span>Runtime filter is approximate (TMDB may store multiple cuts of the same film).</span>
+              </div>
             )}
-          </div>
-
-          <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Max runtime" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any max runtime</SelectItem>
-              {[60, 90, 120, 150, 180, 240].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} min</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <Input
-              value={keywords}
-              onChange={(e) => { setKeywords(e.target.value); setPage(1); }}
-              placeholder="Filter by keywords..."
-              className="h-9 text-sm pl-8"
-            />
-          </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
-      {/* Result count */}
+      {/* Result count — clearer wording */}
       <p className="text-sm text-muted-foreground">
         {query.isLoading ? "Loading..." : (
           <>
-            Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{totalAvailable.toLocaleString()}</span> results
+            Showing <span className="font-bold text-foreground">{items.length}</span>
+            {showMe !== "all" && " (on this page)"}
+            {" "}of <span className="font-bold text-foreground">{totalAvailable.toLocaleString()}</span> total results
           </>
         )}
       </p>

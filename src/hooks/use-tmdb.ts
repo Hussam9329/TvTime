@@ -124,7 +124,7 @@ export function useTvGenres() {
   });
 }
 
-export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; certification?: string; runtimeGte?: number; runtimeLte?: number; textQuery?: string; enabled?: boolean }) {
+export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; certification?: string; runtimeGte?: number; runtimeLte?: number; textQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "movies", "discover", params],
     queryFn: () =>
@@ -142,12 +142,13 @@ export function useDiscoverMovies(params: { genres?: number[]; year?: number; so
         ...(params.runtimeGte != null ? { runtime_gte: params.runtimeGte } : {}),
         ...(params.runtimeLte != null ? { runtime_lte: params.runtimeLte } : {}),
         ...(params.textQuery ? { text_query: params.textQuery } : {}),
+        ...(params.language ? { language: params.language } : {}),
       }),
     enabled: params.enabled !== false,
   });
 }
 
-export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; runtimeGte?: number; runtimeLte?: number; textQuery?: string; enabled?: boolean }) {
+export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; runtimeGte?: number; runtimeLte?: number; textQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "tv", "discover", params],
     queryFn: () =>
@@ -165,6 +166,7 @@ export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_b
         ...(params.runtimeGte != null ? { runtime_gte: params.runtimeGte } : {}),
         ...(params.runtimeLte != null ? { runtime_lte: params.runtimeLte } : {}),
         ...(params.textQuery ? { text_query: params.textQuery } : {}),
+        ...(params.language ? { language: params.language } : {}),
       }),
     enabled: params.enabled !== false,
   });
@@ -589,7 +591,7 @@ export function useRecentlyWatched(limit = 12) {
 }
 
 // Watched Movies - reads from Neon (watched=true)
-export function useWatchedMovies() {
+export function useWatchedMovies(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["media", "watched-movies"],
     queryFn: async () => {
@@ -606,6 +608,7 @@ export function useWatchedMovies() {
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
     staleTime: 30_000,
+    enabled: opts?.enabled !== false,
   });
 }
 
@@ -886,6 +889,39 @@ export function useArabicMovieSchedule(from: string, to: string) {
   });
 }
 
+export type MovieScheduleResponse = ArabicMovieScheduleResponse;
+
+/**
+ * General movie release schedule. Same shape as useArabicMovieSchedule but
+ * hits /api/movies/calendar (which supports any language filter).
+ * Pass language="ar" or "ja" to get localized titles/posters.
+ * Pass originalLanguage="ar" to filter to only Arabic-origin films.
+ */
+export function useMovieSchedule(
+  from: string,
+  to: string,
+  opts?: { language?: "ar" | "ja" | "en-US"; originalLanguage?: string }
+) {
+  return useQuery({
+    queryKey: ["movies", "release-schedule", from, to, opts?.language, opts?.originalLanguage],
+    queryFn: async (): Promise<MovieScheduleResponse> => {
+      const url = new URL("/api/movies/calendar", window.location.origin);
+      url.searchParams.set("from", from);
+      url.searchParams.set("to", to);
+      if (opts?.language) url.searchParams.set("language", opts.language);
+      if (opts?.originalLanguage) url.searchParams.set("original_language", opts.originalLanguage);
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        throw new Error(errorBody?.error || "Failed to load movie releases");
+      }
+      return res.json();
+    },
+    staleTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useCalendarSchedule(from: string, to: string, world: "general" | "arabic-tv" = "general") {
   const userId = useNav((state) => state.userId);
   return useQuery({
@@ -908,7 +944,7 @@ export function useCalendarSchedule(from: string, to: string, world: "general" |
 }
 
 // Following - active TV tracking only; Planned remains a list-only state
-export function useFollowing() {
+export function useFollowing(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["media", "following"],
     queryFn: async () => {
@@ -924,6 +960,7 @@ export function useFollowing() {
       return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
     },
     staleTime: 30_000,
+    enabled: opts?.enabled !== false,
   });
 }
 
