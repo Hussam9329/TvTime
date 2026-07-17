@@ -19,7 +19,6 @@ function requireText(file, pattern, message) {
 const surfaces = [
   "src/components/views/tv-detail-view.tsx",
   "src/components/views/tv-tracking-view.tsx",
-  "src/components/views/calendar-view.tsx",
   "src/components/media/continue-watching.tsx",
 ];
 for (const file of surfaces) {

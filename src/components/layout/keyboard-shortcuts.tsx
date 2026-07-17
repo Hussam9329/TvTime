@@ -25,7 +25,6 @@ const SHORTCUTS: { group: string; items: ShortcutItem[] }[] = [
       { keys: ["g", "m"], description: "Go to Movies" },
       { keys: ["g", "t"], description: "Go to TV Shows" },
       { keys: ["g", "a"], description: "Go to Anime" },
-      { keys: ["g", "c"], description: "Go to Calendar" },
       { keys: ["g", "f"], description: "Go to Arabic Movies" },
       { keys: ["g", "v"], description: "Go to Arabic TV" },
       { keys: ["g", "s"], description: "Go to Stats" },
@@ -114,10 +113,6 @@ export function KeyboardShortcuts() {
           case "a":
             e.preventDefault();
             setView("anime");
-            break;
-          case "c":
-            e.preventDefault();
-            setView("calendar");
             break;
           case "f":
             e.preventDefault();

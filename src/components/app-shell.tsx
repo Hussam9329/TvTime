@@ -27,9 +27,6 @@ const TvDetailView = lazy(() =>
 const PersonDetailView = lazy(() =>
   import("@/components/views/person-detail-view").then((m) => ({ default: m.PersonDetailView })),
 );
-const CalendarView = lazy(() =>
-  import("@/components/views/calendar-view").then((m) => ({ default: m.CalendarView })),
-);
 const MoviesView = lazy(() =>
   import("@/components/views/movies-view").then((m) => ({ default: m.MoviesView })),
 );
@@ -133,7 +130,6 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
                 {view === "movie-detail" && movieId && <MovieDetailView />}
                 {view === "tv-detail" && tvId && <TvDetailView />}
                 {view === "person-detail" && personId && <PersonDetailView />}
-                {view === "calendar" && <CalendarView />}
                 {view === "movies" && <MoviesView />}
                 {view === "anime" && <AnimeView />}
                 {view === "stats" && <StatsView />}

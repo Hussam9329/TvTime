@@ -5,7 +5,6 @@ export type ViewName =
   | "movie-detail"
   | "tv-detail"
   | "person-detail"
-  | "calendar"
   | "movies"
   | "anime"
   | "stats"
@@ -27,7 +26,6 @@ const ROOT_VIEWS = new Set<ViewName>([
   "home",
   "discover",
   "search",
-  "calendar",
   "movies",
   "anime",
   "stats",

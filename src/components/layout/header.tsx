@@ -7,17 +7,12 @@ import {
   ArrowLeft,
   BarChart3,
   Bell,
-  BookOpen,
-  CalendarDays,
   ChevronDown,
   Clapperboard,
-  Compass,
   Film,
   Home,
   Keyboard,
   Languages,
-  Library,
-  List as ListIcon,
   Menu,
   Moon,
   Play,
@@ -70,12 +65,6 @@ const coreNavItems: NavItem[] = [
   { view: "movies", label: "Movies", icon: Film },
   { view: "tv-shows", label: "TV Shows", icon: Clapperboard },
   { view: "anime", label: "Anime", icon: Sparkles },
-];
-
-const libraryNavItems: NavItem[] = [
-  { view: "calendar", label: "Calendar", icon: CalendarDays },
-  { view: "diary", label: "Diary", icon: BookOpen },
-  { view: "lists", label: "Lists", icon: ListIcon },
   { view: "stats", label: "Stats", icon: BarChart3 },
 ];
 
@@ -87,7 +76,6 @@ const arabicNavItems: NavItem[] = [
 const allNavItems: NavItem[] = [
   ...coreNavItems,
   { view: "search", label: "Search", icon: Search },
-  ...libraryNavItems,
   ...arabicNavItems,
 ];
 
@@ -228,7 +216,6 @@ export function Header() {
             </SheetHeader>
             <nav className="flex max-h-[calc(100dvh-88px)] flex-col gap-5 overflow-y-auto p-4" aria-label="Mobile navigation">
               <NavGroup label="Explore">{coreNavItems.map((item) => navButton(item, true))}</NavGroup>
-              <NavGroup label="Your Library">{libraryNavItems.map((item) => navButton(item, true))}</NavGroup>
               <NavGroup label="Arabic World">{arabicNavItems.map((item) => navButton(item, true))}</NavGroup>
             </nav>
           </SheetContent>
@@ -256,29 +243,6 @@ export function Header() {
 
         <nav className="ml-2 hidden xl:flex items-center gap-0.5" aria-label="Primary navigation">
           {coreNavItems.map((item) => navButton(item))}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                onPointerEnter={() => libraryNavItems.forEach((item) => prefetchViewModule(item.view))}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors",
-                  activeIn(view, libraryNavItems) ? "bg-primary/12 text-primary" : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
-                )}
-              >
-                <Library className="h-4 w-4" /> Library <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 rounded-xl p-1.5">
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Your collection</DropdownMenuLabel>
-              {libraryNavItems.map((item) => (
-                <DropdownMenuItem key={item.view} onSelect={() => goTo(item.view)} onFocus={() => prefetchViewModule(item.view)} className={cn("gap-2.5 rounded-lg py-2", view === item.view && "bg-accent text-accent-foreground")}>
-                  <item.icon className="h-4 w-4" /> {item.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

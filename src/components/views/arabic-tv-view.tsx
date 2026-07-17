@@ -5,10 +5,12 @@ import { CalendarDays, Languages, ListChecks, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TvShowsView } from "@/components/views/tv-tracking-view";
 import { ArabicDiscoverCatalog } from "@/components/views/arabic-discover-catalog";
-import { CalendarView } from "@/components/views/calendar-view";
+import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
+
+const ANIMATION_GENRES = [16];
 
 export function ArabicTvView() {
-  const [tab, setTab] = useState<"tracking" | "discover" | "schedule">("tracking");
+  const [tab, setTab] = useState<"tracking" | "discover" | "releases">("tracking");
 
   return (
     <div className="space-y-6">
@@ -19,7 +21,7 @@ export function ArabicTvView() {
           </div>
           <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Arabic TV Shows</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Track Arabic series, discover new productions and follow their release schedule without mixing them into the standard TV Shows or Anime worlds.
+            Track Arabic series, discover new productions and browse new releases without mixing them into the standard TV Shows or Anime worlds.
           </p>
         </div>
       </section>
@@ -32,8 +34,8 @@ export function ArabicTvView() {
           <TabsTrigger value="discover" className="gap-2 py-2.5">
             <Sparkles className="h-4 w-4" /> Discover
           </TabsTrigger>
-          <TabsTrigger value="schedule" className="gap-2 py-2.5">
-            <CalendarDays className="h-4 w-4" /> Schedule
+          <TabsTrigger value="releases" className="gap-2 py-2.5">
+            <CalendarDays className="h-4 w-4" /> Releases
           </TabsTrigger>
         </TabsList>
 
@@ -43,8 +45,16 @@ export function ArabicTvView() {
         <TabsContent value="discover" className="mt-0">
           <ArabicDiscoverCatalog kind="tv" />
         </TabsContent>
-        <TabsContent value="schedule" className="mt-0">
-          <CalendarView world="arabic-tv" embedded />
+        <TabsContent value="releases" className="mt-0">
+          <ReleaseSchedule
+            mediaType="tv"
+            originalLanguage="ar"
+            language="ar"
+            withoutGenres={ANIMATION_GENRES}
+            accentClass="text-amber-400"
+            title="Arabic TV Releases"
+            subtitle="A six-month agenda for new Arabic TV premieres, kept separate from standard TV Shows and Anime."
+          />
         </TabsContent>
       </Tabs>
     </div>

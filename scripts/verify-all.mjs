@@ -3,7 +3,6 @@ import { spawnSync } from "node:child_process";
 
 const checks = [
   ["User-facing integrity", ["scripts/verify-user-facing-integrity.mjs"]],
-  ["Professional calendar", ["scripts/verify-calendar-professional.mjs"]],
   ["Episode watch flow and posters", ["scripts/verify-episode-watch-poster.mjs"]],
   ["Arabic media worlds", ["scripts/verify-arabic-worlds.mjs"]],
   ["World separation", ["scripts/verify-world-separation.mjs"]],

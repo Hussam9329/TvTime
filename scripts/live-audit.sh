@@ -45,29 +45,25 @@ echo "=== 11. TV Tracking endpoint ==="
 curl -s -w "\nHTTP: %{http_code} | Time: %{time_total}s\n" "https://tvtime-iota.vercel.app/api/tv-tracking?userId=cinetrack_default" | head -50
 
 echo ""
-echo "=== 12. Calendar endpoint ==="
-curl -s -w "\nHTTP: %{http_code} | Time: %{time_total}s\n" "https://tvtime-iota.vercel.app/api/calendar?userId=cinetrack_default&from=2026-07-14&to=2026-07-21" | head -30
-
-echo ""
-echo "=== 13. Check security headers ==="
+echo "=== 12. Check security headers ==="
 curl -sI https://tvtime-iota.vercel.app/ | grep -iE "x-frame|x-content|referrer|permissions|strict-transport|content-security"
 
 echo ""
-echo "=== 14. Try accessing admin endpoint with random secret ==="
+echo "=== 13. Try accessing admin endpoint with random secret ==="
 curl -s -w "\nHTTP: %{http_code}\n" "https://tvtime-iota.vercel.app/api/admin/repair-posters?secret=test123"
 
 echo ""
-echo "=== 15. Find or create media (writes to DB!) ==="
+echo "=== 14. Find or create media (writes to DB!) ==="
 curl -s -w "\nHTTP: %{http_code}\n" -X POST "https://tvtime-iota.vercel.app/api/media/find-or-create?userId=cinetrack_default" -H "Content-Type: application/json" -d '{"title":"AUDIT_TEST_DELETE_ME","type":"movie","tmdbId":999999999}' | head -30
 
 echo ""
-echo "=== 16. Homepage HTML checks for SEO ==="
+echo "=== 15. Homepage HTML checks for SEO ==="
 curl -s https://tvtime-iota.vercel.app/ | grep -E "(<title>|<meta name=\"description\"|<meta name=\"viewport\"|<html lang=|og:|twitter:)" | head -10
 
 echo ""
-echo "=== 17. Test random userId injection (multi-tenant leak test) ==="
+echo "=== 16. Test random userId injection (multi-tenant leak test) ==="
 curl -s -w "\nHTTP: %{http_code}\n" "https://tvtime-iota.vercel.app/api/media?userId=HACKED_USER_ID&limit=5" | head -20
 
 echo ""
-echo "=== 18. Try sql-injection style userId ==="
+echo "=== 17. Try sql-injection style userId ==="
 curl -s -w "\nHTTP: %{http_code}\n" "https://tvtime-iota.vercel.app/api/media?userId=cinetrack_default%27%20OR%201%3D1--&limit=5" | head -10
