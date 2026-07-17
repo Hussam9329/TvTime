@@ -154,14 +154,16 @@ interface MediaGridProps {
   loading?: boolean;
   showMediaType?: boolean;
   forcedMediaType?: "movie" | "tv";
+  libraryStates?: Record<string, MediaBatchState>;
 }
 
-export function MediaGrid({ items, loading, showMediaType = true, forcedMediaType }: MediaGridProps) {
+export function MediaGrid({ items, loading, showMediaType = true, forcedMediaType, libraryStates }: MediaGridProps) {
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
     mediaType: forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
   }));
-  const states = useMediaStates(stateRequests);
+  const states = useMediaStates(stateRequests, { enabled: libraryStates === undefined });
+  const resolvedStates = libraryStates ?? states.data;
 
   if (loading) {
     return (
@@ -181,7 +183,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
           index={i}
           showMediaType={showMediaType}
           forcedMediaType={forcedMediaType}
-          libraryState={states.data?.[mediaStateKey(
+          libraryState={resolvedStates?.[mediaStateKey(
             forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
             Number(item.id),
           )] ?? null}

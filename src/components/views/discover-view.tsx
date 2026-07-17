@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useNav } from "@/lib/store";
-import { useDiscoverMovies, useDiscoverTv, useMovieGenres, useTvGenres, useWatchedMovies, useFollowing } from "@/hooks/use-tmdb";
+import { mediaStateKey, useDiscoverMovies, useDiscoverTv, useMediaStates, useMovieGenres, useTvGenres } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -149,28 +149,20 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const movieQuery = useDiscoverMovies({ ...commonParams, certification: certificationParam, page, enabled: !effectiveIsTV });
   const tvQuery = useDiscoverTv({ ...commonParams, page, enabled: effectiveIsTV });
 
-  // Only fetch the user's library when the Show Me filter is actually active.
-  // This avoids 2 unnecessary network calls on every Discover render.
-  const watchedMoviesQuery = useWatchedMovies({ enabled: !effectiveIsTV && showMe !== "all" });
-  const followedShowsQuery = useFollowing({ enabled: effectiveIsTV && showMe !== "all" });
-  const libraryTmdbIds = useMemo(() => {
-    const ids = new Set<number>();
-    if (effectiveIsTV) {
-      for (const it of followedShowsQuery.data?.items ?? []) {
-        if (typeof it.tmdbId === "number") ids.add(it.tmdbId);
-      }
-    } else {
-      for (const it of watchedMoviesQuery.data?.items ?? []) {
-        if (typeof it.tmdbId === "number") ids.add(it.tmdbId);
-      }
-    }
-    return ids;
-  }, [effectiveIsTV, watchedMoviesQuery.data, followedShowsQuery.data]);
-
   const query = effectiveIsTV ? tvQuery : movieQuery;
   const allResults = query.data?.results ?? [];
   const totalAvailable = query.data?.total_results ?? 0;
   const totalPages = Math.min(query.data?.total_pages ?? 1, 500);
+  const resultMediaType: "movie" | "tv" = effectiveIsTV ? "tv" : "movie";
+  const resultStateRequests = useMemo(
+    () => allResults.map((item) => ({ tmdbId: Number(item.id), mediaType: resultMediaType })),
+    [allResults, resultMediaType],
+  );
+  const resultStates = useMediaStates(resultStateRequests, { enabled: showMe !== "all" });
+  const showMeLoading = showMe !== "all" && resultStates.isLoading;
+  const showMeError = showMe !== "all" && resultStates.isError;
+  const isLoading = query.isLoading || showMeLoading;
+  const isError = query.isError || showMeError;
 
   const items = useMemo(() => {
     let filtered = allResults.filter((media) => media.poster_path && !isArabicMediaItem(media));
@@ -184,13 +176,15 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (maxRating !== undefined) {
       filtered = filtered.filter((m) => (m.vote_average || 0) <= maxRating);
     }
-    if (showMe === "seen") {
-      filtered = filtered.filter((m) => libraryTmdbIds.has(m.id));
-    } else if (showMe === "unseen") {
-      filtered = filtered.filter((m) => !libraryTmdbIds.has(m.id));
+    if (showMe !== "all") {
+      filtered = filtered.filter((media) => {
+        const state = resultStates.data?.[mediaStateKey(resultMediaType, Number(media.id))];
+        const matchesSeen = effectiveIsTV ? state?.isFollowing === true : state?.watched === true;
+        return showMe === "seen" ? matchesSeen : !matchesSeen;
+      });
     }
     return filtered;
-  }, [allResults, forcedLang, isAnime, maxRating, showMe, libraryTmdbIds]);
+  }, [allResults, forcedLang, isAnime, maxRating, showMe, resultStates.data, resultMediaType, effectiveIsTV]);
 
   const toggleGenre = (genreId: number) => {
     setSelectedGenres((prev) => (prev.includes(genreId) ? prev.filter((g) => g !== genreId) : [...prev, genreId]));
@@ -256,9 +250,14 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (runtimeMin) chips.push({ label: `≥ ${runtimeMin}min`, clear: () => setRuntimeMin("") });
     if (runtimeMax) chips.push({ label: `≤ ${runtimeMax}min`, clear: () => setRuntimeMax("") });
     if (keywords.trim()) chips.push({ label: `“${keywords.trim().slice(0, 20)}”`, clear: () => setKeywords("") });
-    if (showMe !== "all") chips.push({ label: showMe === "seen" ? "Seen" : "Unseen", clear: () => setShowMe("all") });
+    if (showMe !== "all") {
+      chips.push({
+        label: effectiveIsTV ? (showMe === "seen" ? "Following" : "Not Following") : (showMe === "seen" ? "Seen" : "Haven't Seen"),
+        clear: () => setShowMe("all"),
+      });
+    }
     return chips;
-  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe]);
+  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe, effectiveIsTV]);
 
   const headerTitle = title || (embedded
     ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
@@ -601,7 +600,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
       {/* Result count — clearer wording */}
       <p className="text-sm text-muted-foreground">
-        {query.isLoading ? "Loading..." : (
+        {isLoading ? "Loading..." : (
           <>
             Showing <span className="font-bold text-foreground">{items.length}</span>
             {showMe !== "all" && " (on this page)"}
@@ -611,23 +610,23 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       </p>
 
       {/* Error */}
-      {query.isError && (
+      {isError && (
         <div className="text-center py-16">
           <AlertCircle className="w-12 h-12 mx-auto mb-3 text-rose-400" />
           <p className="font-medium text-foreground text-lg">Failed to load results</p>
-          <p className="text-sm text-muted-foreground mt-1">Could not reach TMDB. Please try again.</p>
+          <p className="text-sm text-muted-foreground mt-1">{showMeError ? "Could not load your watch status. Please try again." : "Could not reach TMDB. Please try again."}</p>
         </div>
       )}
 
       {/* Loading */}
-      {query.isLoading && <MediaGrid items={[]} loading />}
+      {isLoading && <MediaGrid items={[]} loading />}
 
       {/* Empty */}
-      {!query.isLoading && !query.isError && items.length === 0 && (
+      {!isLoading && !isError && items.length === 0 && (
         <div className="text-center py-16 text-muted-foreground">
           <SlidersHorizontal className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No results match your filters</p>
-          <p className="text-sm mt-1">Try removing some filters to see more results.</p>
+          <p className="font-medium">{showMe === "all" ? "No results match your filters" : `No ${effectiveIsTV ? (showMe === "seen" ? "followed" : "unfollowed") : (showMe === "seen" ? "seen" : "unseen")} titles on this page`}</p>
+          <p className="text-sm mt-1">{showMe === "all" ? "Try removing some filters to see more results." : "Try another page or adjust the other filters."}</p>
           {activeFilters > 0 && (
             <Button variant="outline" size="sm" className="mt-4" onClick={resetAll}>
               Reset all filters
@@ -637,20 +636,24 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       )}
 
       {/* Grid */}
-      {!query.isLoading && !query.isError && items.length > 0 && (
-        <MediaGrid items={items} forcedMediaType={effectiveIsTV ? "tv" : "movie"} />
+      {!isLoading && !isError && items.length > 0 && (
+        <MediaGrid
+          items={items}
+          forcedMediaType={resultMediaType}
+          libraryStates={showMe === "all" ? undefined : resultStates.data}
+        />
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && items.length > 0 && (
+      {totalPages > 1 && !isLoading && !isError && (
         <div className="flex items-center justify-center gap-2 pt-4">
-          <Button variant="outline" size="sm" disabled={page === 1 || query.isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          <Button variant="outline" size="sm" disabled={page === 1 || query.isFetching || resultStates.isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             <ChevronLeft className="w-4 h-4" /> Prev
           </Button>
           <span className="text-sm text-muted-foreground px-3">
             Page <span className="font-bold text-foreground">{page}</span> of {totalPages}
           </span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages || query.isFetching} onClick={() => setPage((p) => p + 1)}>
+          <Button variant="outline" size="sm" disabled={page >= totalPages || query.isFetching || resultStates.isFetching} onClick={() => setPage((p) => p + 1)}>
             Next <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
