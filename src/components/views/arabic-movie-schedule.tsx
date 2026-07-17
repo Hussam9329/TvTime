@@ -8,9 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { SafeImage } from "@/components/media/safe-image";
-import { imgOrPlaceholder, getTitle } from "@/lib/tmdb";
-import { useNav } from "@/lib/store";
+import { MediaCard, MediaGrid } from "@/components/media/media-card";
+import { getTitle } from "@/lib/tmdb";
 
 function rangeFromOffset(offset: number) {
   const now = new Date();
@@ -24,7 +23,6 @@ function rangeFromOffset(offset: number) {
 export function ArabicMovieReleaseSchedule() {
   const [offset, setOffset] = useState(0);
   const [search, setSearch] = useState("");
-  const goMovie = useNav((state) => state.goMovie);
   const range = useMemo(() => rangeFromOffset(offset), [offset]);
   const schedule = useArabicMovieSchedule(range.from, range.to);
   const items = useMemo(() => {
@@ -76,7 +74,7 @@ export function ArabicMovieReleaseSchedule() {
       </div>
 
       {schedule.isLoading ? (
-        <div className="space-y-3">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-28 shimmer rounded-xl" />)}</div>
+        <MediaGrid items={[]} loading forcedMediaType="movie" />
       ) : schedule.isError ? (
         <Card className="p-12 text-center">
           <AlertCircle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
@@ -103,23 +101,15 @@ export function ArabicMovieReleaseSchedule() {
                 <h3 className="font-bold">{formatDateOnly(date) || "Release date unavailable"}</h3>
                 <Badge variant="secondary">{releases.length}</Badge>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {releases.map((movie) => (
-                  <button key={movie.id} onClick={() => goMovie(movie.id)} className="text-left">
-                    <Card className="flex gap-3 p-3 transition-all hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5">
-                      <div className="h-24 w-16 flex-shrink-0 overflow-hidden rounded-md bg-muted">
-                        <SafeImage src={imgOrPlaceholder(movie.poster_path, "w185")} alt={getTitle(movie)} className="h-full w-full object-cover" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-1 flex flex-wrap gap-1.5">
-                          <Badge className="border-0 bg-emerald-500/20 text-emerald-300">Arabic Movie</Badge>
-                          {movie.vote_average > 0 && <Badge variant="secondary">{movie.vote_average.toFixed(1)}/10</Badge>}
-                        </div>
-                        <h4 className="line-clamp-2 font-semibold">{getTitle(movie)}</h4>
-                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{movie.overview || "No overview available."}</p>
-                      </div>
-                    </Card>
-                  </button>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {releases.map((movie, index) => (
+                  <MediaCard
+                    key={movie.id}
+                    item={movie}
+                    index={index}
+                    showMediaType={false}
+                    forcedMediaType="movie"
+                  />
                 ))}
               </div>
             </section>

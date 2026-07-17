@@ -48,7 +48,6 @@ export function MoviesView() {
           <MovieReleaseSchedule
             title="Movie Release Schedule"
             subtitle="A six-month release agenda for upcoming films. Dates are handled as date-only values and never shift with timezone conversion."
-            badgeLabel="Movie"
           />
         </TabsContent>
       </Tabs>
