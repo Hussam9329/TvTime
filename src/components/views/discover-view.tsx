@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useNav } from "@/lib/store";
-import { mediaStateKey, useDiscoverMovies, useDiscoverTv, useMediaStates, useMovieGenres, useTvGenres } from "@/hooks/use-tmdb";
+import { useDiscoverMovies, useDiscoverTv, useFilteredDiscover, useMovieGenres, useTvGenres } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +108,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const [language, setLanguage] = useState(forcedLang || "");
   const [keywords, setKeywords] = useState("");
   const [showMe, setShowMe] = useState<"all" | "unseen" | "seen">("all");
+  const [filteredCursors, setFilteredCursors] = useState<(string | null)[]>([null]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const movieGenres = useMovieGenres();
@@ -146,26 +147,30 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     language: tmdbLanguage,
   };
 
-  const movieQuery = useDiscoverMovies({ ...commonParams, certification: certificationParam, page, enabled: !effectiveIsTV });
-  const tvQuery = useDiscoverTv({ ...commonParams, page, enabled: effectiveIsTV });
-
-  const query = effectiveIsTV ? tvQuery : movieQuery;
-  const allResults = query.data?.results ?? [];
-  const totalAvailable = query.data?.total_results ?? 0;
-  const totalPages = Math.min(query.data?.total_pages ?? 1, 500);
   const resultMediaType: "movie" | "tv" = effectiveIsTV ? "tv" : "movie";
-  const resultStateRequests = useMemo(
-    () => allResults.map((item) => ({ tmdbId: Number(item.id), mediaType: resultMediaType })),
-    [allResults, resultMediaType],
-  );
-  const resultStates = useMediaStates(resultStateRequests, { enabled: showMe !== "all" });
-  const showMeLoading = showMe !== "all" && resultStates.isLoading;
-  const showMeError = showMe !== "all" && resultStates.isError;
-  const isLoading = query.isLoading || showMeLoading;
-  const isError = query.isError || showMeError;
+  const movieQuery = useDiscoverMovies({ ...commonParams, certification: certificationParam, page, enabled: !effectiveIsTV && showMe === "all" });
+  const tvQuery = useDiscoverTv({ ...commonParams, page, enabled: effectiveIsTV && showMe === "all" });
+  const catalogueQuery = effectiveIsTV ? tvQuery : movieQuery;
+  const filteredQuery = useFilteredDiscover({
+    ...commonParams,
+    mediaType: resultMediaType,
+    showMe: showMe === "seen" ? "seen" : "unseen",
+    cursor: filteredCursors[page - 1] ?? null,
+    maxRating,
+    certification: certificationParam,
+    excludeArabic: !isArabic,
+    enabled: showMe !== "all",
+  });
+
+  const query = showMe === "all" ? catalogueQuery : filteredQuery;
+  const allResults = query.data?.results ?? [];
+  const totalAvailable = catalogueQuery.data?.total_results ?? 0;
+  const totalPages = Math.min(catalogueQuery.data?.total_pages ?? 1, 500);
+  const isLoading = query.isLoading;
+  const isError = query.isError;
 
   const items = useMemo(() => {
-    let filtered = allResults.filter((media) => media.poster_path && !isArabicMediaItem(media));
+    let filtered = allResults.filter((media) => media.poster_path && (isArabic || !isArabicMediaItem(media)));
     if (forcedLang === "ar") {
       filtered = filtered.filter((m) => m.original_language === "ar");
     }
@@ -176,15 +181,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (maxRating !== undefined) {
       filtered = filtered.filter((m) => (m.vote_average || 0) <= maxRating);
     }
-    if (showMe !== "all") {
-      filtered = filtered.filter((media) => {
-        const state = resultStates.data?.[mediaStateKey(resultMediaType, Number(media.id))];
-        const matchesSeen = effectiveIsTV ? state?.isFollowing === true : state?.watched === true;
-        return showMe === "seen" ? matchesSeen : !matchesSeen;
-      });
-    }
     return filtered;
-  }, [allResults, forcedLang, isAnime, maxRating, showMe, resultStates.data, resultMediaType, effectiveIsTV]);
+  }, [allResults, forcedLang, isAnime, isArabic, maxRating]);
 
   const toggleGenre = (genreId: number) => {
     setSelectedGenres((prev) => (prev.includes(genreId) ? prev.filter((g) => g !== genreId) : [...prev, genreId]));
@@ -237,27 +235,27 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   // Build active-filter chips for the trail below the filter panel header
   const activeFilterChips = useMemo(() => {
     const chips: { label: string; clear: () => void }[] = [];
-    if (fromYear) chips.push({ label: `From ${fromYear}`, clear: () => setFromYear("") });
-    if (toYear) chips.push({ label: `To ${toYear}`, clear: () => setToYear("") });
-    if (certification) chips.push({ label: `Rating: ${certification}`, clear: () => setCertification("") });
+    if (fromYear) chips.push({ label: `From ${fromYear}`, clear: () => { setFromYear(""); setPage(1); } });
+    if (toYear) chips.push({ label: `To ${toYear}`, clear: () => { setToYear(""); setPage(1); } });
+    if (certification) chips.push({ label: `Rating: ${certification}`, clear: () => { setCertification(""); setPage(1); } });
     if (language && language !== forcedLang) {
       const langLabel = LANGUAGES.find((l) => l.code === language)?.label || language;
-      chips.push({ label: `Lang: ${langLabel}`, clear: () => setLanguage(forcedLang || "") });
+      chips.push({ label: `Lang: ${langLabel}`, clear: () => { setLanguage(forcedLang || ""); setPage(1); } });
     }
-    if (userScoreMin) chips.push({ label: `≥ ${userScoreMin}★`, clear: () => setUserScoreMin("") });
-    if (userScoreMax) chips.push({ label: `≤ ${userScoreMax}★`, clear: () => setUserScoreMax("") });
-    if (minVotes) chips.push({ label: `${minVotes}+ votes`, clear: () => setMinVotes("") });
-    if (runtimeMin) chips.push({ label: `≥ ${runtimeMin}min`, clear: () => setRuntimeMin("") });
-    if (runtimeMax) chips.push({ label: `≤ ${runtimeMax}min`, clear: () => setRuntimeMax("") });
-    if (keywords.trim()) chips.push({ label: `“${keywords.trim().slice(0, 20)}”`, clear: () => setKeywords("") });
+    if (userScoreMin) chips.push({ label: `≥ ${userScoreMin}★`, clear: () => { setUserScoreMin(""); setPage(1); } });
+    if (userScoreMax) chips.push({ label: `≤ ${userScoreMax}★`, clear: () => { setUserScoreMax(""); setPage(1); } });
+    if (minVotes) chips.push({ label: `${minVotes}+ votes`, clear: () => { setMinVotes(""); setPage(1); } });
+    if (runtimeMin) chips.push({ label: `≥ ${runtimeMin}min`, clear: () => { setRuntimeMin(""); setPage(1); } });
+    if (runtimeMax) chips.push({ label: `≤ ${runtimeMax}min`, clear: () => { setRuntimeMax(""); setPage(1); } });
+    if (keywords.trim()) chips.push({ label: `“${keywords.trim().slice(0, 20)}”`, clear: () => { setKeywords(""); setPage(1); } });
     if (showMe !== "all") {
       chips.push({
-        label: effectiveIsTV ? (showMe === "seen" ? "Following" : "Not Following") : (showMe === "seen" ? "Seen" : "Haven't Seen"),
-        clear: () => setShowMe("all"),
+        label: showMe === "seen" ? "Seen" : "Haven't Seen",
+        clear: () => { setShowMe("all"); setPage(1); },
       });
     }
     return chips;
-  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe, effectiveIsTV]);
+  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe]);
 
   const headerTitle = title || (embedded
     ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
@@ -286,6 +284,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                 const randomPage = Math.floor(Math.random() * 20) + 1;
                 const randomSort = ["popularity.desc", "vote_average.desc", "primary_release_date.desc", "revenue.desc"][Math.floor(Math.random() * 4)];
                 setSortBy(randomSort);
+                setShowMe("all");
                 setPage(randomPage);
                 toast.success("🎲 Surprise! Here are some random picks");
               }}
@@ -319,6 +318,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                 const randomPage = Math.floor(Math.random() * 20) + 1;
                 const randomSort = ["popularity.desc", "vote_average.desc", "primary_release_date.desc", "revenue.desc"][Math.floor(Math.random() * 4)];
                 setSortBy(randomSort);
+                setShowMe("all");
                 setPage(randomPage);
                 toast.success("🎲 Surprise! Here are some random picks");
               }}
@@ -391,8 +391,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             size="sm"
           >
             <ToggleGroupItem value="all" className="h-7 text-xs px-3">Everything</ToggleGroupItem>
-            <ToggleGroupItem value="unseen" className="h-7 text-xs px-3">{effectiveIsTV ? "Not Following" : "Haven't Seen"}</ToggleGroupItem>
-            <ToggleGroupItem value="seen" className="h-7 text-xs px-3">{effectiveIsTV ? "Following" : "Seen"}</ToggleGroupItem>
+            <ToggleGroupItem value="unseen" className="h-7 text-xs px-3">Haven&apos;t Seen</ToggleGroupItem>
+            <ToggleGroupItem value="seen" className="h-7 text-xs px-3">Seen</ToggleGroupItem>
           </ToggleGroup>
         </div>
 
@@ -601,11 +601,17 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       {/* Result count — clearer wording */}
       <p className="text-sm text-muted-foreground">
         {isLoading ? "Loading..." : (
-          <>
-            Showing <span className="font-bold text-foreground">{items.length}</span>
-            {showMe !== "all" && " (on this page)"}
-            {" "}of <span className="font-bold text-foreground">{totalAvailable.toLocaleString()}</span> total results
-          </>
+          showMe === "all" ? (
+            <>
+              Showing <span className="font-bold text-foreground">{items.length}</span>
+              {" "}of <span className="font-bold text-foreground">{totalAvailable.toLocaleString()}</span> total results
+            </>
+          ) : (
+            <>
+              Showing <span className="font-bold text-foreground">{items.length}</span>
+              {showMe === "seen" ? " seen" : " not seen"} titles
+            </>
+          )
         )}
       </p>
 
@@ -614,7 +620,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
         <div className="text-center py-16">
           <AlertCircle className="w-12 h-12 mx-auto mb-3 text-rose-400" />
           <p className="font-medium text-foreground text-lg">Failed to load results</p>
-          <p className="text-sm text-muted-foreground mt-1">{showMeError ? "Could not load your watch status. Please try again." : "Could not reach TMDB. Please try again."}</p>
+          <p className="text-sm text-muted-foreground mt-1">{showMe === "all" ? "Could not reach TMDB. Please try again." : "Could not load the filtered catalogue. Please try again."}</p>
         </div>
       )}
 
@@ -625,8 +631,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       {!isLoading && !isError && items.length === 0 && (
         <div className="text-center py-16 text-muted-foreground">
           <SlidersHorizontal className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">{showMe === "all" ? "No results match your filters" : `No ${effectiveIsTV ? (showMe === "seen" ? "followed" : "unfollowed") : (showMe === "seen" ? "seen" : "unseen")} titles on this page`}</p>
-          <p className="text-sm mt-1">{showMe === "all" ? "Try removing some filters to see more results." : "Try another page or adjust the other filters."}</p>
+          <p className="font-medium">{showMe === "all" ? "No results match your filters" : `No ${showMe === "seen" ? "seen" : "not seen"} titles match your filters`}</p>
+          <p className="text-sm mt-1">Try removing some filters to see more results.</p>
           {activeFilters > 0 && (
             <Button variant="outline" size="sm" className="mt-4" onClick={resetAll}>
               Reset all filters
@@ -637,23 +643,42 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
       {/* Grid */}
       {!isLoading && !isError && items.length > 0 && (
-        <MediaGrid
-          items={items}
-          forcedMediaType={resultMediaType}
-          libraryStates={showMe === "all" ? undefined : resultStates.data}
-        />
+        <MediaGrid items={items} forcedMediaType={resultMediaType} />
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && !isLoading && !isError && (
+      {!isLoading && !isError && (
+        (showMe === "all" && totalPages > 1)
+        || (showMe !== "all" && (page > 1 || filteredQuery.data?.has_more))
+      ) && (
         <div className="flex items-center justify-center gap-2 pt-4">
-          <Button variant="outline" size="sm" disabled={page === 1 || query.isFetching || resultStates.isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          <Button variant="outline" size="sm" disabled={page === 1 || query.isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             <ChevronLeft className="w-4 h-4" /> Prev
           </Button>
           <span className="text-sm text-muted-foreground px-3">
-            Page <span className="font-bold text-foreground">{page}</span> of {totalPages}
+            Page <span className="font-bold text-foreground">{page}</span>
+            {showMe === "all" && ` of ${totalPages}`}
           </span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages || query.isFetching || resultStates.isFetching} onClick={() => setPage((p) => p + 1)}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={query.isFetching || (showMe === "all" ? page >= totalPages : !filteredQuery.data?.has_more)}
+            onClick={() => {
+              if (showMe === "all") {
+                setPage((current) => current + 1);
+                return;
+              }
+
+              const nextCursor = filteredQuery.data?.next_cursor;
+              if (!nextCursor) return;
+              setFilteredCursors((current) => {
+                const next = current.slice(0, page);
+                next[page] = nextCursor;
+                return next;
+              });
+              setPage((current) => current + 1);
+            }}
+          >
             Next <ChevronRight className="w-4 h-4" />
           </Button>
         </div>

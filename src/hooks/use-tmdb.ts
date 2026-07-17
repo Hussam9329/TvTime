@@ -172,6 +172,63 @@ export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_b
   });
 }
 
+export type FilteredDiscoverResponse = {
+  results: MediaItem[];
+  has_more: boolean;
+  next_cursor: string | null;
+};
+
+export function useFilteredDiscover(params: {
+  mediaType: "movie" | "tv";
+  showMe: "seen" | "unseen";
+  cursor?: string | null;
+  genres?: number[];
+  sort_by?: string;
+  rating?: number;
+  maxRating?: number;
+  originalLanguage?: string;
+  voteCount?: number;
+  releaseDateFrom?: string;
+  releaseDateTo?: string;
+  certification?: string;
+  runtimeGte?: number;
+  runtimeLte?: number;
+  textQuery?: string;
+  language?: "ar" | "ja" | "en-US";
+  excludeArabic?: boolean;
+  enabled?: boolean;
+}) {
+  return useQuery({
+    queryKey: ["media", "discover-filtered", getClientUserId(), params],
+    queryFn: async () => {
+      const url = withUserId(new URL("/api/discover/filtered", window.location.origin));
+      url.searchParams.set("media_type", params.mediaType);
+      url.searchParams.set("show_me", params.showMe);
+      if (params.cursor) url.searchParams.set("cursor", params.cursor);
+      if (params.genres?.length) url.searchParams.set("genre", params.genres.join(","));
+      if (params.sort_by) url.searchParams.set("sort_by", params.sort_by);
+      if (params.rating != null) url.searchParams.set("rating", String(params.rating));
+      if (params.maxRating != null) url.searchParams.set("max_rating", String(params.maxRating));
+      if (params.originalLanguage) url.searchParams.set("original_language", params.originalLanguage);
+      if (params.voteCount != null) url.searchParams.set("vote_count", String(params.voteCount));
+      if (params.releaseDateFrom) url.searchParams.set("release_date_gte", params.releaseDateFrom);
+      if (params.releaseDateTo) url.searchParams.set("release_date_lte", params.releaseDateTo);
+      if (params.certification) url.searchParams.set("certification", params.certification);
+      if (params.runtimeGte != null) url.searchParams.set("runtime_gte", String(params.runtimeGte));
+      if (params.runtimeLte != null) url.searchParams.set("runtime_lte", String(params.runtimeLte));
+      if (params.textQuery) url.searchParams.set("text_query", params.textQuery);
+      if (params.language) url.searchParams.set("language", params.language);
+      if (params.excludeArabic) url.searchParams.set("exclude_arabic", "true");
+
+      const res = await fetch(url, { headers: userHeaders() });
+      await ensureApiOk(res, "Failed to load filtered Discover results");
+      return res.json() as Promise<FilteredDiscoverResponse>;
+    },
+    enabled: params.enabled !== false,
+    staleTime: 30_000,
+  });
+}
+
 export function useSearch(query: string, page = 1) {
   return useQuery({
     queryKey: ["tmdb", "search", query, page],
