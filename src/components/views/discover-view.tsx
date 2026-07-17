@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { X } from "lucide-react";
 import {
-  ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, Dices, AlertCircle,
+  ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, AlertCircle,
   Compass, Star, TrendingUp, Calendar, Clock, Search, RotateCcw, Type,
   Sparkles, Info,
 } from "lucide-react";
@@ -296,21 +296,6 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             <p className="text-sm text-muted-foreground mt-1">{headerSubtitle}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 border-primary/40 text-primary hover:bg-primary/10"
-              onClick={() => {
-                const randomPage = Math.floor(Math.random() * 20) + 1;
-                const randomSort = ["popularity.desc", "vote_average.desc", "primary_release_date.desc", "revenue.desc"][Math.floor(Math.random() * 4)];
-                setSortBy(randomSort);
-                setShowMe("all");
-                setPage(randomPage);
-                toast.success("🎲 Surprise! Here are some random picks");
-              }}
-            >
-              <Dices className="w-4 h-4 mr-1.5" /> Surprise Me
-            </Button>
             <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); resetAll(); }}>
               <TabsList>
                 <TabsTrigger value="movies">Movies</TabsTrigger>
@@ -329,22 +314,6 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                 <p className="text-sm text-muted-foreground mt-0.5">{headerSubtitle}</p>
               </div>
             </div>
-            {/* Lift Surprise Me into embedded view too (was missing before) */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 border-primary/40 text-primary hover:bg-primary/10"
-              onClick={() => {
-                const randomPage = Math.floor(Math.random() * 20) + 1;
-                const randomSort = ["popularity.desc", "vote_average.desc", "primary_release_date.desc", "revenue.desc"][Math.floor(Math.random() * 4)];
-                setSortBy(randomSort);
-                setShowMe("all");
-                setPage(randomPage);
-                toast.success("🎲 Surprise! Here are some random picks");
-              }}
-            >
-              <Dices className="w-4 h-4 mr-1.5" /> Surprise Me
-            </Button>
           </div>
         </div>
       )}
