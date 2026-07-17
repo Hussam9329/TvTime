@@ -9,11 +9,19 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3 } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { SafeImage } from "@/components/media/safe-image";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type CollectionWorld = "movies" | "anime" | "arabic-movies";
 type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
@@ -284,6 +292,7 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
 
   // Determine media type explicitly from the item's type field — never guess
   const isMovie = item.type === "movie";
+  const hasLibraryMenuActions = isWatchedTab || tab === "watchlist" || item.type === "movie";
 
   // Navigate to the correct detail page based on type
   const handleOpenDetails = () => {
@@ -369,15 +378,17 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
-        className="cursor-pointer group"
-        onClick={handleOpenDetails}
-        onKeyDown={handleKeyDown}
-        role="button"
-        tabIndex={0}
-        aria-label={`${item.title}${item.year ? ` (${item.year})` : ""}`}
+        className="group"
       >
         <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card group">
-          <div className="relative aspect-[2/3] overflow-hidden bg-muted">
+          <div
+            className="relative aspect-[2/3] overflow-hidden bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+            onClick={handleOpenDetails}
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
+            aria-label={`Open details for ${item.title}${item.year ? ` (${item.year})` : ""}`}
+          >
             {item.poster ? (
               <SafeImage src={item.poster} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             ) : (
@@ -425,109 +436,109 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
               <h3 className="font-semibold text-white text-sm line-clamp-2 leading-tight drop-shadow">{item.title}</h3>
               <div className="flex items-center gap-2 mt-0.5">
                 {item.year && <p className="text-white/70 text-xs">{item.year}</p>}
-                {userRating != null && (
-                  <span className="text-amber-400 text-xs font-bold">{userRating}/100</span>
-                )}
               </div>
             </div>
+          </div>
 
-            {/* Fix #11: Action buttons visible on touch devices (no hover-only).
-                On desktop: opacity-0 → group-hover:opacity-100
-                On touch devices: always visible via CSS media query in globals.css (.touch-visible) */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 touch-visible transition-opacity flex items-center justify-center gap-2 p-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
-              {/* Details button — always visible, opens the correct profile */}
-              <Button size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); handleOpenDetails(); }}>
-                <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Details
+          <div className="flex items-center gap-1.5 border-t border-border/60 bg-card p-2">
+            <Button size="sm" className="h-8 min-w-0 flex-1 px-2 text-xs" onClick={handleOpenDetails}>
+              <Play className="mr-1 h-3.5 w-3.5 fill-current" /> Details
+            </Button>
+
+            {!isWatchedTab ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 w-8 shrink-0 p-0"
+                onClick={() => void handleMarkWatched()}
+                disabled={update.isPending}
+                title={item.type === "series" ? "Open episode tracking" : "Mark watched"}
+                aria-label={item.type === "series" ? `Track episodes for ${item.title}` : `Mark ${item.title} as watched`}
+              >
+                {item.type === "series" ? <Play className="h-3.5 w-3.5 fill-current" /> : <Check className="h-3.5 w-3.5" />}
               </Button>
-              {!isWatchedTab ? (
-                <>
-                  <Button size="sm" variant="secondary" className="h-8" onClick={(e) => { e.stopPropagation(); void handleMarkWatched(); }} title={item.type === "series" ? "Open episode tracking" : "Mark watched without changing rating"}>
-                    {item.type === "series" ? "Track" : "Watched"}
-                  </Button>
-                  {item.type === "movie" && (
-                    <Button size="sm" variant="secondary" className="h-8" onClick={(e) => { e.stopPropagation(); setRatingOpen(true); }}>
-                      <Star className="w-3.5 h-3.5 mr-1" /> {userRating != null ? "Re-rate" : "Rate"}
-                    </Button>
-                  )}
-                  {tab === "watchlist" && (
-                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); void handleQuickUnwatch(); }} title="Remove from watchlist">
-                      Remove
-                    </Button>
-                  )}
-                </>
-              ) : (
-                <>
-                  {item.type === "movie" ? (
-                    <>
-                      <Button size="sm" variant="secondary" className="h-8" onClick={(e) => { e.stopPropagation(); setRatingOpen(true); }}>
-                        <Star className="w-3.5 h-3.5 mr-1" /> {userRating != null ? "Re-rate" : "Rate"}
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); void handleUnwatch(); }}>
-                        Unwatch
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="h-8"
-                      onClick={(e) => { e.stopPropagation(); if (item.tmdbId) goTv(item.tmdbId); else toast.info("Open the show and change released episodes individually."); }}
-                    >
-                      <Play className="w-3.5 h-3.5 mr-1 fill-current" /> Episodes
-                    </Button>
-                  )}
-                  {userRating != null && (
-                    <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); void handleRemoveRating(); }}>
-                      Remove rating
-                    </Button>
-                  )}
-                </>
-              )}
-              {world !== "anime" && (
+            ) : item.type === "movie" ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 w-8 shrink-0 p-0"
+                onClick={() => setRatingOpen(true)}
+                title={userRating != null ? "Change rating" : "Rate"}
+                aria-label={`${userRating != null ? "Change rating for" : "Rate"} ${item.title}`}
+              >
+                <Star className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 w-8 shrink-0 p-0"
+                onClick={() => { if (item.tmdbId) goTv(item.tmdbId); else toast.info("Open the show and change released episodes individually."); }}
+                title="Open episodes"
+                aria-label={`Open episodes for ${item.title}`}
+              >
+                <Play className="h-3.5 w-3.5 fill-current" />
+              </Button>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 text-xs"
-                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("anime"); }}
-                  title="Move to Anime"
+                  className="h-8 w-8 shrink-0 p-0"
+                  aria-label={`More actions for ${item.title}`}
+                  title="More actions"
                 >
-                  To Anime
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
-              )}
-              {world !== "arabic-movies" && item.type === "movie" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("arabic"); }}
-                  title="Move to Arabic Movies"
-                >
-                  To Arabic Movies
-                </Button>
-              )}
-              {world === "anime" && item.type === "series" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("arabic"); }}
-                  title="Move to Arabic TV"
-                >
-                  To Arabic TV
-                </Button>
-              )}
-              {(world === "anime" || world === "arabic-movies") && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  onClick={(e) => { e.stopPropagation(); void handleMoveWorld("standard"); }}
-                  title="Move to the standard collection"
-                >
-                  {item.type === "movie" ? "To Movies" : "To TV Shows"}
-                </Button>
-              )}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{item.title}</DropdownMenuLabel>
+                {!isWatchedTab && item.type === "movie" && (
+                  <DropdownMenuItem onSelect={() => setRatingOpen(true)}>
+                    <Star /> {userRating != null ? "Change rating" : "Rate"}
+                  </DropdownMenuItem>
+                )}
+                {isWatchedTab && userRating != null && (
+                  <DropdownMenuItem onSelect={() => void handleRemoveRating()} disabled={update.isPending}>
+                    Remove rating
+                  </DropdownMenuItem>
+                )}
+                {tab === "watchlist" && (
+                  <DropdownMenuItem variant="destructive" onSelect={() => void handleQuickUnwatch()} disabled={update.isPending}>
+                    Remove from watchlist
+                  </DropdownMenuItem>
+                )}
+                {isWatchedTab && (
+                  <DropdownMenuItem variant="destructive" onSelect={() => void handleUnwatch()} disabled={update.isPending}>
+                    Remove from Watched
+                  </DropdownMenuItem>
+                )}
+
+                {hasLibraryMenuActions && <DropdownMenuSeparator />}
+                {world !== "anime" && (
+                  <DropdownMenuItem onSelect={() => void handleMoveWorld("anime")} disabled={update.isPending}>
+                    To Anime
+                  </DropdownMenuItem>
+                )}
+                {world !== "arabic-movies" && item.type === "movie" && (
+                  <DropdownMenuItem onSelect={() => void handleMoveWorld("arabic")} disabled={update.isPending}>
+                    To Arabic Movies
+                  </DropdownMenuItem>
+                )}
+                {world === "anime" && item.type === "series" && (
+                  <DropdownMenuItem onSelect={() => void handleMoveWorld("arabic")} disabled={update.isPending}>
+                    To Arabic TV
+                  </DropdownMenuItem>
+                )}
+                {(world === "anime" || world === "arabic-movies") && (
+                  <DropdownMenuItem onSelect={() => void handleMoveWorld("standard")} disabled={update.isPending}>
+                    {item.type === "movie" ? "To Movies" : "To TV Shows"}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </Card>
       </motion.div>
