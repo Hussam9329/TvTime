@@ -11,9 +11,17 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { X } from "lucide-react";
 import {
-  ChevronLeft, ChevronRight, SlidersHorizontal, Dices, AlertCircle,
+  ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, Dices, AlertCircle,
   Compass, Star, TrendingUp, Calendar, Clock, Search, RotateCcw, Type,
   Sparkles, Info,
 } from "lucide-react";
@@ -115,6 +123,11 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const movieGenres = useMovieGenres();
   const tvGenres = useTvGenres();
   const genres = effectiveIsTV ? tvGenres.data : movieGenres.data;
+  const selectedGenreLabel = selectedGenres.length === 0
+    ? "All genres"
+    : selectedGenres.length === 1
+      ? genres?.find((genre) => genre.id === selectedGenres[0])?.name || "1 genre selected"
+      : `${selectedGenres.length} genres selected`;
 
   // Build TMDB discover params
   const yearFrom = fromYear ? Number(fromYear) : undefined;
@@ -403,31 +416,39 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           </ToggleGroup>
         </div>
 
-        {/* Genre chips */}
-        <div className="flex flex-wrap gap-1.5">
-          <Button
-            variant={selectedGenres.length === 0 ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => { setSelectedGenres([]); resetPagination(); }}
-          >
-            All genres
-          </Button>
-          {genres?.map((g) => {
-            const isSelected = selectedGenres.includes(g.id);
-            return (
-              <Button
-                key={g.id}
-                variant={isSelected ? "default" : "outline"}
-                size="sm"
-                className={`h-7 text-xs ${isSelected ? "ring-2 ring-primary/40" : ""}`}
-                onClick={() => toggleGenre(g.id)}
+        {/* Multi-select genre dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="h-9 w-full justify-between text-sm sm:w-[260px]">
+              <span className="truncate">{selectedGenreLabel}</span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-80 w-[260px] overflow-y-auto">
+            <DropdownMenuLabel>Genres</DropdownMenuLabel>
+            <DropdownMenuCheckboxItem
+              checked={selectedGenres.length === 0}
+              onCheckedChange={() => {
+                setSelectedGenres([]);
+                resetPagination();
+              }}
+              onSelect={(event) => event.preventDefault()}
+            >
+              All genres
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator />
+            {genres?.map((genre) => (
+              <DropdownMenuCheckboxItem
+                key={genre.id}
+                checked={selectedGenres.includes(genre.id)}
+                onCheckedChange={() => toggleGenre(genre.id)}
+                onSelect={(event) => event.preventDefault()}
               >
-                {g.name}
-              </Button>
-            );
-          })}
-        </div>
+                {genre.name}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Primary row: Sort + Year range + Certification/Language */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
