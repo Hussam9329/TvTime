@@ -288,7 +288,7 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/airing_today`, { page }),
   tvGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
-  discoverTv: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string; language?: TmdbLanguage } = {}) => {
+  discoverTv: (params: { genres?: number[]; without_genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
     const isArabic = params.original_language === "ar";
     if (params.vote_count_gte != null) {
@@ -297,6 +297,7 @@ export const tmdb = {
       p["vote_count.gte"] = 100;
     }
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
+    if (params.without_genres && params.without_genres.length > 0) p.without_genres = params.without_genres.join(",");
     if (params.year) p.first_air_date_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
     if (params.original_language) p.with_original_language = params.original_language;

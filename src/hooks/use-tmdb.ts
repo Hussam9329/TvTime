@@ -948,6 +948,43 @@ export function useArabicMovieSchedule(from: string, to: string) {
 
 export type MovieScheduleResponse = ArabicMovieScheduleResponse;
 
+export type ReleaseScheduleOptions = {
+  language?: "ar" | "ja" | "en-US";
+  originalLanguage?: string;
+  excludedOriginalLanguage?: string;
+  genres?: number[];
+  withoutGenres?: number[];
+};
+
+export function useReleaseSchedule(
+  mediaType: "movie" | "tv",
+  from: string,
+  to: string,
+  opts?: ReleaseScheduleOptions,
+) {
+  return useQuery({
+    queryKey: ["release-schedule", mediaType, from, to, opts],
+    queryFn: async (): Promise<MovieScheduleResponse> => {
+      const url = new URL(mediaType === "tv" ? "/api/tv/calendar" : "/api/movies/calendar", window.location.origin);
+      url.searchParams.set("from", from);
+      url.searchParams.set("to", to);
+      if (opts?.language) url.searchParams.set("language", opts.language);
+      if (opts?.originalLanguage) url.searchParams.set("original_language", opts.originalLanguage);
+      if (opts?.excludedOriginalLanguage) url.searchParams.set("exclude_original_language", opts.excludedOriginalLanguage);
+      if (opts?.genres?.length) url.searchParams.set("genre", opts.genres.join(","));
+      if (opts?.withoutGenres?.length) url.searchParams.set("without_genre", opts.withoutGenres.join(","));
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        throw new Error(errorBody?.error || `Failed to load ${mediaType} releases`);
+      }
+      return res.json();
+    },
+    staleTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 /**
  * General movie release schedule. Same shape as useArabicMovieSchedule but
  * hits /api/movies/calendar (which supports any language filter).
@@ -959,24 +996,7 @@ export function useMovieSchedule(
   to: string,
   opts?: { language?: "ar" | "ja" | "en-US"; originalLanguage?: string }
 ) {
-  return useQuery({
-    queryKey: ["movies", "release-schedule", from, to, opts?.language, opts?.originalLanguage],
-    queryFn: async (): Promise<MovieScheduleResponse> => {
-      const url = new URL("/api/movies/calendar", window.location.origin);
-      url.searchParams.set("from", from);
-      url.searchParams.set("to", to);
-      if (opts?.language) url.searchParams.set("language", opts.language);
-      if (opts?.originalLanguage) url.searchParams.set("original_language", opts.originalLanguage);
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errorBody = await res.json().catch(() => ({}));
-        throw new Error(errorBody?.error || "Failed to load movie releases");
-      }
-      return res.json();
-    },
-    staleTime: 15 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  return useReleaseSchedule("movie", from, to, opts);
 }
 
 export function useCalendarSchedule(from: string, to: string, world: "general" | "arabic-tv" = "general") {

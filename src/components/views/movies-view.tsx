@@ -5,7 +5,7 @@ import { Library, Sparkles, CalendarDays, Film } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
 import { DiscoverView } from "@/components/views/discover-view";
-import { MovieReleaseSchedule } from "@/components/views/movie-release-schedule";
+import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
 
 export function MoviesView() {
   const [tab, setTab] = useState<"library" | "discover" | "releases">("library");
@@ -45,7 +45,7 @@ export function MoviesView() {
           <DiscoverView world="movies" embedded />
         </TabsContent>
         <TabsContent value="releases" className="mt-0">
-          <MovieReleaseSchedule
+          <ReleaseSchedule
             title="Movie Release Schedule"
             subtitle="A six-month release agenda for upcoming films. Dates are handled as date-only values and never shift with timezone conversion."
           />
