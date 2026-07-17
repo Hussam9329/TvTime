@@ -70,6 +70,8 @@ check(/Go to Arabic Movies/.test(shortcuts) && /Go to Arabic TV/.test(shortcuts)
 check(/My Arabic Movies/.test(arabicMovies) && /Discover/.test(arabicMovies) && /Releases/.test(arabicMovies), "Arabic Movies has its own library, discovery and release schedule");
 check(/Tracking/.test(arabicTv) && /Discover/.test(arabicTv) && /Releases/.test(arabicTv), "Arabic TV has its own tracking, discovery and releases");
 check(/world="arabic-movies"/.test(arabicMovies), "Arabic Movies reads its dedicated collection world");
+check(/<DiscoverView world="arabic-movies" embedded/.test(arabicMovies), "Arabic Movies reuses the full Movies Discover experience");
+check(/<ReleaseSchedule[\s\S]*originalLanguage="ar"[\s\S]*language="ar"/.test(arabicMovies), "Arabic Movies reuses the full Movies release schedule with Arabic-only data");
 check(/world="arabic"/.test(arabicTv), "Arabic TV reads its dedicated tracking world");
 check(/ReleaseSchedule/.test(arabicTv) && /originalLanguage="ar"/.test(arabicTv), "Arabic TV uses the shared Arabic-only release schedule");
 
@@ -93,9 +95,11 @@ check(/primary_release_date/.test(tmdb), "TMDB discovery supports bounded movie 
 check(/Earlier|Later/.test(movieSchedule) && /release/.test(movieSchedule.toLowerCase()), "Arabic Movies has an independent navigable release schedule");
 
 check(/originalLanguage:\s*"ar"/.test(discoverCatalog), "Arabic discovery uses Arabic original-language filtering");
-check(/voteCount:\s*0/.test(discoverCatalog), "Arabic discovery does not discard less-voted regional titles");
+check(/voteCount:\s*(?:voteCount\s*\?\?\s*)?0/.test(discoverCatalog), "Arabic discovery does not discard less-voted regional titles");
 check(/enabled:\s*kind === "movie"/.test(discoverCatalog) && /enabled:\s*kind === "tv"/.test(discoverCatalog), "Arabic discovery performs only the relevant request");
 check(/!isArabicMediaItem\(media\)/.test(discover), "Standard Discover excludes Arabic titles");
+check(/onlyArabic:\s*isArabic/.test(discover), "Arabic Seen/Haven't Seen filtering is enforced at the API boundary");
+check(/disabled=\{Boolean\(forcedLang\)\}/.test(discover), "Arabic and Anime discovery cannot escape their fixed language world");
 check((home.match(/!isArabicMediaItem/g) || []).length >= 3, "Standard Home rows exclude Arabic titles");
 check(/type: "movie", watched: true, isArabic: false/.test(recently), "Home recently watched excludes Arabic Movies at the database query");
 check(/type: "series", isArabic: false/.test(recently) && /showId: \{ in: showIds \}/.test(recently), "Home recently watched includes episodes only from non-Arabic series");

@@ -76,6 +76,7 @@ export async function GET(req: NextRequest) {
     const certification = search.get("certification") || undefined;
     const maxRating = optionalNumber(search.get("max_rating"));
     const excludeArabic = search.get("exclude_arabic") === "true";
+    const onlyArabic = search.get("only_arabic") === "true";
 
     const loadPage = (page: number): Promise<PaginatedResponse<MediaItem>> => mediaType === "tv"
       ? tmdb.discoverTv({ ...common, page })
@@ -87,6 +88,7 @@ export async function GET(req: NextRequest) {
     };
     const matchesCatalogue = (item: MediaItem) => Boolean(item.poster_path)
       && (!excludeArabic || !isArabicMediaItem(item))
+      && (!onlyArabic || isArabicMediaItem(item))
       && (maxRating === undefined || (item.vote_average || 0) <= maxRating);
 
     const results: MediaItem[] = [];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNav } from "@/lib/store";
 import { useDiscoverMovies, useDiscoverTv, useFilteredDiscover, useMovieGenres, useTvGenres } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
@@ -88,6 +88,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";
   const forcedLang = isAnime ? "ja" : isArabic ? "ar" : undefined;
+  const forcedLanguageLabel = forcedLang === "ar" ? "Arabic" : forcedLang === "ja" ? "Japanese" : null;
   const tmdbLanguage = isArabic ? "ar" as const : isAnime ? "ja" as const : undefined;
 
   const discoverTab = useNav((s) => s.discoverTab);
@@ -159,6 +160,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     maxRating,
     certification: certificationParam,
     excludeArabic: !isArabic,
+    onlyArabic: isArabic,
     enabled: showMe !== "all",
   });
 
@@ -184,9 +186,14 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     return filtered;
   }, [allResults, forcedLang, isAnime, isArabic, maxRating]);
 
+  const resetPagination = useCallback(() => {
+    setPage(1);
+    setFilteredCursors([null]);
+  }, []);
+
   const toggleGenre = (genreId: number) => {
     setSelectedGenres((prev) => (prev.includes(genreId) ? prev.filter((g) => g !== genreId) : [...prev, genreId]));
-    setPage(1);
+    resetPagination();
   };
 
   const resetAll = () => {
@@ -200,7 +207,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     setKeywords("");
     setShowMe("all");
     setSortBy("popularity.desc");
-    setPage(1);
+    resetPagination();
   };
 
   const applyPreset = (presetId: string) => {
@@ -211,13 +218,13 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     setToYear("");
     setUserScoreMin("");
     setUserScoreMax("");
-    setMinVotes(preset.id === "hidden" ? "100" : "");
+    setMinVotes(preset.id === "hidden" ? (isArabic ? "20" : "100") : "");
     setRuntimeMin(""); setRuntimeMax("");
     setSelectedGenres([]);
     setCertification("");
     setKeywords("");
     setShowMe("all");
-    setPage(1);
+    resetPagination();
     toast.success(`Applied preset: ${preset.label}`);
   };
 
@@ -235,27 +242,27 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   // Build active-filter chips for the trail below the filter panel header
   const activeFilterChips = useMemo(() => {
     const chips: { label: string; clear: () => void }[] = [];
-    if (fromYear) chips.push({ label: `From ${fromYear}`, clear: () => { setFromYear(""); setPage(1); } });
-    if (toYear) chips.push({ label: `To ${toYear}`, clear: () => { setToYear(""); setPage(1); } });
-    if (certification) chips.push({ label: `Rating: ${certification}`, clear: () => { setCertification(""); setPage(1); } });
+    if (fromYear) chips.push({ label: `From ${fromYear}`, clear: () => { setFromYear(""); resetPagination(); } });
+    if (toYear) chips.push({ label: `To ${toYear}`, clear: () => { setToYear(""); resetPagination(); } });
+    if (certification) chips.push({ label: `Rating: ${certification}`, clear: () => { setCertification(""); resetPagination(); } });
     if (language && language !== forcedLang) {
       const langLabel = LANGUAGES.find((l) => l.code === language)?.label || language;
-      chips.push({ label: `Lang: ${langLabel}`, clear: () => { setLanguage(forcedLang || ""); setPage(1); } });
+      chips.push({ label: `Lang: ${langLabel}`, clear: () => { setLanguage(forcedLang || ""); resetPagination(); } });
     }
-    if (userScoreMin) chips.push({ label: `≥ ${userScoreMin}★`, clear: () => { setUserScoreMin(""); setPage(1); } });
-    if (userScoreMax) chips.push({ label: `≤ ${userScoreMax}★`, clear: () => { setUserScoreMax(""); setPage(1); } });
-    if (minVotes) chips.push({ label: `${minVotes}+ votes`, clear: () => { setMinVotes(""); setPage(1); } });
-    if (runtimeMin) chips.push({ label: `≥ ${runtimeMin}min`, clear: () => { setRuntimeMin(""); setPage(1); } });
-    if (runtimeMax) chips.push({ label: `≤ ${runtimeMax}min`, clear: () => { setRuntimeMax(""); setPage(1); } });
-    if (keywords.trim()) chips.push({ label: `“${keywords.trim().slice(0, 20)}”`, clear: () => { setKeywords(""); setPage(1); } });
+    if (userScoreMin) chips.push({ label: `≥ ${userScoreMin}★`, clear: () => { setUserScoreMin(""); resetPagination(); } });
+    if (userScoreMax) chips.push({ label: `≤ ${userScoreMax}★`, clear: () => { setUserScoreMax(""); resetPagination(); } });
+    if (minVotes) chips.push({ label: `${minVotes}+ votes`, clear: () => { setMinVotes(""); resetPagination(); } });
+    if (runtimeMin) chips.push({ label: `≥ ${runtimeMin}min`, clear: () => { setRuntimeMin(""); resetPagination(); } });
+    if (runtimeMax) chips.push({ label: `≤ ${runtimeMax}min`, clear: () => { setRuntimeMax(""); resetPagination(); } });
+    if (keywords.trim()) chips.push({ label: `“${keywords.trim().slice(0, 20)}”`, clear: () => { setKeywords(""); resetPagination(); } });
     if (showMe !== "all") {
       chips.push({
         label: showMe === "seen" ? "Seen" : "Haven't Seen",
-        clear: () => { setShowMe("all"); setPage(1); },
+        clear: () => { setShowMe("all"); resetPagination(); },
       });
     }
     return chips;
-  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe]);
+  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe, resetPagination]);
 
   const headerTitle = title || (embedded
     ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
@@ -291,7 +298,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             >
               <Dices className="w-4 h-4 mr-1.5" /> Surprise Me
             </Button>
-            <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); setPage(1); resetAll(); }}>
+            <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); resetAll(); }}>
               <TabsList>
                 <TabsTrigger value="movies">Movies</TabsTrigger>
                 <TabsTrigger value="tv">TV Shows</TabsTrigger>
@@ -386,7 +393,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           <ToggleGroup
             type="single"
             value={showMe}
-            onValueChange={(v) => { if (v) { setShowMe(v as any); setPage(1); } }}
+            onValueChange={(v) => { if (v) { setShowMe(v as any); resetPagination(); } }}
             className="rounded-md border border-border/60"
             size="sm"
           >
@@ -402,7 +409,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             variant={selectedGenres.length === 0 ? "default" : "outline"}
             size="sm"
             className="h-7 text-xs"
-            onClick={() => { setSelectedGenres([]); setPage(1); }}
+            onClick={() => { setSelectedGenres([]); resetPagination(); }}
           >
             All genres
           </Button>
@@ -424,7 +431,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
         {/* Primary row: Sort + Year range + Certification/Language */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(1); }}>
+          <Select value={sortBy} onValueChange={(v) => { setSortBy(v); resetPagination(); }}>
             <SelectTrigger className="h-9 text-sm">
               <TrendingUp className="w-3.5 h-3.5 mr-1.5 inline" />
               <SelectValue placeholder="Sort by" />
@@ -439,7 +446,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             </SelectContent>
           </Select>
 
-          <Select value={fromYear || "any"} onValueChange={(v) => { setFromYear(v === "any" ? "" : v); setPage(1); }}>
+          <Select value={fromYear || "any"} onValueChange={(v) => { setFromYear(v === "any" ? "" : v); resetPagination(); }}>
             <SelectTrigger className="h-9 text-sm">
               <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
               <SelectValue placeholder="From year" />
@@ -450,7 +457,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             </SelectContent>
           </Select>
 
-          <Select value={toYear || "any"} onValueChange={(v) => { setToYear(v === "any" ? "" : v); setPage(1); }}>
+          <Select value={toYear || "any"} onValueChange={(v) => { setToYear(v === "any" ? "" : v); resetPagination(); }}>
             <SelectTrigger className="h-9 text-sm">
               <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
               <SelectValue placeholder="To year" />
@@ -463,16 +470,24 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
           {/* Certification — only for movies. TV hides it and shows Language instead. */}
           {effectiveIsTV ? (
-            <Select value={language || "any"} onValueChange={(v) => { setLanguage(v === "any" ? "" : v); setPage(1); }}>
+            <Select
+              value={forcedLang || language || "any"}
+              disabled={Boolean(forcedLang)}
+              onValueChange={(v) => { setLanguage(v === "any" ? "" : v); resetPagination(); }}
+            >
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="Language" />
               </SelectTrigger>
               <SelectContent>
-                {LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)}
+                {forcedLang && forcedLanguageLabel ? (
+                  <SelectItem value={forcedLang}>{forcedLanguageLabel} (fixed for this section)</SelectItem>
+                ) : (
+                  LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)
+                )}
               </SelectContent>
             </Select>
           ) : (
-            <Select value={certification || "any"} onValueChange={(v) => { setCertification(v === "any" ? "" : v); setPage(1); }}>
+            <Select value={certification || "any"} onValueChange={(v) => { setCertification(v === "any" ? "" : v); resetPagination(); }}>
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="Certification" />
               </SelectTrigger>
@@ -501,17 +516,25 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             {/* Language (movies only — TV shows it in primary row) + Score range + Votes */}
             <div className={`grid grid-cols-1 sm:grid-cols-2 ${effectiveIsTV ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-2`}>
               {!effectiveIsTV && (
-                <Select value={language || "any"} onValueChange={(v) => { setLanguage(v === "any" ? "" : v); setPage(1); }}>
+                <Select
+                  value={forcedLang || language || "any"}
+                  disabled={Boolean(forcedLang)}
+                  onValueChange={(v) => { setLanguage(v === "any" ? "" : v); resetPagination(); }}
+                >
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Language" />
                   </SelectTrigger>
                   <SelectContent>
-                    {LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)}
+                    {forcedLang && forcedLanguageLabel ? (
+                      <SelectItem value={forcedLang}>{forcedLanguageLabel} (fixed for this section)</SelectItem>
+                    ) : (
+                      LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)
+                    )}
                   </SelectContent>
                 </Select>
               )}
 
-              <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); setPage(1); }}>
+              <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); resetPagination(); }}>
                 <SelectTrigger className="h-9 text-sm">
                   <Star className="w-3.5 h-3.5 mr-1.5 inline" />
                   <SelectValue placeholder="Min user score" />
@@ -522,7 +545,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                 </SelectContent>
               </Select>
 
-              <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); setPage(1); }}>
+              <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); resetPagination(); }}>
                 <SelectTrigger className="h-9 text-sm">
                   <Star className="w-3.5 h-3.5 mr-1.5 inline" />
                   <SelectValue placeholder="Max user score" />
@@ -533,7 +556,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                 </SelectContent>
               </Select>
 
-              <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); setPage(1); }}>
+              <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); resetPagination(); }}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Min votes" />
                 </SelectTrigger>
@@ -553,7 +576,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             {/* Runtime range (with tooltip disclaimer) + Keywords */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               <div className="space-y-1">
-                <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); setPage(1); }}>
+                <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); resetPagination(); }}>
                   <SelectTrigger className="h-9 text-sm">
                     <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
                     <SelectValue placeholder="Min runtime" />
@@ -565,7 +588,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                 </Select>
               </div>
 
-              <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); setPage(1); }}>
+              <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); resetPagination(); }}>
                 <SelectTrigger className="h-9 text-sm">
                   <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
                   <SelectValue placeholder="Max runtime" />
@@ -580,7 +603,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <Input
                   value={keywords}
-                  onChange={(e) => { setKeywords(e.target.value); setPage(1); }}
+                  onChange={(e) => { setKeywords(e.target.value); resetPagination(); }}
                   placeholder="Filter by keywords..."
                   className="h-9 text-sm pl-8"
                 />

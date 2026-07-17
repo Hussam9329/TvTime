@@ -196,6 +196,7 @@ export function useFilteredDiscover(params: {
   textQuery?: string;
   language?: "ar" | "ja" | "en-US";
   excludeArabic?: boolean;
+  onlyArabic?: boolean;
   enabled?: boolean;
 }) {
   return useQuery({
@@ -219,6 +220,7 @@ export function useFilteredDiscover(params: {
       if (params.textQuery) url.searchParams.set("text_query", params.textQuery);
       if (params.language) url.searchParams.set("language", params.language);
       if (params.excludeArabic) url.searchParams.set("exclude_arabic", "true");
+      if (params.onlyArabic) url.searchParams.set("only_arabic", "true");
 
       const res = await fetch(url, { headers: userHeaders() });
       await ensureApiOk(res, "Failed to load filtered Discover results");
