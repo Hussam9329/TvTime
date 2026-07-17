@@ -219,10 +219,3 @@
   background-size: 1000px 100%;
   animation: shimmer 2s infinite linear;
 }
-
-/* Fix #11: On touch devices (no hover), make action overlays always visible */
-@media (hover: none) and (pointer: coarse) {
-  .touch-visible {
-    opacity: 1 !important;
-  }
-}
