@@ -299,3 +299,229 @@
 @media (max-width: 640px) {
   .ui-surface-card { border-radius: 0.875rem; }
 }
+
+/* Shared action hierarchy: clear, stable controls without changing handlers. */
+.tvtime-app [data-slot="button"] {
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.tvtime-app [data-slot="button"][data-size="icon"] {
+  aspect-ratio: 1;
+}
+.tvtime-app [data-slot="button"]:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+.tvtime-app [data-slot="button"][data-variant="ghost"] {
+  box-shadow: none;
+}
+.tvtime-app [data-slot="button"][data-variant="link"] {
+  min-height: auto;
+  padding-inline: 0.25rem;
+}
+@media (max-width: 640px) {
+  .tvtime-app [data-slot="button"]:not([data-size="icon"]):not([data-size="sm"]) {
+    min-height: 2.75rem;
+  }
+}
+
+/* Motion cleanup: keep feedback on interactive controls, keep static surfaces stable. */
+.tvtime-app [data-slot="card"] {
+  transform: none;
+}
+.tvtime-app [data-slot="card"]:not(a):not(button) {
+  transition-property: border-color, box-shadow, background-color;
+  transition-duration: 180ms;
+}
+.tvtime-app a[data-slot="card"],
+.tvtime-app button[data-slot="card"],
+.tvtime-app [data-slot="card"]:has(> a[aria-label]),
+.tvtime-app [data-slot="card"]:has(> button[aria-label]) {
+  transition-property: transform, border-color, box-shadow, background-color;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-app a[data-slot="card"]:hover,
+  .tvtime-app button[data-slot="card"]:hover {
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tvtime-app *,
+  .tvtime-app *::before,
+  .tvtime-app *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Unified loading, empty, and error feedback surfaces. */
+.feedback-state {
+  width: 100%;
+  min-height: 15rem;
+  border: 1px solid color-mix(in oklab, var(--border) 82%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+}
+.feedback-state__icon {
+  border: 1px solid color-mix(in oklab, var(--border) 75%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+.feedback-state__title {
+  text-wrap: balance;
+}
+.feedback-state__description {
+  text-wrap: pretty;
+}
+.feedback-state--loading {
+  padding-inline: clamp(0.75rem, 2vw, 1.25rem);
+}
+.feedback-state--error {
+  border-color: color-mix(in oklab, var(--destructive) 30%, var(--border));
+}
+.feedback-state--empty {
+  border-style: dashed;
+}
+@media (max-width: 640px) {
+  .feedback-state {
+    min-height: 12rem;
+    border-radius: 0.875rem;
+  }
+  .feedback-state [data-slot="button"] {
+    min-height: 2.75rem;
+  }
+}
+
+/* Keyboard and assistive-technology access for the application shell. */
+.tvtime-skip-link {
+  position: fixed;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 0.75rem;
+  z-index: 100;
+  transform: translateY(-160%);
+  border: 1px solid color-mix(in oklab, var(--primary) 55%, var(--border));
+  border-radius: 0.75rem;
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 14px 34px rgb(0 0 0 / 0.24);
+  transition: transform 160ms ease;
+}
+.tvtime-skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 3px solid color-mix(in oklab, var(--primary) 55%, transparent);
+  outline-offset: 2px;
+}
+#tvtime-main-content:focus { outline: none; }
+.tvtime-app :is(a, button, input, textarea, select, [role="button"], [role="tab"]):focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 72%, white 8%);
+  outline-offset: 2px;
+}
+@media (prefers-contrast: more) {
+  .tvtime-app { --border: color-mix(in oklab, currentColor 38%, transparent); }
+  .tvtime-app :is(a, button, input, textarea, select, [role="button"], [role="tab"]):focus-visible {
+    outline-width: 3px;
+  }
+}
+
+
+/* Consistent primary and secondary tab navigation. */
+.tvtime-tabs-list {
+  scroll-snap-type: inline proximity;
+  scrollbar-width: none;
+  border: 1px solid color-mix(in oklab, var(--border) 76%, transparent);
+}
+.tvtime-tabs-trigger {
+  scroll-snap-align: start;
+  min-width: max-content;
+}
+.tvtime-tabs-trigger[data-state="active"] {
+  color: var(--foreground);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 18px rgb(0 0 0 / 0.08);
+}
+@media (max-width: 640px) {
+  .tvtime-tabs-list {
+    width: 100%;
+    justify-content: flex-start;
+    overscroll-behavior-inline: contain;
+  }
+  .tvtime-tabs-trigger {
+    min-height: 2.5rem;
+    padding-inline: 0.875rem;
+  }
+}
+
+
+/* Desktop filter hierarchy: keep controls compact, aligned and easy to scan. */
+@media (min-width: 1024px) {
+  .tvtime-filter-panel {
+    border-radius: 1.125rem;
+  }
+  .tvtime-filter-panel-header {
+    min-height: 3.75rem;
+    padding-inline: 1.125rem;
+  }
+  .tvtime-filter-panel-content {
+    padding: 1.125rem;
+  }
+  .tvtime-filter-section + .tvtime-filter-section {
+    margin-top: 0.125rem;
+  }
+  .tvtime-filter-grid {
+    gap: 0.75rem;
+    align-items: end;
+  }
+  .tvtime-filter-field {
+    display: flex;
+    min-height: 4.25rem;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .tvtime-filter-field > :last-child {
+    margin-top: auto;
+  }
+}
+
+
+/* Mobile filter layout: preserve every control while reducing visual density. */
+@media (max-width: 767px) {
+  .tvtime-filter-panel {
+    border-radius: 0.875rem;
+  }
+  .tvtime-filter-panel-header {
+    gap: 0.625rem;
+    padding: 0.75rem;
+  }
+  .tvtime-filter-panel-header > :last-child {
+    width: 100%;
+    justify-content: center;
+  }
+  .tvtime-filter-panel-content {
+    padding: 0.75rem;
+  }
+  .tvtime-filter-section {
+    scroll-margin-top: 5rem;
+  }
+  .tvtime-filter-section[divided],
+  .tvtime-filter-section.border-t {
+    padding-top: 0.875rem;
+  }
+  .tvtime-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.625rem;
+  }
+  .tvtime-filter-field {
+    gap: 0.375rem;
+  }
+  .tvtime-filter-field :is(button, [role="combobox"], input) {
+    min-height: 2.625rem;
+  }
+  .tvtime-filter-panel [data-slot="badge"] {
+    max-width: 100%;
+  }
+}

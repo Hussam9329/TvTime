@@ -64,17 +64,17 @@ function DefaultErrorFallback({ error, onRetry }: { error: Error; onRetry: () =>
     error.message.includes("TMDB");
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-4">
-      <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center">
+    <div className="feedback-state feedback-state--error flex flex-col items-center justify-center space-y-4 px-4 py-14 text-center">
+      <div className="feedback-state__icon flex size-16 items-center justify-center rounded-2xl bg-rose-500/10">
         <span className="text-rose-500 text-3xl" aria-hidden>
           ⚠
         </span>
       </div>
       <div className="space-y-1.5">
-        <h3 className="text-lg font-bold">
+        <h3 className="feedback-state__title text-lg font-bold">
           {isNetworkError ? "تعذّر تحميل البيانات" : "حدث خطأ غير متوقع"}
         </h3>
-        <p className="text-sm text-muted-foreground max-w-md">
+        <p className="feedback-state__description max-w-md text-sm text-muted-foreground">
           {isNetworkError
             ? "تحقق من اتصال الإنترنت وحاول مرة أخرى. إذا استمرت المشكلة، قد يكون الخادم مؤقتاً غير متاح."
             : error.message || "يرجى المحاولة مرة أخرى أو تحديث الصفحة."}

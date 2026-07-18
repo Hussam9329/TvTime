@@ -59,11 +59,11 @@ function ViewSkeleton() {
   // Mirrors the layout of detail pages and grid views so the first paint
   // is visually stable while the chunk loads.
   return (
-    <div className="space-y-4 py-4" aria-busy="true" aria-live="polite">
-      <div className="h-8 w-1/3 shimmer rounded" />
+    <div className="feedback-state feedback-state--loading space-y-5 py-6" aria-busy="true" aria-live="polite" role="status">
+      <div className="h-8 w-full max-w-sm shimmer rounded-lg" />
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
         {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="aspect-[2/3] shimmer rounded-lg" />
+          <div key={i} className="aspect-[2/3] shimmer rounded-xl border border-border/40" />
         ))}
       </div>
     </div>
@@ -106,9 +106,12 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
 
   return (
     <div className="tvtime-app min-h-screen flex flex-col">
+      <a href="#tvtime-main-content" className="tvtime-skip-link">
+        Skip to main content
+      </a>
       <Header />
       <KeyboardShortcuts />
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+      <main id="tvtime-main-content" tabIndex={-1} className="flex-1 max-w-[1400px] w-full mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
         <div key={`${view}-${movieId ?? ""}-${tvId ?? ""}-${personId ?? ""}`} className="animate-fade-in-up">
           {/* HomeView stays eager — it is the landing page and the first thing
               the user sees after login. */}

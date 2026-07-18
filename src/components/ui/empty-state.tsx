@@ -27,16 +27,16 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center py-16 px-4 text-center ${className ?? ""}`}
+      className={`feedback-state feedback-state--empty flex flex-col items-center justify-center px-4 py-14 text-center ${className ?? ""}`}
     >
       {icon && (
-        <div className="w-20 h-20 rounded-full bg-muted/40 flex items-center justify-center mb-4 text-muted-foreground">
+        <div className="feedback-state__icon mb-4 flex size-20 items-center justify-center rounded-2xl bg-muted/45 text-muted-foreground">
           {icon}
         </div>
       )}
-      <h3 className="text-lg font-bold mb-1.5">{title}</h3>
+      <h3 className="feedback-state__title mb-1.5 text-lg font-bold">{title}</h3>
       {description && (
-        <p className="text-sm text-muted-foreground max-w-sm mb-5 leading-relaxed">
+        <p className="feedback-state__description mb-5 max-w-md text-sm leading-relaxed text-muted-foreground">
           {description}
         </p>
       )}
