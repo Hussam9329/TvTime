@@ -177,7 +177,7 @@ export function DiaryView() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="tvtime-diary-page space-y-6 p-4 md:p-6">
       <div className="view-page-header">
         <h1 className="view-page-title text-2xl font-bold flex items-center gap-2">
           <CalendarIcon size={24} /> سجل المشاهدة

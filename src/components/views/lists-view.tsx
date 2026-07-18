@@ -190,7 +190,7 @@ export function ListsView() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="tvtime-lists-page space-y-6 p-4 md:p-6">
       <div className="view-page-header flex items-end justify-between">
         <div>
           <h1 className="view-page-title text-2xl font-bold flex items-center gap-2">

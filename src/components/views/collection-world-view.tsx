@@ -116,7 +116,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const notStartedCount = world === "anime" ? Number(counts?.notStartedAnime ?? 0) : 0;
   const watchingCount = world === "anime" ? Number(counts?.watchingAnime ?? 0) : 0;
   return (
-    <div className="space-y-5">
+    <div className="tvtime-collection-world-page space-y-5">
       {!embedded && (
         <div className="view-page-header flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">

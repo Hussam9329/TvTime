@@ -48,7 +48,7 @@ export function MediaView() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="space-y-5">
+    <div className="tvtime-media-page space-y-5">
       {/* Header */}
       <div className="view-page-header flex items-center gap-3">
         <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">

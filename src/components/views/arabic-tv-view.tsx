@@ -13,7 +13,7 @@ export function ArabicTvView() {
   const [tab, setTab] = useState<"tracking" | "discover" | "releases">("tracking");
 
   return (
-    <div className="space-y-6">
+    <div className="tvtime-arabic-tv-page space-y-6">
       <section className="overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/15 via-card to-card p-5 sm:p-7">
         <div className="view-page-header max-w-2xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">

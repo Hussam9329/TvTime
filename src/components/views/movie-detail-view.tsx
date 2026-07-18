@@ -167,7 +167,7 @@ export function MovieDetailView() {
     : "text-rose-400";
 
   return (
-    <div className="space-y-6">
+    <div className="tvtime-movie-detail-page space-y-6">
       <Button variant="ghost" size="sm" onClick={back} className="text-muted-foreground">
         <ArrowLeft className="w-4 h-4 mr-1" /> Back
       </Button>
