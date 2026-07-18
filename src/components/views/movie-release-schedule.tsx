@@ -83,7 +83,7 @@ export function ReleaseSchedule({
   }, [items, isTV]);
 
   return (
-    <div className="space-y-5">
+    <div className="tvtime-release-schedule space-y-5">
       <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>

@@ -613,3 +613,15 @@
 .tvtime-lists-page button { touch-action: manipulation; }
 .tvtime-diary-page time, .tvtime-diary-page [class*="tabular-nums"] { font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .tvtime-arabic-movies-page, .tvtime-arabic-tv-page, .tvtime-movie-detail-page, .tvtime-tv-detail-page, .tvtime-tv-tracking-page { gap: 1rem; } .tvtime-arabic-movies-page > :first-child, .tvtime-arabic-tv-page > section:first-child { padding: 1rem; } .tvtime-lists-page, .tvtime-diary-page { padding: .75rem; gap: 1rem; } }
+
+/* TVTIME UIUX 29–34: supporting page layouts. */
+.tvtime-stats-page > .grid { align-items: stretch; }
+.tvtime-stats-page [data-slot="card"], .tvtime-person-detail-page [data-slot="card"] { min-width: 0; }
+.tvtime-stats-page [data-slot="card"] > * { min-width: 0; }
+.tvtime-person-detail-page > .relative.rounded-2xl { box-shadow: 0 20px 50px -32px hsl(var(--foreground) / .32); }
+.tvtime-profile-dialog [data-slot="dialog-header"] { padding-bottom: .75rem; border-bottom: 1px solid hsl(var(--border) / .65); }
+.tvtime-profile-dialog [data-slot="dialog-footer"] { padding-top: .75rem; border-top: 1px solid hsl(var(--border) / .65); }
+.tvtime-profile-dialog form, .tvtime-profile-dialog section, .tvtime-release-schedule > section, .tvtime-release-schedule > div { min-width: 0; }
+.tvtime-release-schedule [data-slot="card"] { overflow: hidden; }
+.tvtime-release-schedule--rtl, .tvtime-release-schedule--rtl input, .tvtime-release-schedule--rtl button { direction: rtl; }
+@media (max-width: 640px) { .tvtime-stats-page, .tvtime-person-detail-page, .tvtime-release-schedule { gap: 1rem; } .tvtime-profile-dialog button { min-height: 2.75rem; } }

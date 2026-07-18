@@ -51,7 +51,7 @@ export function PersonDetailView() {
   const age = p.birthday ? Math.floor((Date.now() - new Date(p.birthday).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
   return (
-    <div className="space-y-6">
+    <div className="tvtime-person-detail-page space-y-6">
       <Button variant="ghost" size="sm" onClick={back} className="text-muted-foreground">
         <ArrowLeft className="w-4 h-4 mr-1" /> Back
       </Button>

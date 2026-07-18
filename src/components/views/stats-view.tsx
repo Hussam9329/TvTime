@@ -36,7 +36,7 @@ export function StatsView() {
   const topShows = (d.episodesByShow ?? []).slice(0, 5);
 
   return (
-    <div className="space-y-5">
+    <div className="tvtime-stats-page space-y-5">
       {/* Header */}
       <div className="view-page-header flex items-center gap-3">
         <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">

@@ -41,7 +41,7 @@ export function ArabicMovieReleaseSchedule() {
   }, [items]);
 
   return (
-    <div className="space-y-5">
+    <div className="tvtime-release-schedule tvtime-release-schedule--rtl space-y-5">
       <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card to-card p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
