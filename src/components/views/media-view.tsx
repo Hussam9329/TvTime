@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Film, Tv, BookOpen, Gamepad2, Star, Clock, Check, Search, ArrowUpDown, Database } from "lucide-react";
 import { motion } from "framer-motion";
@@ -72,78 +73,101 @@ export function MediaView() {
       )}
 
       {/* Filters */}
-      <div className="glass rounded-xl p-3 sm:p-4 space-y-3">
-        {/* Type tabs */}
-        <Tabs value={type} onValueChange={(v) => { setType(v === "all" ? "" : v); setPage(0); }}>
-          <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="movie"><Film className="w-4 h-4 mr-1.5" />Movies</TabsTrigger>
-            <TabsTrigger value="series"><Tv className="w-4 h-4 mr-1.5" />TV</TabsTrigger>
-            <TabsTrigger value="book"><BookOpen className="w-4 h-4 mr-1.5" />Books</TabsTrigger>
-            <TabsTrigger value="game"><Gamepad2 className="w-4 h-4 mr-1.5" />Games</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <FilterPanel
+        title="Collection filters"
+        description="Filter by media type, search your collection, then refine the order and status."
+        activeCount={
+          Number(type !== "") +
+          Number(search.trim() !== "") +
+          Number(sortBy !== "addedAt") +
+          Number(statusFilter !== "") +
+          Number(showRatedOnly)
+        }
+      >
+        <FilterSection title="Media type">
+          <Tabs value={type} onValueChange={(v) => { setType(v === "all" ? "" : v); setPage(0); }}>
+            <TabsList className="h-auto w-full justify-start overflow-x-auto no-scrollbar">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="movie"><Film className="mr-1.5 h-4 w-4" />Movies</TabsTrigger>
+              <TabsTrigger value="series"><Tv className="mr-1.5 h-4 w-4" />TV</TabsTrigger>
+              <TabsTrigger value="book"><BookOpen className="mr-1.5 h-4 w-4" />Books</TabsTrigger>
+              <TabsTrigger value="game"><Gamepad2 className="mr-1.5 h-4 w-4" />Games</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </FilterSection>
 
-        {/* Search + sort */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-              placeholder="Search your collection..."
-              className="pl-9 h-9"
-            />
-          </div>
-          <Button
-            variant={showRatedOnly ? "default" : "outline"}
-            size="sm"
-            className="h-9"
-            onClick={() => { setShowRatedOnly(!showRatedOnly); setPage(0); }}
-          >
-            <Star className="w-4 h-4 mr-1.5" /> Rated only
-          </Button>
-        </div>
+        <FilterSection title="Search and quick filters" divided>
+          <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_auto]">
+            <FilterField label="Search collection">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                  placeholder="Search your collection..."
+                  className="h-9 pl-9"
+                />
+              </div>
+            </FilterField>
 
-        {/* Sort + status */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
-            <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
-            {[
-              { v: "addedAt", l: "Recent" },
-              { v: "userRating", l: "Rating" },
-              { v: "title", l: "A-Z" },
-              { v: "year", l: "Year" },
-            ].map((opt) => (
-              <button
-                key={opt.v}
-                onClick={() => setSortBy(opt.v)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                  sortBy === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                }`}
+            <FilterField label="Rating">
+              <Button
+                variant={showRatedOnly ? "default" : "outline"}
+                size="sm"
+                className="h-9 whitespace-nowrap lg:min-w-32"
+                onClick={() => { setShowRatedOnly(!showRatedOnly); setPage(0); }}
               >
-                {opt.l}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
-            {[
-              { v: "", l: "All" },
-              { v: "planned", l: "Planned" },
-            ].map((opt) => (
-              <button
-                key={opt.v}
-                onClick={() => { setStatusFilter(opt.v); setPage(0); }}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                  statusFilter === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {opt.l}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+                <Star className="mr-1.5 h-4 w-4" /> Rated only
+              </Button>
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
+
+        <FilterSection title="Sort and status" divided>
+          <FilterGrid className="lg:grid-cols-2">
+            <FilterField label="Sort by">
+              <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-lg border border-border/50 bg-muted/25 p-1">
+                <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                {[
+                  { v: "addedAt", l: "Recent" },
+                  { v: "userRating", l: "Rating" },
+                  { v: "title", l: "A-Z" },
+                  { v: "year", l: "Year" },
+                ].map((opt) => (
+                  <button
+                    key={opt.v}
+                    onClick={() => setSortBy(opt.v)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      sortBy === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
+            </FilterField>
+
+            <FilterField label="Status">
+              <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-lg border border-border/50 bg-muted/25 p-1">
+                {[
+                  { v: "", l: "All" },
+                  { v: "planned", l: "Planned" },
+                ].map((opt) => (
+                  <button
+                    key={opt.v}
+                    onClick={() => { setStatusFilter(opt.v); setPage(0); }}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      statusFilter === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
+      </FilterPanel>
 
       {/* Results count */}
       <div className="flex items-center justify-between">

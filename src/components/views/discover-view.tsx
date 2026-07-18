@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -22,7 +23,7 @@ import {
 import { X } from "lucide-react";
 import {
   ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, AlertCircle,
-  Compass, Star, TrendingUp, Calendar, Clock, Search, RotateCcw, Type,
+  Compass, Star, TrendingUp, Calendar, Clock, Search, Type,
   Sparkles, Info,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -335,183 +336,135 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       </div>
 
       {/* Filters panel */}
-      <div className="glass rounded-xl p-3 sm:p-4 space-y-3">
-        {/* Filter header */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <SlidersHorizontal className="w-4 h-4" /> Filters
-            {activeFilters > 0 && (
-              <Badge variant="secondary" className="text-[10px] ml-1">{activeFilters} active</Badge>
-            )}
-          </div>
-          {activeFilters > 0 && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={resetAll}>
-              <RotateCcw className="w-3 h-3 mr-1" /> Reset all
-            </Button>
-          )}
-        </div>
-
+      <FilterPanel
+        title="Filters"
+        description="Choose what to show first, then narrow the catalogue with the core and advanced controls."
+        activeCount={activeFilters}
+        onReset={resetAll}
+      >
         {/* Active filter chips trail */}
         {activeFilterChips.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap pb-1">
+          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-primary/15 bg-primary/[0.035] p-2.5">
             {activeFilterChips.map((chip, i) => (
-              <Badge key={i} variant="default" className="text-[11px] py-0.5 pl-2 pr-1 gap-1">
+              <Badge key={i} variant="default" className="gap-1 py-0.5 pl-2 pr-1 text-[11px]">
                 {chip.label}
                 <button
                   onClick={chip.clear}
-                  className="ml-0.5 hover:bg-foreground/20 rounded-full p-0.5"
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-foreground/20"
                   aria-label={`Clear ${chip.label}`}
                 >
-                  <X className="w-2.5 h-2.5" />
+                  <X className="h-2.5 w-2.5" />
                 </button>
               </Badge>
             ))}
           </div>
         )}
 
-        {/* Show Me — segmented ToggleGroup */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Show Me</span>
-          <ToggleGroup
-            type="single"
-            value={showMe}
-            onValueChange={(v) => { if (v) { setShowMe(v as any); resetPagination(); } }}
-            className="rounded-md border border-border/60"
-            size="sm"
-          >
-            <ToggleGroupItem value="all" className="h-7 text-xs px-3">Everything</ToggleGroupItem>
-            <ToggleGroupItem value="unseen" className="h-7 text-xs px-3">Haven&apos;t Seen</ToggleGroupItem>
-            <ToggleGroupItem value="seen" className="h-7 text-xs px-3">Seen</ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-
-        {/* Multi-select genre dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="h-9 w-full justify-between text-sm sm:w-[260px]">
-              <span className="truncate">{selectedGenreLabel}</span>
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="max-h-80 w-[260px] overflow-y-auto">
-            <DropdownMenuLabel>Genres</DropdownMenuLabel>
-            <DropdownMenuCheckboxItem
-              checked={selectedGenres.length === 0}
-              onCheckedChange={() => {
-                setSelectedGenres([]);
-                resetPagination();
-              }}
-              onSelect={(event) => event.preventDefault()}
+        <FilterSection title="Viewing status">
+          <div className="flex flex-col gap-2 rounded-xl border border-border/50 bg-muted/20 p-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-xs text-muted-foreground">Limit results using your personal viewing history.</span>
+            <ToggleGroup
+              type="single"
+              value={showMe}
+              onValueChange={(v) => { if (v) { setShowMe(v as any); resetPagination(); } }}
+              className="w-full justify-start rounded-md border border-border/60 bg-background/50 sm:w-auto"
+              size="sm"
             >
-              All genres
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuSeparator />
-            {genres?.map((genre) => (
-              <DropdownMenuCheckboxItem
-                key={genre.id}
-                checked={selectedGenres.includes(genre.id)}
-                onCheckedChange={() => toggleGenre(genre.id)}
-                onSelect={(event) => event.preventDefault()}
-              >
-                {genre.name}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <ToggleGroupItem value="all" className="h-8 flex-1 px-3 text-xs sm:flex-none">Everything</ToggleGroupItem>
+              <ToggleGroupItem value="unseen" className="h-8 flex-1 px-3 text-xs sm:flex-none">Haven&apos;t Seen</ToggleGroupItem>
+              <ToggleGroupItem value="seen" className="h-8 flex-1 px-3 text-xs sm:flex-none">Seen</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+        </FilterSection>
 
-        {/* Primary row: Sort + Year range + Certification/Language */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          <Select value={sortBy} onValueChange={(v) => { setSortBy(v); resetPagination(); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <TrendingUp className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              {sortOptions.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label.includes("Alphabetical") && <Type className="w-3 h-3 mr-1 inline" />}
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <FilterSection title="Core filters" divided>
+          <FilterGrid className="lg:grid-cols-3 xl:grid-cols-5">
+            <FilterField label="Genres">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-9 w-full justify-between text-sm">
+                    <span className="truncate">{selectedGenreLabel}</span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-80 w-[260px] overflow-y-auto">
+                  <DropdownMenuLabel>Genres</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem
+                    checked={selectedGenres.length === 0}
+                    onCheckedChange={() => {
+                      setSelectedGenres([]);
+                      resetPagination();
+                    }}
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    All genres
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  {genres?.map((genre) => (
+                    <DropdownMenuCheckboxItem
+                      key={genre.id}
+                      checked={selectedGenres.includes(genre.id)}
+                      onCheckedChange={() => toggleGenre(genre.id)}
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      {genre.name}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </FilterField>
 
-          <Select value={fromYear || "any"} onValueChange={(v) => { setFromYear(v === "any" ? "" : v); resetPagination(); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="From year" />
-            </SelectTrigger>
-            <SelectContent className="max-h-96">
-              <SelectItem value="any">Any from year</SelectItem>
-              {YEAR_OPTIONS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-            </SelectContent>
-          </Select>
+            <FilterField label="Sort by">
+              <Select value={sortBy} onValueChange={(v) => { setSortBy(v); resetPagination(); }}>
+                <SelectTrigger className="h-9 w-full text-sm">
+                  <TrendingUp className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label.includes("Alphabetical") && <Type className="mr-1 inline h-3 w-3" />}
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FilterField>
 
-          <Select value={toYear || "any"} onValueChange={(v) => { setToYear(v === "any" ? "" : v); resetPagination(); }}>
-            <SelectTrigger className="h-9 text-sm">
-              <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="To year" />
-            </SelectTrigger>
-            <SelectContent className="max-h-96">
-              <SelectItem value="any">Any to year</SelectItem>
-              {YEAR_OPTIONS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-            </SelectContent>
-          </Select>
+            <FilterField label="From year">
+              <Select value={fromYear || "any"} onValueChange={(v) => { setFromYear(v === "any" ? "" : v); resetPagination(); }}>
+                <SelectTrigger className="h-9 w-full text-sm">
+                  <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="From year" />
+                </SelectTrigger>
+                <SelectContent className="max-h-96">
+                  <SelectItem value="any">Any from year</SelectItem>
+                  {YEAR_OPTIONS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FilterField>
 
-          {/* Certification — only for movies. TV hides it and shows Language instead. */}
-          {effectiveIsTV ? (
-            <Select
-              value={forcedLang || language || "any"}
-              disabled={Boolean(forcedLang)}
-              onValueChange={(v) => { setLanguage(v === "any" ? "" : v); resetPagination(); }}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                {forcedLang && forcedLanguageLabel ? (
-                  <SelectItem value={forcedLang}>{forcedLanguageLabel} (fixed for this section)</SelectItem>
-                ) : (
-                  LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)
-                )}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Select value={certification || "any"} onValueChange={(v) => { setCertification(v === "any" ? "" : v); resetPagination(); }}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Certification" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="any">Any certification</SelectItem>
-                {CERTIFICATIONS_MOVIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+            <FilterField label="To year">
+              <Select value={toYear || "any"} onValueChange={(v) => { setToYear(v === "any" ? "" : v); resetPagination(); }}>
+                <SelectTrigger className="h-9 w-full text-sm">
+                  <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="To year" />
+                </SelectTrigger>
+                <SelectContent className="max-h-96">
+                  <SelectItem value="any">Any to year</SelectItem>
+                  {YEAR_OPTIONS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FilterField>
 
-        {/* Advanced filters (collapsible) */}
-        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground">
-              <Sparkles className="w-3 h-3 mr-1" />
-              {advancedOpen ? "Hide advanced filters" : "Show advanced filters"}
-              {(userScoreMin || userScoreMax || minVotes || runtimeMin || runtimeMax || (language && !forcedLang && effectiveIsTV) || keywords) && (
-                <Badge variant="secondary" className="text-[10px] ml-1.5">
-                  {(userScoreMin ? 1 : 0) + (userScoreMax ? 1 : 0) + (minVotes ? 1 : 0) + (runtimeMin ? 1 : 0) + (runtimeMax ? 1 : 0) + ((language && !forcedLang && effectiveIsTV) ? 1 : 0) + (keywords ? 1 : 0)}
-                </Badge>
-              )}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-3 space-y-2">
-            {/* Language (movies only — TV shows it in primary row) + Score range + Votes */}
-            <div className={`grid grid-cols-1 sm:grid-cols-2 ${effectiveIsTV ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-2`}>
-              {!effectiveIsTV && (
+            <FilterField label={effectiveIsTV ? "Language" : "Certification"}>
+              {effectiveIsTV ? (
                 <Select
                   value={forcedLang || language || "any"}
                   disabled={Boolean(forcedLang)}
                   onValueChange={(v) => { setLanguage(v === "any" ? "" : v); resetPagination(); }}
                 >
-                  <SelectTrigger className="h-9 text-sm">
+                  <SelectTrigger className="h-9 w-full text-sm">
                     <SelectValue placeholder="Language" />
                   </SelectTrigger>
                   <SelectContent>
@@ -522,94 +475,165 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                     )}
                   </SelectContent>
                 </Select>
-              )}
-
-              <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); resetPagination(); }}>
-                <SelectTrigger className="h-9 text-sm">
-                  <Star className="w-3.5 h-3.5 mr-1.5 inline" />
-                  <SelectValue placeholder="Min user score" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any min score</SelectItem>
-                  {[5, 6, 7, 8, 9].map((r) => <SelectItem key={r} value={String(r)}>{r}+ / 10</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); resetPagination(); }}>
-                <SelectTrigger className="h-9 text-sm">
-                  <Star className="w-3.5 h-3.5 mr-1.5 inline" />
-                  <SelectValue placeholder="Max user score" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any max score</SelectItem>
-                  {[5, 6, 7, 8, 9, 10].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} / 10</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); resetPagination(); }}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Min votes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any votes</SelectItem>
-                  {[
-                    { v: "50", l: "50+ votes" },
-                    { v: "100", l: "100+ votes" },
-                    { v: "200", l: "200+ votes" },
-                    { v: "500", l: "500+ votes" },
-                    { v: "1000", l: "1000+ votes" },
-                  ].map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Runtime range (with tooltip disclaimer) + Keywords */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              <div className="space-y-1">
-                <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); resetPagination(); }}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
-                    <SelectValue placeholder="Min runtime" />
+              ) : (
+                <Select value={certification || "any"} onValueChange={(v) => { setCertification(v === "any" ? "" : v); resetPagination(); }}>
+                  <SelectTrigger className="h-9 w-full text-sm">
+                    <SelectValue placeholder="Certification" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="any">Any min runtime</SelectItem>
-                    {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
+                    <SelectItem value="any">Any certification</SelectItem>
+                    {CERTIFICATIONS_MOVIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </div>
+              )}
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
 
-              <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); resetPagination(); }}>
-                <SelectTrigger className="h-9 text-sm">
-                  <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
-                  <SelectValue placeholder="Max runtime" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any max runtime</SelectItem>
-                  {[60, 90, 120, 150, 180, 240].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} min</SelectItem>)}
-                </SelectContent>
-              </Select>
+        <FilterSection divided>
+          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/15">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-10 w-full justify-between rounded-none px-3 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {advancedOpen ? "Hide advanced filters" : "Show advanced filters"}
+                    {(userScoreMin || userScoreMax || minVotes || runtimeMin || runtimeMax || (language && !forcedLang && effectiveIsTV) || keywords) && (
+                      <Badge variant="secondary" className="ml-1 h-5 text-[10px]">
+                        {(userScoreMin ? 1 : 0) + (userScoreMax ? 1 : 0) + (minVotes ? 1 : 0) + (runtimeMin ? 1 : 0) + (runtimeMax ? 1 : 0) + ((language && !forcedLang && effectiveIsTV) ? 1 : 0) + (keywords ? 1 : 0)}
+                      </Badge>
+                    )}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
 
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  value={keywords}
-                  onChange={(e) => { setKeywords(e.target.value); resetPagination(); }}
-                  placeholder="Filter by keywords..."
-                  className="h-9 text-sm pl-8"
-                />
-              </div>
+              <CollapsibleContent className="space-y-4 border-t border-border/50 p-3 sm:p-4">
+                <FilterSection title="Ratings and reach">
+                  <FilterGrid className={effectiveIsTV ? "lg:grid-cols-3" : "lg:grid-cols-4"}>
+                    {!effectiveIsTV && (
+                      <FilterField label="Language">
+                        <Select
+                          value={forcedLang || language || "any"}
+                          disabled={Boolean(forcedLang)}
+                          onValueChange={(v) => { setLanguage(v === "any" ? "" : v); resetPagination(); }}
+                        >
+                          <SelectTrigger className="h-9 w-full text-sm">
+                            <SelectValue placeholder="Language" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {forcedLang && forcedLanguageLabel ? (
+                              <SelectItem value={forcedLang}>{forcedLanguageLabel} (fixed for this section)</SelectItem>
+                            ) : (
+                              LANGUAGES.map((l) => <SelectItem key={l.code || "any"} value={l.code || "any"}>{l.label}</SelectItem>)
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </FilterField>
+                    )}
+
+                    <FilterField label="Minimum score">
+                      <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); resetPagination(); }}>
+                        <SelectTrigger className="h-9 w-full text-sm">
+                          <Star className="mr-1.5 h-3.5 w-3.5" />
+                          <SelectValue placeholder="Min user score" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">Any min score</SelectItem>
+                          {[5, 6, 7, 8, 9].map((r) => <SelectItem key={r} value={String(r)}>{r}+ / 10</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FilterField>
+
+                    <FilterField label="Maximum score">
+                      <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); resetPagination(); }}>
+                        <SelectTrigger className="h-9 w-full text-sm">
+                          <Star className="mr-1.5 h-3.5 w-3.5" />
+                          <SelectValue placeholder="Max user score" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">Any max score</SelectItem>
+                          {[5, 6, 7, 8, 9, 10].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} / 10</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FilterField>
+
+                    <FilterField label="Minimum votes">
+                      <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); resetPagination(); }}>
+                        <SelectTrigger className="h-9 w-full text-sm">
+                          <SelectValue placeholder="Min votes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">Any votes</SelectItem>
+                          {[
+                            { v: "50", l: "50+ votes" },
+                            { v: "100", l: "100+ votes" },
+                            { v: "200", l: "200+ votes" },
+                            { v: "500", l: "500+ votes" },
+                            { v: "1000", l: "1000+ votes" },
+                          ].map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FilterField>
+                  </FilterGrid>
+                </FilterSection>
+
+                <FilterSection title="Runtime and keywords" divided>
+                  <FilterGrid className="lg:grid-cols-3">
+                    <FilterField label="Minimum runtime">
+                      <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); resetPagination(); }}>
+                        <SelectTrigger className="h-9 w-full text-sm">
+                          <Clock className="mr-1.5 h-3.5 w-3.5" />
+                          <SelectValue placeholder="Min runtime" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">Any min runtime</SelectItem>
+                          {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FilterField>
+
+                    <FilterField label="Maximum runtime">
+                      <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); resetPagination(); }}>
+                        <SelectTrigger className="h-9 w-full text-sm">
+                          <Clock className="mr-1.5 h-3.5 w-3.5" />
+                          <SelectValue placeholder="Max runtime" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">Any max runtime</SelectItem>
+                          {[60, 90, 120, 150, 180, 240].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} min</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FilterField>
+
+                    <FilterField label="Keywords">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={keywords}
+                          onChange={(e) => { setKeywords(e.target.value); resetPagination(); }}
+                          placeholder="Filter by keywords..."
+                          className="h-9 pl-8 text-sm"
+                        />
+                      </div>
+                    </FilterField>
+                  </FilterGrid>
+
+                  {(runtimeMin || runtimeMax) && (
+                    <div className="mt-2 flex items-center gap-1.5 text-[11px] leading-tight text-amber-500/80">
+                      <Info className="h-3 w-3" />
+                      <span>Runtime filter is approximate (TMDB may store multiple cuts of the same film).</span>
+                    </div>
+                  )}
+                </FilterSection>
+              </CollapsibleContent>
             </div>
-
-            {/* Runtime disclaimer — shown only when a runtime filter is active */}
-            {(runtimeMin || runtimeMax) && (
-              <div className="flex items-center gap-1.5 text-[11px] text-amber-500/80 leading-tight">
-                <Info className="w-3 h-3" />
-                <span>Runtime filter is approximate (TMDB may store multiple cuts of the same film).</span>
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
+          </Collapsible>
+        </FilterSection>
+      </FilterPanel>
 
       {/* Result count — clearer wording */}
       <p className="text-sm text-muted-foreground">

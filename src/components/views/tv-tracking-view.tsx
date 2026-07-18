@@ -5,6 +5,7 @@ import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
 import { SafeImage } from "@/components/media/safe-image";
@@ -175,35 +176,35 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 px-1 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Layers className="w-5 h-5 text-primary" />
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight">{world === "arabic" ? "All Arabic TV Shows" : "All TV Shows"}</h2>
-          <span className="text-xs text-muted-foreground ml-1">({total})</span>
-        </div>
-        <Badge variant="secondary" className="text-[10px]">
-          Global counters
-        </Badge>
-      </div>
-      <p className="text-xs text-muted-foreground px-1 -mt-2">
-        Use these filters from inside All. {world === "arabic"
-          ? "Every number is calculated across your complete Arabic TV collection only, never from standard TV Shows, Anime or the visible page."
-          : "Every number is calculated across your complete TV Shows collection, never from Arabic TV, Anime or only the visible page."}
-      </p>
-
-      <div className="flex items-center gap-2 flex-wrap px-1">
-        {filters.map((item) => (
-          <FilterChip
-            key={item.value}
-            active={filter === item.value}
-            onClick={() => { setFilter(item.value); setPage(0); }}
-            label={item.label}
-            icon={item.icon}
-            count={item.count}
-            color={item.color}
-          />
-        ))}
-      </div>
+      <FilterPanel
+        title={(
+          <span className="flex flex-wrap items-center gap-2">
+            <span>{world === "arabic" ? "All Arabic TV Shows" : "All TV Shows"}</span>
+            <span className="text-xs font-normal text-muted-foreground">({total})</span>
+            <Badge variant="secondary" className="h-5 text-[10px]">Global counters</Badge>
+          </span>
+        )}
+        description={world === "arabic"
+          ? "Use these filters from inside All. Every number is calculated across your complete Arabic TV collection only, never from standard TV Shows, Anime or the visible page."
+          : "Use these filters from inside All. Every number is calculated across your complete TV Shows collection, never from Arabic TV, Anime or only the visible page."}
+        activeCount={filter === "all" ? 0 : 1}
+      >
+        <FilterSection title="Tracking status">
+          <div className="flex flex-wrap items-center gap-2">
+            {filters.map((item) => (
+              <FilterChip
+                key={item.value}
+                active={filter === item.value}
+                onClick={() => { setFilter(item.value); setPage(0); }}
+                label={item.label}
+                icon={item.icon}
+                count={item.count}
+                color={item.color}
+              />
+            ))}
+          </div>
+        </FilterSection>
+      </FilterPanel>
 
       {tracking.isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNav } from "@/lib/store";
+import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -11,7 +12,6 @@ import {
   Edit3,
   X,
   Check,
-  Filter,
   Search,
   Film,
   Tv,
@@ -194,39 +194,73 @@ export function DiaryView() {
         <SummaryCard label="أيام نشطة" value={stats.daysWithActivity.toString()} icon={<CalendarIcon size={18} />} color="bg-blue-500" />
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <Search size={16} className="text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ابحث في سجل المشاهدة..."
-            className="flex-1 bg-transparent text-sm focus:outline-none"
-          />
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter size={14} className="text-muted-foreground" />
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="text-xs bg-background border border-border rounded-md px-2 py-1">
-            <option value="all">كل الأنواع</option>
-            <option value="movie">أفلام</option>
-            <option value="tv">مسلسلات</option>
-            <option value="anime">أنمي</option>
-            <option value="arabic_movie">أفلام عربية</option>
-            <option value="arabic_tv">مسلسلات عربية</option>
-          </select>
-          <select value={filterRewatch} onChange={(e) => setFilterRewatch(e.target.value as any)} className="text-xs bg-background border border-border rounded-md px-2 py-1">
-            <option value="all">الكل</option>
-            <option value="rewatch">إعادة مشاهدة فقط</option>
-            <option value="first">مشاهدة أولى فقط</option>
-          </select>
-          <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupKey)} className="text-xs bg-background border border-border rounded-md px-2 py-1">
-            <option value="date">تجميع حسب التاريخ</option>
-            <option value="title">تجميع حسب العنوان</option>
-            <option value="type">تجميع حسب النوع</option>
-          </select>
-        </div>
-      </div>
+      <FilterPanel
+        title="فلاتر سجل المشاهدة"
+        description="ابحث أولاً، ثم حدّد نوع المحتوى ونوع المشاهدة وطريقة التجميع."
+        activeLabel="نشطة"
+        activeCount={
+          Number(searchQuery.trim() !== "") +
+          Number(filterType !== "all") +
+          Number(filterRewatch !== "all") +
+          Number(groupBy !== "date")
+        }
+      >
+        <FilterSection title="البحث">
+          <div className="relative">
+            <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ابحث في سجل المشاهدة..."
+              className="h-9 w-full rounded-md border border-input bg-background/60 px-3 pr-9 text-sm shadow-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            />
+          </div>
+        </FilterSection>
+
+        <FilterSection title="التصفية والتجميع" divided>
+          <FilterGrid className="lg:grid-cols-3">
+            <FilterField label="نوع المحتوى">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background/60 px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <option value="all">كل الأنواع</option>
+                <option value="movie">أفلام</option>
+                <option value="tv">مسلسلات</option>
+                <option value="anime">أنمي</option>
+                <option value="arabic_movie">أفلام عربية</option>
+                <option value="arabic_tv">مسلسلات عربية</option>
+              </select>
+            </FilterField>
+
+            <FilterField label="نوع المشاهدة">
+              <select
+                value={filterRewatch}
+                onChange={(e) => setFilterRewatch(e.target.value as any)}
+                className="h-9 rounded-md border border-input bg-background/60 px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <option value="all">الكل</option>
+                <option value="rewatch">إعادة مشاهدة فقط</option>
+                <option value="first">مشاهدة أولى فقط</option>
+              </select>
+            </FilterField>
+
+            <FilterField label="طريقة التجميع">
+              <select
+                value={groupBy}
+                onChange={(e) => setGroupBy(e.target.value as GroupKey)}
+                className="h-9 rounded-md border border-input bg-background/60 px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <option value="date">تجميع حسب التاريخ</option>
+                <option value="title">تجميع حسب العنوان</option>
+                <option value="type">تجميع حسب النوع</option>
+              </select>
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
+      </FilterPanel>
 
       {grouped.length === 0 ? (
         <div className="bg-card border border-border rounded-xl p-12 text-center">

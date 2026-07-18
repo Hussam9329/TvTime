@@ -9,11 +9,11 @@ import {
 } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import {
-  AlertCircle, ChevronLeft, ChevronRight, Languages, RotateCcw, SlidersHorizontal, X,
+  AlertCircle, ChevronLeft, ChevronRight, Languages, X,
   Star, TrendingUp, Calendar, Clock, Search, Type,
 } from "lucide-react";
 
@@ -146,187 +146,214 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
               TMDB titles whose original language is Arabic. These results stay separate from the standard Movies, TV Shows and Anime worlds.
             </p>
           </div>
-          {activeFilters > 0 && (
-            <Button variant="outline" size="sm" onClick={resetFilters}>
-              <RotateCcw className="mr-1.5 h-4 w-4" /> Reset filters
-            </Button>
-          )}
         </div>
       </div>
 
-      {/* Filters panel — horizontal layout */}
-      <div className="glass space-y-3 rounded-xl p-3 sm:p-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <SlidersHorizontal className="h-4 w-4 text-primary" /> Independent Arabic filters
-            {activeFilters > 0 && <Badge variant="secondary">{activeFilters} active</Badge>}
-          </div>
-        </div>
-
-        {/* Show Me */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Show Me</span>
-          {[
-            { v: "all", l: "Everything" },
-            { v: "unseen", l: `${kind === "movie" ? "Movies" : "Shows"} I Haven't Seen` },
-            { v: "seen", l: `${kind === "movie" ? "Movies" : "Shows"} I Have Seen` },
-          ].map((opt) => (
-            <label key={opt.v} className="flex items-center gap-1.5 cursor-pointer text-sm">
-              <input
-                type="radio"
-                name="showme-ar"
-                checked={showMe === opt.v}
-                onChange={() => { setShowMe(opt.v as any); setPage(1); }}
-                className="accent-primary"
-              />
-              <span>{opt.l}</span>
-            </label>
-          ))}
-        </div>
-
-        {/* Genre chips */}
-        <div className="flex flex-wrap gap-1.5">
-          <Button
-            variant={selectedGenres.length === 0 ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => { setSelectedGenres([]); setPage(1); }}
-          >
-            All genres
-          </Button>
-          {genres?.map((genre) => {
-            const selected = selectedGenres.includes(genre.id);
-            return (
-              <Button
-                key={genre.id}
-                variant={selected ? "default" : "outline"}
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => toggleGenre(genre.id)}
+      {/* Filters panel */}
+      <FilterPanel
+        title="Independent Arabic filters"
+        description="These controls apply only to the Arabic catalogue and stay separate from Movies, TV Shows and Anime."
+        activeCount={activeFilters}
+        onReset={resetFilters}
+        resetLabel="Reset filters"
+      >
+        <FilterSection title="Viewing status">
+          <div className="grid gap-2 sm:grid-cols-3">
+            {[
+              { v: "all", l: "Everything" },
+              { v: "unseen", l: `${kind === "movie" ? "Movies" : "Shows"} I Haven't Seen` },
+              { v: "seen", l: `${kind === "movie" ? "Movies" : "Shows"} I Have Seen` },
+            ].map((opt) => (
+              <label
+                key={opt.v}
+                className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                  showMe === opt.v
+                    ? "border-primary/40 bg-primary/10 text-foreground"
+                    : "border-border/60 bg-background/35 text-muted-foreground hover:text-foreground"
+                }`}
               >
-                {genre.name}
-                {selected && <X className="ml-1 h-3 w-3" />}
-              </Button>
-            );
-          })}
-        </div>
-
-        {/* Row 1: Sort + From year + To year */}
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <Select value={sortBy} onValueChange={(value) => { setSortBy(value); setPage(1); }}>
-            <SelectTrigger className="h-9">
-              <TrendingUp className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Sort" />
-            </SelectTrigger>
-            <SelectContent>
-              {sortOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label.includes("Alphabetical") && <Type className="w-3 h-3 mr-1 inline" />}
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={fromYear || "any"} onValueChange={(v) => { setFromYear(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9">
-              <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="From year" />
-            </SelectTrigger>
-            <SelectContent className="max-h-72">
-              <SelectItem value="any">Any from year</SelectItem>
-              {RELEASE_YEARS.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <Select value={toYear || "any"} onValueChange={(v) => { setToYear(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9">
-              <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="To year" />
-            </SelectTrigger>
-            <SelectContent className="max-h-72">
-              <SelectItem value="any">Any to year</SelectItem>
-              {RELEASE_YEARS.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Row 2: Min score + Max score + Min votes */}
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9">
-              <Star className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Min user score" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any min score</SelectItem>
-              {[5, 6, 7, 8, 9].map((r) => <SelectItem key={r} value={String(r)}>{r}+ / 10</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9">
-              <Star className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Max user score" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any max score</SelectItem>
-              {[5, 6, 7, 8, 9, 10].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} / 10</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder="Min votes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any votes</SelectItem>
-              {[
-                { v: "50", l: "50+ votes" },
-                { v: "100", l: "100+ votes" },
-                { v: "200", l: "200+ votes" },
-                { v: "500", l: "500+ votes" },
-                { v: "1000", l: "1000+ votes" },
-              ].map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Row 3: Min runtime + Max runtime + Keywords */}
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9">
-              <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Min runtime" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any min runtime</SelectItem>
-              {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-9">
-              <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
-              <SelectValue placeholder="Max runtime" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Any max runtime</SelectItem>
-              {[60, 90, 120, 150, 180, 240].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} min</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <Input
-              value={keywords}
-              onChange={(e) => { setKeywords(e.target.value); setPage(1); }}
-              placeholder="Filter by keywords..."
-              className="h-9 pl-8"
-            />
+                <input
+                  type="radio"
+                  name="showme-ar"
+                  checked={showMe === opt.v}
+                  onChange={() => { setShowMe(opt.v as any); setPage(1); }}
+                  className="accent-primary"
+                />
+                <span>{opt.l}</span>
+              </label>
+            ))}
           </div>
-        </div>
-      </div>
+        </FilterSection>
+
+        <FilterSection
+          title="Genres"
+          description="Choose one or more genres. Selecting All genres clears the genre selection."
+          divided
+        >
+          <div className="flex flex-wrap gap-1.5 rounded-xl border border-border/50 bg-muted/15 p-2.5">
+            <Button
+              variant={selectedGenres.length === 0 ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => { setSelectedGenres([]); setPage(1); }}
+            >
+              All genres
+            </Button>
+            {genres?.map((genre) => {
+              const selected = selectedGenres.includes(genre.id);
+              return (
+                <Button
+                  key={genre.id}
+                  variant={selected ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => toggleGenre(genre.id)}
+                >
+                  {genre.name}
+                  {selected && <X className="ml-1 h-3 w-3" />}
+                </Button>
+              );
+            })}
+          </div>
+        </FilterSection>
+
+        <FilterSection title="Sort and release period" divided>
+          <FilterGrid className="lg:grid-cols-3">
+            <FilterField label="Sort by">
+              <Select value={sortBy} onValueChange={(value) => { setSortBy(value); setPage(1); }}>
+                <SelectTrigger className="h-9 w-full">
+                  <TrendingUp className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label.includes("Alphabetical") && <Type className="mr-1 inline h-3 w-3" />}
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FilterField>
+
+            <FilterField label="From year">
+              <Select value={fromYear || "any"} onValueChange={(v) => { setFromYear(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 w-full">
+                  <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="From year" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="any">Any from year</SelectItem>
+                  {RELEASE_YEARS.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FilterField>
+
+            <FilterField label="To year">
+              <Select value={toYear || "any"} onValueChange={(v) => { setToYear(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 w-full">
+                  <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="To year" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="any">Any to year</SelectItem>
+                  {RELEASE_YEARS.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
+
+        <FilterSection title="Ratings and votes" divided>
+          <FilterGrid className="lg:grid-cols-3">
+            <FilterField label="Minimum score">
+              <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 w-full">
+                  <Star className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Min user score" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any min score</SelectItem>
+                  {[5, 6, 7, 8, 9].map((r) => <SelectItem key={r} value={String(r)}>{r}+ / 10</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FilterField>
+
+            <FilterField label="Maximum score">
+              <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 w-full">
+                  <Star className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Max user score" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any max score</SelectItem>
+                  {[5, 6, 7, 8, 9, 10].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} / 10</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FilterField>
+
+            <FilterField label="Minimum votes">
+              <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="Min votes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any votes</SelectItem>
+                  {[
+                    { v: "50", l: "50+ votes" },
+                    { v: "100", l: "100+ votes" },
+                    { v: "200", l: "200+ votes" },
+                    { v: "500", l: "500+ votes" },
+                    { v: "1000", l: "1000+ votes" },
+                  ].map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
+
+        <FilterSection title="Runtime and keywords" divided>
+          <FilterGrid className="lg:grid-cols-3">
+            <FilterField label="Minimum runtime">
+              <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 w-full">
+                  <Clock className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Min runtime" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any min runtime</SelectItem>
+                  {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FilterField>
+
+            <FilterField label="Maximum runtime">
+              <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 w-full">
+                  <Clock className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Max runtime" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any max runtime</SelectItem>
+                  {[60, 90, 120, 150, 180, 240].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} min</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FilterField>
+
+            <FilterField label="Keywords">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={keywords}
+                  onChange={(e) => { setKeywords(e.target.value); setPage(1); }}
+                  placeholder="Filter by keywords..."
+                  className="h-9 pl-8"
+                />
+              </div>
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
+      </FilterPanel>
 
       <p className="text-sm text-muted-foreground">
         {query.isLoading ? "Loading..." : (

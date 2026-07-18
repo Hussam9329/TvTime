@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
@@ -135,65 +136,80 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
         <MiniStat label="Watched" value={watchedCount} />
       </div>
 
-      <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
-        <TabsList className="w-full sm:w-auto h-auto justify-start overflow-x-auto">
-          <TabsTrigger value="watchlist" className="min-w-36 h-10">
-            <WorldIcon className="w-4 h-4 mr-2" />
-            Watchlist
-            <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchlistCount}</span>
-          </TabsTrigger>
-          {world === "anime" && (
-            <TabsTrigger value="not-started" className="min-w-36 h-10">
-              <Clock3 className="w-4 h-4 mr-2" />
-              Not Started
-              <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{notStartedCount}</span>
-            </TabsTrigger>
-          )}
-          {world === "anime" && (
-            <TabsTrigger value="watching" className="min-w-36 h-10">
-              <Play className="w-4 h-4 mr-2" />
-              In Progress
-              <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchingCount}</span>
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="watched" className="min-w-36 h-10">
-            <Check className="w-4 h-4 mr-2" />
-            Watched
-            <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchedCount}</span>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <FilterPanel
+        title="Library filters"
+        description={`Browse your ${config.title.toLowerCase()} by collection status, search term and sort order.`}
+        activeCount={Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "addedAt")}
+      >
+        <FilterSection title="Collection status">
+          <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
+            <TabsList className="h-auto w-full justify-start overflow-x-auto">
+              <TabsTrigger value="watchlist" className="h-10 min-w-36">
+                <WorldIcon className="mr-2 h-4 w-4" />
+                Watchlist
+                <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchlistCount}</span>
+              </TabsTrigger>
+              {world === "anime" && (
+                <TabsTrigger value="not-started" className="h-10 min-w-36">
+                  <Clock3 className="mr-2 h-4 w-4" />
+                  Not Started
+                  <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{notStartedCount}</span>
+                </TabsTrigger>
+              )}
+              {world === "anime" && (
+                <TabsTrigger value="watching" className="h-10 min-w-36">
+                  <Play className="mr-2 h-4 w-4" />
+                  In Progress
+                  <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchingCount}</span>
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="watched" className="h-10 min-w-36">
+                <Check className="mr-2 h-4 w-4" />
+                Watched
+                <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchedCount}</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </FilterSection>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            value={search}
-            onChange={(event) => { setSearch(event.target.value); setPage(0); }}
-            placeholder={config.searchPlaceholder}
-            className="pl-9 h-9"
-          />
-        </div>
-        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
-          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
-          {[
-            { value: "addedAt", label: "Recent" },
-            { value: "userRating", label: "Rating" },
-            { value: "title", label: "A-Z" },
-            { value: "year", label: "Year" },
-          ].map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setSortBy(option.value)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                sortBy === option.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
+        <FilterSection title="Search and sort" divided>
+          <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_auto]">
+            <FilterField label="Search collection">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => { setSearch(event.target.value); setPage(0); }}
+                  placeholder={config.searchPlaceholder}
+                  className="h-9 pl-9"
+                />
+              </div>
+            </FilterField>
+
+            <FilterField label="Sort by">
+              <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-lg border border-border/50 bg-muted/25 p-1 lg:min-w-[310px]">
+                <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                {[
+                  { value: "addedAt", label: "Recent" },
+                  { value: "userRating", label: "Rating" },
+                  { value: "title", label: "A-Z" },
+                  { value: "year", label: "Year" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setSortBy(option.value)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      sortBy === option.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
+      </FilterPanel>
 
       <p className="text-sm text-muted-foreground">
         Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "arabic-movies" ? "Arabic movies" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
