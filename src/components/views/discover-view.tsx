@@ -288,7 +288,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const sortOptions = effectiveIsTV ? SORT_OPTIONS_TV : SORT_OPTIONS_MOVIES;
 
   return (
-    <div className="space-y-5">
+    <div className="tvtime-discover-view space-y-5">
       {/* Header */}
       {!embedded ? (
         <div className="view-page-header flex items-center justify-between gap-3 flex-wrap">

@@ -11,7 +11,7 @@ export function MoviesView() {
   const [tab, setTab] = useState<"library" | "discover" | "releases">("library");
 
   return (
-    <div className="space-y-5">
+    <div className="tvtime-world-view tvtime-movies-view space-y-5">
       {/* Hero banner — matches Arabic Movies page structure */}
       <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
         <div className="flex items-center gap-3">

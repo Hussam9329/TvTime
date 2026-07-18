@@ -54,7 +54,7 @@ export function HomeView() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="tvtime-home-view space-y-6">
       {/* Greeting */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>

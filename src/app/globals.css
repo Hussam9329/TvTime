@@ -525,3 +525,73 @@
     max-width: 100%;
   }
 }
+
+/* TVTIME UIUX 13: responsive grids and page spacing */
+@layer components {
+  .tvtime-app main { min-width: 0; }
+  .tvtime-app .grid, .tvtime-app .grid > * { min-width: 0; }
+  .tvtime-app [class*="grid-cols-"] { align-items: stretch; }
+  .tvtime-app .overflow-x-auto { overscroll-behavior-inline: contain; scrollbar-gutter: stable; }
+}
+@media (max-width: 767px) {
+  .tvtime-app main { overflow-x: clip; }
+  .tvtime-app .view-page-header { gap: 0.75rem; }
+  .tvtime-app .view-page-header > * { min-width: 0; }
+}
+
+/* TVTIME UIUX 14: semantic status chips */
+@layer components {
+  .tvtime-app [data-status], .tvtime-app .status-chip {
+    display: inline-flex; min-height: 1.5rem; align-items: center; gap: 0.3rem;
+    border-radius: 9999px; border-width: 1px; padding-inline: 0.55rem;
+    font-size: 0.75rem; font-weight: 700; line-height: 1.1; white-space: nowrap;
+  }
+  .tvtime-app [data-status="watched"], .tvtime-app [data-status="completed"] { border-color: rgb(16 185 129 / 0.35); background: rgb(16 185 129 / 0.12); color: rgb(5 150 105); }
+  .dark .tvtime-app [data-status="watched"], .dark .tvtime-app [data-status="completed"] { color: rgb(110 231 183); }
+  .tvtime-app [data-status="watching"], .tvtime-app [data-status="airing"], .tvtime-app [data-status="returning"] { border-color: rgb(59 130 246 / 0.35); background: rgb(59 130 246 / 0.12); color: rgb(37 99 235); }
+  .dark .tvtime-app [data-status="watching"], .dark .tvtime-app [data-status="airing"], .dark .tvtime-app [data-status="returning"] { color: rgb(147 197 253); }
+  .tvtime-app [data-status="planned"], .tvtime-app [data-status="upcoming"] { border-color: rgb(245 158 11 / 0.35); background: rgb(245 158 11 / 0.12); color: rgb(217 119 6); }
+  .dark .tvtime-app [data-status="planned"], .dark .tvtime-app [data-status="upcoming"] { color: rgb(252 211 77); }
+  .tvtime-app [data-status="dropped"], .tvtime-app [data-status="ended"] { border-color: rgb(244 63 94 / 0.32); background: rgb(244 63 94 / 0.11); color: rgb(225 29 72); }
+  .dark .tvtime-app [data-status="dropped"], .dark .tvtime-app [data-status="ended"] { color: rgb(253 164 175); }
+}
+
+/* TVTIME UIUX 15–17: home, search and discover layout. */
+@layer components {
+  .tvtime-home-view { display: flex; flex-direction: column; gap: 1.5rem; }
+  .tvtime-home-view > * { min-width: 0; }
+  .tvtime-home-view section, .tvtime-home-view [data-section] { scroll-margin-top: 6rem; }
+  .tvtime-home-view .view-all-link, .tvtime-home-view a[href]:has(svg) { white-space: nowrap; }
+  .tvtime-search-view > .relative:first-of-type { max-width: 56rem; }
+  .tvtime-search-view button.group { min-width: 0; }
+  .tvtime-search-view button.group > div:first-child { box-shadow: 0 10px 30px rgb(0 0 0 / 0.08); }
+  .tvtime-search-view button.group:focus-visible > div:first-child { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.18); }
+  .tvtime-discover-view > .rounded-2xl:first-child, .tvtime-discover-view > .view-page-header:first-child { scroll-margin-top: 6rem; }
+  .tvtime-discover-view > .flex.items-center.gap-2.flex-wrap { padding-block: 0.15rem; }
+  .tvtime-discover-view [data-slot="card"] { min-width: 0; }
+  .tvtime-discover-view > :last-child { scroll-margin-bottom: 2rem; }
+}
+@media (max-width: 767px) {
+  .tvtime-home-view { gap: 1.1rem; }
+  .tvtime-home-view > :first-child { gap: 0.75rem; }
+  .tvtime-discover-view { gap: 1rem; }
+  .tvtime-discover-view > .flex.items-center.gap-2.flex-wrap { gap: 0.45rem; }
+}
+@media (max-width: 639px) {
+  .tvtime-search-view { gap: 1rem; }
+  .tvtime-search-view .view-page-description { max-width: 36rem; }
+}
+
+/* TVTIME UIUX 18–20: individual media-world layout. */
+@layer components {
+  .tvtime-world-view > .rounded-2xl:first-child { box-shadow: 0 18px 45px rgb(0 0 0 / 0.08); }
+  .tvtime-world-view > [data-slot="tabs"] > [data-slot="tabs-list"] { position: sticky; top: 4.75rem; z-index: 20; backdrop-filter: blur(16px); }
+  .tvtime-world-view [data-slot="tabs-content"] { min-width: 0; }
+  .tvtime-tv-view > [data-slot="tabs"] > [data-slot="tabs-list"] { border: 1px solid hsl(var(--border) / 0.7); box-shadow: 0 12px 30px rgb(0 0 0 / 0.06); }
+  .tvtime-tv-view [data-slot="tabs-content"] { scroll-margin-top: 8rem; }
+  .tvtime-anime-view > [data-slot="tabs"] > [data-slot="tabs-list"] { border: 1px solid rgb(217 70 239 / 0.24); background: linear-gradient(135deg, rgb(217 70 239 / 0.09), hsl(var(--muted) / 0.72)); }
+  .tvtime-anime-view [data-slot="tabs-trigger"][data-state="active"] { box-shadow: 0 8px 22px rgb(217 70 239 / 0.14); }
+}
+@media (max-width: 767px) {
+  .tvtime-world-view > [data-slot="tabs"] > [data-slot="tabs-list"] { top: 4.25rem; }
+}

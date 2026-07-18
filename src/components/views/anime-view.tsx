@@ -13,7 +13,7 @@ export function AnimeView() {
   const [tab, setTab] = useState<"library" | "discover" | "releases">("library");
 
   return (
-    <div className="space-y-5">
+    <div className="tvtime-world-view tvtime-anime-view space-y-5">
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-5">
         <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
           <TabsTrigger value="library" className="gap-2 py-2.5">
