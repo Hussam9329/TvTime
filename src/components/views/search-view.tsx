@@ -44,9 +44,9 @@ export function SearchView() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Search</h1>
-        <p className="text-sm text-muted-foreground">Find movies, TV shows, anime, Arabic titles and people from the TMDB database</p>
+      <div className="view-page-header">
+        <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Search</h1>
+        <p className="view-page-description text-sm text-muted-foreground">Find movies, TV shows, anime, Arabic titles and people from the TMDB database</p>
       </div>
 
       <div className="relative">

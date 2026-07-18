@@ -200,7 +200,7 @@ export function Header() {
       <div className="mx-auto flex h-15 max-w-[1600px] items-center gap-2 px-3 sm:h-16 sm:px-4 lg:px-6">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl xl:hidden" aria-label="Open navigation">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl 2xl:hidden" aria-label="Open navigation">
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </SheetTrigger>
@@ -231,7 +231,7 @@ export function Header() {
           type="button"
           onClick={() => goTo("home")}
           onPointerEnter={() => prefetchViewModule("home")}
-          className="group flex shrink-0 items-center gap-2.5 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+          className="group flex shrink-0 items-center gap-2 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
           aria-label="TvTime home"
         >
           <BrandMark />
@@ -241,7 +241,7 @@ export function Header() {
           </span>
         </button>
 
-        <nav className="ml-2 hidden xl:flex items-center gap-0.5" aria-label="Primary navigation">
+        <nav className="ml-1 hidden 2xl:flex items-center gap-0.5" aria-label="Primary navigation">
           {coreNavItems.map((item) => navButton(item))}
 
           <DropdownMenu>
@@ -268,7 +268,7 @@ export function Header() {
           </DropdownMenu>
         </nav>
 
-        <form onSubmit={onSubmitSearch} className="ml-auto hidden min-w-0 max-w-sm flex-1 md:block xl:max-w-[320px] 2xl:max-w-sm">
+        <form onSubmit={onSubmitSearch} className="ml-auto hidden min-w-0 max-w-[280px] flex-1 md:block lg:max-w-[340px] 2xl:max-w-sm">
           <div className="group relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <Input
@@ -290,7 +290,7 @@ export function Header() {
           </div>
         </form>
 
-        <span className="hidden max-w-32 truncate text-xs font-semibold text-muted-foreground sm:block md:hidden">{currentLabel}</span>
+        <span className="hidden max-w-28 truncate text-xs font-semibold text-muted-foreground sm:block md:hidden">{currentLabel}</span>
 
         <Button
           variant="ghost"
@@ -332,7 +332,7 @@ export function Header() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => setHelpOpen(true)} aria-label="Keyboard shortcuts" className="hidden h-10 w-10 rounded-xl lg:inline-flex">
+              <Button variant="ghost" size="icon" onClick={() => setHelpOpen(true)} aria-label="Keyboard shortcuts" className="hidden h-10 w-10 rounded-xl xl:inline-flex">
                 <Keyboard className="h-5 w-5" />
               </Button>
             </TooltipTrigger>

@@ -15,12 +15,12 @@ export function ArabicTvView() {
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/15 via-card to-card p-5 sm:p-7">
-        <div className="max-w-2xl">
+        <div className="view-page-header max-w-2xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
             <Languages className="h-3.5 w-3.5" /> Independent Arabic television world
           </div>
-          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Arabic TV Shows</h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
+          <h1 className="view-page-title text-3xl font-black tracking-tight sm:text-4xl">Arabic TV Shows</h1>
+          <p className="view-page-description mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
             Track Arabic series, discover new productions and browse new releases without mixing them into the standard TV Shows or Anime worlds.
           </p>
         </div>

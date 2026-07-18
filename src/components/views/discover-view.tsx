@@ -291,10 +291,10 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     <div className="space-y-5">
       {/* Header */}
       {!embedded ? (
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="view-page-header flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{headerTitle}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{headerSubtitle}</p>
+            <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">{headerTitle}</h1>
+            <p className="view-page-description text-sm text-muted-foreground mt-1">{headerSubtitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); resetAll(); }}>
@@ -307,7 +307,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
         </div>
       ) : (
         <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="view-page-header flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
               <Compass className="w-5 h-5 text-primary" />
               <div>

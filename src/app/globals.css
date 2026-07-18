@@ -219,3 +219,83 @@
   background-size: 1000px 100%;
   animation: shimmer 2s infinite linear;
 }
+
+
+/* Shared page-heading rhythm for top-level views. */
+.view-page-header {
+  position: relative;
+  padding-block: 0.25rem 0.5rem;
+}
+.view-page-header::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: 0;
+  width: 3rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), transparent);
+  opacity: 0.8;
+}
+.view-page-title {
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.view-page-description {
+  max-width: 62rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+@media (max-width: 640px) {
+  .view-page-header { padding-bottom: 0.625rem; }
+  .view-page-description { line-height: 1.55; }
+}
+
+
+/* Readable typography floor inside the application shell. */
+.tvtime-app {
+  font-size: 1rem;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+.tvtime-app .text-\[8px\],
+.tvtime-app .text-\[9px\],
+.tvtime-app .text-\[10px\],
+.tvtime-app .text-\[11px\] {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+.tvtime-app .text-xs {
+  line-height: 1.1rem;
+}
+.tvtime-app p,
+.tvtime-app [data-slot="card-description"] {
+  text-wrap: pretty;
+}
+.tvtime-app h1,
+.tvtime-app h2,
+.tvtime-app h3 {
+  text-wrap: balance;
+}
+@media (max-width: 640px) {
+  .tvtime-app { -webkit-text-size-adjust: 100%; }
+}
+
+
+/* Shared surface treatment for standard application cards. */
+.ui-surface-card {
+  isolation: isolate;
+  background-image: linear-gradient(180deg, color-mix(in oklab, var(--card) 96%, white 4%), var(--card));
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+.ui-surface-card:focus-within {
+  border-color: color-mix(in oklab, var(--primary) 42%, var(--border));
+  box-shadow: 0 14px 36px rgb(0 0 0 / 0.12), 0 0 0 1px color-mix(in oklab, var(--primary) 18%, transparent);
+}
+.light .ui-surface-card {
+  box-shadow: 0 10px 28px rgb(35 24 56 / 0.07);
+}
+@media (max-width: 640px) {
+  .ui-surface-card { border-radius: 0.875rem; }
+}

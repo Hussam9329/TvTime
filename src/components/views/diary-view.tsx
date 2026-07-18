@@ -178,11 +178,11 @@ export function DiaryView() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+      <div className="view-page-header">
+        <h1 className="view-page-title text-2xl font-bold flex items-center gap-2">
           <CalendarIcon size={24} /> سجل المشاهدة
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="view-page-description text-sm text-muted-foreground mt-1">
           تتبّع كل جلسة مشاهدة — متى شاهدت، ماذا شاهدت، والتقييم وقتها
         </p>
       </div>

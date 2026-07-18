@@ -105,7 +105,7 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="tvtime-app min-h-screen flex flex-col">
       <Header />
       <KeyboardShortcuts />
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">

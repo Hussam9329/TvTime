@@ -84,13 +84,13 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
   return (
     <div className="space-y-5">
       {!embedded && (
-        <div className="flex items-center gap-3">
+        <div className="view-page-header flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
             <Clapperboard className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{world === "arabic" ? "Arabic TV Shows" : "TV Shows"}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">{world === "arabic" ? "Arabic TV Shows" : "TV Shows"}</h1>
+            <p className="view-page-description text-sm text-muted-foreground mt-0.5">
               {world === "arabic"
                 ? "Arabic-language series tracking, fully separated from TV Shows and Anime"
                 : "Your complete non-anime, non-Arabic TV tracking world, with global counts across every show"}

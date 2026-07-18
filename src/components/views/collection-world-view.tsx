@@ -118,13 +118,13 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   return (
     <div className="space-y-5">
       {!embedded && (
-        <div className="flex items-center gap-3">
+        <div className="view-page-header flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
             <WorldIcon className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{config.title}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{config.subtitle}</p>
+            <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">{config.title}</h1>
+            <p className="view-page-description text-sm text-muted-foreground mt-0.5">{config.subtitle}</p>
           </div>
         </div>
       )}

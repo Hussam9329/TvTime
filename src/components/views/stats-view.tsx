@@ -38,13 +38,13 @@ export function StatsView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="view-page-header flex items-center gap-3">
         <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
           <BarChart3 className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Your Statistics</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Welcome back, <span className="text-foreground font-medium">{userName}</span></p>
+          <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">Your Statistics</h1>
+          <p className="view-page-description text-sm text-muted-foreground mt-0.5">Welcome back, <span className="text-foreground font-medium">{userName}</span></p>
         </div>
       </div>
 
