@@ -35,7 +35,7 @@ export function RatingStars({ value, onChange, size = "md", readOnly = false, sh
               key={i}
               type="button"
               disabled={readOnly}
-              className={cn("relative transition-transform", !readOnly && "hover:scale-110 cursor-pointer", readOnly && "cursor-default")}
+              className={cn("relative transition-transform", !readOnly && "hover:scale-105 cursor-pointer", readOnly && "cursor-default")}
               onMouseEnter={() => !readOnly && setHover(starValue)}
               onMouseLeave={() => !readOnly && setHover(null)}
               onClick={() => !readOnly && onChange?.(starValue === value ? 0 : starValue)}

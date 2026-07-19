@@ -134,8 +134,10 @@ export function MediaView() {
                   { v: "title", l: "A-Z" },
                   { v: "year", l: "Year" },
                 ].map((opt) => (
-                  <button
+                  <button type="button"
+                    data-ui-action="choice"
                     key={opt.v}
+                    aria-pressed={sortBy === opt.v}
                     onClick={() => setSortBy(opt.v)}
                     className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                       sortBy === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -153,8 +155,10 @@ export function MediaView() {
                   { v: "", l: "All" },
                   { v: "planned", l: "Planned" },
                 ].map((opt) => (
-                  <button
+                  <button type="button"
+                    data-ui-action="choice"
                     key={opt.v}
+                    aria-pressed={statusFilter === opt.v}
                     onClick={() => { setStatusFilter(opt.v); setPage(0); }}
                     className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                       statusFilter === opt.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -178,19 +182,19 @@ export function MediaView() {
 
       {/* Grid */}
       {media.isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+        <div className="feedback-grid feedback-grid--loading grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4" role="status" aria-busy="true" aria-label="Loading collection">
           {Array.from({ length: 12 }).map((_, i) => (
             <div key={i} className="aspect-[2/3] shimmer rounded-lg" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <Card className="p-12 text-center text-muted-foreground">
+        <Card className="feedback-state feedback-state--empty p-12 text-center text-muted-foreground" role="status">
           <Search className="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No items found</p>
           <p className="text-sm mt-1">Try adjusting your filters or search</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+        <div className="feedback-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {items.map((item, i) => (
             <MediaCard key={item.id} item={item} index={i} />
           ))}
@@ -239,10 +243,10 @@ function MediaCard({ item, index }: { item: MediaItemDB; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
     >
-      <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card group">
+      <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card group">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           {item.poster ? (
-            <SafeImage src={item.poster} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <SafeImage src={item.poster} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-95" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
               <Icon className="w-12 h-12" />

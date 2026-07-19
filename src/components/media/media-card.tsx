@@ -70,13 +70,13 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       tabIndex={0}
       aria-label={`${title}${year ? ` (${year})` : ""}`}
     >
-      <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 bg-card">
+      <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           <SafeImage
             src={imgOrPlaceholder(item.poster_path, "w342")}
             alt={title}
             loading="lazy"
-            className="relative w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="relative w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-95"
           />
           {/* gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-80" />
@@ -143,7 +143,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
 
 export function MediaCardSkeleton() {
   return (
-    <Card className="overflow-hidden p-0 border-border/50 bg-card">
+    <Card className="feedback-skeleton overflow-hidden p-0 border-border/50 bg-card" aria-hidden="true">
       <div className="aspect-[2/3] shimmer" />
     </Card>
   );
@@ -167,7 +167,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+      <div className="feedback-grid feedback-grid--loading grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4" role="status" aria-busy="true" aria-label="Loading media">
         {Array.from({ length: 12 }).map((_, i) => (
           <MediaCardSkeleton key={i} />
         ))}

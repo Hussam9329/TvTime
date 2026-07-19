@@ -13,7 +13,7 @@ export function MoviesView() {
   return (
     <div className="tvtime-world-view tvtime-movies-view space-y-5">
       {/* Hero banner — matches Arabic Movies page structure */}
-      <section className="tvtime-page-hero rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
+      <section data-ui-surface="hero" className="tvtime-page-hero rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
         <div className="view-page-header flex items-start gap-3">
           <Film className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <div className="min-w-0">

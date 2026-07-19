@@ -255,7 +255,7 @@ function FilterChip({ active, onClick, label, icon, count, color }: {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-[color,background-color,border-color,box-shadow] ${
         active
           ? `${color} border-current/30`
           : "bg-muted/40 text-muted-foreground border-transparent hover:bg-muted hover:text-foreground"
@@ -279,10 +279,10 @@ function AllShowCard({ show, onGo, world }: { show: any; onGo: () => void; world
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer" onClick={onGo}>
         <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
-            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
+            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
           )}
@@ -541,10 +541,10 @@ function UpToDateShowCard({ show, onGo }: { show: any; onGo: () => void }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer" onClick={onGo}>
         <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
-            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
+            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
           )}
@@ -592,10 +592,10 @@ function FinishedShowCard({ show, onGo }: { show: any; onGo: () => void }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer" onClick={onGo}>
         <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
-            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
+            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
           )}
@@ -792,8 +792,8 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
 
   if (isLoading) {
     return (
-      <Card className="p-3 h-[200px] flex items-center gap-3">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      <Card className="feedback-state feedback-state--loading feedback-state--compact p-3 h-[200px] flex items-center gap-3" role="status" aria-busy="true">
+        <Loader2 className="feedback-state__spinner w-5 h-5 animate-spin text-muted-foreground" />
         <span className="text-sm text-muted-foreground">Loading {title}...</span>
       </Card>
     );
@@ -804,7 +804,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
   if (allWatched) {
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="overflow-hidden p-0 border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 transition-all group">
+        <Card className="overflow-hidden p-0 border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 transition-[border-color,box-shadow,background-color] duration-200 group">
           <div className="flex">
             <button onClick={onGo} className="relative w-28 h-28 flex-shrink-0 overflow-hidden bg-muted">
               {poster ? <SafeImage src={img(poster, "w185")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>}
@@ -850,11 +850,11 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className={`overflow-hidden p-0 hover:border-primary/50 transition-all group ${featured ? "ring-2 ring-primary/30 shadow-lg shadow-primary/10" : ""}`}>
+        <Card className={`overflow-hidden p-0 hover:border-primary/50 transition-[border-color,box-shadow,background-color] duration-200 group ${featured ? "ring-2 ring-primary/30 shadow-lg shadow-primary/10" : ""}`}>
           <div className="flex">
             <button onClick={onGo} className="relative w-28 h-28 flex-shrink-0 overflow-hidden bg-muted">
               {ep.still_path ? (
-                <SafeImage src={img(ep.still_path, "w300")} alt={ep.name} fill variant="still" className="group-hover:scale-105 transition-transform" />
+                <SafeImage src={img(ep.still_path, "w300")} alt={ep.name} fill variant="still" className="transition-opacity duration-200 group-hover:opacity-95" />
               ) : poster ? (
                 <SafeImage src={img(poster, "w185")} alt={title} fill variant="poster" />
               ) : (
@@ -883,7 +883,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured, onCompletion }
                     <span className="font-bold text-primary">{progress}%</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                    <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-[width] duration-500" style={{ width: `${progress}%` }} />
                   </div>
                   <div className="text-[10px] text-muted-foreground mt-0.5">{remaining} remaining of {totalEpisodes}</div>
                 </div>
@@ -940,10 +940,10 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer" onClick={onGo}>
         <div className="relative w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
           {poster ? (
-            <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" className="group-hover:scale-105 transition-transform" />
+            <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
           )}
@@ -968,7 +968,7 @@ function ShowProgressCard({ showId, title, poster, onGo }: { showId: number; tit
                 <span className="font-bold text-primary">{progressPct}%</span>
               </div>
               <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-[width] duration-500" style={{ width: `${progressPct}%` }} />
               </div>
               <p className="text-[10px] text-muted-foreground mt-0.5">{remaining} remaining</p>
             </div>
@@ -998,7 +998,7 @@ function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: 
   const { nextUpcomingEpisode, isLoading, showDetail } = data;
 
   if (isLoading) {
-    return <Card className="p-3 h-[100px] flex items-center gap-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /><span className="text-xs text-muted-foreground">Loading...</span></Card>;
+    return <Card className="feedback-state feedback-state--loading feedback-state--compact p-3 h-[100px] flex items-center gap-3" role="status" aria-busy="true"><Loader2 className="feedback-state__spinner w-4 h-4 animate-spin text-muted-foreground" /><span className="text-xs text-muted-foreground">Loading...</span></Card>;
   }
 
   const now = new Date();
@@ -1014,7 +1014,7 @@ function UpcomingCard({ showId, title, poster, onGo }: { showId: number; title: 
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer" onClick={onGo}>
         <div className="relative w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
           {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
         </div>
@@ -1068,7 +1068,7 @@ function HaventWatchedCard({ showId, title, poster, onGo, type }: { showId: numb
   const { watchedCount, daysSinceLastWatch, isLoading, totalEpisodes, lastWatchedDate, showDetail } = data;
 
   if (isLoading) {
-    return <Card className="p-3 h-[100px] flex items-center gap-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /><span className="text-xs text-muted-foreground">Loading...</span></Card>;
+    return <Card className="feedback-state feedback-state--loading feedback-state--compact p-3 h-[100px] flex items-center gap-3" role="status" aria-busy="true"><Loader2 className="feedback-state__spinner w-4 h-4 animate-spin text-muted-foreground" /><span className="text-xs text-muted-foreground">Loading...</span></Card>;
   }
 
   // Haven't Started: 0 watched episodes
@@ -1084,7 +1084,7 @@ function HaventWatchedCard({ showId, title, poster, onGo, type }: { showId: numb
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer" onClick={onGo}>
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer" onClick={onGo}>
         <div className="relative w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
           {poster ? <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" /> : <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
         </div>

@@ -155,7 +155,7 @@ export function StatsView() {
       {counts.watchedMovies === 0 && counts.watchedEpisodes === 0 && counts.watchlist === 0 && counts.following === 0 && (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground mb-4">You haven't tracked anything yet. Start exploring!</p>
-          <button onClick={() => setView("discover")} className="text-primary font-semibold underline">Go to Discover →</button>
+          <button type="button" data-ui-action="link" onClick={() => setView("discover")} className="text-primary font-semibold underline">Go to Discover →</button>
         </Card>
       )}
     </div>
@@ -230,8 +230,10 @@ function TopShowRow({ showId, count, rank, max, onGo }: { showId: number; count:
   const poster = detail.data?.poster_path;
 
   return (
-    <button
+    <button type="button"
+      data-ui-action="surface"
       onClick={() => onGo(showId)}
+      aria-label={`Open ${title}`}
       className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left group"
     >
       <span className="w-7 h-7 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">{rank}</span>
@@ -248,7 +250,7 @@ function TopShowRow({ showId, count, rank, max, onGo }: { showId: number; count:
           <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">{count} ep</span>
         </div>
         <div className="h-2 rounded-full bg-muted overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all" style={{ width: `${(count / max) * 100}%` }} />
+          <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-[width] duration-300" style={{ width: `${(count / max) * 100}%` }} />
         </div>
       </div>
     </button>

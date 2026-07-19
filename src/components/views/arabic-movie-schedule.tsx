@@ -41,8 +41,8 @@ export function ArabicMovieReleaseSchedule() {
   }, [items]);
 
   return (
-    <div className="tvtime-release-schedule tvtime-release-schedule--rtl space-y-5">
-      <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card to-card p-4 sm:p-5">
+    <div className="tvtime-release-schedule tvtime-release-schedule--rtl space-y-5" dir="rtl" lang="ar">
+      <div data-ui-surface="panel" className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card to-card p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-xl font-extrabold">
@@ -76,14 +76,14 @@ export function ArabicMovieReleaseSchedule() {
       {schedule.isLoading ? (
         <MediaGrid items={[]} loading forcedMediaType="movie" />
       ) : schedule.isError ? (
-        <Card className="p-12 text-center">
+        <Card className="feedback-state feedback-state--error p-12 text-center" role="alert">
           <AlertCircle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
           <p className="font-semibold">Could not load the Arabic movie schedule</p>
           <p className="mt-1 text-sm text-muted-foreground">Your library is unaffected. TMDB may be temporarily unavailable.</p>
           <Button variant="outline" className="mt-4" onClick={() => schedule.refetch()}>Retry</Button>
         </Card>
       ) : groups.length === 0 ? (
-        <Card className="p-12 text-center text-muted-foreground">
+        <Card className="feedback-state feedback-state--empty p-12 text-center text-muted-foreground" role="status">
           <Film className="mx-auto mb-3 h-10 w-10 opacity-40" />
           <p className="font-medium">No Arabic movie releases match this window</p>
           {search && <Button variant="outline" size="sm" className="mt-4" onClick={() => setSearch("")}>Clear search</Button>}

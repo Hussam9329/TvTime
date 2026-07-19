@@ -631,7 +631,7 @@
 .tvtime-profile-dialog [data-slot="dialog-footer"] { padding-top: .75rem; border-top: 1px solid hsl(var(--border) / .65); }
 .tvtime-profile-dialog form, .tvtime-profile-dialog section, .tvtime-release-schedule > section, .tvtime-release-schedule > div { min-width: 0; }
 .tvtime-release-schedule [data-slot="card"] { overflow: hidden; }
-.tvtime-release-schedule--rtl, .tvtime-release-schedule--rtl input, .tvtime-release-schedule--rtl button { direction: rtl; }
+.tvtime-release-schedule--rtl { direction: rtl; }
 @media (max-width: 640px) { .tvtime-stats-page, .tvtime-person-detail-page, .tvtime-release-schedule { gap: 1rem; } .tvtime-profile-dialog button { min-height: 2.75rem; } }
 
 
@@ -871,4 +871,215 @@
     min-width: max-content;
     padding-inline: 0.875rem;
   }
+}
+
+
+/* UIUX QA 09: normalize legacy raw action buttons without changing their handlers. */
+@layer components {
+  [data-ui-action] {
+    font: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 160ms;
+    transition-timing-function: ease-out;
+  }
+  [data-ui-action]:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--ring) 72%, transparent);
+    outline-offset: 2px;
+  }
+  [data-ui-action]:disabled {
+    cursor: not-allowed;
+    opacity: .5;
+  }
+  [data-ui-action="icon"],
+  [data-ui-action$="-icon"] {
+    min-width: 2rem;
+    min-height: 2rem;
+    border-radius: .625rem;
+  }
+  [data-ui-action="secondary"],
+  [data-ui-action="choice"] {
+    border-color: color-mix(in oklab, var(--border) 82%, transparent);
+  }
+  [data-ui-action="secondary"]:hover,
+  [data-ui-action="choice"]:hover {
+    border-color: color-mix(in oklab, var(--primary) 30%, var(--border));
+    box-shadow: 0 5px 14px rgb(0 0 0 / .08);
+  }
+  [data-ui-action="primary"] {
+    box-shadow: 0 8px 18px color-mix(in oklab, var(--primary) 18%, transparent);
+  }
+  [data-ui-action="danger"],
+  [data-ui-action="danger-icon"],
+  [data-ui-action="danger-link"] {
+    color: color-mix(in oklab, var(--destructive) 88%, white 12%);
+  }
+  [data-ui-action="danger-icon"]:hover,
+  [data-ui-action="danger"]:hover {
+    background: color-mix(in oklab, var(--destructive) 14%, transparent);
+    border-color: color-mix(in oklab, var(--destructive) 34%, transparent);
+  }
+  [data-ui-action="link"],
+  [data-ui-action="danger-link"] {
+    text-underline-offset: .2em;
+  }
+  [data-ui-action="link"]:hover,
+  [data-ui-action="danger-link"]:hover {
+    text-decoration: underline;
+  }
+  [data-ui-action="surface"]:focus-visible {
+    border-radius: .75rem;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 22%, transparent);
+  }
+}
+@media (max-width: 640px) {
+  [data-ui-action="icon"], [data-ui-action$="-icon"] { min-width: 2.5rem; min-height: 2.5rem; }
+}
+
+
+/* UIUX QA 10: one surface language for custom containers outside the Card primitive. */
+@layer components {
+  [data-ui-surface] {
+    min-width: 0;
+    border-radius: 1rem;
+    border-color: color-mix(in oklab, var(--border) 76%, transparent);
+    box-shadow: 0 12px 32px rgb(0 0 0 / .075), inset 0 1px 0 rgb(255 255 255 / .025);
+  }
+  [data-ui-surface="hero"] {
+    isolation: isolate;
+    box-shadow: 0 20px 52px -34px rgb(0 0 0 / .48), inset 0 1px 0 rgb(255 255 255 / .035);
+  }
+  [data-ui-surface="panel"] {
+    background-color: color-mix(in oklab, var(--card) 88%, transparent);
+    backdrop-filter: blur(10px);
+  }
+  [data-ui-surface="card"] {
+    background: linear-gradient(180deg, color-mix(in oklab, var(--card) 97%, white 3%), var(--card));
+  }
+  [data-ui-surface="dialog"] {
+    border: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
+    box-shadow: 0 28px 80px rgb(0 0 0 / .34), inset 0 1px 0 rgb(255 255 255 / .035);
+    backdrop-filter: blur(18px);
+  }
+  [data-ui-surface]:focus-within {
+    border-color: color-mix(in oklab, var(--primary) 25%, var(--border));
+  }
+}
+@media (max-width: 640px) {
+  [data-ui-surface] { border-radius: .875rem; }
+  [data-ui-surface="dialog"] { max-width: calc(100vw - 1.25rem); }
+}
+
+
+/* UIUX QA 11: reserve motion for feedback, not decoration. */
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-app :is([data-slot="card"], [data-ui-surface="card"]):is([role="button"], .cursor-pointer):hover {
+    box-shadow: 0 14px 34px rgb(0 0 0 / .12);
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .tvtime-app :is([class*="hover:-translate"], [class*="hover:scale"], [class*="group-hover:scale"]) {
+    transform: none !important;
+  }
+}
+
+
+/* UIUX QA 12: complete the shared loading, empty, and error language. */
+.feedback-grid { min-width: 0; }
+.feedback-grid--loading { position: relative; }
+.feedback-skeleton {
+  pointer-events: none;
+  box-shadow: none !important;
+}
+.feedback-state--compact {
+  min-height: 6.25rem;
+  border-style: solid;
+}
+.feedback-state__spinner {
+  flex: 0 0 auto;
+  color: color-mix(in oklab, var(--primary) 72%, var(--muted-foreground));
+}
+.feedback-state[role="alert"] { color: var(--foreground); }
+.feedback-state[aria-busy="true"] { cursor: progress; }
+@media (max-width: 640px) {
+  .feedback-state--compact { min-height: 5.5rem; }
+}
+
+
+/* UIUX QA 13: complete logical RTL behavior for Arabic worlds and schedules. */
+.tvtime-arabic-movies-page,
+.tvtime-arabic-tv-page,
+.tvtime-release-schedule--rtl {
+  text-align: start;
+}
+.tvtime-release-schedule--rtl .left-3 {
+  left: auto;
+  right: .75rem;
+}
+.tvtime-release-schedule--rtl input.pl-9 {
+  padding-left: .75rem;
+  padding-right: 2.25rem;
+  text-align: right;
+}
+.tvtime-release-schedule--rtl .mr-1 {
+  margin-right: 0;
+  margin-left: .25rem;
+}
+.tvtime-release-schedule--rtl .ml-1 {
+  margin-left: 0;
+  margin-right: .25rem;
+}
+.tvtime-release-schedule--rtl :is(.justify-between, .sm\:justify-between) {
+  min-width: 0;
+}
+:is(.tvtime-arabic-movies-page, .tvtime-arabic-tv-page, .tvtime-release-schedule--rtl) :is(.tabular-nums, time, [dir="ltr"]) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+:is(.tvtime-arabic-movies-page, .tvtime-arabic-tv-page) [data-slot="tabs-list"] {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+@media (max-width: 640px) {
+  .tvtime-release-schedule--rtl [data-ui-surface="panel"] > div:first-child > div:last-child {
+    flex-wrap: wrap;
+  }
+  .tvtime-release-schedule--rtl [data-ui-surface="panel"] [data-slot="button"] {
+    flex: 1 1 auto;
+  }
+}
+
+
+/* UIUX QA 14: final visual guardrails and selector cleanup. */
+.tvtime-app :is(main, section, [data-slot="card"], [data-ui-surface], .feedback-state) {
+  max-width: 100%;
+}
+.tvtime-app :is([data-slot="card"], [data-ui-surface]) :is(h1, h2, h3, p, span) {
+  min-width: 0;
+}
+.tvtime-app [data-status] {
+  max-width: 100%;
+  white-space: nowrap;
+}
+.group:focus-within [data-ui-action][class*="opacity-0"] {
+  opacity: 1;
+}
+.tvtime-release-schedule section > .sticky {
+  top: 4.75rem;
+  scroll-margin-top: 7rem;
+}
+body:has(.tvtime-app-header[data-mobile-search-open="true"]) .tvtime-release-schedule section > .sticky {
+  top: calc(8rem + env(safe-area-inset-top, 0px));
+}
+@media (max-width: 640px) {
+  .tvtime-app-header [data-ui-action="icon"] {
+    min-width: 2rem;
+    min-height: 2rem;
+  }
+  [data-ui-action="primary"], [data-ui-action="secondary"] {
+    min-height: 2.5rem;
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  [data-ui-action][class*="opacity-0"] { opacity: 1; }
 }

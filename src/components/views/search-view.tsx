@@ -218,7 +218,7 @@ function PersonCard({ person, index, onGo }: { person: any; index: number; onGo:
           <img
             src={img(person.profile_path, "w342")}
             alt={name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-95"
             loading="lazy"
           />
         ) : (

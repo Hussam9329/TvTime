@@ -14,7 +14,7 @@ export function TVShowsPageView() {
 
   return (
     <div className="tvtime-world-view tvtime-tv-view space-y-5">
-      <section className="tvtime-page-hero rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-card to-card p-4 sm:p-5">
+      <section data-ui-surface="hero" className="tvtime-page-hero rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-card to-card p-4 sm:p-5">
         <div className="view-page-header flex items-start gap-3">
           <Tv className="mt-0.5 h-5 w-5 shrink-0 text-sky-400" />
           <div className="min-w-0">

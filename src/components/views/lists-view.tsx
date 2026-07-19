@@ -201,6 +201,8 @@ export function ListsView() {
           </p>
         </div>
         <button
+          type="button"
+          data-ui-action="primary"
           onClick={() => setShowCreate(true)}
           className="bg-primary text-primary-foreground px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 hover:bg-primary/90"
         >
@@ -209,7 +211,7 @@ export function ListsView() {
       </div>
 
       {lists.length === 0 ? (
-        <div className="bg-card border border-border rounded-xl p-12 text-center">
+        <div className="feedback-state feedback-state--empty flex flex-col items-center justify-center p-12 text-center" role="status">
           <ListIcon className="text-muted-foreground/40 mx-auto mb-3" size={48} />
           <h3 className="text-base font-medium text-muted-foreground">لا توجد قوائم بعد</h3>
           <p className="text-xs text-muted-foreground/70 mt-1">أنشئ قائمتك الأولى لتنظيم أعمالك</p>
@@ -254,8 +256,8 @@ function ListCard({ list, onClick, onEdit, onDelete, onShare }: { list: CustomLi
   const previewItems = list.items.slice(0, 4);
   const remaining = list.items.length - previewItems.length;
   return (
-    <div className="card-hover bg-card border border-border rounded-xl overflow-hidden group">
-      <button onClick={onClick} className="block w-full text-right">
+    <div data-ui-surface="card" className="card-hover bg-card border border-border rounded-xl overflow-hidden group">
+      <button type="button" data-ui-action="surface" onClick={onClick} className="block w-full text-right" aria-label={`فتح قائمة ${list.name}`}>
         <div className="h-1.5" style={{ background: list.color }} />
         <div className="p-4">
           <div className="flex items-start justify-between gap-2">
@@ -283,13 +285,13 @@ function ListCard({ list, onClick, onEdit, onDelete, onShare }: { list: CustomLi
         </div>
       </button>
       <div className="px-4 pb-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={onEdit} className="text-xs px-2 py-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1">
+        <button type="button" data-ui-action="secondary" onClick={onEdit} className="text-xs px-2 py-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1">
           <Edit3 size={11} /> تعديل
         </button>
-        <button onClick={onShare} className="text-xs px-2 py-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1">
+        <button type="button" data-ui-action="secondary" onClick={onShare} className="text-xs px-2 py-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1">
           <Share2 size={11} /> مشاركة
         </button>
-        <button onClick={onDelete} className="text-xs px-2 py-1 rounded-md text-rose-500 hover:bg-rose-500/15 flex items-center gap-1 mr-auto">
+        <button type="button" data-ui-action="danger" onClick={onDelete} className="text-xs px-2 py-1 rounded-md text-rose-500 hover:bg-rose-500/15 flex items-center gap-1 mr-auto">
           <Trash2 size={11} /> حذف
         </button>
       </div>
@@ -325,7 +327,7 @@ function ListView(props: {
     <div className="space-y-4 p-4 md:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <button onClick={onBack} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-2">
+          <button type="button" data-ui-action="link" onClick={onBack} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-2">
             <ChevronRight size={12} /> العودة للقوائم
           </button>
           {editingList === list.id ? (
@@ -357,25 +359,25 @@ function ListView(props: {
         </div>
         {editingList !== list.id && (
           <div className="flex items-center gap-1">
-            <button onClick={onEdit} className="w-9 h-9 rounded-md border border-border hover:bg-accent flex items-center justify-center" title="تعديل">
+            <button type="button" data-ui-action="icon" onClick={onEdit} className="w-9 h-9 rounded-md border border-border hover:bg-accent flex items-center justify-center" title="تعديل" aria-label="تعديل القائمة">
               <Edit3 size={15} />
             </button>
-            <button onClick={onShare} className="w-9 h-9 rounded-md border border-border hover:bg-accent flex items-center justify-center" title="مشاركة">
+            <button type="button" data-ui-action="icon" onClick={onShare} className="w-9 h-9 rounded-md border border-border hover:bg-accent flex items-center justify-center" title="مشاركة" aria-label="مشاركة القائمة">
               <Share2 size={15} />
             </button>
-            <button onClick={onDelete} className="w-9 h-9 rounded-md border border-rose-500/30 text-rose-500 hover:bg-rose-500/15 flex items-center justify-center" title="حذف">
+            <button type="button" data-ui-action="danger-icon" onClick={onDelete} className="w-9 h-9 rounded-md border border-rose-500/30 text-rose-500 hover:bg-rose-500/15 flex items-center justify-center" title="حذف" aria-label="حذف القائمة">
               <Trash2 size={15} />
             </button>
           </div>
         )}
       </div>
 
-      <button onClick={onAddItem} className="w-full py-2.5 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2">
+      <button type="button" data-ui-action="secondary" onClick={onAddItem} className="w-full py-2.5 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2">
         <ListPlus size={16} /> أضف عنصرًا للقائمة
       </button>
 
       {list.items.length === 0 ? (
-        <div className="bg-card border border-border rounded-xl p-12 text-center">
+        <div className="feedback-state feedback-state--empty flex flex-col items-center justify-center p-12 text-center" role="status">
           <ListPlus className="text-muted-foreground/40 mx-auto mb-3" size={48} />
           <h3 className="text-base font-medium text-muted-foreground">القائمة فارغة</h3>
           <p className="text-xs text-muted-foreground/70 mt-1">أضف أفلامًا أو مسلسلات لتنظيمها هنا</p>
@@ -389,7 +391,7 @@ function ListView(props: {
                 <h4 className="text-sm font-medium truncate">{item.title}</h4>
                 <span className="text-[10px] text-muted-foreground">{TYPE_LABELS[item.mediaType] || item.mediaType}</span>
               </div>
-              <button onClick={() => onRemoveItem(item.tmdbId, item.mediaType)} className="w-7 h-7 rounded-md text-rose-500 hover:bg-rose-500/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="إزالة">
+              <button type="button" data-ui-action="danger-icon" onClick={() => onRemoveItem(item.tmdbId, item.mediaType)} className="w-7 h-7 rounded-md text-rose-500 hover:bg-rose-500/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="إزالة" aria-label={`إزالة ${item.title} من القائمة`}>
                 <X size={14} />
               </button>
             </div>
@@ -437,17 +439,17 @@ function ListFormDialog(props: {
         <label className="text-xs font-medium text-muted-foreground block mb-1.5">اللون</label>
         <div className="flex items-center gap-2 flex-wrap">
           {PRESET_COLORS.map((c) => (
-            <button key={c} onClick={() => setColor(c)} className={`w-8 h-8 rounded-full transition-transform ${color === c ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-110" : ""}`} style={{ background: c }} />
+            <button type="button" onClick={() => setColor(c)} aria-label={`اختيار اللون ${c}`} aria-pressed={color === c} className={`w-8 h-8 rounded-full transition-transform ${color === c ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-105" : ""}`} style={{ background: c }} />
           ))}
         </div>
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground block mb-1.5">الخصوصية</label>
         <div className="flex items-center gap-2">
-          <button onClick={() => setIsPublic(false)} className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border flex items-center justify-center gap-1.5 ${!isPublic ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent"}`}>
+          <button type="button" data-ui-action="choice" aria-pressed={!isPublic} onClick={() => setIsPublic(false)} className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border flex items-center justify-center gap-1.5 ${!isPublic ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent"}`}>
             <Lock size={14} /> خاصة
           </button>
-          <button onClick={() => setIsPublic(true)} className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border flex items-center justify-center gap-1.5 ${isPublic ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-border hover:bg-accent"}`}>
+          <button type="button" data-ui-action="choice" aria-pressed={isPublic} onClick={() => setIsPublic(true)} className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border flex items-center justify-center gap-1.5 ${isPublic ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-border hover:bg-accent"}`}>
             <Globe size={14} /> عامة
           </button>
         </div>
@@ -456,10 +458,10 @@ function ListFormDialog(props: {
         </p>
       </div>
       <div className="flex items-center gap-2 pt-2">
-        <button onClick={onSave} disabled={!name.trim()} className="flex-1 bg-primary text-primary-foreground py-2 rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-1.5">
+        <button type="button" data-ui-action="primary" onClick={onSave} disabled={!name.trim()} className="flex-1 bg-primary text-primary-foreground py-2 rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-1.5">
           <Check size={15} /> حفظ
         </button>
-        <button onClick={onCancel} className="px-4 py-2 border border-border rounded-md text-sm hover:bg-accent">إلغاء</button>
+        <button type="button" data-ui-action="secondary" onClick={onCancel} className="px-4 py-2 border border-border rounded-md text-sm hover:bg-accent">إلغاء</button>
       </div>
     </div>
   );
@@ -469,10 +471,10 @@ function ListFormDialog(props: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onCancel}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-card rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
+      <div data-ui-surface="dialog" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-card rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg">{title}</h2>
-          <button onClick={onCancel} className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center"><X size={16} /></button>
+          <button type="button" data-ui-action="icon" onClick={onCancel} aria-label="إغلاق نافذة القائمة" className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center"><X size={16} /></button>
         </div>
         {content}
       </div>
@@ -508,10 +510,10 @@ function AddItemDialog({ existingItems, onAdd, onClose }: { existingItems: Custo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-2xl bg-card rounded-2xl p-5 max-h-[85vh] overflow-y-auto">
+      <div data-ui-surface="dialog" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-2xl bg-card rounded-2xl p-5 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg">أضف للقائمة</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center"><X size={16} /></button>
+          <button type="button" data-ui-action="icon" onClick={onClose} aria-label="إغلاق النافذة" className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center"><X size={16} /></button>
         </div>
         <div className="space-y-3">
           <div className="relative">
@@ -524,7 +526,7 @@ function AddItemDialog({ existingItems, onAdd, onClose }: { existingItems: Custo
               { v: "movie", l: "أفلام" },
               { v: "tv", l: "مسلسلات" },
             ].map((t) => (
-              <button key={t.v} onClick={() => setFilterType(t.v)} className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${filterType === t.v ? "bg-primary text-primary-foreground" : "bg-accent"}`}>
+              <button type="button" data-ui-action="choice" key={t.v} aria-pressed={filterType === t.v} onClick={() => setFilterType(t.v)} className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${filterType === t.v ? "bg-primary text-primary-foreground" : "bg-accent"}`}>
                 {t.l}
               </button>
             ))}
@@ -544,6 +546,8 @@ function AddItemDialog({ existingItems, onAdd, onClose }: { existingItems: Custo
                     <div className="text-[10px] text-muted-foreground">{TYPE_LABELS[m.mediaType] || m.mediaType}</div>
                   </div>
                   <button
+                    type="button"
+                    data-ui-action="secondary"
                     onClick={() => onAdd({ tmdbId: m.id, mediaType: m.mediaType, title: m.title || m.name, posterPath: m.posterPath })}
                     disabled={isAdded}
                     className={`px-2.5 py-1 rounded-md text-xs font-medium ${isAdded ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
@@ -575,10 +579,10 @@ function ShareDialog({ list, onClose }: { list: CustomList; onClose: () => void 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-card rounded-2xl p-5">
+      <div data-ui-surface="dialog" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-card rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg flex items-center gap-2"><Share2 size={18} /> مشاركة القائمة</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center"><X size={16} /></button>
+          <button type="button" data-ui-action="icon" onClick={onClose} aria-label="إغلاق النافذة" className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center"><X size={16} /></button>
         </div>
         <div className="text-center py-4">
           <div className="w-16 h-16 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: list.color }}>
@@ -591,7 +595,7 @@ function ShareDialog({ list, onClose }: { list: CustomList; onClose: () => void 
           <>
             <div className="bg-background border border-border rounded-md p-3 flex items-center gap-2">
               <span className="text-xs text-muted-foreground truncate flex-1" dir="ltr">{shareUrl}</span>
-              <button onClick={handleCopy} className={`px-3 py-1.5 rounded-md text-xs font-medium shrink-0 ${copied ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}>
+              <button type="button" data-ui-action="primary" onClick={handleCopy} className={`px-3 py-1.5 rounded-md text-xs font-medium shrink-0 ${copied ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}>
                 {copied ? "✓ تم النسخ" : "نسخ"}
               </button>
             </div>

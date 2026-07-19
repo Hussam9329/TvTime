@@ -174,6 +174,7 @@ export function Header() {
     const active = item.view === view;
     return (
       <button
+        data-ui-action="nav"
         key={item.view}
         type="button"
         onClick={() => goTo(item.view)}
@@ -188,7 +189,7 @@ export function Header() {
             : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
         )}
       >
-        <item.icon className={cn("shrink-0 transition-transform group-hover:scale-105", compact ? "h-4.5 w-4.5" : "h-4 w-4")} />
+        <item.icon className={cn("shrink-0 transition-colors", compact ? "h-4.5 w-4.5" : "h-4 w-4")} />
         <span>{item.label}</span>
         {!compact && active && <span className="absolute -bottom-[9px] left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-primary" />}
       </button>
@@ -228,6 +229,7 @@ export function Header() {
         )}
 
         <button
+          data-ui-action="brand"
           type="button"
           onClick={() => goTo("home")}
           onPointerEnter={() => prefetchViewModule("home")}
@@ -246,6 +248,7 @@ export function Header() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                data-ui-action="nav"
                 type="button"
                 onPointerEnter={() => arabicNavItems.forEach((item) => prefetchViewModule(item.view))}
                 className={cn(
@@ -277,10 +280,10 @@ export function Header() {
               onFocus={() => prefetchViewModule("search")}
               placeholder="Search titles, people..."
               aria-label="Search movies, shows, anime and people"
-              className="h-10 rounded-xl border-border/60 bg-muted/45 pl-9 pr-10 shadow-inner shadow-black/5 transition-all focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/35"
+              className="h-10 rounded-xl border-border/60 bg-muted/45 pl-9 pr-10 shadow-inner shadow-black/5 transition-[background-color,border-color,box-shadow] duration-200 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/35"
             />
             {searchVal ? (
-              <button type="button" onClick={() => setSearchVal("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Clear search">
+              <button data-ui-action="icon" type="button" onClick={() => setSearchVal("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Clear search">
                 <X className="h-3.5 w-3.5" />
               </button>
             ) : (
@@ -339,7 +342,7 @@ export function Header() {
           </Tooltip>
         </TooltipProvider>
 
-        <button type="button" onClick={() => setProfileOpen(true)} className="flex shrink-0 items-center gap-2 rounded-xl p-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70" aria-label="Open profile">
+        <button data-ui-action="profile" type="button" onClick={() => setProfileOpen(true)} className="flex shrink-0 items-center gap-2 rounded-xl p-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70" aria-label="Open profile">
           <Avatar className="h-9 w-9 border border-primary/40 shadow-sm shadow-primary/15">
             <AvatarFallback className="bg-gradient-to-br from-primary/25 to-fuchsia-500/15 text-xs font-black text-primary">
               {userName.slice(0, 2).toUpperCase()}
@@ -365,7 +368,7 @@ export function Header() {
               className="h-11 rounded-xl bg-muted/50 pl-9 pr-10"
               autoFocus
             />
-            <button type="button" onClick={() => { setSearchVal(""); setMobileSearchOpen(false); }} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent" aria-label="Close search">
+            <button data-ui-action="icon" type="button" onClick={() => { setSearchVal(""); setMobileSearchOpen(false); }} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent" aria-label="Close search">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -386,7 +389,7 @@ export function Header() {
 
 function BrandMark() {
   return (
-    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary via-rose-500 to-fuchsia-600 text-white shadow-lg shadow-primary/20 transition-transform duration-200 group-hover:scale-[1.03]">
+    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary via-rose-500 to-fuchsia-600 text-white shadow-lg shadow-primary/20 transition-[box-shadow,filter] duration-200 group-hover:brightness-105">
       <Play className="h-4 w-4 translate-x-px fill-current" />
       <span className="absolute inset-x-1.5 top-1 h-px bg-white/45" />
     </span>

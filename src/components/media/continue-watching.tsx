@@ -147,8 +147,8 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
   if (isLoading) {
     return (
       <div className={featured ? "flex-shrink-0 w-[340px] sm:w-[400px]" : "flex-shrink-0 w-[280px] sm:w-[320px]"}>
-        <Card className="p-3 h-[140px] flex items-center gap-3">
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        <Card className="feedback-state feedback-state--loading feedback-state--compact p-3 h-[140px] flex items-center gap-3" role="status" aria-busy="true">
+          <Loader2 className="feedback-state__spinner w-5 h-5 animate-spin text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Loading episodes...</span>
         </Card>
       </div>
@@ -163,7 +163,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
         animate={{ opacity: 1, x: 0 }}
         className={featured ? "flex-shrink-0 w-[340px] sm:w-[400px]" : "flex-shrink-0 w-[280px] sm:w-[320px]"}
       >
-        <Card className="overflow-hidden p-0 border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 transition-all group">
+        <Card className="overflow-hidden p-0 border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 transition-[border-color,box-shadow,background-color] duration-200 group">
           <div className="flex">
             <button onClick={onGo} className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-muted">
               {poster ? (
@@ -224,12 +224,12 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
       animate={{ opacity: 1, x: 0 }}
       className={featured ? "flex-shrink-0 w-[340px] sm:w-[400px]" : "flex-shrink-0 w-[280px] sm:w-[320px]"}
     >
-      <Card className={`overflow-hidden p-0 hover:border-primary/50 transition-all group ${featured ? "ring-2 ring-primary/30 shadow-lg shadow-primary/10" : ""}`}>
+      <Card className={`overflow-hidden p-0 hover:border-primary/50 transition-[border-color,box-shadow,background-color] duration-200 group ${featured ? "ring-2 ring-primary/30 shadow-lg shadow-primary/10" : ""}`}>
         {/* Top: episode still + info */}
         <div className="flex">
           <button onClick={onGo} className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-muted">
             {ep.still_path ? (
-              <SafeImage src={img(ep.still_path, "w300")} alt={ep.name} fill variant="still" className="group-hover:scale-105 transition-transform" />
+              <SafeImage src={img(ep.still_path, "w300")} alt={ep.name} fill variant="still" className="transition-opacity duration-200 group-hover:opacity-95" />
             ) : poster ? (
               <SafeImage src={img(poster, "w185")} alt={title} fill variant="poster" />
             ) : (
@@ -275,7 +275,7 @@ function NextEpisodeCard({ showId, title, poster, onGo, featured }: {
                 <span className="font-bold text-primary">{progress}%</span>
               </div>
               <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-[width] duration-500" style={{ width: `${progress}%` }} />
               </div>
               <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5">
                 <span>{remaining} remaining of {totalEpisodes}</span>

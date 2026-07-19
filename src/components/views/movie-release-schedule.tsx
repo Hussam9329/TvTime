@@ -57,6 +57,7 @@ export function ReleaseSchedule({
   const [search, setSearch] = useState("");
   const range = useMemo(() => rangeFromOffset(offset), [offset]);
   const isTV = mediaType === "tv";
+  const isRTL = language === "ar";
   const mediaLabel = isTV ? "TV show" : "movie";
   const resolvedTitle = title || (isTV ? "TV Release Schedule" : "Movie Release Schedule");
   const resolvedSubtitle = subtitle || `A six-month release agenda for upcoming ${isTV ? "shows" : "films"}. Dates are handled as date-only values and never shift with timezone conversion.`;
@@ -83,8 +84,12 @@ export function ReleaseSchedule({
   }, [items, isTV]);
 
   return (
-    <div className="tvtime-release-schedule space-y-5">
-      <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
+    <div
+      className={`tvtime-release-schedule ${isRTL ? "tvtime-release-schedule--rtl" : ""} space-y-5`}
+      dir={isRTL ? "rtl" : undefined}
+      lang={isRTL ? "ar" : undefined}
+    >
+      <div data-ui-surface="panel" className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-xl font-extrabold">
@@ -116,14 +121,14 @@ export function ReleaseSchedule({
       {schedule.isLoading ? (
         <MediaGrid items={[]} loading forcedMediaType={mediaType} />
       ) : schedule.isError ? (
-        <Card className="p-12 text-center">
+        <Card className="feedback-state feedback-state--error p-12 text-center" role="alert">
           <AlertCircle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
           <p className="font-semibold">Could not load the {mediaLabel} schedule</p>
           <p className="mt-1 text-sm text-muted-foreground">Your library is unaffected. TMDB may be temporarily unavailable.</p>
           <Button variant="outline" className="mt-4" onClick={() => schedule.refetch()}>Retry</Button>
         </Card>
       ) : groups.length === 0 ? (
-        <Card className="p-12 text-center text-muted-foreground">
+        <Card className="feedback-state feedback-state--empty p-12 text-center text-muted-foreground" role="status">
           {isTV ? <Tv className="mx-auto mb-3 h-10 w-10 opacity-40" /> : <Film className="mx-auto mb-3 h-10 w-10 opacity-40" />}
           <p className="font-medium">No {mediaLabel} releases match this window</p>
           {search && <Button variant="outline" size="sm" className="mt-4" onClick={() => setSearch("")}>Clear search</Button>}

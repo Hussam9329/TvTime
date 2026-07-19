@@ -135,7 +135,7 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-card to-card p-4 sm:p-5">
+      <div data-ui-surface="panel" className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-card to-card p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-xl font-extrabold tracking-tight">

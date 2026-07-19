@@ -27,6 +27,8 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
     <div
+      role="status"
+      aria-live="polite"
       className={`feedback-state feedback-state--empty flex flex-col items-center justify-center px-4 py-14 text-center ${className ?? ""}`}
     >
       {icon && (

@@ -99,8 +99,8 @@ function LoginPageInner() {
 
   if (checkingAuth) {
     return (
-      <div className="tvtime-login-loading min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="tvtime-login-loading feedback-state--loading min-h-screen flex items-center justify-center bg-background" role="status" aria-busy="true" aria-label="Checking authentication">
+        <Loader2 className="feedback-state__spinner w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }

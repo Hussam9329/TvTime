@@ -451,7 +451,7 @@ function PreferencesSection() {
               <Badge key={p} variant="secondary" className="text-[10px] gap-1">
                 <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
                 {p}
-                <button onClick={() => removePlatform(p)} className="ml-0.5 hover:text-rose-400">✕</button>
+                <button type="button" data-ui-action="danger-link" onClick={() => removePlatform(p)} className="ml-0.5 hover:text-rose-400" aria-label={`Remove ${p}`}>✕</button>
               </Badge>
             ))}
           </div>

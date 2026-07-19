@@ -57,7 +57,7 @@ export function PersonDetailView() {
       </Button>
 
       {/* Hero with profile */}
-      <div className="relative rounded-2xl overflow-hidden border border-border/50 -mt-4">
+      <div data-ui-surface="hero" className="relative rounded-2xl overflow-hidden border border-border/50 -mt-4">
         <div className="relative bg-gradient-to-br from-primary/20 via-purple-500/10 to-transparent p-6 sm:p-8">
           <div className="absolute inset-0 opacity-30">
             {knownFor[0]?.backdrop_path && (
@@ -136,9 +136,9 @@ export function PersonDetailView() {
                 onClick={() => c.title ? goMovie(c.id) : goTv(c.id)}
                 className="flex-shrink-0 w-[120px] sm:w-[140px] group text-left"
               >
-                <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/60 transition-all hover:-translate-y-1">
+                <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-md">
                   <div className="relative aspect-[2/3] overflow-hidden bg-muted">
-                    <SafeImage src={img(c.poster_path, "w342")} alt={c.title || c.name} fill variant="poster" className="group-hover:scale-105 transition-transform" />
+                    <SafeImage src={img(c.poster_path, "w342")} alt={c.title || c.name} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
                   </div>
                   <div className="p-2">
                     <p className="text-xs font-semibold line-clamp-1">{c.title || c.name}</p>

@@ -356,10 +356,10 @@ function SessionRow({
             onChange={(e) => onTempDateChange(e.target.value)}
             className="text-xs bg-background border border-border rounded-md px-2 py-1"
           />
-          <button onClick={onSaveEdit} className="w-7 h-7 rounded-md bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25 flex items-center justify-center" title="حفظ">
+          <button type="button" data-ui-action="success-icon" onClick={onSaveEdit} className="w-7 h-7 rounded-md bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25 flex items-center justify-center" title="حفظ" aria-label="حفظ التاريخ">
             <Check size={14} />
           </button>
-          <button onClick={onCancelEdit} className="w-7 h-7 rounded-md bg-muted hover:bg-accent flex items-center justify-center" title="إلغاء">
+          <button type="button" data-ui-action="icon" onClick={onCancelEdit} className="w-7 h-7 rounded-md bg-muted hover:bg-accent flex items-center justify-center" title="إلغاء" aria-label="إلغاء التعديل">
             <X size={14} />
           </button>
         </div>
@@ -380,13 +380,13 @@ function SessionRow({
             </div>
           )}
           <div className="flex items-center gap-1 shrink-0">
-            <button onClick={onEdit} className="w-7 h-7 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="تعديل التاريخ">
+            <button type="button" data-ui-action="icon" onClick={onEdit} className="w-7 h-7 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="تعديل التاريخ" aria-label="تعديل التاريخ">
               <Edit3 size={13} />
             </button>
-            <button onClick={onRewatch} className="w-7 h-7 rounded-md text-purple-500 hover:bg-purple-500/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="إعادة مشاهدة">
+            <button type="button" data-ui-action="accent-icon" onClick={onRewatch} className="w-7 h-7 rounded-md text-purple-500 hover:bg-purple-500/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="إعادة مشاهدة" aria-label="تسجيل إعادة مشاهدة">
               <RefreshCw size={13} />
             </button>
-            <button onClick={onDelete} className="w-7 h-7 rounded-md text-rose-500 hover:bg-rose-500/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="حذف">
+            <button type="button" data-ui-action="danger-icon" onClick={onDelete} className="w-7 h-7 rounded-md text-rose-500 hover:bg-rose-500/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="حذف" aria-label="حذف جلسة المشاهدة">
               <Trash2 size={13} />
             </button>
           </div>

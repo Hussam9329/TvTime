@@ -286,7 +286,7 @@ export function TvDetailView() {
       </Button>
 
       {/* Hero */}
-      <div className="relative rounded-2xl overflow-hidden border border-border/50 -mt-4">
+      <div data-ui-surface="hero" className="relative rounded-2xl overflow-hidden border border-border/50 -mt-4">
         <div className="relative aspect-[16/9] sm:aspect-[21/9]">
           <SafeImage src={img(t.backdrop_path, "w1280")} alt={t.name} fill variant="backdrop" priority className="absolute inset-0" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
@@ -529,7 +529,7 @@ export function TvDetailView() {
                 >
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
                     {c.profile_path ? (
-                      <SafeImage src={img(c.profile_path, "w92")} alt={c.name} fill variant="profile" className="group-hover:scale-110 transition-transform" />
+                      <SafeImage src={img(c.profile_path, "w92")} alt={c.name} fill variant="profile" className="transition-opacity duration-200 group-hover:opacity-90" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Users className="w-5 h-5" /></div>
                     )}
@@ -555,7 +555,7 @@ export function TvDetailView() {
                     <div className="relative aspect-video bg-black">
                       <SafeImage src={`https://img.youtube.com/vi/${v.key}/hqdefault.jpg`} alt={v.name} fill variant="youtube" className="opacity-80 group-hover:opacity-100 transition-opacity" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <div className="w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center transition-opacity duration-200 group-hover:opacity-90">
                           <Play className="w-5 h-5 text-primary-foreground fill-current" />
                         </div>
                       </div>
@@ -863,7 +863,7 @@ function SeasonEpisodes({
         <div className="flex items-center gap-3 text-sm">
           <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full bg-primary transition-all"
+              className="h-full bg-primary transition-[width] duration-300"
               style={{ width: `${(releasedEpisodes.filter((episode: any) => isEpisodeWatched(episode)).length / Math.max(releasedEpisodes.length, 1)) * 100}%` }}
             />
           </div>

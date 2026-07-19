@@ -201,7 +201,7 @@ function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactN
         <span className="text-primary">{icon}</span>
         {label}
       </div>
-      <div className="text-2xl sm:text-3xl font-extrabold text-gradient group-hover:scale-105 transition-transform inline-block">
+      <div className="text-2xl sm:text-3xl font-extrabold text-gradient inline-block">
         {value}{suffix && <span className="text-sm text-muted-foreground font-normal">{suffix}</span>}
       </div>
     </button>
@@ -215,6 +215,7 @@ function Hero({ item }: { item: any }) {
   const mediaType = item.media_type === "tv" || !item.title ? "tv" : "movie";
   return (
     <motion.section
+      data-ui-surface="hero"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
@@ -377,7 +378,7 @@ function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
           loading="eager"
           decoding="async"
           fetchPriority="high"
-          className="group-hover:scale-105 transition-transform"
+          className="transition-opacity duration-200 group-hover:opacity-95"
         />
         <div className="absolute top-1.5 right-1.5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center gap-1 px-1.5 h-5 text-white pointer-events-none">
           <Check className="w-3 h-3" />
@@ -416,7 +417,7 @@ function WatchNextCTA() {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       onClick={() => setView("tv-shows")}
-      className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all hover:scale-105"
+      className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-[box-shadow,background-color,transform] duration-200 active:translate-y-px"
     >
       <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
         <Play className="w-4 h-4 fill-current" />

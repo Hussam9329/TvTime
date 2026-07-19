@@ -30,6 +30,7 @@ export function FilterPanel({
 }: FilterPanelProps) {
   return (
     <section
+      data-ui-surface="panel"
       className={cn(
         "tvtime-filter-panel glass overflow-hidden rounded-2xl border border-border/60 bg-card/70 shadow-sm",
         className,
