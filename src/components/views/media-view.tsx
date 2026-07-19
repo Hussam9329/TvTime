@@ -281,7 +281,7 @@ function MediaCard({ item, index }: { item: MediaItemDB; index: number }) {
           {/* planned badge */}
           {item.status === "planned" && !item.watched && (
             <div className="absolute top-10 right-2">
-              <Badge className="bg-blue-500/90 text-white border-0 text-[9px] h-5 px-1.5">PLAN</Badge>
+              <Badge data-status="planned" className="bg-blue-500/90 text-white border-0 text-[9px] h-5 px-1.5">PLAN</Badge>
             </div>
           )}
 

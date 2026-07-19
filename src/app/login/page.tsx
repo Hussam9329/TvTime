@@ -11,7 +11,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="tvtime-login-loading min-h-screen flex items-center justify-center bg-background">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       }
@@ -99,7 +99,7 @@ function LoginPageInner() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="tvtime-login-loading min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -111,10 +111,10 @@ function LoginPageInner() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4">
-      <Card className="w-full max-w-sm border-border/60 shadow-2xl">
-        <CardHeader className="text-center space-y-3">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
+    <div className="tvtime-login-page min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4">
+      <Card className="tvtime-login-card w-full max-w-sm border-border/60 shadow-2xl">
+        <CardHeader className="tvtime-login-header text-center space-y-3">
+          <div className="tvtime-login-mark mx-auto w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
             <Film className="w-6 h-6 text-primary" />
           </div>
           <div>
@@ -125,9 +125,9 @@ function LoginPageInner() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="tvtime-login-form space-y-4">
             {requiresUsername && (
-              <div className="space-y-2">
+              <div className="tvtime-login-field space-y-2">
                 <label
                   htmlFor="username"
                   className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
@@ -151,7 +151,7 @@ function LoginPageInner() {
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="tvtime-login-field space-y-2">
               <label
                 htmlFor="password"
                 className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
@@ -176,18 +176,18 @@ function LoginPageInner() {
             </div>
 
             {error && (
-              <p className="text-sm text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-md px-3 py-2">
+              <p className="tvtime-login-error text-sm text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-md px-3 py-2" role="alert">
                 {error}
               </p>
             )}
 
-            <Button type="submit" className="w-full h-10" disabled={loading || !password || (requiresUsername && !username)}>
+            <Button type="submit" className="tvtime-login-submit w-full h-10" disabled={loading || !password || (requiresUsername && !username)}>
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 
-          <p className="text-[11px] text-muted-foreground text-center mt-4">
+          <p className="tvtime-login-footnote text-[11px] text-muted-foreground text-center mt-4">
             Your session stays valid for 30 days on this device.
           </p>
         </CardContent>

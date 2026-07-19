@@ -433,7 +433,7 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
             {/* Fix #8: Rating labels — user rating shows /100, TMDB shows /10 */}
             {userRating != null ? (
               <div className="absolute top-2 right-2">
-                <Badge className="bg-amber-500/90 text-black border-0 text-[10px] h-6 px-2 font-bold" title="Your Rating">
+                <Badge data-status="rated" className="bg-amber-500/90 text-black border-0 text-[10px] h-6 px-2 font-bold" title="Your Rating">
                   <Star className="w-3 h-3 mr-1 fill-black" />
                   {userRating}/100
                 </Badge>

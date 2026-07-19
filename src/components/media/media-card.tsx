@@ -113,17 +113,17 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
                 </span>
               )}
               {watched && (
-                <span className="inline-flex items-center gap-0.5 text-[9px] text-emerald-400 bg-emerald-500/20 rounded px-1 py-0.5" title="Watched">
+                <span data-status="watched" className="inline-flex items-center gap-0.5 text-[9px] text-emerald-400 bg-emerald-500/20 rounded px-1 py-0.5" title="Watched">
                   <Check className="w-2.5 h-2.5" /> Watched
                 </span>
               )}
               {isFollowing && (
-                <span className="inline-flex items-center gap-0.5 text-[9px] text-amber-400 bg-amber-500/20 rounded px-1 py-0.5" title="Following">
+                <span data-status="following" className="inline-flex items-center gap-0.5 text-[9px] text-amber-400 bg-amber-500/20 rounded px-1 py-0.5" title="Following">
                   <Bell className="w-2.5 h-2.5" /> Following
                 </span>
               )}
               {userRating != null && (
-                <span className="inline-flex items-center gap-0.5 text-[9px] text-amber-300 bg-amber-500/20 rounded px-1 py-0.5" title="Your rating">
+                <span data-status="rated" className="inline-flex items-center gap-0.5 text-[9px] text-amber-300 bg-amber-500/20 rounded px-1 py-0.5" title="Your rating">
                   <Star className="w-2.5 h-2.5 fill-current" /> {userRating}/100
                 </span>
               )}

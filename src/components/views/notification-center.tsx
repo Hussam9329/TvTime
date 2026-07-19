@@ -133,10 +133,16 @@ export function NotificationCenter({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-start" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md h-full bg-card border-l border-border flex flex-col shadow-2xl">
-        <div className="p-4 border-b border-border flex items-center justify-between">
+    <div className="tvtime-notification-center fixed inset-0 z-50 flex justify-start" onClick={onClose} dir="rtl">
+      <div className="tvtime-notification-backdrop absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="tvtime-notification-panel relative w-full max-w-md h-full bg-card border-l border-border flex flex-col shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tvtime-notification-title"
+      >
+        <div className="tvtime-notification-header p-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="relative">
               <Bell size={20} />
@@ -147,18 +153,18 @@ export function NotificationCenter({
               )}
             </div>
             <div>
-              <h2 className="font-bold text-base">الإشعارات</h2>
+              <h2 id="tvtime-notification-title" className="font-bold text-base">الإشعارات</h2>
               <p className="text-xs text-muted-foreground">
                 {unreadCount > 0 ? `${unreadCount} غير مقروء` : "كل الإشعارات مقروءة"}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center">
+          <button onClick={onClose} className="tvtime-notification-icon-button w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center" aria-label="إغلاق الإشعارات">
             <X size={16} />
           </button>
         </div>
 
-        <div className="px-4 py-2 border-b border-border flex items-center gap-1">
+        <div className="tvtime-notification-tabs px-4 py-2 border-b border-border flex items-center gap-1">
           {[
             { key: "all" as const, label: "الكل", count: notifications.length },
             { key: "unread" as const, label: "غير مقروء", count: unreadCount },
@@ -167,7 +173,8 @@ export function NotificationCenter({
             <button
               key={t.key}
               onClick={() => setFilter(t.key)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${filter === t.key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent"}`}
+              aria-pressed={filter === t.key}
+              className={`tvtime-notification-tab px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${filter === t.key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent"}`}
             >
               {t.label}
               <span className="text-[10px] tabular-nums opacity-70">({t.count})</span>
@@ -176,7 +183,7 @@ export function NotificationCenter({
         </div>
 
         {notifications.length > 0 && (
-          <div className="px-4 py-2 border-b border-border flex items-center gap-2">
+          <div className="tvtime-notification-actions px-4 py-2 border-b border-border flex items-center gap-2">
             <button onClick={handleMarkAllRead} disabled={unreadCount === 0} className="text-xs text-primary hover:underline disabled:text-muted-foreground/50 disabled:no-underline flex items-center gap-1">
               <CheckCheck size={12} /> تعليم الكل كمقروء
             </button>
@@ -187,7 +194,7 @@ export function NotificationCenter({
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="tvtime-notification-list flex-1 overflow-y-auto">
           {loading ? (
             <div className="p-8 text-center text-muted-foreground">جاري التحميل...</div>
           ) : filtered.length === 0 ? (
@@ -207,7 +214,7 @@ export function NotificationCenter({
                   <div
                     key={n.id}
                     onClick={() => !n.read && handleMarkRead(n.id)}
-                    className={`p-3 flex items-start gap-3 cursor-pointer hover:bg-accent/50 transition-colors relative group ${!n.read ? "bg-primary/5" : ""}`}
+                    className={`tvtime-notification-item p-3 flex items-start gap-3 cursor-pointer hover:bg-accent/50 transition-colors relative group ${!n.read ? "bg-primary/5" : ""}`}
                   >
                     {!n.read && <div className="absolute top-3 right-1 w-2 h-2 rounded-full bg-primary" />}
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
@@ -223,7 +230,8 @@ export function NotificationCenter({
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(n.id); }}
-                      className="w-7 h-7 rounded-md text-muted-foreground hover:bg-rose-500/15 hover:text-rose-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      className="tvtime-notification-icon-button w-7 h-7 rounded-md text-muted-foreground hover:bg-rose-500/15 hover:text-rose-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      aria-label={`حذف إشعار ${n.title}`}
                     >
                       <Trash2 size={12} />
                     </button>

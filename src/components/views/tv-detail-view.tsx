@@ -311,23 +311,23 @@ export function TvDetailView() {
               <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
               {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">Arabic TV</Badge>}
               {effectiveLabel === "finished" && (
-                <Badge className="bg-emerald-500/20 text-emerald-400 border-0">
+                <Badge data-status="finished" className="bg-emerald-500/20 text-emerald-400 border-0">
                   <Trophy className="w-3 h-3 mr-1" /> Finished
                 </Badge>
               )}
               {effectiveLabel === "uptodate" && (
-                <Badge className="bg-cyan-500/20 text-cyan-400 border-0">
+                <Badge data-status="uptodate" className="bg-cyan-500/20 text-cyan-400 border-0">
                   <Zap className="w-3 h-3 mr-1" /> Up To Date
                 </Badge>
               )}
               {effectiveLabel === "watching" && (
-                <Badge className="bg-blue-500/20 text-blue-400 border-0">Watching</Badge>
+                <Badge data-status="watching" className="bg-blue-500/20 text-blue-400 border-0">Watching</Badge>
               )}
               {effectiveLabel === "not_started" && (
-                <Badge className="bg-slate-500/20 text-slate-300 border-0">Not Started</Badge>
+                <Badge data-status="not_started" className="bg-slate-500/20 text-slate-300 border-0">Not Started</Badge>
               )}
               {effectiveLabel === "planned" && (
-                <Badge className="bg-violet-500/20 text-violet-300 border-0">Planned</Badge>
+                <Badge data-status="planned" className="bg-violet-500/20 text-violet-300 border-0">Planned</Badge>
               )}
               {year && <Badge variant="secondary" className="border-0">{year}</Badge>}
               {t.number_of_seasons > 0 && <Badge variant="secondary" className="border-0"><Layers className="w-3 h-3 mr-1" />{t.number_of_seasons} season{t.number_of_seasons > 1 ? "s" : ""}</Badge>}
