@@ -222,7 +222,7 @@ export function MovieDetailView() {
               {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
               {m.status && <Badge variant="secondary" className="border-0">{m.status}</Badge>}
             </div>
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
+            <h1 className="view-page-title text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
               {m.title}
             </h1>
             {m.tagline && <p className="text-sm sm:text-base italic text-foreground/70 mt-1">{m.tagline}</p>}

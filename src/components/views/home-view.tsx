@@ -56,12 +56,12 @@ export function HomeView() {
   return (
     <div className="tvtime-home-view space-y-6">
       {/* Greeting */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+      <div className="view-page-header tvtime-home-header flex items-center justify-between flex-wrap gap-2">
+        <div className="min-w-0">
+          <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">
             {greeting}, <span className="text-gradient">{userName}</span> 👋
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Here's what's trending in your cinema world today</p>
+          <p className="view-page-description text-sm text-muted-foreground mt-1">Here's what's trending in your cinema world today</p>
         </div>
         {/* Watch Next CTA - shows when user has followed shows */}
         {following.data && following.data.items.length > 0 && (

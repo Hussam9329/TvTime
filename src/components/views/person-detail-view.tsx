@@ -75,7 +75,7 @@ export function PersonDetailView() {
               )}
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight drop-shadow-lg">{p.name}</h1>
+              <h1 className="view-page-title text-2xl sm:text-4xl font-extrabold tracking-tight drop-shadow-lg">{p.name}</h1>
               {p.known_for_department && (
                 <Badge variant="secondary" className="mt-2 bg-primary/20 text-primary border-0">
                   <Briefcase className="w-3 h-3 mr-1" /> {p.known_for_department}

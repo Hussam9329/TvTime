@@ -196,7 +196,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/82 shadow-[0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72">
+    <header className="tvtime-app-header sticky top-0 z-40 border-b border-border/70 bg-background/82 shadow-[0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72" data-mobile-search-open={mobileSearchOpen ? "true" : "false"}>
       <div className="mx-auto flex h-15 max-w-[1600px] items-center gap-2 px-3 sm:h-16 sm:px-4 lg:px-6">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>

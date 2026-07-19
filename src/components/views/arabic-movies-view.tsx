@@ -12,20 +12,20 @@ export function ArabicMoviesView() {
 
   return (
     <div className="tvtime-arabic-movies-page space-y-5">
-      <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card to-card p-4 sm:p-5">
-        <div className="flex items-center gap-3">
-          <Languages className="h-5 w-5 text-emerald-400" />
-          <div>
-            <h2 className="text-xl font-extrabold tracking-tight">Arabic Movies</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">
+      <section className="tvtime-page-hero rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card to-card p-4 sm:p-5">
+        <div className="view-page-header flex items-start gap-3">
+          <Languages className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+          <div className="min-w-0">
+            <h1 className="view-page-title text-xl font-extrabold tracking-tight">Arabic Movies</h1>
+            <p className="view-page-description mt-1 text-sm text-muted-foreground">
               Track Arabic films you&apos;ve watched, discover new ones, and stay on top of upcoming releases.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
-        <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
+        <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
           <TabsTrigger value="library" className="gap-2 py-2.5">
             <Library className="h-4 w-4" /> My Arabic Movies
           </TabsTrigger>

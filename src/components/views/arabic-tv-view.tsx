@@ -14,7 +14,7 @@ export function ArabicTvView() {
 
   return (
     <div className="tvtime-arabic-tv-page space-y-6">
-      <section className="overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/15 via-card to-card p-5 sm:p-7">
+      <section className="tvtime-page-hero overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/15 via-card to-card p-5 sm:p-7">
         <div className="view-page-header max-w-2xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
             <Languages className="h-3.5 w-3.5" /> Independent Arabic television world
@@ -27,7 +27,7 @@ export function ArabicTvView() {
       </section>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
-        <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
+        <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
           <TabsTrigger value="tracking" className="gap-2 py-2.5">
             <ListChecks className="h-4 w-4" /> Tracking
           </TabsTrigger>
