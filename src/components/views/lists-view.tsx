@@ -439,7 +439,7 @@ function ListFormDialog(props: {
         <label className="text-xs font-medium text-muted-foreground block mb-1.5">اللون</label>
         <div className="flex items-center gap-2 flex-wrap">
           {PRESET_COLORS.map((c) => (
-            <button type="button" onClick={() => setColor(c)} aria-label={`اختيار اللون ${c}`} aria-pressed={color === c} className={`w-8 h-8 rounded-full transition-transform ${color === c ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-105" : ""}`} style={{ background: c }} />
+            <button key={c} type="button" onClick={() => setColor(c)} aria-label={`اختيار اللون ${c}`} aria-pressed={color === c} className={`w-8 h-8 rounded-full transition-transform ${color === c ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-105" : ""}`} style={{ background: c }} />
           ))}
         </div>
       </div>
