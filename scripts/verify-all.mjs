@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 
 const checks = [
+  ["Repository hygiene", ["scripts/verify-repository-hygiene.mjs"]],
   ["User-facing integrity", ["scripts/verify-user-facing-integrity.mjs"]],
   ["Episode watch flow and posters", ["scripts/verify-episode-watch-poster.mjs"]],
   ["Arabic media worlds", ["scripts/verify-arabic-worlds.mjs"]],

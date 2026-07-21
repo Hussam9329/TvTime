@@ -54,6 +54,23 @@ Items can be moved between worlds via the `Move to Anime` / `To Movies` / `To TV
 - **DATABASE_URL**: Set in Vercel environment variables (must be `postgresql://...`)
 - **Reviewed migrations only**: destructive `db push`/`reset` commands remain blocked. Production schema changes are delivered as reviewed Prisma migrations.
 - **Migration deployment**: run `npm run db:migrate:status`, take a verified backup, then run `npm run db:migrate:deploy` in the approved maintenance window.
+
+### Safe read-only database audit
+
+`scripts/db-audit.py` accepts a connection only from `TVTIME_AUDIT_DATABASE_URL`.
+Use a dedicated PostgreSQL role with `SELECT` access only; the script refuses
+database owners, object owners, bypass-RLS roles, and roles with table write
+privileges. It also avoids printing user profile records or connection values.
+
+Keep the populated value in an ignored local environment file or an operator
+secret manager, then run:
+
+```bash
+python3 scripts/db-audit.py
+```
+
+Do not copy the application or migration `DATABASE_URL` into the audit variable.
+See `SECURITY.md` for credential rotation and Git-history cleanup steps.
 - **Build pipeline**: `assert-production-db` → `prisma generate` → read-only schema contract verification → `next build`
   - The build never applies a migration or writes to production.
   - It fails before deployment when `Media.isFollowing`, the canonical media identity constraint, or the `series` type normalization is missing.

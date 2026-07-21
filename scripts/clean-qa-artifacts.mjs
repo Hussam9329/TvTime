@@ -11,13 +11,26 @@ const removableDirs = [
   "test-results",
   "coverage",
   ".nyc_output",
+  "audit",
+  ".audit",
+];
+
+const removableExactFiles = [
+  "scripts/export-test.json",
+  "scripts/db-audit-results.log",
+  "scripts/live-audit-results.log",
+  "scripts/remove-hardcoded-tmdb-key.py",
+  "db/custom.db",
 ];
 
 const removableFilePatterns = [
   /^screenshot-.*\.(png|jpe?g|webp)$/i,
+  /^pasted(?:[_ -]?image| content).*\.(png|jpe?g|txt|webp)$/i,
   /^qa.*\.(png|jpe?g|webp)$/i,
   /^worklog\.md$/i,
   /^.*\.trace\.zip$/i,
+  /^.*audit-results\.(json|log|txt)$/i,
+  /^.*\.py[cod]$/i,
 ];
 
 function removePath(targetPath) {
@@ -41,6 +54,14 @@ function walk(dir) {
       continue;
     }
 
+    if (entry.isDirectory() && entry.name === "__pycache__") {
+      if (removePath(fullPath)) {
+        console.log(`removed directory: ${relativePath}`);
+        removed += 1;
+      }
+      continue;
+    }
+
     if (entry.isDirectory()) {
       files.push(...walk(fullPath));
     } else {
@@ -59,6 +80,13 @@ for (const dir of removableDirs) {
   }
 }
 
+for (const relativeFile of removableExactFiles) {
+  if (removePath(path.join(root, relativeFile))) {
+    console.log(`removed file: ${relativeFile}`);
+    removed += 1;
+  }
+}
+
 for (const relativeFile of walk(root)) {
   const basename = path.basename(relativeFile);
   if (removableFilePatterns.some((pattern) => pattern.test(basename))) {
@@ -70,7 +98,7 @@ for (const relativeFile of walk(root)) {
 }
 
 if (removed === 0) {
-  console.log("No QA artifacts found. Project is already clean.");
+  console.log("No QA or local security artifacts found. Project is already clean.");
 } else {
-  console.log(`Cleaned ${removed} QA artifact item(s).`);
+  console.log(`Cleaned ${removed} QA/security artifact item(s).`);
 }

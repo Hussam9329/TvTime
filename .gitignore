@@ -23,6 +23,9 @@ node_modules
 # misc
 .DS_Store
 *.pem
+__pycache__/
+*.py[cod]
+.venv/
 
 # debug
 npm-debug.log*
@@ -95,6 +98,10 @@ server.log
 # Local audit artifacts (never committed)
 /audit/
 /.audit/
+/scripts/*audit-results.*
+/scripts/export*.json
+*.sqlite
+*.sqlite3
 
 # Emergency recovery safety
 .env

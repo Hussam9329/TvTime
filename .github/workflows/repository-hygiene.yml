@@ -1,0 +1,25 @@
+name: Repository hygiene
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  repository-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.9.0"
+
+      - name: Reject secrets and local artifacts
+        run: node scripts/verify-repository-hygiene.mjs
