@@ -38,6 +38,8 @@ const counts = read("src/lib/library-counts.ts");
 const hooks = read("src/hooks/use-tmdb.ts");
 const importRoute = read("src/app/api/library/import/route.ts");
 const exportRoute = read("src/app/api/library/export/route.ts");
+const importValidation = read("src/lib/library-import-validation.ts");
+const transferTypes = read("src/lib/library-transfer-types.ts");
 const dedup = read("src/app/api/admin/dedup-media/route.ts");
 const backfill = read("scripts/backfill-arabic-media.mjs");
 const recently = read("src/app/api/media/recently/route.ts");
@@ -127,9 +129,22 @@ for (const field of ["watchlistArabicMovies", "watchedArabicMovies", "watchlistA
 check(/type:\s*"movie",\s*isAnime:\s*false,\s*isArabic:\s*false/.test(counts), "Standard movie counters exclude Arabic and Anime");
 check(/type:\s*"series",\s*isAnime:\s*false,\s*isArabic:\s*false/.test(counts), "Standard TV counters exclude Arabic and Anime");
 
-check(/version:\s*4/.test(exportRoute), "Library export version records Arabic classification metadata");
-check(/isArabic/.test(importRoute) && /originalLanguage/.test(importRoute) && /originCountries/.test(importRoute), "Library import preserves Arabic classification metadata");
-check(/shouldPromoteArabic/.test(importRoute), "Import conservatively promotes older Arabic records without destructive demotion");
+check(
+  /LIBRARY_BACKUP_VERSION\s*=\s*5/.test(transferTypes)
+    && /LIBRARY_BACKUP_VERSION/.test(exportRoute),
+  "Library export version records Arabic classification metadata",
+);
+check(
+  /isArabic:\s*strictBoolean/.test(importValidation)
+    && /originalLanguage:\s*nullableString/.test(importValidation)
+    && /originCountries:\s*stringArray/.test(importValidation),
+  "Library import preserves Arabic classification metadata",
+);
+check(
+  /shouldPromoteArabic\s*=\s*detectIsArabic/.test(importValidation)
+    && /const isArabic = parsed\.isArabic \|\| shouldPromoteArabic/.test(importValidation),
+  "Import conservatively promotes older Arabic records without destructive demotion",
+);
 check(/isArabic/.test(dedup) && /originCountries/.test(dedup), "Media dedup merges Arabic classification metadata");
 
 check(/const apply = process\.argv\.includes\("--apply"\)/.test(backfill), "Arabic backfill is dry-run by default");
@@ -137,7 +152,11 @@ check(/if \(apply &&/.test(backfill), "Arabic backfill writes only after explici
 check(!/deleteMany|DROP|TRUNCATE/i.test(backfill) && !/prisma\.media\.delete/.test(backfill), "Arabic backfill contains no destructive database operation");
 check(/TMDB_API_KEY is required/.test(backfill), "Arabic backfill fails closed without TMDB credentials");
 check(backfill.indexOf("TMDB_API_KEY is required") < backfill.indexOf("new PrismaClient"), "Arabic backfill validates credentials before opening a database client");
-check(/hasArabicColumn/.test(schemaVerifier) && /hasMediaWorldConstraint/.test(schemaVerifier), "Production schema guard verifies Arabic columns and exclusivity");
+check(
+  /Media:\s*\[[\s\S]*"isArabic"[\s\S]*"originalLanguage"[\s\S]*"originCountries"/.test(schemaVerifier)
+    && /Media_media_world_exclusive_check/.test(schemaVerifier),
+  "Production schema guard verifies Arabic columns and exclusivity",
+);
 check(packageJson.scripts?.["db:backfill:arabic"] === "node scripts/backfill-arabic-media.mjs", "Package exposes the reviewed Arabic backfill command");
 check(packageJson.scripts?.["verify:arabic"] === "node scripts/verify-arabic-worlds.mjs", "Package exposes Arabic-world verification");
 

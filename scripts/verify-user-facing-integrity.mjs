@@ -52,9 +52,19 @@ check((watchedEpisodes.match(/tx\.watchedEpisode\.createMany/g) || []).length >=
 check(/attempted && !legacySnapshot\.verified/.test(watchedEpisodes), "Episode mutations fail closed when legacy completion cannot be verified");
 check(/verified:\s*boolean/.test(repair) && /verified:\s*false/.test(repair), "Legacy snapshot repair exposes explicit verification status");
 
-check(/if \(derived\.verified\)[\s\S]*tvStateToMediaPatch/.test(watchedEpisodes), "Unverified TMDB state is never persisted from episode mutations");
-check(/derived\.verified \? derived\.state : persistedState/.test(watchedEpisodes), "Episode responses preserve the last persisted state during TMDB failure");
-check(/const effectiveState = derived\.verified[\s\S]*persisted \?\?/.test(tracking), "TV tracking display preserves persisted state when TMDB verification fails");
+check(
+  /safeUnverifiedState[\s\S]*watchedEpisodes\.length > 0[\s\S]*"watching"[\s\S]*tvStateToMediaPatch\(effectiveState/.test(watchedEpisodes),
+  "Unverified episode progress persists only a safe non-completion state",
+);
+check(
+  /Could not verify the TV metadata\. No progress was changed\./.test(watchedEpisodes)
+    && watchedEpisodes.indexOf("loadMutationMetadata(showId, now)") < watchedEpisodes.indexOf("db.$transaction"),
+  "TMDB failure blocks episode mutations before their transaction",
+);
+check(
+  /const effectiveState = derived\.verified[\s\S]*watched\.count > 0[\s\S]*\? "watching"/.test(tracking),
+  "TV tracking display preserves real episode progress when cache verification is incomplete",
+);
 
 check(/type CollectionTab = "watchlist" \| "not-started" \| "watching" \| "watched"/.test(collection), "Anime collection models Watchlist, Not Started, In Progress and Watched separately");
 check(/value="not-started"/.test(collection) && /Not Started/.test(collection), "Anime not-started titles remain visible in their own tab");
@@ -76,9 +86,9 @@ check(/view === "media" && <MediaView/.test(shell), "The legacy ?view=media rout
 check(/verify-required-schema\.mjs/.test(pkg.scripts?.build || ""), "Production build verifies the required database contract before Next.js build");
 check(pkg.scripts?.["db:migrate:status"]?.includes("prisma migrate status"), "A read-only migration status command is available");
 check(pkg.scripts?.["db:migrate:deploy"]?.includes("prisma migrate deploy"), "Reviewed migrations have an explicit deployment command");
-check(/Media\.isFollowing/.test(schemaVerifier), "Schema guard verifies the dedicated following field");
+check(/Media:\s*\[[\s\S]*"isFollowing"/.test(schemaVerifier), "Schema guard verifies the dedicated following field");
 check(/Media_userId_type_tmdbId_key/.test(schemaVerifier), "Schema guard verifies the canonical Media identity constraint");
-check(/type" = 'tv'|"type" = 'tv'/.test(schemaVerifier), "Schema guard rejects unnormalized legacy TV identities");
+check(/WHERE "type" = 'tv'/.test(schemaVerifier), "Schema guard rejects unnormalized legacy TV identities");
 check(!/\b(prisma\s+db\s+push|prisma\s+migrate\s+reset)\b/i.test(pkg.scripts?.build || ""), "Build contains no destructive schema command");
 check(pkg.scripts?.["verify:all"] === "node scripts/verify-all.mjs", "One comprehensive verification command covers the maintained project checks");
 

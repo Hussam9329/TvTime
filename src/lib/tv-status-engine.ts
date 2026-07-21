@@ -265,7 +265,17 @@ export function deriveTvTrackingState(input: DeriveTvTrackingStateInput): Derive
   // A legacy whole-show flag is informational only. It can trigger the
   // separate snapshot materializer, but it must never by itself prove that all
   // episodes were watched or produce Finished.
-  const verified = input.officiallyEnded != null && airedEpisodeCount != null;
+  //
+  // For an ongoing show, a numeric aired count is not enough to prove which
+  // watched episode keys belong inside that boundary. Cache readers must either
+  // provide the exact aired keys for shows with progress, or accept an
+  // unverified Watching state. Ended shows can safely use the numeric total as
+  // a fallback because every regular episode belongs to the final boundary.
+  const boundaryKnown = input.officiallyEnded != null && airedEpisodeCount != null;
+  const progressIntersectionKnown = watchedKeys.size === 0
+    || airedKeys.size > 0
+    || input.officiallyEnded === true;
+  const verified = boundaryKnown && progressIntersectionKnown;
 
   // Finished and Up To Date both require a verified released-episode boundary.
   // When TMDB cannot be verified, keep real episode progress as Watching and

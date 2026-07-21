@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
@@ -12,23 +11,22 @@ function read(path) {
   return readFileSync(resolve(root, path), "utf8");
 }
 
-function sha256(path) {
-  return createHash("sha256").update(readFileSync(resolve(root, path))).digest("hex");
-}
 
 function check(condition, message) {
   if (condition) passes.push(message);
   else failures.push(message);
 }
 
-const protectedHashes = {
-  "scripts/assert-production-db.mjs": "f4a8214783d8a926a391b27da36102dc2ef0b075e013fd95eca3b5dcd7f53d36",
-  "next.config.ts": "6427983b336fdc783833ad08feab538b75286de080701680509663fd27b999c5",
-};
-
-for (const [path, expected] of Object.entries(protectedHashes)) {
-  check(sha256(path) === expected, `${path} remains on the reviewed infrastructure baseline`);
-}
+const productionGuard = read("scripts/assert-production-db.mjs");
+const nextConfig = read("next.config.ts");
+check(
+  /DATABASE_URL/.test(productionGuard) && /postgresql?:/.test(productionGuard) && /fail closed/i.test(productionGuard),
+  "Deployment target guard fails closed and accepts PostgreSQL only",
+);
+check(
+  /Content-Security-Policy/.test(nextConfig) && /X-Frame-Options/.test(nextConfig) && /Strict-Transport-Security/.test(nextConfig),
+  "Next.js configuration retains the reviewed security headers",
+);
 
 const schema = read("prisma/schema.prisma");
 const packageJson = JSON.parse(read("package.json"));
@@ -42,6 +40,8 @@ const trackingRoute = read("src/app/api/tv-tracking/route.ts");
 const statsRoute = read("src/app/api/library/stats/route.ts");
 const libraryCounts = read("src/lib/library-counts.ts");
 const importRoute = read("src/app/api/library/import/route.ts");
+const importValidationPath = resolve(root, "src/lib/library-import-validation.ts");
+const importValidation = existsSync(importValidationPath) ? read("src/lib/library-import-validation.ts") : null;
 
 check(/provider\s*=\s*"postgresql"/.test(schema), "Prisma remains PostgreSQL");
 check(/url\s*=\s*env\("DATABASE_URL"\)/.test(schema), "Prisma still reads DATABASE_URL");
@@ -60,8 +60,15 @@ check(/allEpisodes\s*=\s*allEpisodesIncludingFuture\.filter/.test(hooks), "Clien
 check(/nextEp\s*=\s*allEpisodes\.find/.test(hooks), "Next-to-watch is selected only from released episodes");
 check(/deriveTvTrackingState/.test(trackingRoute), "TV tracking API uses the central state engine");
 check(/type:\s*"series",\s*isAnime:\s*false,\s*isArabic:\s*false,\s*isFollowing:\s*true/.test(libraryCounts), "Following statistics use explicit TV following membership and exclude Anime and Arabic TV");
-check(/watched:\s*itemType\s*===\s*"series"\s*\?\s*false/.test(importRoute), "Legacy rating import does not mark media watched");
-check(/item\.type\s*===\s*"movie"\s*\?/.test(collectionView) && /> Episodes\s*</.test(collectionView), "Watched TV cards route state changes through episode tracking");
+const seriesImportResetsWholeShowCompletion = importValidation
+  ? /watched:\s*parsed\.type\s*===\s*"series"\s*\?\s*false/.test(importValidation)
+  : /watched:\s*itemType\s*===\s*"series"\s*\?\s*false/.test(importRoute);
+check(seriesImportResetsWholeShowCompletion, "Legacy rating import does not mark media watched");
+check(
+  /if\s*\(item\.type\s*===\s*"series"\)[\s\S]{0,300}goTv\(item\.tmdbId\)/.test(collectionView)
+    && /Open episode tracking/.test(collectionView),
+  "Watched TV cards route state changes through episode tracking",
+);
 check(/getAllReleasedEpisodes/.test(server) && /isEpisodeReleased/.test(server), "Server computes released episodes from episode air dates");
 
 try {

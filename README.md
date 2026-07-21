@@ -53,7 +53,7 @@ Items can be moved between worlds via the `Move to Anime` / `To Movies` / `To TV
 - **Provider**: PostgreSQL (Neon)
 - **DATABASE_URL**: Set in Vercel environment variables (must be `postgresql://...`)
 - **Reviewed migrations only**: destructive `db push`/`reset` commands remain blocked. Production schema changes are delivered as reviewed Prisma migrations.
-- **Migration deployment**: run `npm run db:migrate:status`, take a verified backup, then run `npm run db:migrate:deploy` in the approved maintenance window.
+- **Migration deployment**: new databases are built completely from `prisma/migrations`; existing db-push installations must follow `MIGRATION_BASELINE.md` on a verified clone before the baseline is recorded. Run `npm run db:migrate:status`, take a verified backup, then run `npm run db:migrate:deploy` in the approved maintenance window.
 
 ### Safe read-only database audit
 
@@ -71,9 +71,29 @@ python3 scripts/db-audit.py
 
 Do not copy the application or migration `DATABASE_URL` into the audit variable.
 See `SECURITY.md` for credential rotation and Git-history cleanup steps.
-- **Build pipeline**: `assert-production-db` → `prisma generate` → read-only schema contract verification → `next build`
-  - The build never applies a migration or writes to production.
-  - It fails before deployment when `Media.isFollowing`, the canonical media identity constraint, or the `series` type normalization is missing.
+- **Build pipeline**: database-target validation → static migration-history verification → `prisma generate` → read-only live schema/RLS verification → `next build`
+  - The build never applies a migration or writes application data.
+  - It fails before deployment when a table, required column, index, constraint, RLS policy, or migration record is missing.
+  - A GitHub Actions PostgreSQL service proves that the complete migration history can build an empty database.
+
+## Authentication safety
+
+Production is fail-closed. A missing or weak login secret returns a safe 503/locked login screen instead of exposing a publicly writable application.
+
+- `APP_PASSWORD` is required in production and must contain at least 12 characters.
+- `SESSION_SECRET` is independently required and must contain at least 32 characters; it never falls back to `APP_PASSWORD`.
+- `APP_USERNAME` is optional and adds a username check to the login form.
+- Public mode requires `ALLOW_PUBLIC_MODE=true` **and** an explicitly non-production environment. It is refused on Vercel Production.
+- `next` after login is restricted to a same-origin application path; absolute and protocol-relative redirects are rejected.
+- In authenticated mode, every user-owned API route takes its owner from the verified JWT `sub`; browser-supplied `userId` query/header values are ignored.
+
+For local public development only:
+
+```bash
+ALLOW_PUBLIC_MODE=true npm run dev
+```
+
+Run the focused checks with `npm run verify:auth-boundary` and `npm run verify:authorization`.
 
 ### Safety-Critical Files
 
@@ -85,7 +105,9 @@ Changes to these files require explicit review and must be delivered with verifi
 | `prisma/migrations/**` | Reviewed, ordered production schema changes |
 | `package.json` | Dependencies, build and migration safety scripts |
 | `scripts/assert-production-db.mjs` | PostgreSQL build guard |
-| `scripts/verify-required-schema.mjs` | Read-only schema compatibility guard |
+| `scripts/verify-required-schema.mjs` | Read-only schema, migration and RLS compatibility guard |
+| `scripts/verify-migration-history.mjs` | Static coverage guard for every Prisma model |
+| `MIGRATION_BASELINE.md` | Existing-database baseline reconciliation runbook |
 | `next.config.ts` | Next.js runtime/build configuration |
 
 ## Development
@@ -117,7 +139,7 @@ bun run dev  # or npm run dev
 
 ```bash
 bun run build  # or npm run build
-# Runs: assert-production-db → prisma generate → read-only schema verification → next build
+# Runs: target guard → migration-history guard → prisma generate → read-only live schema/RLS guard → next build
 ```
 
 ### Lint
@@ -129,9 +151,17 @@ bun run lint  # or npm run lint
 ### Database Verification (Read-Only)
 
 ```bash
+npm run db:verify:migrations
+# Verifies that every Prisma model has an ordered migration
+
+npm run db:verify:schema
+# Verifies the deployed tables, indexes, constraints, RLS policies and migration records
+
 npm run db:verify:readonly
-# Counts rows in all tables without modifying anything
+# Counts rows in the canonical/legacy tables without modifying anything
 ```
+
+For a database that predates the baseline, read `MIGRATION_BASELINE.md` before running any migration command.
 
 ## API Overview
 
@@ -149,12 +179,35 @@ npm run db:verify:readonly
 - `GET /api/library/watched-episodes` — episode tracking
 - `POST /api/library/watched-episodes` — mark episode(s) watched
 - `DELETE /api/library/watched-episodes` — unmark episode
-- `GET /api/library/export` — export library as JSON
-- `POST /api/library/import` — import library from JSON
+- `GET /api/library/export` — return a versioned manifest or a cursor-paged collection page (each response stays below the serverless payload budget)
+- `POST /api/library/import` — create a temporary validated import session; this endpoint does not change library rows
+- `POST /api/library/import/[sessionId]/chunks` — upload checksummed chunks into user-scoped staging
+- `POST /api/library/import/[sessionId]/finalize` — verify all counts/sequences and return a merge preview
+- `POST /api/library/import/[sessionId]/commit` — apply the previewed restore in one database transaction
+- `DELETE /api/library/import/[sessionId]` — cancel a non-committed import and remove its staging rows
+
+### Backup and restore safety
+
+The profile dialog exports **version 5 NDJSON**. It requests Media, watched episodes, and episode ratings in small cursor pages, then assembles the downloadable file in the browser; no single Vercel Function response contains the whole backup. Version 1–4 JSON backups remain accepted through a compatibility adapter.
+
+Restore is intentionally two-phase:
+
+1. The browser streams the file and uploads chunks smaller than 1.5 MB with a SHA-256 checksum.
+2. The server validates and normalizes every row into `LibraryImport*` staging tables. Invalid chunks write nothing.
+3. Finalize checks contiguous chunk sequences, manifest totals, duplicates, and merge impact, then shows the user a preview.
+4. Only an exact preview-bound confirmation starts the final transaction. Target library tables either all commit together or remain unchanged.
+
+Import sessions expire after 24 hours, are isolated by the authenticated user, and can be cancelled before commit. A restore currently covers the same canonical data as export: Media, watched episodes, and episode-level ratings. Diary, notifications, and custom lists remain scheduled for the data-lifecycle patch.
 
 ### TV Tracking
 - `GET /api/tv-tracking` — list shows with derived states + global counts
 - Categories: all, watchlist, uptodate, finished, upcoming, havent-watched, havent-started
+
+### TV cache and episode-mutation safety
+
+- Cached TV metadata now retains the original language, origin countries and genres required to keep Arabic and anime classification stable. Older incomplete cache rows are refreshed before a classification-sensitive mutation.
+- Shows with real episode progress request exact aired-episode keys from the cache. When an old/incomplete boundary is encountered, progress remains `Watching` but is marked unverified instead of falling back to `Not Started`.
+- Marking or unmarking an episode obtains TMDB metadata before opening the database transaction. The episode row and derived `Media` status/classification are then committed together under a row lock with a bounded timeout; metadata failures therefore leave both unchanged.
 
 ### TMDB Proxy
 - `GET /api/tmdb/[...path]` — proxies all TMDB API calls (caching, no CORS)
@@ -202,26 +255,58 @@ node scripts/verify-world-separation.mjs
 # Unit tests
 node --experimental-strip-types scripts/test-tv-status-engine.ts
 node --experimental-strip-types scripts/test-tvm-06-09.ts
+
+# Patch-specific regression suites
+npm run verify:patch-05
+npm run verify:patch-06
+npm run verify:patch-07
 ```
 
 ## Deployment (Vercel)
 
 1. Push to GitHub `main` branch
-2. Before the first deployment containing a new migration, run `npm run db:migrate:status`, take a verified database backup, and run `npm run db:migrate:deploy` from an approved maintenance environment.
+2. For an existing db-push database, complete the clone procedure in `MIGRATION_BASELINE.md`. Before every deployment containing a migration, run `npm run db:migrate:status`, take a verified backup, and run `npm run db:migrate:deploy` from an approved maintenance environment.
 3. Vercel auto-deploys only after the migration is ready; the build guard blocks an incompatible schema.
 4. Environment variables:
    - `DATABASE_URL` — PostgreSQL connection string (must be `postgresql://`)
-   - `TMDB_API_KEY` — optional (has default)
-   - `ADMIN_REPAIR_SECRET` — optional, protects admin endpoints
-5. Build: `assert-production-db.mjs` → `prisma generate` → `verify-required-schema.mjs` → `next build`
+   - `TMDB_API_KEY` — TMDB server API key
+   - `APP_PASSWORD` — production login password, 12+ characters
+   - `SESSION_SECRET` — independent JWT signing secret, 32+ characters
+   - `APP_USERNAME` — optional login username
+   - `ADMIN_REPAIR_SECRET` — independent 32+ character secret for intentional admin repairs
+5. Build: `assert-production-db.mjs` → `verify-migration-history.mjs` → `prisma generate` → `verify-required-schema.mjs` → `next build`
 
-### Admin Endpoints
+### Admin operations
 
-- `GET /api/admin/repair-posters` — fix stale movie posters from TMDB
-- `GET /api/admin/reset-accidental-watched` — dry-run by default, resets accidental watched movies
-- `GET /api/admin/migrate-legacy-library` — manual legacy migration trigger
-- `GET /api/admin/backfill-watched-from-ratings` — set watched=true for rated movies
-- `GET /api/admin/backfill-watchlist-status` — set status=planned for unwatched items with NULL status
+All admin operations:
+
+- accept `POST` only;
+- require the signed owner session plus `Authorization: Bearer <ADMIN_REPAIR_SECRET>`;
+- reject cross-site browser requests;
+- are scoped to the authenticated owner;
+- run as a read-only preview unless the JSON body contains `"apply": true` and the exact operation confirmation.
+
+Preview example:
+
+```bash
+curl -X POST https://your-host.example/api/admin/repair-posters \
+  -H "Authorization: Bearer $ADMIN_REPAIR_SECRET" \
+  -H "Content-Type: application/json" \
+  -b "tvtime_session=<owner-session-cookie>" \
+  --data '{}'
+```
+
+Apply example:
+
+```bash
+curl -X POST https://your-host.example/api/admin/repair-posters \
+  -H "Authorization: Bearer $ADMIN_REPAIR_SECRET" \
+  -H "Content-Type: application/json" \
+  -b "tvtime_session=<owner-session-cookie>" \
+  --data '{"apply":true,"confirm":"APPLY:repair-posters"}'
+```
+
+Available operation names are `repair-posters`, `reset-accidental-watched`, `migrate-legacy-library`, `backfill-watched-from-ratings`, `backfill-watchlist-status`, `backfill-tmdb-ids`, and `dedup-media`. The preview response returns `confirmationForApply` so operators do not have to guess the token.
 
 ## Constraints
 
@@ -231,3 +316,5 @@ node --experimental-strip-types scripts/test-tvm-06-09.ts
 - **Never** treat a rating as watched or vice versa
 - **Never** allow future episodes to count as progress
 - **Never** write to the database during GET requests (TVM-27)
+- **Never** bypass staged validation by posting a whole backup directly to an import commit route
+- **Never** trust client record counts or checksums without server-side verification

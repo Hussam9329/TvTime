@@ -3,6 +3,16 @@ import { spawnSync } from "node:child_process";
 
 const checks = [
   ["Repository hygiene", ["scripts/verify-repository-hygiene.mjs"]],
+  ["Migration history", ["scripts/verify-migration-history.mjs"]],
+  ["Patch 05 deployment guards", ["scripts/verify-patch-05.mjs"]],
+  ["Patch 06 import validation tests", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-library-import-validation.ts"]],
+  ["Patch 06 staged backup guards", ["scripts/verify-patch-06.mjs"]],
+  ["Patch 07 TV cache regression tests", ["--experimental-strip-types", "scripts/test-tv-cache-regression.ts"]],
+  ["Patch 07 atomic TV guards", ["scripts/verify-patch-07.mjs"]],
+  ["Auth boundary tests", ["--experimental-strip-types", "scripts/test-auth-boundary.ts"]],
+  ["Auth boundary source verification", ["scripts/verify-auth-boundary.mjs"]],
+  ["Request identity and admin command tests", ["--experimental-strip-types", "scripts/test-request-authorization.ts"]],
+  ["Request authorization source verification", ["scripts/verify-request-authorization.mjs"]],
   ["User-facing integrity", ["scripts/verify-user-facing-integrity.mjs"]],
   ["Episode watch flow and posters", ["scripts/verify-episode-watch-poster.mjs"]],
   ["Arabic media worlds", ["scripts/verify-arabic-worlds.mjs"]],

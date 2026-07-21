@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { normalizeMediaMany } from "@/lib/media-normalize";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import {
   deriveTvTrackingState,
   episodeKey,
@@ -201,9 +202,17 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
   const trackedTmdbIds = series
     .map((s: any) => Number(s.tmdbId))
     .filter((id: number) => Number.isFinite(id) && id > 0);
-  const metadataByTmdbId = await batchReadDbMetadata(trackedTmdbIds, now);
+  const showsNeedingKeys = trackedTmdbIds.filter((id) => {
+    const watched = watchedByShow.get(id);
+    return watched && watched.count > 0;
+  });
+  const metadataByTmdbId = await batchReadDbMetadata(trackedTmdbIds, now, {
+    // Exact aired keys are required only for shows that have progress. Without
+    // them an ongoing cached show cannot prove the watched/air-date boundary.
+    episodeKeysForTmdbIds: showsNeedingKeys,
+  });
 
-  // ── FETCH EPISODE KEYS ONLY FOR SHOWS THAT NEED THEM ─────────────────
+  // ── FETCH WATCHED EPISODE KEYS ONLY FOR SHOWS THAT NEED THEM ─────────
   // The state-derivation engine needs the actual episode keys (Set<string>)
   // to compute "watching" vs "uptodate" vs "finished". But it does NOT need
   // them for shows with zero watched episodes — those get an empty Set.
@@ -212,10 +221,6 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
   // This keeps the heavy query off the fast path (countsOnly=true) entirely,
   // and limits it on the full path to ~466 shows × ~72 episodes = ~34k rows
   // — but as raw tuples, not arrays, so serialization is 5x faster.
-  const showsNeedingKeys = trackedTmdbIds.filter((id) => {
-    const w = watchedByShow.get(id);
-    return w && w.count > 0;
-  });
   if (showsNeedingKeys.length > 0) {
     const keyRows = await db.$queryRaw<
       Array<{ showId: number; seasonNumber: number; episodeNumber: number }>
@@ -285,7 +290,11 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
 
     const effectiveState = derived.verified
       ? derived.state
-      : (persisted ?? (watched.count > 0 ? "watching" : "not_started"));
+      : watched.count > 0
+        ? "watching"
+        : persisted === "planned"
+          ? "planned"
+          : "not_started";
     const repaired = await repairShowIfNeeded(
       show,
       effectiveState,
@@ -337,7 +346,7 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const url = new URL(req.url);
     const rawCategory = url.searchParams.get("category") || "all";
     const aliasedCategory = LEGACY_CATEGORY_ALIASES[rawCategory] || rawCategory;

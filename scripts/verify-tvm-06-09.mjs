@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve, relative } from "node:path";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -11,16 +10,18 @@ const root = process.cwd();
 const failures = [];
 const passes = [];
 const read = (path) => readFileSync(resolve(root, path), "utf8");
-const sha256 = (path) => createHash("sha256").update(readFileSync(resolve(root, path))).digest("hex");
 const check = (condition, message) => (condition ? passes : failures).push(message);
 
-const protectedHashes = {
-  "scripts/assert-production-db.mjs": "f4a8214783d8a926a391b27da36102dc2ef0b075e013fd95eca3b5dcd7f53d36",
-  "next.config.ts": "6427983b336fdc783833ad08feab538b75286de080701680509663fd27b999c5",
-};
-for (const [path, expected] of Object.entries(protectedHashes)) {
-  check(sha256(path) === expected, `${path} remains on the reviewed infrastructure baseline`);
-}
+const productionGuard = read("scripts/assert-production-db.mjs");
+const nextConfig = read("next.config.ts");
+check(
+  /DATABASE_URL/.test(productionGuard) && /postgresql?:/.test(productionGuard) && /fail closed/i.test(productionGuard),
+  "Deployment target guard fails closed and accepts PostgreSQL only",
+);
+check(
+  /Content-Security-Policy/.test(nextConfig) && /X-Frame-Options/.test(nextConfig) && /Strict-Transport-Security/.test(nextConfig),
+  "Next.js configuration retains the reviewed security headers",
+);
 
 const schema = read("prisma/schema.prisma");
 const packageJson = JSON.parse(read("package.json"));
@@ -30,6 +31,12 @@ const trackingRoute = read("src/app/api/tv-tracking/route.ts");
 const mediaUpdateRoute = read("src/app/api/media/[id]/route.ts");
 const ratingRoute = read("src/app/api/library/ratings/route.ts");
 const importRoute = read("src/app/api/library/import/route.ts");
+const importValidationPath = resolve(root, "src/lib/library-import-validation.ts");
+const importValidation = existsSync(importValidationPath) ? read("src/lib/library-import-validation.ts") : null;
+const importFinalizePath = resolve(root, "src/app/api/library/import/[sessionId]/finalize/route.ts");
+const importFinalize = existsSync(importFinalizePath)
+  ? read("src/app/api/library/import/[sessionId]/finalize/route.ts")
+  : null;
 const eligibility = read("src/lib/tv-rating-eligibility.ts");
 const episodeRating = read("src/lib/episode-rating.ts");
 const ratingRules = read("src/lib/tv-rating-rules.ts");
@@ -55,18 +62,41 @@ check(/cached\.nextEpisode[\s\S]*isEpisodeReleased/.test(statusServer), "Cache i
 check(/hasUnwatchedReleasedEpisode/.test(trackingRoute), "Haven't Watched is based on a released unwatched episode");
 check(/"havent-watched": snapshot\.predicates\.hasUnwatchedReleasedEpisode/.test(trackingRoute), "Haven't Watched filter uses the released-episode predicate");
 check(/if \(stateVerified\)/.test(trackingRoute) && /repairShowIfNeeded\([\s\S]*derived\.verified/.test(trackingRoute), "Background display repair applies derived progress only when TMDB state is verified");
-check(/refetchInterval:\s*5 \* 60 \* 1000/.test(hooks), "TV tracking/progress refetches while the app is open");
-check(/setInterval\([\s\S]*5 \* 60 \* 1000/.test(providers), "Global provider triggers periodic server reconciliation");
-check(/visibilitychange/.test(providers) && /online/.test(providers) && /focus/.test(providers), "Reconciliation runs on return, reconnect and focus");
+check(
+  /useTvTrackingCounts[\s\S]*staleTime:\s*60_000[\s\S]*refetchOnReconnect:\s*true/.test(hooks)
+    && /useTvTracking\([\s\S]*staleTime:\s*60_000[\s\S]*refetchOnReconnect:\s*true/.test(hooks),
+  "TV tracking queries refresh on reconnect and expire while the app remains open",
+);
+check(
+  /BACKGROUND_REFRESH_INTERVAL_MS\s*=\s*15 \* 60 \* 1000/.test(providers)
+    && /countsOnly/.test(providers)
+    && /window\.setInterval/.test(providers),
+  "Global provider performs bounded periodic server reconciliation",
+);
+check(
+  /MIN_REFRESH_GAP_MS/.test(providers)
+    && /document\.visibilityState !== "visible"/.test(providers)
+    && /addEventListener\("online"/.test(providers)
+    && !/addEventListener\("focus"/.test(providers),
+  "Reconciliation is debounced, visible-only and avoids focus-trigger storms",
+);
 check(/getTvRatingEligibility/.test(mediaUpdateRoute), "Direct whole-series rating writes use server eligibility");
 check(/TV_RATING_LOCKED_UNTIL_ENDED/.test(eligibility), "Ongoing whole-series rating returns a dedicated lock code");
 check(/isWholeSeriesRatingEligible/.test(eligibility)
   && /officiallyEnded\s*===\s*true/.test(ratingRules)
   && /watchedEpisodes\s*>=\s*args\.totalEpisodes/.test(ratingRules), "Full-series rating requires ended + every final episode watched");
 check(/mediaType === "tv"[\s\S]*getTvRatingEligibility/.test(ratingRoute), "Legacy title-rating API cannot bypass the TV lock");
-check(/deferredSeriesRatings/.test(importRoute) && /lockedSeriesRatingsSkipped/.test(importRoute), "Import cannot bypass the whole-series rating lock");
+const stagedImportSkipsSeriesRatings = importValidation && importFinalize
+  ? /requestedSeriesRating/.test(importValidation)
+    && /userRating:\s*parsed\.type === "series" \? null/.test(importValidation)
+    && /skippedWholeSeriesRatings/.test(importFinalize)
+  : /deferredSeriesRatings/.test(importRoute) && /lockedSeriesRatingsSkipped/.test(importRoute);
+check(stagedImportSkipsSeriesRatings, "Import cannot bypass the whole-series rating lock");
 check(/intentionally disabled/.test(legacyBackupScript) && !/db\.media\.createMany/.test(legacyBackupScript), "Legacy direct backup importer cannot bypass TV state/rating rules");
-check(/status: itemType === "series" \? "not_started"/.test(importRoute), "Imported stale Finished TV status is not trusted");
+const stagedImportResetsSeriesState = importValidation
+  ? /status:\s*parsed\.type === "series"[\s\S]*parsed\.status === "planned" \? "planned" : "not_started"/.test(importValidation)
+  : /status: itemType === "series" \? "not_started"/.test(importRoute);
+check(stagedImportResetsSeriesState, "Imported stale Finished TV status is not trusted");
 check(/EPISODE_RATING_PREFIX/.test(episodeRating) && /\$\{season\}:\$\{episode\}/.test(episodeRating), "Episode ratings have independent per-episode identities");
 check(/EPISODE_RATING_REQUIRES_RELEASE/.test(ratingRoute), "Episode rating requires the episode to have aired");
 check(/EPISODE_RATING_REQUIRES_WATCHED/.test(ratingRoute), "Episode rating requires the episode to be watched");

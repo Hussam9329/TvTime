@@ -1,21 +1,36 @@
-const url = String(process.env.DATABASE_URL || "").trim();
+const rawUrl = String(process.env.DATABASE_URL || "").trim();
 
-if (!url) {
-  console.error("[RECOVERY] DATABASE_URL is missing. Build stopped before connecting to an empty database.");
+function refuse(message) {
+  console.error(`[database-target] ${message}`);
   process.exit(1);
+}
+
+if (!rawUrl) {
+  refuse("DATABASE_URL is missing. Build and migration commands fail closed.");
 }
 
 let parsed;
 try {
-  parsed = new URL(url);
+  parsed = new URL(rawUrl);
 } catch {
-  console.error("[RECOVERY] DATABASE_URL is invalid. Expected the original PostgreSQL connection URL.");
-  process.exit(1);
+  refuse("DATABASE_URL is invalid. Expected a PostgreSQL connection URL.");
 }
 
-if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) {
-  console.error(`[RECOVERY] Refusing database protocol ${parsed.protocol}. The recovery build requires the original PostgreSQL database.`);
-  process.exit(1);
+if (!["postgres:", "postgresql:"].includes(parsed.protocol)) {
+  refuse(`Refusing database protocol ${parsed.protocol || "unknown"}; PostgreSQL is required.`);
+}
+if (!parsed.hostname || !parsed.pathname.replace(/^\//, "")) {
+  refuse("DATABASE_URL must include a host and database name.");
+}
+if (/^(user|username|host|localhost)$/i.test(parsed.username)
+  || /^(password|pass|changeme)$/i.test(parsed.password)
+  || /^(host|example\.com)$/i.test(parsed.hostname)) {
+  refuse("DATABASE_URL still appears to contain placeholder credentials.");
 }
 
-console.log(`[RECOVERY] PostgreSQL target confirmed: ${parsed.hostname || 'configured-host'}/${parsed.pathname.replace(/^\//, '') || 'configured-database'}`);
+const auditUrl = String(process.env.TVTIME_AUDIT_DATABASE_URL || "").trim();
+if (auditUrl && auditUrl === rawUrl) {
+  refuse("DATABASE_URL must not reuse TVTIME_AUDIT_DATABASE_URL.");
+}
+
+console.log("[database-target] PostgreSQL deployment target is configured; credentials were not printed.");

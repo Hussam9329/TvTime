@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { useNav } from "@/lib/store";
 import { useQueryClient } from "@tanstack/react-query";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
 import { getUserPreferences, setUserPreferences, COUNTRY_OPTIONS, TIMEZONE_OPTIONS } from "@/lib/user-preferences";
+import { downloadLibraryBackup, restoreLibraryBackup } from "@/lib/library-backup-client";
 import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Globe, Clock, Star, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -37,6 +38,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [clearing, setClearing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [transferProgress, setTransferProgress] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [authEnabled, setAuthEnabled] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -127,60 +129,74 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     }
   };
 
+  const invalidateLibraryQueries = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["lib"] }),
+      qc.invalidateQueries({ queryKey: ["media"] }),
+      qc.invalidateQueries({ queryKey: ["library-counts"] }),
+      qc.invalidateQueries({ queryKey: ["tv-tracking"] }),
+      qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] }),
+    ]);
+  };
+
   const onExport = async () => {
     setExporting(true);
+    setTransferProgress("Preparing backup manifest");
     try {
-      const res = await fetch(withUserId(new URL("/api/library/export", window.location.origin)), {
-        headers: userHeaders(),
-      });
-      if (!res.ok) throw new Error("Failed to export");
-      const data = await res.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `cinetrack-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("Collection exported");
-    } catch {
-      toast.error("Failed to export data");
+      const result = await downloadLibraryBackup((progress) => setTransferProgress(progress.message));
+      toast.success(`Exported ${result.totalRecords.toLocaleString()} records`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export data");
     } finally {
       setExporting(false);
+      setTransferProgress("");
     }
   };
 
-  const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const onImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
     setImporting(true);
+    setTransferProgress("Reading backup manifest");
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      const res = await fetch(withUserId(new URL("/api/library/import", window.location.origin)), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...userHeaders() },
-        body: JSON.stringify(data),
+      const result = await restoreLibraryBackup(file, {
+        onProgress: (progress) => setTransferProgress(progress.message),
+        confirmPreview: (preview) => {
+          const counts = (preview.counts ?? {}) as Record<string, number>;
+          const duplicates = (preview.duplicateRecordsThatWillMerge ?? {}) as Record<string, number>;
+          const warnings = Array.isArray(preview.warnings) ? preview.warnings.map(String) : [];
+          const lines = [
+            "Restore this validated backup?",
+            "",
+            `Media: ${Number(counts.media ?? 0).toLocaleString()}`,
+            `Watched episodes: ${Number(counts.watchedEpisodes ?? 0).toLocaleString()}`,
+            `Episode ratings: ${Number(counts.episodeRatings ?? 0).toLocaleString()}`,
+            `Existing media to merge: ${Number(preview.existingMediaThatWillMerge ?? 0).toLocaleString()}`,
+            `Duplicate backup rows to merge: ${(Number(duplicates.media ?? 0) + Number(duplicates.watchedEpisodes ?? 0)).toLocaleString()}`,
+            "",
+            "The final database update is atomic: it either completes fully or leaves your library unchanged.",
+            ...warnings.map((warning) => `Warning: ${warning}`),
+          ];
+          return window.confirm(lines.join("\n"));
+        },
       });
-      if (!res.ok) throw new Error("Import failed");
-      const result = await res.json();
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["lib"] }),
-        qc.invalidateQueries({ queryKey: ["media"] }),
-        qc.invalidateQueries({ queryKey: ["library-counts"] }),
-        qc.invalidateQueries({ queryKey: ["tv-tracking"] }),
-        qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] }),
-      ]);
-      const imported = result?.imported || {};
-      const total = (imported.watchlist || 0) + (imported.watchedMovies || 0) + (imported.watchedEpisodes || 0) + (imported.following || 0) + (imported.ratings || 0) + (imported.episodeRatings || 0) + (imported.media || 0);
-      toast.success(`Imported ${total} items`);
+
+      if (result.cancelled) {
+        toast.info("Restore cancelled; staged data was removed");
+        return;
+      }
+      await invalidateLibraryQueries();
+      const imported = result.imported ?? {};
+      const affected = Number(imported.mediaRowsAffected ?? 0)
+        + Number(imported.watchedEpisodeRowsAffected ?? 0)
+        + Number(imported.episodeRatingRowsAffected ?? 0);
+      toast.success(`Restore completed atomically (${affected.toLocaleString()} rows merged)`);
       onOpenChange(false);
-    } catch {
-      toast.error("Failed to import. Check the file format.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to import backup");
     } finally {
       setImporting(false);
+      setTransferProgress("");
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -253,15 +269,15 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               <Download className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold">Backup & Restore</p>
-                <p className="text-xs text-muted-foreground">Export your complete collection to a JSON file or import a backup.</p>
+                <p className="text-xs text-muted-foreground">Export a paged NDJSON backup or restore a JSON/NDJSON backup through validated staging.</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" onClick={onExport} disabled={exporting}>
+              <Button variant="outline" size="sm" onClick={onExport} disabled={exporting || importing}>
                 {exporting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
                 Export
               </Button>
-              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing || exporting}>
                 {importing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
                 Import
               </Button>
@@ -269,10 +285,15 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             <input
               ref={fileInputRef}
               type="file"
-              accept="application/json,.json"
+              accept="application/x-ndjson,application/json,.ndjson,.json"
               onChange={onImport}
               className="hidden"
             />
+            {transferProgress && (
+              <p className="mt-2 text-[11px] text-muted-foreground" role="status" aria-live="polite">
+                {transferProgress}
+              </p>
+            )}
           </div>
 
           {/* TVM-35/36/37: Preferences — timezone, country, platform preferences */}

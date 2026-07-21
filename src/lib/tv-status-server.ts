@@ -21,6 +21,10 @@ export type TvStatusMetadata = {
   posterPath: string | null;
   overview: string | null;
   firstAirDate: string | null;
+  originalLanguage: string | null;
+  originCountries: string[];
+  genres: Array<{ id: number; name: string }>;
+  classificationComplete: boolean;
   tmdbStatus: string | null;
   officiallyEnded: boolean;
   inProduction: boolean | null;
@@ -57,11 +61,16 @@ function readFresh<T>(entry: CacheEntry<T> | undefined, ttl: number): T | null {
   return Date.now() - entry.fetchedAt < ttl ? entry.value : null;
 }
 
-function readFreshTvMetadata(entry: CacheEntry<TvStatusMetadata> | undefined, now: Date): TvStatusMetadata | null {
+function readFreshTvMetadata(
+  entry: CacheEntry<TvStatusMetadata> | undefined,
+  now: Date,
+  requireClassification = false,
+): TvStatusMetadata | null {
   if (!entry) return null;
   const ttl = entry.value.officiallyEnded ? ENDED_TV_META_TTL_MS : ONGOING_TV_META_TTL_MS;
   const cached = readFresh(entry, ttl);
   if (!cached) return null;
+  if (requireClassification && !cached.classificationComplete) return null;
 
   // Do not let the ordinary metadata TTL hide an episode whose calendar date
   // has just arrived. TMDB only supplies an air date here, so the state engine
@@ -79,12 +88,17 @@ function readFreshTvMetadata(entry: CacheEntry<TvStatusMetadata> | undefined, no
  * reconstructed minimally because tv-status-engine only needs a handful of
  * fields; we keep it loose (any) to avoid over-specifying.
  */
-function metadataFromDbRow(row: {
+type TvMetadataDbRow = {
   tmdbId: number;
   title: string;
   posterPath: string | null;
   overview: string | null;
   firstAirDate: string | null;
+  originalLanguage: string | null;
+  originCountries: string[];
+  genreIds: number[];
+  genreNames: string[];
+  classificationComplete: boolean;
   tmdbStatus: string | null;
   officiallyEnded: boolean;
   inProduction: boolean | null;
@@ -99,17 +113,27 @@ function metadataFromDbRow(row: {
   nextEpisodeEpisodeNumber: number | null;
   seasonsCount: number | null;
   lastSeasonNumber: number | null;
-}): TvStatusMetadata {
+  refreshAfter: Date;
+};
+
+function metadataFromDbRow(row: TvMetadataDbRow): TvStatusMetadata {
   const hasNext =
     row.nextEpisodeAirDate !== null &&
     row.nextEpisodeSeasonNumber !== null &&
     row.nextEpisodeEpisodeNumber !== null;
+  const genres = (row.genreNames ?? [])
+    .map((name, index) => ({ id: Number(row.genreIds?.[index] ?? 0), name: String(name || "").trim() }))
+    .filter((genre) => genre.name.length > 0);
   return {
     tmdbId: row.tmdbId,
     title: row.title,
     posterPath: row.posterPath,
     overview: row.overview,
     firstAirDate: row.firstAirDate,
+    originalLanguage: row.originalLanguage,
+    originCountries: row.originCountries ?? [],
+    genres,
+    classificationComplete: row.classificationComplete,
     tmdbStatus: row.tmdbStatus,
     officiallyEnded: row.officiallyEnded,
     inProduction: row.inProduction,
@@ -141,8 +165,8 @@ function metadataFromDbRow(row: {
       vote_count: 0,
       media_type: "tv",
       popularity: 0,
-      original_language: undefined,
-      origin_country: [],
+      original_language: row.originalLanguage ?? undefined,
+      origin_country: row.originCountries ?? [],
       number_of_seasons: row.totalSeasons ?? 0,
       number_of_episodes: row.totalEpisodes ?? 0,
       seasons: Array.from({ length: row.seasonsCount ?? 0 }, (_, i) => ({
@@ -154,7 +178,7 @@ function metadataFromDbRow(row: {
         poster_path: null,
         overview: "",
       })),
-      genres: [],
+      genres,
       tagline: "",
       status: row.tmdbStatus ?? "",
       episode_run_time: [],
@@ -190,6 +214,11 @@ function metadataToDbRow(meta: TvStatusMetadata, refreshAfter: Date) {
     posterPath: meta.posterPath,
     overview: meta.overview,
     firstAirDate: meta.firstAirDate,
+    originalLanguage: meta.originalLanguage,
+    originCountries: meta.originCountries,
+    genreIds: meta.genres.map((genre) => genre.id),
+    genreNames: meta.genres.map((genre) => genre.name),
+    classificationComplete: meta.classificationComplete,
     tmdbStatus: meta.tmdbStatus,
     officiallyEnded: meta.officiallyEnded,
     inProduction: meta.inProduction,
@@ -220,10 +249,15 @@ function metadataToDbRow(meta: TvStatusMetadata, refreshAfter: Date) {
  * every 5m. Additionally, if a cached next-episode air date has become
  * current, we treat the row as stale so the engine re-evaluates the boundary.
  */
-async function readDbMetadata(tmdbId: number, now: Date): Promise<TvStatusMetadata | null> {
+async function readDbMetadata(
+  tmdbId: number,
+  now: Date,
+  requireClassification = false,
+): Promise<TvStatusMetadata | null> {
   try {
-    const row = await db.tvMetadataCache.findUnique({ where: { tmdbId } });
+    const row = await (db.tvMetadataCache as any).findUnique({ where: { tmdbId } }) as TvMetadataDbRow | null;
     if (!row) return null;
+    if (requireClassification && !row.classificationComplete) return null;
     if (row.refreshAfter > now) {
       // Fresh enough. But check the next-episode boundary.
       if (row.nextEpisodeAirDate && isEpisodeReleased(row.nextEpisodeAirDate, now)) {
@@ -252,22 +286,29 @@ async function readDbMetadata(tmdbId: number, now: Date): Promise<TvStatusMetada
  * 597 rows × 20 columns (including TEXT[] arrays with avg 63 elements each)
  * was measured at ~900ms. Raw SQL is ~150ms.
  *
- * Pass `includeEpisodeKeys: false` (default) to skip the heavy
- * `airedEpisodeKeys` TEXT[] column. This cuts the query from ~1.3s to ~430ms
- * because the array serialization is the dominant cost. The state-derivation
- * engine falls back to `Math.min(watchedKeys.size, airedEpisodeCount)` when
- * `airedEpisodeKeys` is empty — slightly less precise but good enough for
- * the tracking dashboard. Pass `includeEpisodeKeys: true` only when you need
- * the exact set intersection (e.g. when marking a specific episode watched).
+ * By default the heavy `airedEpisodeKeys` TEXT[] column is omitted. Callers
+ * may request it for every row with `includeEpisodeKeys`, or only for shows
+ * that actually have watched progress with `episodeKeysForTmdbIds`. Ongoing
+ * progress is deliberately unverified when the exact released-key boundary is
+ * absent; it must never collapse to Not Started merely because a compact cache
+ * projection skipped the array.
  */
 export async function batchReadDbMetadata(
   tmdbIds: number[],
   now: Date,
-  options: { includeEpisodeKeys?: boolean } = {},
+  options: { includeEpisodeKeys?: boolean; episodeKeysForTmdbIds?: number[] } = {},
 ): Promise<Map<number, TvStatusMetadata>> {
   const result = new Map<number, TvStatusMetadata>();
   if (tmdbIds.length === 0) return result;
   const includeEpisodeKeys = options.includeEpisodeKeys === true;
+  const requestedKeyIds = [...new Set((options.episodeKeysForTmdbIds ?? [])
+    .map(Number)
+    .filter((id) => Number.isInteger(id) && id > 0))];
+  const episodeKeysProjection = includeEpisodeKeys
+    ? Prisma.raw('"airedEpisodeKeys"')
+    : requestedKeyIds.length > 0
+      ? Prisma.raw(`CASE WHEN "tmdbId" IN (${requestedKeyIds.join(",")}) THEN "airedEpisodeKeys" ELSE ARRAY[]::TEXT[] END AS "airedEpisodeKeys"`)
+      : Prisma.raw(`ARRAY[]::TEXT[] AS "airedEpisodeKeys"`);
 
   try {
     const rows = await db.$queryRaw<
@@ -277,6 +318,11 @@ export async function batchReadDbMetadata(
         posterPath: string | null;
         overview: string | null;
         firstAirDate: string | null;
+        originalLanguage: string | null;
+        originCountries: string[];
+        genreIds: number[];
+        genreNames: string[];
+        classificationComplete: boolean;
         tmdbStatus: string | null;
         officiallyEnded: boolean;
         inProduction: boolean | null;
@@ -295,10 +341,11 @@ export async function batchReadDbMetadata(
       }>
     >`
       SELECT
-        "tmdbId", "title", "posterPath", "overview", "firstAirDate", "tmdbStatus",
+        "tmdbId", "title", "posterPath", "overview", "firstAirDate",
+        "originalLanguage", "originCountries", "genreIds", "genreNames", "classificationComplete", "tmdbStatus",
         "officiallyEnded", "inProduction", "totalEpisodes", "totalSeasons",
         "airedEpisodeCount",
-        ${includeEpisodeKeys ? Prisma.raw('"airedEpisodeKeys"') : Prisma.raw(`ARRAY[]::TEXT[] AS "airedEpisodeKeys"`)},
+        ${episodeKeysProjection},
         "airedEpisodeInferenceReliable",
         "nextEpisodeAirDate", "nextEpisodeName", "nextEpisodeSeasonNumber", "nextEpisodeEpisodeNumber",
         "seasonsCount", "lastSeasonNumber", "refreshAfter"
@@ -321,34 +368,37 @@ export async function batchReadDbMetadata(
 }
 
 /**
- * Upsert a TvStatusMetadata into the DB cache. Fire-and-forget — the caller
- * does not need to wait for this to complete. Errors are swallowed because
- * a cache write failure should NOT break the user's request.
+ * Upsert metadata before the request finishes. Cache failure remains non-fatal,
+ * but a successful return now means the L2 write was allowed to settle instead
+ * of being abandoned when a serverless invocation ends.
  */
-function writeDbMetadata(meta: TvStatusMetadata, refreshAfter: Date): void {
-  // Avoid blocking the response. Use .catch to silence unhandled rejection.
-  db.tvMetadataCache
-    .upsert({
+async function writeDbMetadata(meta: TvStatusMetadata, refreshAfter: Date): Promise<void> {
+  try {
+    await (db.tvMetadataCache as any).upsert({
       where: { tmdbId: meta.tmdbId },
       create: metadataToDbRow(meta, refreshAfter),
       update: metadataToDbRow(meta, refreshAfter),
-    })
-    .catch((error) => {
-      // Log but don't throw — cache write is best-effort.
-      console.warn(`[tv-metadata-cache] write failed for tmdbId=${meta.tmdbId}`, error);
     });
+  } catch (error) {
+    console.warn(`[tv-metadata-cache] write failed for tmdbId=${meta.tmdbId}`, error);
+  }
 }
 
-export async function getTvStatusMetadata(tmdbId: number, now: Date = new Date()): Promise<TvStatusMetadata> {
+export async function getTvStatusMetadata(
+  tmdbId: number,
+  now: Date = new Date(),
+  options: { requireClassification?: boolean } = {},
+): Promise<TvStatusMetadata> {
   const id = Number(tmdbId);
   if (!Number.isFinite(id) || id <= 0) throw new Error("A valid TMDB TV id is required");
 
   // L1: in-memory cache (fast, but cold-start lossy)
-  const memCached = readFreshTvMetadata(tvMetadataCache.get(id), now);
+  const requireClassification = options.requireClassification === true;
+  const memCached = readFreshTvMetadata(tvMetadataCache.get(id), now, requireClassification);
   if (memCached) return memCached;
 
   // L2: DB cache (survives cold starts)
-  const dbCached = await readDbMetadata(id, now);
+  const dbCached = await readDbMetadata(id, now, requireClassification);
   if (dbCached) {
     // Promote to L1 so subsequent reads in the same invocation skip the DB.
     tvMetadataCache.set(id, { value: dbCached, fetchedAt: Date.now() });
@@ -377,6 +427,12 @@ export async function getTvStatusMetadata(tmdbId: number, now: Date = new Date()
     posterPath: detail.poster_path || null,
     overview: detail.overview || null,
     firstAirDate: detail.first_air_date || null,
+    originalLanguage: detail.original_language?.trim().toLowerCase() || null,
+    originCountries: [...new Set((detail.origin_country || []).map((country) => String(country).trim().toUpperCase()).filter(Boolean))],
+    genres: (detail.genres || [])
+      .map((genre) => ({ id: Number(genre.id || 0), name: String(genre.name || "").trim() }))
+      .filter((genre) => genre.name.length > 0),
+    classificationComplete: true,
     tmdbStatus: detail.status || null,
     officiallyEnded: isOfficiallyEndedTvStatus(detail.status),
     inProduction: typeof detail.in_production === "boolean" ? detail.in_production : null,
@@ -395,7 +451,7 @@ export async function getTvStatusMetadata(tmdbId: number, now: Date = new Date()
   const ttlMs = metadata.officiallyEnded ? ENDED_TV_META_TTL_MS : ONGOING_TV_META_TTL_MS;
   const refreshAfter = new Date(now.getTime() + ttlMs);
   tvMetadataCache.set(id, { value: metadata, fetchedAt: Date.now() });
-  writeDbMetadata(metadata, refreshAfter);
+  await writeDbMetadata(metadata, refreshAfter);
 
   return metadata;
 }
@@ -422,9 +478,10 @@ export async function getReleasedEpisodesForSeason(
   tmdbId: number,
   seasonNumber: number,
   now: Date = new Date(),
+  providedMetadata?: TvStatusMetadata,
 ): Promise<ReleasedEpisode[]> {
   const [metadata, season] = await Promise.all([
-    getTvStatusMetadata(tmdbId, now),
+    providedMetadata ?? getTvStatusMetadata(tmdbId, now),
     getTvSeasonDetail(tmdbId, seasonNumber),
   ]);
 
@@ -480,12 +537,18 @@ export async function validateReleasedEpisodeBatch(
   tmdbId: number,
   episodes: TvEpisodeRequest[],
   now: Date = new Date(),
+  providedMetadata?: TvStatusMetadata,
 ): Promise<{ released: ReleasedEpisode[]; blocked: TvEpisodeRequest[] }> {
   const seasonNumbers = [...new Set(episodes.map((episode) => Number(episode.seasonNumber)))];
   const releasedByKey = new Map<string, ReleasedEpisode>();
 
   const seasonResults = await Promise.all(
-    seasonNumbers.map((seasonNumber) => getReleasedEpisodesForSeason(tmdbId, seasonNumber, now)),
+    seasonNumbers.map((seasonNumber) => getReleasedEpisodesForSeason(
+      tmdbId,
+      seasonNumber,
+      now,
+      providedMetadata,
+    )),
   );
   for (const items of seasonResults) {
     for (const item of items) releasedByKey.set(episodeKey(item.seasonNumber, item.episodeNumber), item);

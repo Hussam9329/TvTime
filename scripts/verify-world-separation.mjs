@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve, relative } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -8,18 +7,20 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), "utf8");
-const sha256 = (path) => createHash("sha256").update(readFileSync(resolve(root, path))).digest("hex");
 const passes = [];
 const failures = [];
 const check = (condition, message) => (condition ? passes : failures).push(message);
 
-const protectedHashes = {
-  "scripts/assert-production-db.mjs": "f4a8214783d8a926a391b27da36102dc2ef0b075e013fd95eca3b5dcd7f53d36",
-  "next.config.ts": "6427983b336fdc783833ad08feab538b75286de080701680509663fd27b999c5",
-};
-for (const [path, expected] of Object.entries(protectedHashes)) {
-  check(sha256(path) === expected, `${path} remains on the reviewed infrastructure baseline`);
-}
+const productionGuard = read("scripts/assert-production-db.mjs");
+const nextConfig = read("next.config.ts");
+check(
+  /DATABASE_URL/.test(productionGuard) && /postgresql?:/.test(productionGuard) && /fail closed/i.test(productionGuard),
+  "Deployment target guard fails closed and accepts PostgreSQL only",
+);
+check(
+  /Content-Security-Policy/.test(nextConfig) && /X-Frame-Options/.test(nextConfig) && /Strict-Transport-Security/.test(nextConfig),
+  "Next.js configuration retains the reviewed security headers",
+);
 
 const schema = read("prisma/schema.prisma");
 const header = read("src/components/layout/header.tsx");

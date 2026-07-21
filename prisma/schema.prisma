@@ -26,6 +26,7 @@ model User {
   watchSessions   WatchSession[]
   notifications   Notification[]
   customLists     CustomList[]
+  importSessions  LibraryImportSession[]
 }
 
 /// Canonical media record - tracks all types of media (movies, TV, books, games)
@@ -167,6 +168,11 @@ model TvMetadataCache {
   posterPath                  String?
   overview                    String?
   firstAirDate                String?
+  originalLanguage            String?
+  originCountries             String[] @default([])
+  genreIds                    Int[]    @default([])
+  genreNames                  String[] @default([])
+  classificationComplete      Boolean  @default(false)
   tmdbStatus                  String?
   officiallyEnded             Boolean
   inProduction                Boolean?
@@ -267,4 +273,58 @@ model CustomListItem {
 
   @@unique([listId, tmdbId, mediaType])
   @@index([listId])
+}
+
+
+/// Temporary, user-scoped staging session for a validated library restore.
+model LibraryImportSession {
+  id              String                @id @default(cuid())
+  userId          String
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  version         Int
+  status          String                @default("uploading")
+  manifest        Json
+  expectedRecords Int
+  receivedRecords Int                   @default(0)
+  expectedChunks  Int?
+  receivedChunks  Int                   @default(0)
+  preview         Json?
+  result          Json?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  expiresAt       DateTime
+  committedAt     DateTime?
+  chunks          LibraryImportChunk[]
+  records         LibraryImportRecord[]
+
+  @@index([userId, status])
+  @@index([expiresAt])
+}
+
+/// Idempotency marker for each uploaded import chunk.
+model LibraryImportChunk {
+  id          String               @id @default(cuid())
+  sessionId   String
+  session     LibraryImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sequence    Int
+  checksum    String
+  recordCount Int
+  createdAt   DateTime             @default(now())
+
+  @@unique([sessionId, sequence])
+  @@index([sessionId])
+}
+
+/// A normalized and validated record waiting for the atomic import commit.
+model LibraryImportRecord {
+  id         String               @id @default(cuid())
+  sessionId  String
+  session    LibraryImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  collection String
+  ordinal    Int
+  payload    Json
+  createdAt  DateTime             @default(now())
+
+  @@unique([sessionId, collection, ordinal])
+  @@index([sessionId, collection])
 }

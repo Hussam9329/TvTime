@@ -1,0 +1,54 @@
+name: Schema migrations
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  empty-database-migration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tvtime
+          POSTGRES_PASSWORD: tvtime_ci_password
+          POSTGRES_DB: tvtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tvtime -d tvtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://tvtime:tvtime_ci_password@127.0.0.1:5432/tvtime
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify migration history
+        run: node scripts/verify-migration-history.mjs
+
+      - name: Apply migrations to an empty database
+        run: bunx prisma migrate deploy
+
+      - name: Generate Prisma Client
+        run: bunx prisma generate
+
+      - name: Verify the live schema contract
+        run: node scripts/verify-required-schema.mjs
+
+      - name: Run Patch 05 guards
+        run: node scripts/verify-patch-05.mjs

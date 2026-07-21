@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve, relative } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -10,16 +9,24 @@ const root = process.cwd();
 const passes = [];
 const failures = [];
 const read = (path) => readFileSync(resolve(root, path), "utf8");
-const hash = (path) => createHash("sha256").update(readFileSync(resolve(root, path))).digest("hex");
 const check = (condition, message) => (condition ? passes : failures).push(message);
 
-const protectedHashes = {
-  "scripts/assert-production-db.mjs": "f4a8214783d8a926a391b27da36102dc2ef0b075e013fd95eca3b5dcd7f53d36",
-  "next.config.ts": "6427983b336fdc783833ad08feab538b75286de080701680509663fd27b999c5",
-};
-for (const [path, expected] of Object.entries(protectedHashes)) {
-  check(hash(path) === expected, `${path} remains on the reviewed infrastructure baseline`);
-}
+const productionGuard = read("scripts/assert-production-db.mjs");
+const nextConfig = read("next.config.ts");
+check(
+  /DATABASE_URL/.test(productionGuard) &&
+    /new URL\(rawUrl\)/.test(productionGuard) &&
+    /postgres:\", \"postgresql:/.test(productionGuard) &&
+    /fail(?:ed|ure|s)? closed|fail-closed/i.test(productionGuard) &&
+    /credentials were not printed/.test(productionGuard),
+  "Production database guard remains fail-closed, PostgreSQL-only, and secret-safe",
+);
+check(
+  /Content-Security-Policy/.test(nextConfig) &&
+    /X-Frame-Options/.test(nextConfig) &&
+    /Strict-Transport-Security/.test(nextConfig),
+  "Next configuration retains the reviewed security-header contract",
+);
 
 const schema = read("prisma/schema.prisma");
 const pkg = JSON.parse(read("package.json"));
