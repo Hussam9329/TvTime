@@ -1,6 +1,6 @@
 "use client";
 
-import { useFollowing, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useWatchedMovieToggle } from "@/hooks/use-tmdb";
+import { useFollowing, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackingCounts, useWatchedMovieToggle } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X, Languages } from "lucide-react";
@@ -18,6 +18,7 @@ export function HomeView() {
 
   const following = useFollowing();
   const stats = useStats();
+  const tvTrackingCounts = useTvTrackingCounts("standard");
 
   const setView = useNav((s) => s.setView);
   const userName = useNav((s) => s.userName);
@@ -90,7 +91,7 @@ export function HomeView() {
           <QuickStat
             icon={<Tv className="w-4 h-4" />}
             label="TV Shows"
-            value={stats.data.counts.series ?? stats.data.counts.following ?? 0}
+            value={tvTrackingCounts.data?.counts.all ?? "…"}
             onClick={() => setView("tv-shows")}
           />
           <QuickStat
@@ -191,7 +192,7 @@ export function HomeView() {
   );
 }
 
-function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactNode; label: string; value: number; suffix?: string; onClick?: () => void }) {
+function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactNode; label: string; value: number | string; suffix?: string; onClick?: () => void }) {
   return (
     <button
       onClick={onClick}
