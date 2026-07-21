@@ -39,17 +39,11 @@ const StatsView = lazy(() =>
 const TvShowsView = lazy(() =>
   import("@/components/views/tv-shows-page-view").then((m) => ({ default: m.TVShowsPageView })),
 );
-const MediaView = lazy(() =>
-  import("@/components/views/media-view").then((m) => ({ default: m.MediaView })),
-);
 const ArabicMoviesView = lazy(() =>
   import("@/components/views/arabic-movies-view").then((m) => ({ default: m.ArabicMoviesView })),
 );
 const ArabicTvView = lazy(() =>
   import("@/components/views/arabic-tv-view").then((m) => ({ default: m.ArabicTvView })),
-);
-const DiaryView = lazy(() =>
-  import("@/components/views/diary-view").then((m) => ({ default: m.DiaryView })),
 );
 const ListsView = lazy(() =>
   import("@/components/views/lists-view").then((m) => ({ default: m.ListsView })),
@@ -136,11 +130,9 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
                 {view === "movies" && <MoviesView />}
                 {view === "anime" && <AnimeView />}
                 {view === "stats" && <StatsView />}
-                {view === "media" && <MediaView />}
                 {view === "tv-shows" && <TvShowsView />}
                 {view === "arabic-movies" && <ArabicMoviesView />}
                 {view === "arabic-tv" && <ArabicTvView />}
-                {view === "diary" && <DiaryView />}
                 {view === "lists" && <ListsView />}
               </Suspense>
             </ErrorBoundary>

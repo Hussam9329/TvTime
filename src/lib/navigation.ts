@@ -8,11 +8,9 @@ export type ViewName =
   | "movies"
   | "anime"
   | "stats"
-  | "media"
   | "tv-shows"
   | "arabic-movies"
   | "arabic-tv"
-  | "diary"
   | "lists";
 
 export type NavigationEntry = {
@@ -29,11 +27,9 @@ const ROOT_VIEWS = new Set<ViewName>([
   "movies",
   "anime",
   "stats",
-  "media",
   "tv-shows",
   "arabic-movies",
   "arabic-tv",
-  "diary",
   "lists",
 ]);
 

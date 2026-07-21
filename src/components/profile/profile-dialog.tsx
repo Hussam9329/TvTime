@@ -126,7 +126,6 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         qc.invalidateQueries({ queryKey: ["library-counts"] }),
         qc.invalidateQueries({ queryKey: ["tv-tracking"] }),
         qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] }),
-        qc.invalidateQueries({ queryKey: ["diary"] }),
         qc.invalidateQueries({ queryKey: ["lists"] }),
         qc.invalidateQueries({ queryKey: ["notifications"] }),
         qc.invalidateQueries({ queryKey: ["user"] }),
@@ -147,7 +146,6 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       qc.invalidateQueries({ queryKey: ["library-counts"] }),
       qc.invalidateQueries({ queryKey: ["tv-tracking"] }),
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] }),
-      qc.invalidateQueries({ queryKey: ["diary"] }),
       qc.invalidateQueries({ queryKey: ["lists"] }),
       qc.invalidateQueries({ queryKey: ["notifications"] }),
       qc.invalidateQueries({ queryKey: ["user"] }),
@@ -186,7 +184,6 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             `Media: ${Number(counts.media ?? 0).toLocaleString()}`,
             `Watched episodes: ${Number(counts.watchedEpisodes ?? 0).toLocaleString()}`,
             `Episode ratings: ${Number(counts.episodeRatings ?? 0).toLocaleString()}`,
-            `Diary sessions: ${Number(counts.watchSessions ?? 0).toLocaleString()}`,
             `Notifications: ${Number(counts.notifications ?? 0).toLocaleString()}`,
             `Custom lists: ${Number(counts.customLists ?? 0).toLocaleString()} (${Number(counts.customListItems ?? 0).toLocaleString()} items)`,
             `Preferences: ${Number(counts.preferences ?? 0).toLocaleString()}`,
@@ -292,7 +289,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               <Download className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold">Backup & Restore</p>
-                <p className="text-xs text-muted-foreground">Export or restore your library, diary, notifications, custom lists and account preferences through validated staging.</p>
+                <p className="text-xs text-muted-foreground">Export or restore your library, notifications, custom lists and account preferences through validated staging.</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -351,7 +348,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-destructive">Danger zone</p>
-                <p className="text-xs text-muted-foreground">Clear all user-owned content, including the diary, notifications and custom lists. Account preferences are preserved.</p>
+                <p className="text-xs text-muted-foreground">Clear all user-owned content, including notifications and custom lists. Account preferences are preserved.</p>
               </div>
             </div>
             <AlertDialog>
@@ -365,7 +362,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                 <AlertDialogHeader>
                   <AlertDialogTitle>Clear all collection data?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This permanently deletes your library, ratings, watched episodes, diary sessions, notifications and custom lists. Your account name and preferences remain. This action cannot be undone.
+                    This permanently deletes your library, ratings, watched episodes, notifications and custom lists. Your account name and preferences remain. This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -461,7 +458,7 @@ function PreferencesSection() {
             {TIMEZONE_OPTIONS.map((timezone) => <SelectItem key={timezone.value} value={timezone.value}>{timezone.label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <p className="text-[10px] text-muted-foreground">Diary timestamps display in this timezone and sync across devices.</p>
+        <p className="text-[10px] text-muted-foreground">Dates and times display in this timezone and sync across devices.</p>
       </div>
 
       <div className="space-y-1.5">

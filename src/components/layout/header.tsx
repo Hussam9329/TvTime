@@ -14,7 +14,6 @@ import {
   Keyboard,
   Languages,
   Library,
-  CalendarDays,
   ListChecks,
   Menu,
   Moon,
@@ -79,8 +78,6 @@ const arabicNavItems: NavItem[] = [
 ];
 
 const myStuffNavItems: NavItem[] = [
-  { view: "media", label: "My Media", icon: Library },
-  { view: "diary", label: "Diary", icon: CalendarDays },
   { view: "lists", label: "Custom Lists", icon: ListChecks },
 ];
 

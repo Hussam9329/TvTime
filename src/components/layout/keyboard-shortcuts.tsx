@@ -29,8 +29,6 @@ const SHORTCUTS: { group: string; items: ShortcutItem[] }[] = [
       { keys: ["g", "f"], description: "Go to Arabic Movies" },
       { keys: ["g", "v"], description: "Go to Arabic TV" },
       { keys: ["g", "s"], description: "Go to Stats" },
-      { keys: ["g", "c"], description: "Go to My Media" },
-      { keys: ["g", "y"], description: "Go to Diary" },
       { keys: ["g", "l"], description: "Go to Custom Lists" },
     ],
   },
@@ -126,14 +124,6 @@ export function KeyboardShortcuts() {
           case "v":
             e.preventDefault();
             setView("arabic-tv");
-            break;
-          case "c":
-            e.preventDefault();
-            setView("media");
-            break;
-          case "y":
-            e.preventDefault();
-            setView("diary");
             break;
           case "l":
             e.preventDefault();

@@ -42,8 +42,6 @@ requireText("prisma/migrations/20260718000000_data_lifecycle_preferences/migrati
 ]);
 requireText("src/components/layout/header.tsx", [
   [/const myStuffNavItems/, "My Stuff navigation is missing"],
-  [/view: "media"/, "Media navigation is missing"],
-  [/view: "diary"/, "Diary navigation is missing"],
   [/view: "lists"/, "Lists navigation is missing"],
   [/TVTIME_SEARCH_FOCUS_EVENT/, "central search command is not wired"],
 ]);
@@ -62,10 +60,6 @@ if (/dir="rtl"/.test(read("src/app/arabic/layout.tsx"))) {
 requireText("src/components/media/watch-providers.tsx", [
   [/fetchUserPreferences/, "provider region is not account-synchronized"],
   [/preferredPlatforms/, "preferred platform highlighting is missing"],
-]);
-requireText("src/components/views/diary-view.tsx", [
-  [/dateKeyInTimezone/, "diary grouping is not timezone-aware"],
-  [/timeZone: timezone/, "diary display is not timezone-aware"],
 ]);
 
 const pkg = JSON.parse(read("package.json"));

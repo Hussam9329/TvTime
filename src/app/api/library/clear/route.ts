@@ -12,7 +12,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({
         error: `Confirmation required. Send header 'x-confirm-delete: ${CONFIRMATION}' to confirm.`,
         code: "CONFIRMATION_REQUIRED",
-        hint: "This deletes the library, diary, notifications and custom lists, but keeps the account preferences.",
+        hint: "This deletes the library, notifications and custom lists, but keeps the account preferences.",
       }, { status: 409 });
     }
 

@@ -86,7 +86,7 @@ check(/INVALID_TV_TRACKING_CATEGORY/.test(tracking) && /status:\s*400/.test(trac
 const sequenceAt = shortcuts.indexOf('lastKeyRef.current === "g"');
 const standaloneAt = shortcuts.indexOf('e.key.toLowerCase() === "s"');
 check(sequenceAt >= 0 && standaloneAt > sequenceAt, "g+s navigation is resolved before the standalone search shortcut");
-check(/view === "media" && <MediaView/.test(shell), "The legacy ?view=media route renders a real view instead of a blank shell");
+check(!/view === "media" && <MediaView/.test(shell), "The removed My Media route is still rendered");
 
 check(/verify-required-schema\.mjs/.test(pkg.scripts?.build || ""), "Production build verifies the required database contract before Next.js build");
 check(pkg.scripts?.["db:migrate:status"]?.includes("prisma migrate status"), "A read-only migration status command is available");
