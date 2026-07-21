@@ -9,6 +9,12 @@ const checks = [
   ["Patch 06 staged backup guards", ["scripts/verify-patch-06.mjs"]],
   ["Patch 07 TV cache regression tests", ["--experimental-strip-types", "scripts/test-tv-cache-regression.ts"]],
   ["Patch 07 atomic TV guards", ["scripts/verify-patch-07.mjs"]],
+  ["Patch 08 behavior tests", ["--experimental-strip-types", "scripts/test-patch-08.ts"]],
+  ["Patch 08 source guards", ["scripts/verify-patch-08.mjs"]],
+  ["Patch 09 behavior tests", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-patch-09.ts"]],
+  ["Patch 09 source guards", ["scripts/verify-patch-09.mjs"]],
+  ["Patch 10 behavior tests", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-patch-10.ts"]],
+  ["Patch 10 source guards", ["scripts/verify-patch-10.mjs"]],
   ["Auth boundary tests", ["--experimental-strip-types", "scripts/test-auth-boundary.ts"]],
   ["Auth boundary source verification", ["scripts/verify-auth-boundary.mjs"]],
   ["Request identity and admin command tests", ["--experimental-strip-types", "scripts/test-request-authorization.ts"]],
@@ -22,6 +28,7 @@ const checks = [
   ["TVM-10/11/12/13", ["scripts/verify-tvm-10-13.mjs"]],
 ];
 
+const failures = [];
 for (const [label, args] of checks) {
   console.log(`\n=== ${label} ===`);
   const result = spawnSync(process.execPath, args, {
@@ -29,14 +36,23 @@ for (const [label, args] of checks) {
     stdio: "inherit",
     env: process.env,
   });
-  if (result.error) {
-    console.error(`${label} could not start:`, result.error);
-    process.exit(1);
-  }
-  if (result.status !== 0) {
-    console.error(`\n${label} failed with exit code ${result.status ?? "unknown"}.`);
-    process.exit(result.status || 1);
+  if (result.error || result.status !== 0) {
+    failures.push({
+      label,
+      status: result.status ?? 1,
+      error: result.error?.message ?? null,
+    });
   }
 }
 
+console.log("\n=== Maintained verification summary ===");
+for (const [label] of checks) {
+  const failure = failures.find((item) => item.label === label);
+  console.log(`${failure ? "FAIL" : "PASS"}: ${label}${failure?.error ? ` (${failure.error})` : ""}`);
+}
+
+if (failures.length > 0) {
+  console.error(`\n${failures.length} maintained verification suite(s) failed.`);
+  process.exit(1);
+}
 console.log("\nAll maintained TvTime verification suites passed.");

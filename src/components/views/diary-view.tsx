@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useNav } from "@/lib/store";
+import {
+  fetchUserPreferences,
+  getUserPreferences,
+  USER_PREFERENCES_EVENT,
+  type UserPreferences,
+} from "@/lib/user-preferences";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import {
   Calendar as CalendarIcon,
@@ -64,6 +69,7 @@ export function DiaryView() {
   const [filterRewatch, setFilterRewatch] = useState<"all" | "rewatch" | "first">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [groupBy, setGroupBy] = useState<GroupKey>("date");
+  const [timezone, setTimezone] = useState(() => getUserPreferences().timezone);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -83,6 +89,22 @@ export function DiaryView() {
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchUserPreferences().then((preferences) => {
+      if (!cancelled) setTimezone(preferences.timezone);
+    }).catch(() => undefined);
+    const handlePreferences = (event: Event) => {
+      const preferences = (event as CustomEvent<UserPreferences>).detail;
+      if (preferences) setTimezone(preferences.timezone);
+    };
+    window.addEventListener(USER_PREFERENCES_EVENT, handlePreferences);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(USER_PREFERENCES_EVENT, handlePreferences);
+    };
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm("هل تريد حذف هذه الجلسة من السجل؟")) return;
@@ -152,15 +174,15 @@ export function DiaryView() {
     const total = filtered.length;
     const totalMinutes = filtered.reduce((sum, s) => sum + (s.duration || 0), 0);
     const rewatchCount = filtered.filter((s) => s.rewatch).length;
-    const daysWithActivity = new Set(filtered.map((s) => s.watchedAt.slice(0, 10))).size;
+    const daysWithActivity = new Set(filtered.map((session) => dateKeyInTimezone(session.watchedAt, timezone))).size;
     return { total, totalMinutes, rewatchCount, daysWithActivity };
-  }, [filtered]);
+  }, [filtered, timezone]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, WatchSession[]>();
     filtered.forEach((s) => {
       let key: string;
-      if (groupBy === "date") key = s.watchedAt.slice(0, 10);
+      if (groupBy === "date") key = dateKeyInTimezone(s.watchedAt, timezone);
       else if (groupBy === "title") key = s.title;
       else key = TYPE_LABELS[s.mediaType] || s.mediaType;
       const arr = map.get(key) || [];
@@ -168,7 +190,7 @@ export function DiaryView() {
       map.set(key, arr);
     });
     return Array.from(map.entries());
-  }, [filtered, groupBy]);
+  }, [filtered, groupBy, timezone]);
 
   if (loading) {
     return (
@@ -275,7 +297,7 @@ export function DiaryView() {
               <div className="flex items-center justify-between sticky top-14 bg-background/80 backdrop-blur-sm py-1 z-10">
                 <h3 className="text-sm font-bold flex items-center gap-2">
                   {groupBy === "date" && <CalendarIcon size={14} />}
-                  {groupBy === "date" ? formatDateGroup(key) : key}
+                  {groupBy === "date" ? formatDateGroup(key, timezone) : key}
                   {groupBy === "date" && (
                     <span className="text-xs text-muted-foreground font-normal">({items.length} جلسة)</span>
                   )}
@@ -299,6 +321,7 @@ export function DiaryView() {
                     onTempDateChange={setTempDate}
                     onSaveEdit={handleSaveEdit}
                     onCancelEdit={() => setEditingId(null)}
+                    timezone={timezone}
                   />
                 ))}
               </div>
@@ -311,7 +334,7 @@ export function DiaryView() {
 }
 
 function SessionRow({
-  session, onEdit, onDelete, onRewatch, isEditing, tempDate, onTempDateChange, onSaveEdit, onCancelEdit,
+  session, onEdit, onDelete, onRewatch, isEditing, tempDate, onTempDateChange, onSaveEdit, onCancelEdit, timezone,
 }: {
   session: WatchSession;
   onEdit: () => void;
@@ -322,6 +345,7 @@ function SessionRow({
   onTempDateChange: (v: string) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
+  timezone: string;
 }) {
   const Icon = TYPE_ICONS[session.mediaType] || Film;
   const d = new Date(session.watchedAt);
@@ -367,10 +391,10 @@ function SessionRow({
         <>
           <div className="text-left shrink-0">
             <div className="text-xs font-medium">
-              {d.toLocaleDateString("ar-EG", { day: "numeric", month: "short" })}
+              {new Intl.DateTimeFormat("ar-EG", { timeZone: timezone, day: "numeric", month: "short" }).format(d)}
             </div>
             <div className="text-[10px] text-muted-foreground">
-              {d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
+              {new Intl.DateTimeFormat("ar-EG", { timeZone: timezone, hour: "2-digit", minute: "2-digit" }).format(d)}
             </div>
           </div>
           {session.rating != null && (
@@ -416,13 +440,25 @@ function formatMinutesShort(minutes: number): string {
   return `${days.toFixed(1)} ي`;
 }
 
-function formatDateGroup(dateStr: string): string {
-  const d = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "اليوم";
-  if (d.toDateString() === yesterday.toDateString()) return "أمس";
-  return d.toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+function dateKeyInTimezone(value: Date | string, timezone: string): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function formatDateGroup(dateStr: string, timezone: string): string {
+  const todayKey = dateKeyInTimezone(new Date(), timezone);
+  const yesterday = new Date();
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayKey = dateKeyInTimezone(yesterday, timezone);
+  if (dateStr === todayKey) return "اليوم";
+  if (dateStr === yesterdayKey) return "أمس";
+  const date = new Date(`${dateStr}T12:00:00Z`);
+  return new Intl.DateTimeFormat("ar-EG", {
+    timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric",
+  }).format(date);
 }

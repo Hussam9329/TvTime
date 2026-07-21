@@ -12,7 +12,14 @@ import { useStats } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { useQueryClient } from "@tanstack/react-query";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
-import { getUserPreferences, setUserPreferences, COUNTRY_OPTIONS, TIMEZONE_OPTIONS } from "@/lib/user-preferences";
+import {
+  fetchUserPreferences,
+  getUserPreferences,
+  saveUserPreferences,
+  COUNTRY_OPTIONS,
+  TIMEZONE_OPTIONS,
+  type UserPreferences,
+} from "@/lib/user-preferences";
 import { downloadLibraryBackup, restoreLibraryBackup } from "@/lib/library-backup-client";
 import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Globe, Clock, Star, LogOut } from "lucide-react";
 import { toast } from "sonner";
@@ -119,6 +126,10 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         qc.invalidateQueries({ queryKey: ["library-counts"] }),
         qc.invalidateQueries({ queryKey: ["tv-tracking"] }),
         qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] }),
+        qc.invalidateQueries({ queryKey: ["diary"] }),
+        qc.invalidateQueries({ queryKey: ["lists"] }),
+        qc.invalidateQueries({ queryKey: ["notifications"] }),
+        qc.invalidateQueries({ queryKey: ["user"] }),
       ]);
       toast.success("All collection data cleared");
       onOpenChange(false);
@@ -136,6 +147,10 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       qc.invalidateQueries({ queryKey: ["library-counts"] }),
       qc.invalidateQueries({ queryKey: ["tv-tracking"] }),
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] }),
+      qc.invalidateQueries({ queryKey: ["diary"] }),
+      qc.invalidateQueries({ queryKey: ["lists"] }),
+      qc.invalidateQueries({ queryKey: ["notifications"] }),
+      qc.invalidateQueries({ queryKey: ["user"] }),
     ]);
   };
 
@@ -171,6 +186,10 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             `Media: ${Number(counts.media ?? 0).toLocaleString()}`,
             `Watched episodes: ${Number(counts.watchedEpisodes ?? 0).toLocaleString()}`,
             `Episode ratings: ${Number(counts.episodeRatings ?? 0).toLocaleString()}`,
+            `Diary sessions: ${Number(counts.watchSessions ?? 0).toLocaleString()}`,
+            `Notifications: ${Number(counts.notifications ?? 0).toLocaleString()}`,
+            `Custom lists: ${Number(counts.customLists ?? 0).toLocaleString()} (${Number(counts.customListItems ?? 0).toLocaleString()} items)`,
+            `Preferences: ${Number(counts.preferences ?? 0).toLocaleString()}`,
             `Existing media to merge: ${Number(preview.existingMediaThatWillMerge ?? 0).toLocaleString()}`,
             `Duplicate backup rows to merge: ${(Number(duplicates.media ?? 0) + Number(duplicates.watchedEpisodes ?? 0)).toLocaleString()}`,
             "",
@@ -189,7 +208,11 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       const imported = result.imported ?? {};
       const affected = Number(imported.mediaRowsAffected ?? 0)
         + Number(imported.watchedEpisodeRowsAffected ?? 0)
-        + Number(imported.episodeRatingRowsAffected ?? 0);
+        + Number(imported.episodeRatingRowsAffected ?? 0)
+        + Number(imported.watchSessionRowsAffected ?? 0)
+        + Number(imported.notificationRowsAffected ?? 0)
+        + Number(imported.customListRowsAffected ?? 0)
+        + Number(imported.customListItemRowsAffected ?? 0);
       toast.success(`Restore completed atomically (${affected.toLocaleString()} rows merged)`);
       onOpenChange(false);
     } catch (error) {
@@ -269,7 +292,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               <Download className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold">Backup & Restore</p>
-                <p className="text-xs text-muted-foreground">Export a paged NDJSON backup or restore a JSON/NDJSON backup through validated staging.</p>
+                <p className="text-xs text-muted-foreground">Export or restore your library, diary, notifications, custom lists and account preferences through validated staging.</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -328,7 +351,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-destructive">Danger zone</p>
-                <p className="text-xs text-muted-foreground">Clear all your collection data. This cannot be undone.</p>
+                <p className="text-xs text-muted-foreground">Clear all user-owned content, including the diary, notifications and custom lists. Account preferences are preserved.</p>
               </div>
             </div>
             <AlertDialog>
@@ -342,7 +365,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                 <AlertDialogHeader>
                   <AlertDialogTitle>Clear all collection data?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete your watchlist, watched movies, watched episodes, followed shows, and ratings. This action cannot be undone.
+                    This permanently deletes your library, ratings, watched episodes, diary sessions, notifications and custom lists. Your account name and preferences remain. This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -369,115 +392,114 @@ function StatBox({ label, value }: { label: string; value: number }) {
   );
 }
 
-// TVM-35/36/37: User preferences section — timezone, country, platform prefs
+// Account-synchronized preferences with a local cache for offline rendering.
 function PreferencesSection() {
-  const [prefs, setPrefs] = useState({ timezone: "Asia/Baghdad", country: "IQ", preferredPlatforms: [] as string[] });
+  const [prefs, setPrefs] = useState<UserPreferences>(() => getUserPreferences());
   const [platformInput, setPlatformInput] = useState("");
-  const [initialized, setInitialized] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [savingPreference, setSavingPreference] = useState(false);
 
-  // Load preferences on first render (client-side) using "adjust state during
-  // render" pattern to avoid setState-in-effect lint violation.
-  if (!initialized) {
-    setInitialized(true);
-    setPrefs(getUserPreferences());
-  }
+  useEffect(() => {
+    let cancelled = false;
+    fetchUserPreferences()
+      .then((next) => { if (!cancelled) setPrefs(next); })
+      .catch(() => { /* local cached preferences remain available */ })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
-  const updatePref = (key: keyof typeof prefs, value: any) => {
-    const updated = setUserPreferences({ [key]: value });
-    setPrefs(updated);
-    toast.success("Preference saved");
+  const persist = async (next: UserPreferences, successMessage = "Preference saved") => {
+    const previous = prefs;
+    setPrefs(next);
+    setSavingPreference(true);
+    try {
+      const saved = await saveUserPreferences(next);
+      setPrefs(saved);
+      toast.success(successMessage);
+    } catch (error) {
+      setPrefs(previous);
+      toast.error(error instanceof Error ? error.message : "Failed to save preference");
+    } finally {
+      setSavingPreference(false);
+    }
+  };
+
+  const updatePref = (key: keyof UserPreferences, value: UserPreferences[typeof key]) => {
+    void persist({ ...prefs, [key]: value });
   };
 
   const addPlatform = () => {
     const name = platformInput.trim();
     if (!name) return;
-    if (prefs.preferredPlatforms.includes(name)) {
+    if (prefs.preferredPlatforms.some((platform) => platform.toLowerCase() === name.toLowerCase())) {
       toast.info("Already in your preferences");
       return;
     }
-    const updated = setUserPreferences({ preferredPlatforms: [...prefs.preferredPlatforms, name] });
-    setPrefs(updated);
     setPlatformInput("");
-    toast.success(`Added "${name}" to preferred platforms`);
+    void persist({ ...prefs, preferredPlatforms: [...prefs.preferredPlatforms, name] }, `Added "${name}"`);
   };
 
   const removePlatform = (name: string) => {
-    const updated = setUserPreferences({ preferredPlatforms: prefs.preferredPlatforms.filter((p) => p !== name) });
-    setPrefs(updated);
+    void persist({ ...prefs, preferredPlatforms: prefs.preferredPlatforms.filter((platform) => platform !== name) }, `Removed "${name}"`);
   };
 
-  if (!initialized) return null;
-
   return (
-    <div className="rounded-lg border border-border/50 bg-card/50 p-3 space-y-3">
-      <div className="flex items-center gap-2">
-        <Settings className="w-4 h-4 text-primary" />
-        <p className="text-sm font-semibold">Preferences</p>
+    <div className="rounded-lg border border-border/50 bg-card/50 p-3 space-y-3" aria-busy={loading || savingPreference}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Settings className="w-4 h-4 text-primary" />
+          <p className="text-sm font-semibold">Preferences</p>
+        </div>
+        {(loading || savingPreference) && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-label="Synchronizing preferences" />}
       </div>
 
-      {/* TVM-35: Timezone */}
       <div className="space-y-1.5">
-        <Label className="text-xs flex items-center gap-1">
-          <Clock className="w-3 h-3" /> Timezone
-        </Label>
-        <Select value={prefs.timezone} onValueChange={(v) => updatePref("timezone", v)}>
-          <SelectTrigger className="h-9 text-sm">
-            <SelectValue />
-          </SelectTrigger>
+        <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> Timezone</Label>
+        <Select value={prefs.timezone} onValueChange={(value) => updatePref("timezone", value)} disabled={savingPreference}>
+          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {TIMEZONE_OPTIONS.map((tz) => (
-              <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
-            ))}
+            {TIMEZONE_OPTIONS.map((timezone) => <SelectItem key={timezone.value} value={timezone.value}>{timezone.label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <p className="text-[10px] text-muted-foreground">Episode air dates display in this timezone</p>
+        <p className="text-[10px] text-muted-foreground">Diary timestamps display in this timezone and sync across devices.</p>
       </div>
 
-      {/* TVM-36: Country for Watch Providers */}
       <div className="space-y-1.5">
-        <Label className="text-xs flex items-center gap-1">
-          <Globe className="w-3 h-3" /> Country (Where to Watch)
-        </Label>
-        <Select value={prefs.country} onValueChange={(v) => updatePref("country", v)}>
-          <SelectTrigger className="h-9 text-sm">
-            <SelectValue />
-          </SelectTrigger>
+        <Label className="text-xs flex items-center gap-1"><Globe className="w-3 h-3" /> Country (Where to Watch)</Label>
+        <Select value={prefs.country} onValueChange={(value) => updatePref("country", value)} disabled={savingPreference}>
+          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {COUNTRY_OPTIONS.map((c) => (
-              <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-            ))}
+            {COUNTRY_OPTIONS.map((country) => <SelectItem key={country.code} value={country.code}>{country.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <p className="text-[10px] text-muted-foreground">Streaming platforms shown for this country</p>
+        <p className="text-[10px] text-muted-foreground">Provider availability uses this country when TMDB supplies regional data.</p>
       </div>
 
-      {/* TVM-37: Preferred platforms */}
       <div className="space-y-1.5">
-        <Label className="text-xs flex items-center gap-1">
-          <Star className="w-3 h-3" /> Preferred Platforms
-        </Label>
+        <Label className="text-xs flex items-center gap-1"><Star className="w-3 h-3" /> Preferred Platforms</Label>
         <div className="flex gap-2">
           <Input
             value={platformInput}
-            onChange={(e) => setPlatformInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPlatform(); } }}
+            onChange={(event) => setPlatformInput(event.target.value)}
+            onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addPlatform(); } }}
             placeholder="e.g. Netflix, Shahid, Prime Video"
             className="h-9 text-sm flex-1"
+            disabled={savingPreference}
           />
-          <Button size="sm" variant="outline" className="h-9" onClick={addPlatform}>Add</Button>
+          <Button size="sm" variant="outline" className="h-9" onClick={addPlatform} disabled={savingPreference}>Add</Button>
         </div>
         {prefs.preferredPlatforms.length > 0 ? (
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {prefs.preferredPlatforms.map((p) => (
-              <Badge key={p} variant="secondary" className="text-[10px] gap-1">
+            {prefs.preferredPlatforms.map((platform) => (
+              <Badge key={platform} variant="secondary" className="text-[10px] gap-1">
                 <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                {p}
-                <button type="button" data-ui-action="danger-link" onClick={() => removePlatform(p)} className="ml-0.5 hover:text-rose-400" aria-label={`Remove ${p}`}>✕</button>
+                {platform}
+                <button type="button" data-ui-action="danger-link" onClick={() => removePlatform(platform)} className="ml-0.5 hover:text-rose-400" aria-label={`Remove ${platform}`} disabled={savingPreference}>✕</button>
               </Badge>
             ))}
           </div>
         ) : (
-          <p className="text-[10px] text-muted-foreground">Add platforms to highlight them in Where to Watch</p>
+          <p className="text-[10px] text-muted-foreground">Add platforms to highlight them in Where to Watch.</p>
         )}
       </div>
     </div>

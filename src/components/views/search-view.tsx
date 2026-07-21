@@ -13,7 +13,7 @@ import { img } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 
 export function SearchView() {
-  const { searchQuery, setSearchQuery, goPerson, goMovie, goTv } = useNav();
+  const { searchQuery, setSearchQuery, goPerson } = useNav();
   const [local, setLocal] = useState(searchQuery);
   const [filter, setFilter] = useState<"all" | "movie" | "tv" | "arabic-movies" | "arabic-tv" | "people">("all");
 

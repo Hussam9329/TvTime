@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, BookOpen, Gamepad2, Star, Clock, Check, Search, ArrowUpDown, Database } from "lucide-react";
+import { Film, Tv, BookOpen, Gamepad2, Star, Check, Search, ArrowUpDown, Database } from "lucide-react";
 import { motion } from "framer-motion";
 import { SafeImage } from "@/components/media/safe-image";
 

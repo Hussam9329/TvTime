@@ -2,6 +2,7 @@
 
 import { Film, Heart, Clapperboard, Sparkles } from "lucide-react";
 import { useStats } from "@/hooks/use-tmdb";
+import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 
 export function Footer() {
   const stats = useStats();
@@ -22,9 +23,9 @@ export function Footer() {
               </div>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="font-extrabold text-gradient text-base">CineTrack</span>
+              <span className="font-extrabold text-gradient text-base">{APP_NAME}</span>
               <span className="text-muted-foreground/40 hidden sm:inline">·</span>
-              <span className="text-muted-foreground hidden sm:inline">Your personal cinema companion</span>
+              <span className="text-muted-foreground hidden sm:inline">{APP_TAGLINE}</span>
             </div>
           </div>
 

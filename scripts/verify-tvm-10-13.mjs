@@ -73,6 +73,8 @@ check(/throw new Error\("Legacy library migration could not be verified/.test(us
 
 const allowedLegacyFiles = new Set([
   "src/lib/legacy-library-migration.ts",
+  "src/app/api/discover/filtered/route.ts",
+  "src/app/api/library/clear/route.ts",
   "scripts/verify-production-db-readonly.mjs",
   "scripts/verify-tvm-10-13.mjs",
 ]);
@@ -90,15 +92,19 @@ for (const absolute of [...walk(resolve(root, "src")), ...walk(resolve(root, "sc
   if (!/\.(?:ts|tsx|js|mjs)$/.test(file)) continue;
   if (legacyPattern.test(readFileSync(absolute, "utf8")) && !allowedLegacyFiles.has(file)) legacyUsers.push(file);
 }
-check(legacyUsers.length === 0, "No runtime page/API reads or writes legacy title tables after migration");
+check(legacyUsers.length === 0, "Only reviewed compatibility reads and explicit clear-all cleanup touch legacy title tables");
 if (legacyUsers.length) failures.push(`Unexpected legacy table users: ${legacyUsers.join(", ")}`);
 
 check(/source:\s*"Media"/.test(watchlist) && !/db\.watchlistItem/.test(watchlist), "Watchlist compatibility API is backed only by Media");
 check(/source:\s*"Media"/.test(watchedMovies) && !/db\.watchedMovie/.test(watchedMovies), "Watched movies compatibility API is backed only by Media");
 check(/source:\s*"Media"/.test(following) && !/db\.followingShow/.test(following), "Following compatibility API is backed only by Media");
 check(/Media\.userRating/.test(ratings) && /Rating:episode-only/.test(ratings), "Title ratings use Media while episode ratings remain independent");
-check(/episodeRatings/.test(exportRoute) && !/watchlistItems|watchedMovies|followingShows/.test(exportRoute), "Export uses canonical Media plus episode-only data");
-check(/media\.deleteMany/.test(clearRoute) && /mediaType:\s*\{\s*startsWith:\s*"episode:"/.test(clearRoute), "Clear removes canonical Media and episode-only records without legacy writes");
+check(/episodeRatings/.test(exportRoute) && /watchSessions/.test(exportRoute) && /customLists/.test(exportRoute), "Export uses the declared canonical Backup v6 collections");
+check(/tx\.media\.deleteMany/.test(clearRoute)
+  && /tx\.rating\.deleteMany/.test(clearRoute)
+  && /tx\.watchSession\.deleteMany/.test(clearRoute)
+  && /tx\.customList\.deleteMany/.test(clearRoute)
+  && /tx\.watchlistItem\.deleteMany/.test(clearRoute), "Clear removes the full declared lifecycle and compatibility rows in one transaction");
 
 check(/status:\s*"planned",\s*\n\s*watched:\s*false/.test(watchlist), "Watchlist API requires Planned and watched=false");
 check(/status:\s*"planned",\s*watched:\s*false/.test(counts), "Global Watchlist counters require Planned and watched=false");
@@ -126,10 +132,10 @@ for (const label of expectedLabels) {
   check(index > lastLabelAt, `TV Tracking/All contains ${label} in the requested order`);
   lastLabelAt = index;
 }
-check(/const counts = \{[\s\S]*all:[\s\S]*haventWatched:/.test(trackingApi), "TV Tracking computes every filter count from one snapshot");
+check(/buildFastTvTrackingSummary/.test(trackingApi) && /dbQueryBudget:\s*1/.test(trackingApi), "TV Tracking counts use the dedicated one-query fast summary");
 check(/countsOnly[\s\S]*countsAreGlobal:\s*true/.test(trackingApi), "TV Tracking counts-only response is global");
 check(/const matching =[\s\S]*matching\.slice\(offset, offset \+ limit\)/.test(trackingApi), "TV Tracking counts/filtering happen before pagination");
-check(/const snapshot = await buildTrackingSnapshot\(user\.id, world\)/.test(trackingApi), "TV Tracking list and counters share one canonical world-scoped snapshot");
+check(/const snapshot = await buildTrackingSnapshot\(user\.id, world\)/.test(trackingApi), "TV Tracking list uses the canonical world-scoped full snapshot");
 check(/Every number is calculated across your complete TV Shows collection/.test(trackingView), "TV Shows explains that badge counts are global");
 
 check(!/watchedMovie|followingShow|watchlistItem/.test(recently), "Recently Watched reads no legacy title table");

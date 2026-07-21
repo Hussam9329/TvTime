@@ -13,6 +13,7 @@ import {
 } from "@/lib/tv-status-engine";
 import { getTvStatusMetadata, batchReadDbMetadata, type TvStatusMetadata } from "@/lib/tv-status-server";
 import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
+import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -138,18 +139,71 @@ async function repairShowIfNeeded(
   return patched;
 }
 
+type FastTrackingDatabaseRow = {
+  tmdbId: number | null;
+  status: string | null;
+  watched: boolean;
+  episodeCount: bigint | number;
+  lastWatchedAt: Date | null;
+  officiallyEnded: boolean | null;
+  airedEpisodeCount: number | null;
+  nextEpisodeAirDate: string | null;
+  metadataFresh: boolean;
+};
+
+/**
+ * A single read-only SQL statement powers the header counters. It never reads
+ * episode-key arrays, calls TMDB, materializes legacy snapshots or writes cache
+ * rows. The full snapshot remains available for list pages that need exact
+ * per-episode decoration.
+ */
+async function buildTrackingCounts(userId: string, world: "standard" | "arabic", now = new Date()) {
+  const rows = await db.$queryRaw<FastTrackingDatabaseRow[]>`
+    SELECT
+      media."tmdbId" AS "tmdbId",
+      media."status" AS "status",
+      media."watched" AS "watched",
+      COALESCE(progress."episodeCount", 0)::bigint AS "episodeCount",
+      progress."lastWatchedAt" AS "lastWatchedAt",
+      metadata."officiallyEnded" AS "officiallyEnded",
+      metadata."airedEpisodeCount" AS "airedEpisodeCount",
+      metadata."nextEpisodeAirDate" AS "nextEpisodeAirDate",
+      COALESCE(metadata."refreshAfter" > ${now}, FALSE) AS "metadataFresh"
+    FROM "Media" AS media
+    LEFT JOIN (
+      SELECT
+        "showId",
+        COUNT(*)::bigint AS "episodeCount",
+        MAX("watchedAt") AS "lastWatchedAt"
+      FROM "WatchedEpisode"
+      WHERE "userId" = ${userId}
+      GROUP BY "showId"
+    ) AS progress ON progress."showId" = media."tmdbId"
+    LEFT JOIN "TvMetadataCache" AS metadata ON metadata."tmdbId" = media."tmdbId"
+    WHERE media."userId" = ${userId}
+      AND media."type" = 'series'
+      AND media."isAnime" = FALSE
+      AND media."isArabic" = ${world === "arabic"}
+      AND (media."status" IS NOT NULL OR media."watched" = TRUE OR COALESCE(progress."episodeCount", 0) > 0)
+  `;
+
+  return buildFastTvTrackingSummary(rows.map((row): FastTvTrackingRow => ({
+    ...row,
+    episodeCount: Number(row.episodeCount),
+  })), now);
+}
+
 async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic") {
   const now = new Date();
 
   // ── GROUP WATCHED EPISODES AT THE DB LEVEL ───────────────────────────
-  // Two-stage aggregation:
-  // 1. Fast counts-only query: per-show COUNT(*) + MAX(watchedAt). Tiny
-  //    result set (466 rows), no array serialization. Used for the
-  //    `countsOnly=true` fast path AND as the basis for the full path.
-  // 2. (Only on the full path) Per-show episode keys via a second query
-  //    that returns just (showId, seasonNumber, episodeNumber) — we build
-  //    the Set<string> in JS. This avoids ARRAY_AGG which was 1s slower
-  //    due to array serialization overhead.
+  // Two-stage aggregation for the full list path:
+  // 1. Per-show COUNT(*) + MAX(watchedAt) avoids array serialization.
+  // 2. Per-show episode keys are loaded only for shows with progress. The
+  //    query returns (showId, seasonNumber, episodeNumber), and the Set is
+  //    assembled in JavaScript instead of serializing ARRAY_AGG values.
+  // The independent countsOnly fast path returns before this function and
+  // uses one compact SQL statement without TMDB or episode-key loading.
   const watchedCounts = await db.$queryRaw<
     Array<{ showId: number; episodeCount: bigint; lastWatchedAt: Date | null }>
   >`
@@ -346,7 +400,7 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(await resolveUserId(req));
+    const requestUserId = await resolveUserId(req);
     const url = new URL(req.url);
     const rawCategory = url.searchParams.get("category") || "all";
     const aliasedCategory = LEGACY_CATEGORY_ALIASES[rawCategory] || rawCategory;
@@ -375,10 +429,27 @@ export async function GET(req: NextRequest) {
     }
     const world = worldParam as "standard" | "arabic";
 
-    const snapshot = await buildTrackingSnapshot(user.id, world);
     if (countsOnly) {
-      return NextResponse.json({ counts: snapshot.counts, countsAreGlobal: true, repairedOnRead: false, world });
+      const summary = await buildTrackingCounts(requestUserId, world);
+      const response = NextResponse.json({
+        counts: summary.counts,
+        countsAreGlobal: true,
+        repairedOnRead: false,
+        world,
+        fastPath: true,
+        countsSource: "persisted-state-plus-aggregate-progress",
+        dbQueryBudget: 1,
+        freshMetadataRows: summary.freshMetadataRows,
+        unverifiedProgressRows: summary.unverifiedProgressRows,
+      });
+      response.headers.set("Cache-Control", "private, no-store");
+      response.headers.set("X-TvTime-Counts-Path", "fast");
+      response.headers.set("X-TvTime-DB-Query-Budget", "1");
+      return response;
     }
+
+    const user = await getOrCreateUser(requestUserId);
+    const snapshot = await buildTrackingSnapshot(user.id, world);
 
     const filteredBySearch = search
       ? snapshot.decorated.filter((show) => String(show.title || "").toLowerCase().includes(search))

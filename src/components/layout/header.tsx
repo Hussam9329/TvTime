@@ -13,6 +13,9 @@ import {
   Home,
   Keyboard,
   Languages,
+  Library,
+  CalendarDays,
+  ListChecks,
   Menu,
   Moon,
   Play,
@@ -26,6 +29,7 @@ import { useNav, type ViewName } from "@/lib/store";
 import { prefetchViewModule } from "@/lib/view-prefetch";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
 import { cn } from "@/lib/utils";
+import { TVTIME_SEARCH_CLOSE_EVENT, TVTIME_SEARCH_FOCUS_EVENT } from "@/lib/search-command";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -44,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { APP_NAME } from "@/lib/brand";
 
 const ProfileDialog = dynamic(
   () => import("@/components/profile/profile-dialog").then((module) => module.ProfileDialog),
@@ -73,9 +78,16 @@ const arabicNavItems: NavItem[] = [
   { view: "arabic-tv", label: "Arabic TV", icon: Clapperboard },
 ];
 
+const myStuffNavItems: NavItem[] = [
+  { view: "media", label: "My Media", icon: Library },
+  { view: "diary", label: "Diary", icon: CalendarDays },
+  { view: "lists", label: "Custom Lists", icon: ListChecks },
+];
+
 const allNavItems: NavItem[] = [
   ...coreNavItems,
   { view: "search", label: "Search", icon: Search },
+  ...myStuffNavItems,
   ...arabicNavItems,
 ];
 
@@ -94,7 +106,8 @@ export function Header() {
   const userName = useNav((state) => state.userName);
   const { resolvedTheme, setTheme } = useTheme();
   const queryClient = useQueryClient();
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const desktopSearchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = useState(false);
   const [searchVal, setSearchVal] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -125,36 +138,46 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    const handleShortcut = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const typing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
-      if (event.key === "/" && !typing) {
-        event.preventDefault();
-        prefetchViewModule("search");
-        setMobileSearchOpen(true);
-        window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    const focusSearch = () => {
+      prefetchViewModule("search");
+      const desktop = window.matchMedia("(min-width: 768px)").matches;
+      if (desktop) {
+        desktopSearchInputRef.current?.focus();
+        desktopSearchInputRef.current?.select();
+        return;
       }
-      if (event.key === "Escape" && document.activeElement === searchInputRef.current) {
-        searchInputRef.current?.blur();
-        setMobileSearchOpen(false);
-      }
+      setMobileSearchOpen(true);
+      window.requestAnimationFrame(() => {
+        mobileSearchInputRef.current?.focus();
+        mobileSearchInputRef.current?.select();
+      });
     };
-    window.addEventListener("keydown", handleShortcut);
-    return () => window.removeEventListener("keydown", handleShortcut);
+    const closeSearch = () => {
+      desktopSearchInputRef.current?.blur();
+      mobileSearchInputRef.current?.blur();
+      setMobileSearchOpen(false);
+    };
+    window.addEventListener(TVTIME_SEARCH_FOCUS_EVENT, focusSearch);
+    window.addEventListener(TVTIME_SEARCH_CLOSE_EVENT, closeSearch);
+    return () => {
+      window.removeEventListener(TVTIME_SEARCH_FOCUS_EVENT, focusSearch);
+      window.removeEventListener(TVTIME_SEARCH_CLOSE_EVENT, closeSearch);
+    };
   }, []);
 
   const onSubmitSearch = (event: React.FormEvent) => {
     event.preventDefault();
     const query = searchVal.trim();
     if (!query) {
-      searchInputRef.current?.focus();
+      (desktopSearchInputRef.current ?? mobileSearchInputRef.current)?.focus();
       return;
     }
     setSearchQuery(query);
     setView("search");
     setMobileOpen(false);
     setMobileSearchOpen(false);
-    searchInputRef.current?.blur();
+    desktopSearchInputRef.current?.blur();
+    mobileSearchInputRef.current?.blur();
   };
 
   const goTo = useCallback((nextView: ViewName) => {
@@ -167,7 +190,7 @@ export function Header() {
   }, [queryClient]);
 
   const currentLabel = allNavItems.find((item) => item.view === view)?.label
-    ?? (view === "movie-detail" ? "Movie Details" : view === "tv-detail" ? "TV Details" : "TvTime");
+    ?? (view === "movie-detail" ? "Movie Details" : view === "tv-detail" ? "TV Details" : APP_NAME);
   const isDetailView = view === "movie-detail" || view === "tv-detail" || view === "person-detail";
 
   const navButton = (item: NavItem, compact = false) => {
@@ -210,13 +233,14 @@ export function Header() {
               <SheetTitle className="flex items-center gap-3">
                 <BrandMark />
                 <span>
-                  <span className="block text-lg font-black tracking-tight">TvTime</span>
+                  <span className="block text-lg font-black tracking-tight">{APP_NAME}</span>
                   <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Your watch universe</span>
                 </span>
               </SheetTitle>
             </SheetHeader>
             <nav className="flex max-h-[calc(100dvh-88px)] flex-col gap-5 overflow-y-auto p-4" aria-label="Mobile navigation">
               <NavGroup label="Explore">{coreNavItems.map((item) => navButton(item, true))}</NavGroup>
+              <NavGroup label="My Stuff">{myStuffNavItems.map((item) => navButton(item, true))}</NavGroup>
               <NavGroup label="Arabic World">{arabicNavItems.map((item) => navButton(item, true))}</NavGroup>
             </nav>
           </SheetContent>
@@ -234,7 +258,7 @@ export function Header() {
           onClick={() => goTo("home")}
           onPointerEnter={() => prefetchViewModule("home")}
           className="group flex shrink-0 items-center gap-2 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-          aria-label="TvTime home"
+          aria-label={`${APP_NAME} home`}
         >
           <BrandMark />
           <span className="tvtime-brand-copy hidden sm:block">
@@ -244,6 +268,30 @@ export function Header() {
 
         <nav className="tvtime-primary-nav ml-1 hidden xl:flex items-center gap-0.5" aria-label="Primary navigation">
           {coreNavItems.map((item) => navButton(item))}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                data-ui-action="nav"
+                type="button"
+                onPointerEnter={() => myStuffNavItems.forEach((item) => prefetchViewModule(item.view))}
+                className={cn(
+                  "tvtime-primary-nav-item inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors",
+                  activeIn(view, myStuffNavItems) ? "bg-primary/12 text-primary" : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
+                )}
+              >
+                <Library className="h-4 w-4" /> My Stuff <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56 rounded-xl p-1.5">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Your collection</DropdownMenuLabel>
+              {myStuffNavItems.map((item) => (
+                <DropdownMenuItem key={item.view} onSelect={() => goTo(item.view)} onFocus={() => prefetchViewModule(item.view)} className={cn("gap-2.5 rounded-lg py-2", view === item.view && "bg-accent text-accent-foreground")}>
+                  <item.icon className="h-4 w-4" /> {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -274,7 +322,7 @@ export function Header() {
           <div className="group relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <Input
-              ref={searchInputRef}
+              ref={desktopSearchInputRef}
               value={searchVal}
               onChange={(event) => setSearchVal(event.target.value)}
               onFocus={() => prefetchViewModule("search")}
@@ -300,7 +348,7 @@ export function Header() {
           onClick={() => {
             setMobileSearchOpen((open) => !open);
             prefetchViewModule("search");
-            window.requestAnimationFrame(() => searchInputRef.current?.focus());
+            window.requestAnimationFrame(() => mobileSearchInputRef.current?.focus());
           }}
           className="h-10 w-10 rounded-xl md:hidden"
           aria-label="Open search"
@@ -360,7 +408,7 @@ export function Header() {
           <div className="relative mx-auto max-w-xl">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
             <Input
-              ref={searchInputRef}
+              ref={mobileSearchInputRef}
               value={searchVal}
               onChange={(event) => setSearchVal(event.target.value)}
               placeholder="Search movies, shows, anime and people..."

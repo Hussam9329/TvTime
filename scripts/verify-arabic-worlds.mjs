@@ -23,8 +23,6 @@ const trackingView = read("src/components/views/tv-tracking-view.tsx");
 const tvReleaseApi = read("src/app/api/tv/calendar/route.ts");
 const releaseSchedule = read("src/components/views/movie-release-schedule.tsx");
 const movieCalendarApi = read("src/app/api/arabic-movies/calendar/route.ts");
-const movieSchedule = read("src/components/views/arabic-movie-schedule.tsx");
-const discoverCatalog = read("src/components/views/arabic-discover-catalog.tsx");
 const discover = read("src/components/views/discover-view.tsx");
 const home = read("src/components/views/home-view.tsx");
 const search = read("src/components/views/search-view.tsx");
@@ -69,8 +67,8 @@ check(/view: "arabic-tv"/.test(read("src/app/arabic/tv/page.tsx")), "Arabic TV d
 check(/Arabic Movies/.test(header) && /Arabic TV/.test(header), "Header exposes both Arabic worlds");
 check(/Go to Arabic Movies/.test(shortcuts) && /Go to Arabic TV/.test(shortcuts), "Keyboard navigation reaches both Arabic worlds");
 
-check(/My Arabic Movies/.test(arabicMovies) && /Discover/.test(arabicMovies) && /Releases/.test(arabicMovies), "Arabic Movies has its own library, discovery and release schedule");
-check(/Tracking/.test(arabicTv) && /Discover/.test(arabicTv) && /Releases/.test(arabicTv), "Arabic TV has its own tracking, discovery and releases");
+check(/value="library"/.test(arabicMovies) && /value="discover"/.test(arabicMovies) && /value="releases"/.test(arabicMovies) && /CollectionWorldView/.test(arabicMovies) && /DiscoverView/.test(arabicMovies) && /ReleaseSchedule/.test(arabicMovies), "Arabic Movies has its own library, discovery and release schedule");
+check(/value="tracking"/.test(arabicTv) && /value="discover"/.test(arabicTv) && /value="releases"/.test(arabicTv) && /TvShowsView/.test(arabicTv) && /DiscoverView/.test(arabicTv) && /ReleaseSchedule/.test(arabicTv), "Arabic TV has its own tracking, discovery and releases");
 check(/world="arabic-movies"/.test(arabicMovies), "Arabic Movies reads its dedicated collection world");
 check(/<DiscoverView world="arabic-movies" embedded/.test(arabicMovies), "Arabic Movies reuses the full Movies Discover experience");
 check(/<ReleaseSchedule[\s\S]*originalLanguage="ar"[\s\S]*language="ar"/.test(arabicMovies), "Arabic Movies reuses the full Movies release schedule with Arabic-only data");
@@ -94,11 +92,11 @@ check(/mediaType="tv"/.test(arabicTv) && /language="ar"/.test(arabicTv), "Arabic
 check(/forcedMediaType=\{mediaType\}/.test(releaseSchedule), "Shared release cards keep the correct media type");
 check(/original_language:\s*"ar"/.test(movieCalendarApi), "Arabic movie release API requests Arabic-language releases");
 check(/primary_release_date/.test(tmdb), "TMDB discovery supports bounded movie release dates");
-check(/Earlier|Later/.test(movieSchedule) && /release/.test(movieSchedule.toLowerCase()), "Arabic Movies has an independent navigable release schedule");
+check(/Earlier/.test(releaseSchedule) && /Later/.test(releaseSchedule) && /scheduled releases/.test(releaseSchedule), "Shared release schedule gives Arabic Movies an independently navigable window");
 
-check(/originalLanguage:\s*"ar"/.test(discoverCatalog), "Arabic discovery uses Arabic original-language filtering");
-check(/voteCount:\s*(?:voteCount\s*\?\?\s*)?0/.test(discoverCatalog), "Arabic discovery does not discard less-voted regional titles");
-check(/enabled:\s*kind === "movie"/.test(discoverCatalog) && /enabled:\s*kind === "tv"/.test(discoverCatalog), "Arabic discovery performs only the relevant request");
+check(/const forcedLang = isAnime \? "ja" : isArabic \? "ar"/.test(discover), "Shared Arabic discovery fixes the original language to Arabic");
+check(/const effectiveVoteCount = isArabic \? \(voteCount \?\? 0\)/.test(discover), "Arabic discovery does not discard less-voted regional titles");
+check(/mediaType: resultMediaType/.test(discover) && /world === "arabic-movies"/.test(discover) && /world === "arabic-tv"/.test(discover), "Shared Arabic discovery selects only the active movie or TV media type");
 check(/!isArabicMediaItem\(media\)/.test(discover), "Standard Discover excludes Arabic titles");
 check(/onlyArabic:\s*isArabic/.test(discover), "Arabic Seen/Haven't Seen filtering is enforced at the API boundary");
 check(/disabled=\{Boolean\(forcedLang\)\}/.test(discover), "Arabic and Anime discovery cannot escape their fixed language world");
@@ -130,7 +128,7 @@ check(/type:\s*"movie",\s*isAnime:\s*false,\s*isArabic:\s*false/.test(counts), "
 check(/type:\s*"series",\s*isAnime:\s*false,\s*isArabic:\s*false/.test(counts), "Standard TV counters exclude Arabic and Anime");
 
 check(
-  /LIBRARY_BACKUP_VERSION\s*=\s*5/.test(transferTypes)
+  /LIBRARY_BACKUP_VERSION\s*=\s*6/.test(transferTypes)
     && /LIBRARY_BACKUP_VERSION/.test(exportRoute),
   "Library export version records Arabic classification metadata",
 );

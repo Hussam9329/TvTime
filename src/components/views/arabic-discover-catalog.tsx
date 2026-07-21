@@ -79,7 +79,7 @@ export function ArabicDiscoverCatalog({ kind }: { kind: "movie" | "tv" }) {
     releaseDateTo,
     runtimeGte: runtimeFrom,
     runtimeLte: runtimeTo,
-    textQuery: keywords.trim() || undefined,
+    keywordQuery: keywords.trim() || undefined,
     // Pass language=ar so TMDB returns Arabic titles + Arabic posters (with
     // fallback to original-language artwork via include_image_language).
     language: "ar" as const,

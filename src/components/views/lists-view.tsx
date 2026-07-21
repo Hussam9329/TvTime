@@ -1,22 +1,40 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  List as ListIcon,
-  Plus,
-  Trash2,
-  Edit3,
-  X,
+  AlertCircle,
   Check,
-  Globe,
-  Lock,
-  Share2,
   ChevronRight,
-  Search,
-  ListPlus,
   Crown,
+  Edit3,
+  Film,
+  Globe,
+  List as ListIcon,
+  ListPlus,
+  Loader2,
+  Lock,
+  Plus,
+  Search,
+  Share2,
+  Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SafeImage } from "@/components/media/safe-image";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { readApiJson } from "@/lib/api-response";
+import {
+  normalizeListSearchResults,
+  type ListMediaType,
+  type ListSearchResult,
+} from "@/lib/custom-list-contract";
+import { img, type MediaItem, type PaginatedResponse } from "@/lib/tmdb";
 
 interface CustomListItem {
   id: string;
@@ -26,6 +44,7 @@ interface CustomListItem {
   posterPath: string | null;
   addedAt: string;
 }
+
 interface CustomList {
   id: string;
   name: string;
@@ -37,578 +56,593 @@ interface CustomList {
   createdAt: string;
 }
 
-const PRESET_COLORS = ["#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444", "#14b8a6", "#f97316"];
-const TYPE_LABELS: Record<string, string> = {
-  movie: "فيلم",
-  tv: "مسلسل",
-  anime: "أنمي",
-  arabic_movie: "فيلم عربي",
-  arabic_tv: "مسلسل عربي",
-  series: "مسلسل",
+type ListDraft = {
+  name: string;
+  description: string;
+  color: string;
+  isPublic: boolean;
 };
+
+const PRESET_COLORS = ["#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444", "#14b8a6", "#f97316"];
+const EMPTY_DRAFT: ListDraft = { name: "", description: "", color: PRESET_COLORS[0], isPublic: false };
+const TYPE_LABELS: Record<string, string> = { movie: "فيلم", tv: "مسلسل" };
 
 export function ListsView() {
   const [lists, setLists] = useState<CustomList[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [editingList, setEditingList] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [shareList, setShareList] = useState<CustomList | null>(null);
-  const [showAddItem, setShowAddItem] = useState(false);
-
-  const [newName, setNewName] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
-  const [newPublic, setNewPublic] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editDesc, setEditDesc] = useState("");
-  const [editColor, setEditColor] = useState(PRESET_COLORS[0]);
-  const [editPublic, setEditPublic] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [createDraft, setCreateDraft] = useState<ListDraft>(EMPTY_DRAFT);
+  const [editDraft, setEditDraft] = useState<ListDraft>(EMPTY_DRAFT);
 
   const fetchLists = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
-      setLoading(true);
-      const res = await fetch("/api/lists");
-      if (res.ok) {
-        const data = await res.json();
-        setLists(data.lists || []);
-      }
-    } catch (e) {
-      console.error(e);
+      const data = await readApiJson<{ lists?: CustomList[] }>(
+        await fetch("/api/lists", { cache: "no-store" }),
+        "تعذر تحميل القوائم",
+      );
+      setLists(data.lists || []);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "تعذر تحميل القوائم");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchLists();
-  }, [fetchLists]);
+  useEffect(() => { void fetchLists(); }, [fetchLists]);
 
-  const handleCreate = async () => {
-    if (!newName.trim()) return;
-    const res = await fetch("/api/lists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName, description: newDesc, color: newColor, isPublic: newPublic }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setLists((prev) => [data.list, ...prev]);
-      setNewName(""); setNewDesc(""); setNewColor(PRESET_COLORS[0]); setNewPublic(false);
-      setShowCreate(false);
+  const selectedList = lists.find((list) => list.id === selectedListId) || null;
+  const totalItems = useMemo(() => lists.reduce((sum, list) => sum + list.items.length, 0), [lists]);
+
+  const createList = async () => {
+    if (!createDraft.name.trim() || pending) return;
+    setPending("create");
+    try {
+      const data = await readApiJson<{ list: CustomList }>(
+        await fetch("/api/lists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(createDraft),
+        }),
+        "تعذر إنشاء القائمة",
+      );
+      setLists((current) => [data.list, ...current]);
+      setCreateDraft(EMPTY_DRAFT);
+      setCreateOpen(false);
       setSelectedListId(data.list.id);
       toast.success("تم إنشاء القائمة");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر إنشاء القائمة");
+    } finally {
+      setPending(null);
     }
   };
 
-  const handleStartEdit = (l: CustomList) => {
-    setEditingList(l.id);
-    setEditName(l.name); setEditDesc(l.description || ""); setEditColor(l.color); setEditPublic(l.isPublic);
+  const beginEdit = (list: CustomList) => {
+    setEditDraft({
+      name: list.name,
+      description: list.description || "",
+      color: list.color,
+      isPublic: list.isPublic,
+    });
+    setEditing(true);
   };
 
-  const handleSaveEdit = async () => {
-    if (!editingList || !editName.trim()) return;
-    const res = await fetch(`/api/lists/${editingList}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editName, description: editDesc, color: editColor, isPublic: editPublic }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setLists((prev) => prev.map((l) => (l.id === editingList ? data.list : l)));
-      setEditingList(null);
+  const saveEdit = async () => {
+    if (!selectedList || !editDraft.name.trim() || pending) return;
+    setPending(`edit:${selectedList.id}`);
+    try {
+      const data = await readApiJson<{ list: CustomList }>(
+        await fetch(`/api/lists/${selectedList.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editDraft),
+        }),
+        "تعذر تحديث القائمة",
+      );
+      setLists((current) => current.map((list) => list.id === data.list.id ? data.list : list));
+      setEditing(false);
       toast.success("تم تحديث القائمة");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر تحديث القائمة");
+    } finally {
+      setPending(null);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("هل تريد حذف هذه القائمة؟")) return;
-    await fetch(`/api/lists/${id}`, { method: "DELETE" });
-    setLists((prev) => prev.filter((l) => l.id !== id));
-    setSelectedListId(null);
-    toast.success("تم حذف القائمة");
+  const deleteList = async (list: CustomList) => {
+    if (pending || !window.confirm(`هل تريد حذف قائمة «${list.name}»؟`)) return;
+    setPending(`delete:${list.id}`);
+    try {
+      await readApiJson(
+        await fetch(`/api/lists/${list.id}`, { method: "DELETE" }),
+        "تعذر حذف القائمة",
+      );
+      setLists((current) => current.filter((item) => item.id !== list.id));
+      if (selectedListId === list.id) setSelectedListId(null);
+      if (shareList?.id === list.id) setShareList(null);
+      toast.success("تم حذف القائمة");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر حذف القائمة");
+    } finally {
+      setPending(null);
+    }
   };
 
-  const handleAddItem = async (listId: string, item: { tmdbId: number; mediaType: string; title: string; posterPath?: string }) => {
-    const res = await fetch(`/api/lists/${listId}/items`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(item),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setLists((prev) => prev.map((l) => {
-        if (l.id !== listId) return l;
-        const exists = l.items.some((i) => i.tmdbId === item.tmdbId && i.mediaType === item.mediaType);
-        if (exists) return l;
-        return { ...l, items: [...l.items, data.item] };
+  const addItem = async (item: ListSearchResult) => {
+    if (!selectedList || pending) return;
+    const action = `add:${item.mediaType}:${item.tmdbId}`;
+    setPending(action);
+    try {
+      const data = await readApiJson<{ item: CustomListItem; duplicate: boolean }>(
+        await fetch(`/api/lists/${selectedList.id}/items`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        }),
+        "تعذر إضافة العنصر",
+      );
+      setLists((current) => current.map((list) => {
+        if (list.id !== selectedList.id) return list;
+        const exists = list.items.some((currentItem) => currentItem.tmdbId === item.tmdbId && currentItem.mediaType === item.mediaType);
+        return exists
+          ? { ...list, items: list.items.map((currentItem) => currentItem.tmdbId === item.tmdbId && currentItem.mediaType === item.mediaType ? data.item : currentItem) }
+          : { ...list, items: [...list.items, data.item] };
       }));
+      toast.success(data.duplicate ? "العنصر موجود وتم تحديث معلوماته" : "تمت إضافة العنصر");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر إضافة العنصر");
+      throw error;
+    } finally {
+      setPending(null);
     }
   };
 
-  const handleRemoveItem = async (listId: string, tmdbId: number, mediaType: string) => {
-    await fetch(`/api/lists/${listId}/items?tmdbId=${tmdbId}&mediaType=${mediaType}`, { method: "DELETE" });
-    setLists((prev) => prev.map((l) => {
-      if (l.id !== listId) return l;
-      return { ...l, items: l.items.filter((i) => !(i.tmdbId === tmdbId && i.mediaType === mediaType)) };
-    }));
+  const removeItem = async (item: CustomListItem) => {
+    if (!selectedList || pending) return;
+    const action = `remove:${item.mediaType}:${item.tmdbId}`;
+    setPending(action);
+    try {
+      const url = new URL(`/api/lists/${selectedList.id}/items`, window.location.origin);
+      url.searchParams.set("tmdbId", String(item.tmdbId));
+      url.searchParams.set("mediaType", item.mediaType);
+      await readApiJson(await fetch(url, { method: "DELETE" }), "تعذر إزالة العنصر");
+      setLists((current) => current.map((list) => list.id === selectedList.id
+        ? { ...list, items: list.items.filter((currentItem) => !(currentItem.tmdbId === item.tmdbId && currentItem.mediaType === item.mediaType)) }
+        : list));
+      toast.success("تمت إزالة العنصر");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر إزالة العنصر");
+    } finally {
+      setPending(null);
+    }
   };
-
-  const totalItems = useMemo(() => lists.reduce((sum, l) => sum + l.items.length, 0), [lists]);
-  const selectedList = lists.find((l) => l.id === selectedListId) || null;
 
   if (loading) {
-    return <div className="p-8 text-center text-muted-foreground">جاري تحميل القوائم...</div>;
+    return <div className="flex items-center justify-center gap-2 p-12 text-muted-foreground" role="status"><Loader2 className="h-4 w-4 animate-spin" /> جاري تحميل القوائم...</div>;
+  }
+
+  if (loadError) {
+    return (
+      <div className="feedback-state feedback-state--error m-4 flex flex-col items-center justify-center rounded-xl border border-rose-500/30 p-12 text-center" role="alert">
+        <AlertCircle className="mb-3 h-10 w-10 text-rose-400" />
+        <h2 className="font-semibold">تعذر تحميل القوائم</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{loadError}</p>
+        <button type="button" onClick={() => void fetchLists()} className="mt-4 rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">إعادة المحاولة</button>
+      </div>
+    );
   }
 
   if (selectedList) {
     return (
-      <ListView
+      <ListDetail
         list={selectedList}
-        onBack={() => setSelectedListId(null)}
-        onEdit={() => handleStartEdit(selectedList)}
-        onDelete={() => handleDelete(selectedList.id)}
+        editing={editing}
+        editDraft={editDraft}
+        setEditDraft={setEditDraft}
+        pending={pending}
+        onBack={() => { setSelectedListId(null); setEditing(false); }}
+        onEdit={() => beginEdit(selectedList)}
+        onCancelEdit={() => setEditing(false)}
+        onSaveEdit={() => void saveEdit()}
+        onDelete={() => void deleteList(selectedList)}
         onShare={() => setShareList(selectedList)}
-        onAddItem={() => setShowAddItem(true)}
-        onRemoveItem={(tmdbId, mediaType) => handleRemoveItem(selectedList.id, tmdbId, mediaType)}
-        showAddItem={showAddItem}
-        onCloseAddItem={() => setShowAddItem(false)}
-        onAddToThisList={(item) => handleAddItem(selectedList.id, item)}
-        editingList={editingList}
-        editName={editName}
-        editDesc={editDesc}
-        editColor={editColor}
-        editPublic={editPublic}
-        setEditName={setEditName}
-        setEditDesc={setEditDesc}
-        setEditColor={setEditColor}
-        setEditPublic={setEditPublic}
-        onSaveEdit={handleSaveEdit}
-        onCancelEdit={() => setEditingList(null)}
-      />
+        onAdd={() => setAddOpen(true)}
+        onRemove={(item) => void removeItem(item)}
+      >
+        <AddItemDialog
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          existingItems={selectedList.items}
+          pending={pending}
+          onAdd={addItem}
+        />
+        <ShareDialog list={shareList} onClose={() => setShareList(null)} />
+      </ListDetail>
     );
   }
 
   return (
-    <div className="tvtime-lists-page space-y-6 p-4 md:p-6">
-      <div className="view-page-header flex items-end justify-between">
+    <div className="tvtime-lists-page space-y-6 p-4 md:p-6" dir="rtl">
+      <div className="view-page-header flex items-end justify-between gap-3">
         <div>
-          <h1 className="view-page-title text-2xl font-bold flex items-center gap-2">
-            <ListIcon size={24} /> قوائمي
-          </h1>
-          <p className="view-page-description text-sm text-muted-foreground mt-1">
-            {lists.length} قائمة • {totalItems} عنصر
-          </p>
+          <h1 className="view-page-title flex items-center gap-2 text-2xl font-bold"><ListIcon size={24} /> قوائمي</h1>
+          <p className="view-page-description mt-1 text-sm text-muted-foreground">{lists.length} قائمة • {totalItems} عنصر</p>
         </div>
-        <button
-          type="button"
-          data-ui-action="primary"
-          onClick={() => setShowCreate(true)}
-          className="bg-primary text-primary-foreground px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 hover:bg-primary/90"
-        >
+        <button type="button" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
           <Plus size={16} /> قائمة جديدة
         </button>
       </div>
 
       {lists.length === 0 ? (
         <div className="feedback-state feedback-state--empty flex flex-col items-center justify-center p-12 text-center" role="status">
-          <ListIcon className="text-muted-foreground/40 mx-auto mb-3" size={48} />
-          <h3 className="text-base font-medium text-muted-foreground">لا توجد قوائم بعد</h3>
-          <p className="text-xs text-muted-foreground/70 mt-1">أنشئ قائمتك الأولى لتنظيم أعمالك</p>
+          <ListIcon className="mb-3 text-muted-foreground/40" size={48} />
+          <h2 className="text-base font-medium text-muted-foreground">لا توجد قوائم بعد</h2>
+          <p className="mt-1 text-xs text-muted-foreground/70">أنشئ قائمتك الأولى لتنظيم أعمالك</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {lists.map((l) => (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {lists.map((list) => (
             <ListCard
-              key={l.id}
-              list={l}
-              onClick={() => setSelectedListId(l.id)}
-              onEdit={() => handleStartEdit(l)}
-              onDelete={() => handleDelete(l.id)}
-              onShare={() => setShareList(l)}
+              key={list.id}
+              list={list}
+              pending={pending}
+              onOpen={() => setSelectedListId(list.id)}
+              onEdit={() => { setSelectedListId(list.id); beginEdit(list); }}
+              onDelete={() => void deleteList(list)}
+              onShare={() => setShareList(list)}
             />
           ))}
         </div>
       )}
 
-      {showCreate && (
-        <ListFormDialog
-          title="إنشاء قائمة جديدة"
-          name={newName}
-          desc={newDesc}
-          color={newColor}
-          isPublic={newPublic}
-          setName={setNewName}
-          setDesc={setNewDesc}
-          setColor={setNewColor}
-          setIsPublic={setNewPublic}
-          onSave={handleCreate}
-          onCancel={() => setShowCreate(false)}
-        />
-      )}
-
-      {shareList && <ShareDialog list={shareList} onClose={() => setShareList(null)} />}
+      <ListFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="إنشاء قائمة جديدة"
+        description="اختر اسمًا ولونًا وحدد ما إذا كانت القائمة قابلة للمشاركة."
+        draft={createDraft}
+        setDraft={setCreateDraft}
+        saving={pending === "create"}
+        onSave={() => void createList()}
+      />
+      <ShareDialog list={shareList} onClose={() => setShareList(null)} />
     </div>
   );
 }
 
-function ListCard({ list, onClick, onEdit, onDelete, onShare }: { list: CustomList; onClick: () => void; onEdit: () => void; onDelete: () => void; onShare: () => void; }) {
+function Poster({ title, posterPath, compact = false }: { title: string; posterPath: string | null; compact?: boolean }) {
+  return (
+    <div className={`relative shrink-0 overflow-hidden rounded bg-muted ${compact ? "h-14 w-10" : "aspect-[2/3] w-full"}`}>
+      {posterPath ? (
+        <SafeImage src={img(posterPath, compact ? "w92" : "w342")} alt={title} fill variant="poster" />
+      ) : (
+        <div className="flex h-full items-center justify-center text-muted-foreground"><Film className={compact ? "h-4 w-4" : "h-7 w-7"} /></div>
+      )}
+    </div>
+  );
+}
+
+function ListCard({ list, pending, onOpen, onEdit, onDelete, onShare }: {
+  list: CustomList;
+  pending: string | null;
+  onOpen: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onShare: () => void;
+}) {
   const previewItems = list.items.slice(0, 4);
   const remaining = list.items.length - previewItems.length;
+  const isDeleting = pending === `delete:${list.id}`;
   return (
-    <div data-ui-surface="card" className="card-hover bg-card border border-border rounded-xl overflow-hidden group">
-      <button type="button" data-ui-action="surface" onClick={onClick} className="block w-full text-right" aria-label={`فتح قائمة ${list.name}`}>
-        <div className="h-1.5" style={{ background: list.color }} />
+    <article className="group overflow-hidden rounded-xl border border-border bg-card">
+      <button type="button" onClick={onOpen} className="block w-full text-right" aria-label={`فتح قائمة ${list.name}`}>
+        <div className="h-1.5" style={{ backgroundColor: list.color }} />
         <div className="p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-base truncate">{list.name}</h3>
-                {list.isPublic ? <Globe size={13} className="text-emerald-500 shrink-0" /> : <Lock size={13} className="text-muted-foreground shrink-0" />}
-              </div>
-              {list.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{list.description}</p>}
-            </div>
+          <div className="flex items-center gap-1.5">
+            <h2 className="min-w-0 flex-1 truncate text-base font-bold">{list.name}</h2>
+            {list.isPublic ? <Globe size={13} className="shrink-0 text-emerald-500" /> : <Lock size={13} className="shrink-0 text-muted-foreground" />}
           </div>
-          <div className="flex items-center gap-1 mt-3">
-            {previewItems.map((item, i) => (
-              <div key={i} className="w-10 h-14 rounded bg-muted shrink-0" />
-            ))}
-            {remaining > 0 && (
-              <div className="w-10 h-14 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground font-medium">+{remaining}</div>
-            )}
-            {list.items.length === 0 && <div className="text-xs text-muted-foreground italic">لا توجد عناصر بعد</div>}
+          {list.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{list.description}</p>}
+          <div className="mt-3 flex items-center gap-1" aria-hidden="true">
+            {previewItems.map((item) => <Poster key={item.id} title={item.title} posterPath={item.posterPath} compact />)}
+            {remaining > 0 && <div className="flex h-14 w-10 items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground">+{remaining}</div>}
+            {list.items.length === 0 && <span className="text-xs italic text-muted-foreground">لا توجد عناصر بعد</span>}
           </div>
-          <div className="flex items-center justify-between mt-3">
+          <div className="mt-3 flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{list.items.length} عنصر</span>
             <ChevronRight size={14} className="text-muted-foreground" />
           </div>
         </div>
       </button>
-      <div className="px-4 pb-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button type="button" data-ui-action="secondary" onClick={onEdit} className="text-xs px-2 py-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1">
-          <Edit3 size={11} /> تعديل
-        </button>
-        <button type="button" data-ui-action="secondary" onClick={onShare} className="text-xs px-2 py-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1">
-          <Share2 size={11} /> مشاركة
-        </button>
-        <button type="button" data-ui-action="danger" onClick={onDelete} className="text-xs px-2 py-1 rounded-md text-rose-500 hover:bg-rose-500/15 flex items-center gap-1 mr-auto">
-          <Trash2 size={11} /> حذف
+      <div className="flex items-center gap-1 px-4 pb-3">
+        <button type="button" onClick={onEdit} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"><Edit3 size={11} /> تعديل</button>
+        <button type="button" onClick={onShare} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"><Share2 size={11} /> مشاركة</button>
+        <button type="button" onClick={onDelete} disabled={isDeleting} className="mr-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs text-rose-500 hover:bg-rose-500/15 disabled:opacity-50">
+          {isDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />} حذف
         </button>
       </div>
-    </div>
+    </article>
   );
 }
 
-function ListView(props: {
+function ListDetail({ list, editing, editDraft, setEditDraft, pending, onBack, onEdit, onCancelEdit, onSaveEdit, onDelete, onShare, onAdd, onRemove, children }: {
   list: CustomList;
+  editing: boolean;
+  editDraft: ListDraft;
+  setEditDraft: (draft: ListDraft) => void;
+  pending: string | null;
   onBack: () => void;
   onEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: () => void;
   onDelete: () => void;
   onShare: () => void;
-  onAddItem: () => void;
-  onRemoveItem: (tmdbId: number, mediaType: string) => void;
-  showAddItem: boolean;
-  onCloseAddItem: () => void;
-  onAddToThisList: (item: { tmdbId: number; mediaType: string; title: string; posterPath?: string }) => void;
-  editingList: string | null;
-  editName: string;
-  editDesc: string;
-  editColor: string;
-  editPublic: boolean;
-  setEditName: (v: string) => void;
-  setEditDesc: (v: string) => void;
-  setEditColor: (v: string) => void;
-  setEditPublic: (v: boolean) => void;
-  onSaveEdit: () => void;
-  onCancelEdit: () => void;
+  onAdd: () => void;
+  onRemove: (item: CustomListItem) => void;
+  children: ReactNode;
 }) {
-  const { list, onBack, onEdit, onDelete, onShare, onAddItem, onRemoveItem, showAddItem, onCloseAddItem, onAddToThisList, editingList, editName, editDesc, editColor, editPublic, setEditName, setEditDesc, setEditColor, setEditPublic, onSaveEdit, onCancelEdit } = props;
   return (
-    <div className="space-y-4 p-4 md:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <button type="button" data-ui-action="link" onClick={onBack} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-2">
-            <ChevronRight size={12} /> العودة للقوائم
-          </button>
-          {editingList === list.id ? (
-            <ListFormDialog
-              title="تعديل القائمة"
-              name={editName}
-              desc={editDesc}
-              color={editColor}
-              isPublic={editPublic}
-              setName={setEditName}
-              setDesc={setEditDesc}
-              setColor={setEditColor}
-              setIsPublic={setEditPublic}
-              onSave={onSaveEdit}
-              onCancel={onCancelEdit}
-              inline
-            />
-          ) : (
-            <>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded" style={{ background: list.color }} />
-                <h1 className="text-2xl font-bold">{list.name}</h1>
-                {list.isPublic ? <Globe size={16} className="text-emerald-500" /> : <Lock size={16} className="text-muted-foreground" />}
-              </div>
-              {list.description && <p className="text-sm text-muted-foreground mt-1">{list.description}</p>}
-              <p className="text-xs text-muted-foreground mt-1">{list.items.length} عنصر</p>
-            </>
-          )}
-        </div>
-        {editingList !== list.id && (
-          <div className="flex items-center gap-1">
-            <button type="button" data-ui-action="icon" onClick={onEdit} className="w-9 h-9 rounded-md border border-border hover:bg-accent flex items-center justify-center" title="تعديل" aria-label="تعديل القائمة">
-              <Edit3 size={15} />
-            </button>
-            <button type="button" data-ui-action="icon" onClick={onShare} className="w-9 h-9 rounded-md border border-border hover:bg-accent flex items-center justify-center" title="مشاركة" aria-label="مشاركة القائمة">
-              <Share2 size={15} />
-            </button>
-            <button type="button" data-ui-action="danger-icon" onClick={onDelete} className="w-9 h-9 rounded-md border border-rose-500/30 text-rose-500 hover:bg-rose-500/15 flex items-center justify-center" title="حذف" aria-label="حذف القائمة">
-              <Trash2 size={15} />
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="space-y-4 p-4 md:p-6" dir="rtl">
+      <button type="button" onClick={onBack} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><ChevronRight size={12} /> العودة للقوائم</button>
 
-      <button type="button" data-ui-action="secondary" onClick={onAddItem} className="w-full py-2.5 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2">
-        <ListPlus size={16} /> أضف عنصرًا للقائمة
-      </button>
+      {editing ? (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <ListFormFields draft={editDraft} setDraft={setEditDraft} />
+          <div className="mt-4 flex gap-2">
+            <button type="button" onClick={onSaveEdit} disabled={!editDraft.name.trim() || pending === `edit:${list.id}`} className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+              {pending === `edit:${list.id}` ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} حفظ
+            </button>
+            <button type="button" onClick={onCancelEdit} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">إلغاء</button>
+          </div>
+        </div>
+      ) : (
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 rounded" style={{ backgroundColor: list.color }} />
+              <h1 className="truncate text-2xl font-bold">{list.name}</h1>
+              {list.isPublic ? <Globe size={16} className="text-emerald-500" /> : <Lock size={16} className="text-muted-foreground" />}
+            </div>
+            {list.description && <p className="mt-1 text-sm text-muted-foreground">{list.description}</p>}
+            <p className="mt-1 text-xs text-muted-foreground">{list.items.length} عنصر</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <IconButton label="تعديل القائمة" onClick={onEdit}><Edit3 size={15} /></IconButton>
+            <IconButton label="مشاركة القائمة" onClick={onShare}><Share2 size={15} /></IconButton>
+            <IconButton label="حذف القائمة" onClick={onDelete} danger><Trash2 size={15} /></IconButton>
+          </div>
+        </header>
+      )}
+
+      <button type="button" onClick={onAdd} className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2.5 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"><ListPlus size={16} /> أضف عنصرًا للقائمة</button>
 
       {list.items.length === 0 ? (
         <div className="feedback-state feedback-state--empty flex flex-col items-center justify-center p-12 text-center" role="status">
-          <ListPlus className="text-muted-foreground/40 mx-auto mb-3" size={48} />
-          <h3 className="text-base font-medium text-muted-foreground">القائمة فارغة</h3>
-          <p className="text-xs text-muted-foreground/70 mt-1">أضف أفلامًا أو مسلسلات لتنظيمها هنا</p>
+          <ListPlus className="mb-3 text-muted-foreground/40" size={48} />
+          <h2 className="text-base font-medium text-muted-foreground">القائمة فارغة</h2>
+          <p className="mt-1 text-xs text-muted-foreground/70">أضف أفلامًا أو مسلسلات لتنظيمها هنا</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {list.items.map((item) => (
-            <div key={`${item.tmdbId}-${item.mediaType}`} className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 group">
-              <div className="w-10 h-14 rounded bg-muted shrink-0" />
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-medium truncate">{item.title}</h4>
-                <span className="text-[10px] text-muted-foreground">{TYPE_LABELS[item.mediaType] || item.mediaType}</span>
-              </div>
-              <button type="button" data-ui-action="danger-icon" onClick={() => onRemoveItem(item.tmdbId, item.mediaType)} className="w-7 h-7 rounded-md text-rose-500 hover:bg-rose-500/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="إزالة" aria-label={`إزالة ${item.title} من القائمة`}>
-                <X size={14} />
-              </button>
-            </div>
-          ))}
+          {list.items.map((item) => {
+            const removing = pending === `remove:${item.mediaType}:${item.tmdbId}`;
+            return (
+              <article key={item.id} className="group flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+                <Poster title={item.title} posterPath={item.posterPath} compact />
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-sm font-medium">{item.title}</h2>
+                  <span className="text-[11px] text-muted-foreground">{TYPE_LABELS[item.mediaType] || item.mediaType}</span>
+                </div>
+                <button type="button" onClick={() => onRemove(item)} disabled={removing} className="flex h-8 w-8 items-center justify-center rounded-md text-rose-500 hover:bg-rose-500/15 disabled:opacity-50" aria-label={`إزالة ${item.title} من القائمة`}>
+                  {removing ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
+                </button>
+              </article>
+            );
+          })}
         </div>
       )}
-
-      {showAddItem && (
-        <AddItemDialog
-          existingItems={list.items}
-          onAdd={onAddToThisList}
-          onClose={onCloseAddItem}
-        />
-      )}
+      {children}
     </div>
   );
 }
 
-function ListFormDialog(props: {
-  title: string;
-  name: string;
-  desc: string;
-  color: string;
-  isPublic: boolean;
-  setName: (v: string) => void;
-  setDesc: (v: string) => void;
-  setColor: (v: string) => void;
-  setIsPublic: (v: boolean) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  inline?: boolean;
-}) {
-  const { title, name, desc, color, isPublic, setName, setDesc, setColor, setIsPublic, onSave, onCancel, inline } = props;
-  const content = (
-    <div className="space-y-4">
-      <div>
-        <label className="text-xs font-medium text-muted-foreground block mb-1.5">اسم القائمة *</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: أفلام العيد، أفضل رعب..." className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-      </div>
-      <div>
-        <label className="text-xs font-medium text-muted-foreground block mb-1.5">الوصف (اختياري)</label>
-        <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="وصف قصير للقائمة..." rows={2} className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
-      </div>
-      <div>
-        <label className="text-xs font-medium text-muted-foreground block mb-1.5">اللون</label>
-        <div className="flex items-center gap-2 flex-wrap">
-          {PRESET_COLORS.map((c) => (
-            <button key={c} type="button" onClick={() => setColor(c)} aria-label={`اختيار اللون ${c}`} aria-pressed={color === c} className={`w-8 h-8 rounded-full transition-transform ${color === c ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-105" : ""}`} style={{ background: c }} />
-          ))}
-        </div>
-      </div>
-      <div>
-        <label className="text-xs font-medium text-muted-foreground block mb-1.5">الخصوصية</label>
-        <div className="flex items-center gap-2">
-          <button type="button" data-ui-action="choice" aria-pressed={!isPublic} onClick={() => setIsPublic(false)} className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border flex items-center justify-center gap-1.5 ${!isPublic ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent"}`}>
-            <Lock size={14} /> خاصة
-          </button>
-          <button type="button" data-ui-action="choice" aria-pressed={isPublic} onClick={() => setIsPublic(true)} className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border flex items-center justify-center gap-1.5 ${isPublic ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-border hover:bg-accent"}`}>
-            <Globe size={14} /> عامة
-          </button>
-        </div>
-        <p className="text-[10px] text-muted-foreground mt-1">
-          {isPublic ? "يمكن لأي شخص لديه الرابط رؤية القائمة" : "مرئية لك فقط"}
-        </p>
-      </div>
-      <div className="flex items-center gap-2 pt-2">
-        <button type="button" data-ui-action="primary" onClick={onSave} disabled={!name.trim()} className="flex-1 bg-primary text-primary-foreground py-2 rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-1.5">
-          <Check size={15} /> حفظ
-        </button>
-        <button type="button" data-ui-action="secondary" onClick={onCancel} className="px-4 py-2 border border-border rounded-md text-sm hover:bg-accent">إلغاء</button>
-      </div>
-    </div>
-  );
+function IconButton({ label, onClick, danger = false, children }: { label: string; onClick: () => void; danger?: boolean; children: ReactNode }) {
+  return <button type="button" onClick={onClick} aria-label={label} title={label} className={`flex h-9 w-9 items-center justify-center rounded-md border ${danger ? "border-rose-500/30 text-rose-500 hover:bg-rose-500/15" : "border-border hover:bg-accent"}`}>{children}</button>;
+}
 
-  if (inline) return <div className="bg-card border border-border rounded-xl p-4">{content}</div>;
-
+function ListFormFields({ draft, setDraft }: { draft: ListDraft; setDraft: (draft: ListDraft) => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onCancel}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div data-ui-surface="dialog" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-card rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg">{title}</h2>
-          <button type="button" data-ui-action="icon" onClick={onCancel} aria-label="إغلاق نافذة القائمة" className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center"><X size={16} /></button>
+    <div className="space-y-4">
+      <label className="block text-xs font-medium text-muted-foreground">
+        اسم القائمة *
+        <input value={draft.name} maxLength={120} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="مثال: أفلام العيد" className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+      </label>
+      <label className="block text-xs font-medium text-muted-foreground">
+        الوصف (اختياري)
+        <textarea value={draft.description} maxLength={1000} onChange={(event) => setDraft({ ...draft, description: event.target.value })} rows={3} placeholder="وصف قصير للقائمة..." className="mt-1.5 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+      </label>
+      <fieldset>
+        <legend className="mb-1.5 text-xs font-medium text-muted-foreground">اللون</legend>
+        <div className="flex flex-wrap items-center gap-2">
+          {PRESET_COLORS.map((color) => (
+            <button key={color} type="button" onClick={() => setDraft({ ...draft, color })} aria-label={`اختيار اللون ${color}`} aria-pressed={draft.color === color} className={`h-8 w-8 rounded-full transition-transform ${draft.color === color ? "scale-105 ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`} style={{ backgroundColor: color }} />
+          ))}
         </div>
-        {content}
-      </div>
+      </fieldset>
+      <fieldset>
+        <legend className="mb-1.5 text-xs font-medium text-muted-foreground">الخصوصية</legend>
+        <div className="flex items-center gap-2">
+          <button type="button" aria-pressed={!draft.isPublic} onClick={() => setDraft({ ...draft, isPublic: false })} className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium ${!draft.isPublic ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent"}`}><Lock size={14} /> خاصة</button>
+          <button type="button" aria-pressed={draft.isPublic} onClick={() => setDraft({ ...draft, isPublic: true })} className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium ${draft.isPublic ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-border hover:bg-accent"}`}><Globe size={14} /> عامة</button>
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">{draft.isPublic ? "يمكن لأي شخص لديه الرابط رؤية القائمة" : "مرئية لك فقط"}</p>
+      </fieldset>
     </div>
   );
 }
 
-function AddItemDialog({ existingItems, onAdd, onClose }: { existingItems: CustomListItem[]; onAdd: (item: { tmdbId: number; mediaType: string; title: string; posterPath?: string }) => void; onClose: () => void; }) {
+function ListFormDialog({ open, onOpenChange, title, description, draft, setDraft, saving, onSave }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  draft: ListDraft;
+  setDraft: (draft: ListDraft) => void;
+  saving: boolean;
+  onSave: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next); }}>
+      <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader>
+        <ListFormFields draft={draft} setDraft={setDraft} />
+        <div className="flex items-center gap-2 pt-1">
+          <button type="button" onClick={onSave} disabled={!draft.name.trim() || saving} className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+            {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} حفظ
+          </button>
+          <button type="button" onClick={() => onOpenChange(false)} disabled={saving} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent disabled:opacity-50">إلغاء</button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddItemDialog({ open, onOpenChange, existingItems, pending, onAdd }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  existingItems: CustomListItem[];
+  pending: string | null;
+  onAdd: (item: ListSearchResult) => Promise<void>;
+}) {
   const [query, setQuery] = useState("");
-  const [filterType, setFilterType] = useState<string>("all");
-  const [results, setResults] = useState<any[]>([]);
+  const [filterType, setFilterType] = useState<"all" | ListMediaType>("all");
+  const [results, setResults] = useState<ListSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
-    const search = async () => {
-      if (!query.trim()) { setResults([]); return; }
+    if (!open || !query.trim()) {
+      setResults([]);
+      setSearchError(null);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
       setLoading(true);
+      setSearchError(null);
       try {
-        const types = filterType === "all" ? "movie,tv" : filterType;
-        const res = await fetch(`/api/tmdb/search/multi?query=${encodeURIComponent(query)}&page=1`);
-        if (res.ok) {
-          const data = await res.json();
-          const items = (data.results || []).filter((r: any) => types.includes(r.mediaType)).slice(0, 20);
-          setResults(items);
-        }
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    };
-    const t = setTimeout(search, 300);
-    return () => clearTimeout(t);
-  }, [query, filterType]);
+        const url = new URL("/api/tmdb/search", window.location.origin);
+        url.searchParams.set("q", query.trim());
+        url.searchParams.set("page", "1");
+        const data = await readApiJson<PaginatedResponse<MediaItem>>(
+          await fetch(url, { signal: controller.signal }),
+          "تعذر البحث في TMDB",
+        );
+        const normalized = normalizeListSearchResults(data.results || []);
+        setResults((filterType === "all" ? normalized : normalized.filter((item) => item.mediaType === filterType)).slice(0, 20));
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setResults([]);
+        setSearchError(error instanceof Error ? error.message : "تعذر البحث");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 300);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [filterType, open, query]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div data-ui-surface="dialog" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-2xl bg-card rounded-2xl p-5 max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg">أضف للقائمة</h2>
-          <button type="button" data-ui-action="icon" onClick={onClose} aria-label="إغلاق النافذة" className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center"><X size={16} /></button>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent dir="rtl" className="sm:max-w-2xl">
+        <DialogHeader><DialogTitle>أضف للقائمة</DialogTitle><DialogDescription>ابحث عن فيلم أو مسلسل ثم أضفه مرة واحدة إلى القائمة.</DialogDescription></DialogHeader>
         <div className="space-y-3">
           <div className="relative">
-            <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث عن عمل..." autoFocus className="w-full pr-9 pl-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            <Search size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ابحث عن عمل..." autoFocus className="w-full rounded-md border border-border bg-background py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            {[
-              { v: "all", l: "الكل" },
-              { v: "movie", l: "أفلام" },
-              { v: "tv", l: "مسلسلات" },
-            ].map((t) => (
-              <button type="button" data-ui-action="choice" key={t.v} aria-pressed={filterType === t.v} onClick={() => setFilterType(t.v)} className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${filterType === t.v ? "bg-primary text-primary-foreground" : "bg-accent"}`}>
-                {t.l}
-              </button>
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {([{ value: "all", label: "الكل" }, { value: "movie", label: "أفلام" }, { value: "tv", label: "مسلسلات" }] as const).map((option) => (
+              <button key={option.value} type="button" aria-pressed={filterType === option.value} onClick={() => setFilterType(option.value)} className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${filterType === option.value ? "bg-primary text-primary-foreground" : "bg-accent"}`}>{option.label}</button>
             ))}
           </div>
-          {loading && <div className="text-center py-4 text-sm text-muted-foreground">جاري البحث...</div>}
-          {!loading && results.length === 0 && query.trim() && (
-            <div className="text-center py-4 text-sm text-muted-foreground">لا توجد نتائج</div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {results.map((m) => {
-              const isAdded = existingItems.some((i) => i.tmdbId === m.id && i.mediaType === m.mediaType);
+          {loading && <div className="flex items-center justify-center gap-2 py-5 text-sm text-muted-foreground" role="status"><Loader2 className="h-4 w-4 animate-spin" /> جاري البحث...</div>}
+          {searchError && <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-3 text-sm text-rose-500" role="alert">{searchError}</div>}
+          {!loading && !searchError && query.trim() && results.length === 0 && <div className="py-5 text-center text-sm text-muted-foreground">لا توجد نتائج</div>}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {results.map((item) => {
+              const isAdded = existingItems.some((existing) => existing.tmdbId === item.tmdbId && existing.mediaType === item.mediaType);
+              const adding = pending === `add:${item.mediaType}:${item.tmdbId}`;
               return (
-                <div key={`${m.id}-${m.mediaType}`} className="flex items-center gap-2 p-2 rounded-lg border border-border hover:bg-accent/50">
-                  <div className="w-9 h-12 rounded bg-muted shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{m.title || m.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{TYPE_LABELS[m.mediaType] || m.mediaType}</div>
+                <article key={`${item.mediaType}:${item.tmdbId}`} className="flex items-center gap-2 rounded-lg border border-border p-2 hover:bg-accent/50">
+                  <Poster title={item.title} posterPath={item.posterPath} compact />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-medium">{item.title}</h3>
+                    <p className="text-[11px] text-muted-foreground">{TYPE_LABELS[item.mediaType]}{item.year ? ` • ${item.year}` : ""}</p>
                   </div>
-                  <button
-                    type="button"
-                    data-ui-action="secondary"
-                    onClick={() => onAdd({ tmdbId: m.id, mediaType: m.mediaType, title: m.title || m.name, posterPath: m.posterPath })}
-                    disabled={isAdded}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium ${isAdded ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
-                  >
-                    {isAdded ? "✓ مضاف" : "+ إضافة"}
+                  <button type="button" onClick={() => { void onAdd(item).catch(() => undefined); }} disabled={isAdded || Boolean(pending)} className={`rounded-md px-2.5 py-1 text-xs font-medium ${isAdded ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-primary/10 text-primary hover:bg-primary/20"}`}>
+                    {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isAdded ? "✓ مضاف" : "+ إضافة"}
                   </button>
-                </div>
+                </article>
               );
             })}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function ShareDialog({ list, onClose }: { list: CustomList; onClose: () => void }) {
-  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/list/${list.slug}` : "";
+function ShareDialog({ list, onClose }: { list: CustomList | null; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        setCopied(true);
-        toast.success("تم نسخ الرابط");
-        setTimeout(() => setCopied(false), 2000);
-      });
+  const shareUrl = list && typeof window !== "undefined" ? `${window.location.origin}/list/${encodeURIComponent(list.slug)}` : "";
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast.success("تم نسخ الرابط");
+      window.setTimeout(() => setCopied(false), 2_000);
+    } catch {
+      toast.error("تعذر نسخ الرابط");
     }
   };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div data-ui-surface="dialog" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-card rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg flex items-center gap-2"><Share2 size={18} /> مشاركة القائمة</h2>
-          <button type="button" data-ui-action="icon" onClick={onClose} aria-label="إغلاق النافذة" className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center"><X size={16} /></button>
-        </div>
-        <div className="text-center py-4">
-          <div className="w-16 h-16 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: list.color }}>
-            <Crown size={28} className="text-white" />
-          </div>
-          <h3 className="font-bold text-base">{list.name}</h3>
-          <p className="text-xs text-muted-foreground mt-1">{list.items.length} عنصر • {list.isPublic ? "قائمة عامة" : "قائمة خاصة"}</p>
-        </div>
-        {list.isPublic ? (
-          <>
-            <div className="bg-background border border-border rounded-md p-3 flex items-center gap-2">
-              <span className="text-xs text-muted-foreground truncate flex-1" dir="ltr">{shareUrl}</span>
-              <button type="button" data-ui-action="primary" onClick={handleCopy} className={`px-3 py-1.5 rounded-md text-xs font-medium shrink-0 ${copied ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}>
-                {copied ? "✓ تم النسخ" : "نسخ"}
-              </button>
+    <Dialog open={Boolean(list)} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><Share2 size={18} /> مشاركة القائمة</DialogTitle><DialogDescription>الرابط العام يعرض محتوى القائمة فقط ولا يكشف معلومات الحساب.</DialogDescription></DialogHeader>
+        {list && (
+          <div className="space-y-4">
+            <div className="py-2 text-center">
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl" style={{ backgroundColor: list.color }}><Crown size={28} className="text-white" /></div>
+              <h3 className="text-base font-bold">{list.name}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{list.items.length} عنصر • {list.isPublic ? "قائمة عامة" : "قائمة خاصة"}</p>
             </div>
-            <p className="text-[11px] text-muted-foreground text-center mt-3">يمكن لأي شخص لديه الرابط رؤية محتوى هذه القائمة</p>
-          </>
-        ) : (
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-3 text-center">
-            <Lock className="text-amber-500 mx-auto mb-2" size={20} />
-            <p className="text-sm text-amber-700 dark:text-amber-500 font-medium">القائمة خاصة</p>
-            <p className="text-xs text-muted-foreground mt-1">غيّر الإعداد إلى "عامة" للسماح بالمشاركة عبر الرابط</p>
+            {list.isPublic ? (
+              <>
+                <div className="flex items-center gap-2 rounded-md border border-border bg-background p-3">
+                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground" dir="ltr">{shareUrl}</span>
+                  <button type="button" onClick={() => void copy()} className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium ${copied ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground"}`}>{copied ? "✓ تم النسخ" : "نسخ"}</button>
+                </div>
+                <a href={shareUrl} target="_blank" rel="noreferrer" className="block text-center text-xs text-primary hover:underline">فتح الصفحة العامة</a>
+              </>
+            ) : (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-center">
+                <Lock className="mx-auto mb-2 text-amber-500" size={20} />
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-500">القائمة خاصة</p>
+                <p className="mt-1 text-xs text-muted-foreground">غيّر إعداد الخصوصية إلى «عامة» لإنشاء رابط قابل للمشاركة.</p>
+              </div>
+            )}
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

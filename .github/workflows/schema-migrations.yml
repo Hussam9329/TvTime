@@ -32,6 +32,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
@@ -52,3 +57,11 @@ jobs:
 
       - name: Run Patch 05 guards
         run: node scripts/verify-patch-05.mjs
+
+      - name: Build the production application against the migrated schema
+        env:
+          APP_PASSWORD: tvtime-ci-password-strong
+          SESSION_SECRET: tvtime-ci-session-secret-at-least-thirty-two-characters
+          ALLOW_PUBLIC_MODE: "false"
+          TMDB_API_KEY: tvtime-ci-placeholder-key-not-used-during-build
+        run: bun run build

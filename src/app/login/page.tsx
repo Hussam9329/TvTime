@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Lock, Film, User } from "lucide-react";
+import { Loader2, Lock, Film, User, ShieldAlert } from "lucide-react";
+import { safeNextPath } from "@/lib/safe-next-path";
+import { APP_NAME } from "@/lib/brand";
 
 export default function LoginPage() {
   return (
@@ -31,6 +33,8 @@ function LoginPageInner() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [authEnabled, setAuthEnabled] = useState(true);
   const [requiresUsername, setRequiresUsername] = useState(false);
+  const [configurationValid, setConfigurationValid] = useState(true);
+  const [configurationCode, setConfigurationCode] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,12 +44,15 @@ function LoginPageInner() {
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
+        const valid = data?.configurationValid !== false;
+        setConfigurationValid(valid);
+        setConfigurationCode(typeof data?.configurationCode === "string" ? data.configurationCode : null);
         setAuthEnabled(Boolean(data?.authEnabled));
         setRequiresUsername(Boolean(data?.requiresUsername));
-        // If auth is disabled, redirect to where the user wanted to go.
-        if (!data?.authEnabled) {
-          const next = search.get("next") || "/";
-          router.replace(next);
+
+        // Explicit non-production public mode does not need a login screen.
+        if (valid && data?.publicMode) {
+          router.replace(safeNextPath(search.get("next")));
           return;
         }
       } catch {
@@ -87,8 +94,7 @@ function LoginPageInner() {
         }
         return;
       }
-      const next = search.get("next") || "/";
-      router.replace(next);
+      router.replace(safeNextPath(search.get("next")));
       router.refresh();
     } catch {
       setError("Network error. Please try again.");
@@ -105,8 +111,34 @@ function LoginPageInner() {
     );
   }
 
+  if (!configurationValid) {
+    return (
+      <div className="tvtime-login-page min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4">
+        <Card className="tvtime-login-card w-full max-w-md border-rose-500/30 shadow-2xl">
+          <CardHeader className="text-center space-y-3">
+            <div className="mx-auto w-12 h-12 rounded-xl bg-rose-500/15 flex items-center justify-center">
+              <ShieldAlert className="w-6 h-6 text-rose-400" />
+            </div>
+            <CardTitle>Authentication configuration required</CardTitle>
+            <CardDescription>
+              This deployment is locked because its login secrets are missing or too weak.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>Set a strong APP_PASSWORD and an independent SESSION_SECRET, then redeploy.</p>
+            {configurationCode && (
+              <p className="font-mono text-xs rounded-md bg-muted px-3 py-2" role="status">
+                {configurationCode}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!authEnabled) {
-    // Auth disabled — middleware already redirected, this is a safety fallback.
+    // Explicit public mode redirects above; keep a no-render fallback.
     return null;
   }
 
@@ -118,7 +150,7 @@ function LoginPageInner() {
             <Film className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-extrabold">TvTime</CardTitle>
+            <CardTitle className="text-2xl font-extrabold">{APP_NAME}</CardTitle>
             <CardDescription className="mt-1">
               Sign in to access your cinema library
             </CardDescription>

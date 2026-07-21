@@ -23,7 +23,7 @@ function validationError(error: unknown) {
   );
 }
 
-/** Start a staged version-5 import. No library rows are changed here. */
+/** Start a staged version-5 or version-6 import. No user content rows are changed here. */
 export async function POST(req: NextRequest) {
   try {
     const user = await getOrCreateUser(await resolveUserId(req));

@@ -16,18 +16,22 @@ function requireText(file, pattern, message) {
   pass(message);
 }
 
-const surfaces = [
-  "src/components/views/tv-detail-view.tsx",
-  "src/components/views/tv-tracking-view.tsx",
-  "src/components/media/continue-watching.tsx",
-];
-for (const file of surfaces) {
-  requireText(file, /EpisodeWatchConfirmationDialog/, `${file} uses the shared previous-episode decision dialog`);
-  requireText(file, /buildEpisodeWatchPlan/, `${file} checks earlier released episodes before marking an episode`);
+const activeEpisodeMutationSurface = "src/components/views/tv-detail-view.tsx";
+requireText(activeEpisodeMutationSurface, /EpisodeWatchConfirmationDialog/, "TV detail uses the shared previous-episode decision dialog");
+requireText(activeEpisodeMutationSurface, /buildEpisodeWatchPlan/, "TV detail checks earlier released episodes before marking an episode");
+requireText(activeEpisodeMutationSurface, /buildSeasonWatchPlan/, "TV detail checks earlier seasons before marking a season");
+
+const trackingSource = fs.readFileSync("src/components/views/tv-tracking-view.tsx", "utf8");
+if (/EpisodeWatchConfirmationDialog|buildEpisodeWatchPlan|buildSeasonWatchPlan|useEpisodeToggle|useBulkEpisodeToggle/.test(trackingSource)) {
+  console.error("FAIL: TV Tracking contains an unreachable duplicate episode-mutation flow");
+  process.exit(1);
 }
-requireText("src/components/views/tv-detail-view.tsx", /buildSeasonWatchPlan/, "TV detail checks earlier seasons before marking a season");
-requireText("src/components/views/tv-tracking-view.tsx", /buildSeasonWatchPlan/, "TV Tracking checks earlier seasons before marking a season");
-requireText("src/components/media/continue-watching.tsx", /buildSeasonWatchPlan/, "Continue Watching checks earlier seasons before marking a season");
+pass("TV Tracking delegates episode mutations to the active TV detail flow");
+if (fs.existsSync("src/components/media/continue-watching.tsx")) {
+  console.error("FAIL: unmounted Continue Watching implementation remains as dead runtime code");
+  process.exit(1);
+}
+pass("unmounted Continue Watching implementation was removed instead of being tested as a live feature");
 requireText("src/components/media/episode-watch-confirmation-dialog.tsx", /const selectedLabel =/, "dialog offers a selected-only path");
 requireText("src/components/media/episode-watch-confirmation-dialog.tsx", /Previous \+|Previous seasons \+/, "dialog offers an explicit include-previous path");
 requireText("src/components/media/episode-watch-confirmation-dialog.tsx", />Cancel</, "dialog keeps a true cancel action separate from selected-only");

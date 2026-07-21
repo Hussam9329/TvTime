@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 
 export type LibraryImportCommitResult = {
@@ -5,7 +6,30 @@ export type LibraryImportCommitResult = {
   watchedEpisodeRowsAffected: number;
   episodeRatingRowsAffected: number;
   seriesProgressRowsAffected: number;
+  watchSessionRowsAffected: number;
+  notificationRowsAffected: number;
+  customListRowsAffected: number;
+  customListItemRowsAffected: number;
+  preferencesUpdated: boolean;
 };
+
+function listSlugStem(value: string): string {
+  return value.trim().toLowerCase()
+    .replace(/[^\w\u0600-\u06FF]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "list";
+}
+
+function asPayload(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function optionalDate(value: unknown): Date | null {
+  if (value === null || value === undefined || value === "") return null;
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
 
 /**
  * Merge normalized staging rows into the canonical tables. The caller owns the
@@ -282,10 +306,177 @@ export async function commitStagedLibraryImport(
       AND media."tmdbId" = progress."showId"
   `;
 
+  const watchSessionRowsAffected = await tx.$executeRaw`
+    WITH staged AS (
+      SELECT record.payload
+      FROM "LibraryImportRecord" record
+      WHERE record."sessionId" = ${sessionId}
+        AND record.collection = 'watchSessions'
+    )
+    INSERT INTO "WatchSession" (
+      id, "userId", "mediaId", "mediaType", "tmdbId", title, season, episode,
+      "watchedAt", duration, rewatch, rating, source, notes, "createdAt"
+    )
+    SELECT
+      payload->>'importId', ${userId}, NULL, payload->>'mediaType',
+      (payload->>'tmdbId')::INTEGER, payload->>'title',
+      NULLIF(payload->>'season', '')::INTEGER, NULLIF(payload->>'episode', '')::INTEGER,
+      COALESCE(NULLIF(payload->>'watchedAt', '')::TIMESTAMPTZ, NOW()),
+      NULLIF(payload->>'duration', '')::INTEGER,
+      COALESCE((payload->>'rewatch')::BOOLEAN, false),
+      NULLIF(payload->>'rating', '')::INTEGER, NULLIF(payload->>'source', ''),
+      NULLIF(payload->>'notes', ''),
+      COALESCE(NULLIF(payload->>'createdAt', '')::TIMESTAMPTZ, NOW())
+    FROM staged
+    WHERE NOT EXISTS (
+      SELECT 1 FROM "WatchSession" existing
+      WHERE existing."userId" = ${userId}
+        AND existing."mediaType" = staged.payload->>'mediaType'
+        AND existing."tmdbId" = (staged.payload->>'tmdbId')::INTEGER
+        AND COALESCE(existing.season, -1) = COALESCE(NULLIF(staged.payload->>'season', '')::INTEGER, -1)
+        AND COALESCE(existing.episode, -1) = COALESCE(NULLIF(staged.payload->>'episode', '')::INTEGER, -1)
+        AND existing."watchedAt" = COALESCE(NULLIF(staged.payload->>'watchedAt', '')::TIMESTAMPTZ, NOW())
+    )
+  `;
+
+  const notificationRowsAffected = await tx.$executeRaw`
+    WITH staged AS (
+      SELECT record.payload
+      FROM "LibraryImportRecord" record
+      WHERE record."sessionId" = ${sessionId}
+        AND record.collection = 'notifications'
+    )
+    INSERT INTO "Notification" (
+      id, "userId", type, title, body, "tmdbId", "mediaType", read, "scheduledFor", "createdAt"
+    )
+    SELECT
+      payload->>'importId', ${userId}, payload->>'type', payload->>'title', payload->>'body',
+      NULLIF(payload->>'tmdbId', '')::INTEGER, NULLIF(payload->>'mediaType', ''),
+      COALESCE((payload->>'read')::BOOLEAN, false),
+      NULLIF(payload->>'scheduledFor', '')::TIMESTAMPTZ,
+      COALESCE(NULLIF(payload->>'createdAt', '')::TIMESTAMPTZ, NOW())
+    FROM staged
+    WHERE NOT EXISTS (
+      SELECT 1 FROM "Notification" existing
+      WHERE existing."userId" = ${userId}
+        AND existing.type = staged.payload->>'type'
+        AND existing.title = staged.payload->>'title'
+        AND existing.body = staged.payload->>'body'
+        AND COALESCE(existing."tmdbId", -1) = COALESCE(NULLIF(staged.payload->>'tmdbId', '')::INTEGER, -1)
+        AND existing."createdAt" = COALESCE(NULLIF(staged.payload->>'createdAt', '')::TIMESTAMPTZ, NOW())
+    )
+  `;
+
+  const stagedLists = await tx.libraryImportRecord.findMany({
+    where: { sessionId, collection: "customLists" },
+    orderBy: { ordinal: "asc" },
+    select: { payload: true },
+  });
+  const targetListIds = new Map<string, string>();
+  let customListRowsAffected = 0;
+  for (const record of stagedLists) {
+    const payload = asPayload(record.payload);
+    const sourceListId = String(payload.sourceListId || "");
+    const name = String(payload.name || "").trim();
+    if (!sourceListId || !name) continue;
+    const existing = await tx.customList.findFirst({
+      where: { userId, name: { equals: name, mode: "insensitive" } },
+      select: { id: true },
+    });
+    let targetId = existing?.id;
+    if (targetId) {
+      await tx.customList.update({
+        where: { id: targetId },
+        data: {
+          description: payload.description == null ? null : String(payload.description),
+          color: String(payload.color || "#f59e0b"),
+          isPublic: Boolean(payload.isPublic),
+        },
+      });
+    } else {
+      const requestedSlug = String(payload.slug || "").trim();
+      const stem = listSlugStem(requestedSlug || name);
+      let slug = stem;
+      if (await tx.customList.findUnique({ where: { slug }, select: { id: true } })) {
+        slug = `${stem}-${randomUUID().slice(0, 10)}`;
+      }
+      const created = await tx.customList.create({
+        data: {
+          userId, name,
+          description: payload.description == null ? null : String(payload.description),
+          color: String(payload.color || "#f59e0b"),
+          isPublic: Boolean(payload.isPublic),
+          slug,
+          createdAt: optionalDate(payload.createdAt) ?? new Date(),
+        },
+        select: { id: true },
+      });
+      targetId = created.id;
+    }
+    targetListIds.set(sourceListId, targetId);
+    customListRowsAffected++;
+  }
+
+  const stagedListItems = await tx.libraryImportRecord.findMany({
+    where: { sessionId, collection: "customListItems" },
+    orderBy: { ordinal: "asc" },
+    select: { payload: true },
+  });
+  const listItemsByTarget = new Map<string, Array<{ tmdbId: number; mediaType: string; title: string; posterPath: string | null; order: number; addedAt: Date }>>();
+  for (const record of stagedListItems) {
+    const payload = asPayload(record.payload);
+    const targetId = targetListIds.get(String(payload.sourceListId || ""));
+    if (!targetId) continue;
+    const rows = listItemsByTarget.get(targetId) ?? [];
+    rows.push({
+      tmdbId: Number(payload.tmdbId),
+      mediaType: String(payload.mediaType),
+      title: String(payload.title),
+      posterPath: payload.posterPath == null ? null : String(payload.posterPath),
+      order: Number(payload.order || 0),
+      addedAt: optionalDate(payload.addedAt) ?? new Date(),
+    });
+    listItemsByTarget.set(targetId, rows);
+  }
+  let customListItemRowsAffected = 0;
+  for (const [listId, rows] of listItemsByTarget) {
+    const result = await tx.customListItem.createMany({
+      data: rows.map((row) => ({ listId, ...row })),
+      skipDuplicates: true,
+    });
+    customListItemRowsAffected += result.count;
+  }
+
+  const preferenceRecord = await tx.libraryImportRecord.findFirst({
+    where: { sessionId, collection: "preferences" },
+    orderBy: { ordinal: "asc" },
+    select: { payload: true },
+  });
+  let preferencesUpdated = false;
+  if (preferenceRecord) {
+    const payload = asPayload(preferenceRecord.payload);
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        timezone: String(payload.timezone || "Asia/Baghdad"),
+        country: String(payload.country || "IQ"),
+        preferredPlatforms: Array.isArray(payload.preferredPlatforms)
+          ? payload.preferredPlatforms.map(String).slice(0, 100)
+          : [],
+      },
+    });
+    preferencesUpdated = true;
+  }
+
   return {
     mediaRowsAffected: Number(mediaWithIdentity) + Number(mediaWithoutIdentity),
     watchedEpisodeRowsAffected: Number(watchedEpisodeRowsAffected),
     episodeRatingRowsAffected: Number(episodeRatingRowsAffected),
     seriesProgressRowsAffected: Number(seriesProgressRowsAffected),
+    watchSessionRowsAffected: Number(watchSessionRowsAffected),
+    notificationRowsAffected: Number(notificationRowsAffected),
+    customListRowsAffected,
+    customListItemRowsAffected,
+    preferencesUpdated,
   };
 }

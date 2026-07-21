@@ -1,39 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 
-// TVM-39: Protected Clear Library — requires explicit confirmation token.
-// The client must send a confirm header with the exact string "DELETE EVERYTHING"
-// to prevent accidental data loss. Without it, the request is rejected with 409.
+const CONFIRMATION = "DELETE EVERYTHING";
 
+/** Delete every user-owned content record while preserving the account and its preferences. */
 export async function DELETE(req: NextRequest) {
   try {
-    // TVM-39: Require explicit confirmation header
-    const confirm = req.headers.get("x-confirm-delete");
-    if (confirm !== "DELETE EVERYTHING") {
-      return NextResponse.json(
-        {
-          error: "Confirmation required. Send header 'x-confirm-delete: DELETE EVERYTHING' to confirm.",
-          code: "CONFIRMATION_REQUIRED",
-          hint: "This endpoint deletes ALL your library data. Add the confirmation header to proceed.",
-        },
-        { status: 409 },
-      );
+    if (req.headers.get("x-confirm-delete") !== CONFIRMATION) {
+      return NextResponse.json({
+        error: `Confirmation required. Send header 'x-confirm-delete: ${CONFIRMATION}' to confirm.`,
+        code: "CONFIRMATION_REQUIRED",
+        hint: "This deletes the library, diary, notifications and custom lists, but keeps the account preferences.",
+      }, { status: 409 });
     }
 
-    const user = await getOrCreateUser(parseUserId(req));
-    const [media, watchedEpisodes, episodeRatings] = await db.$transaction([
-      db.media.deleteMany({ where: { userId: user.id } }),
-      db.watchedEpisode.deleteMany({ where: { userId: user.id } }),
-      db.rating.deleteMany({ where: { userId: user.id, mediaType: { startsWith: "episode:" } } }),
-    ]);
+    const user = await getOrCreateUser(await resolveUserId(req));
+    const deleted = await db.$transaction(async (tx) => {
+      const customListItems = await tx.customListItem.count({ where: { list: { userId: user.id } } });
+      const customLists = await tx.customList.deleteMany({ where: { userId: user.id } });
+      const watchSessions = await tx.watchSession.deleteMany({ where: { userId: user.id } });
+      const notifications = await tx.notification.deleteMany({ where: { userId: user.id } });
+      const ratings = await tx.rating.deleteMany({ where: { userId: user.id } });
+      const watchedEpisodes = await tx.watchedEpisode.deleteMany({ where: { userId: user.id } });
+      const watchlistItems = await tx.watchlistItem.deleteMany({ where: { userId: user.id } });
+      const watchedMovies = await tx.watchedMovie.deleteMany({ where: { userId: user.id } });
+      const followingShows = await tx.followingShow.deleteMany({ where: { userId: user.id } });
+      const media = await tx.media.deleteMany({ where: { userId: user.id } });
+      return {
+        media: media.count,
+        watchedEpisodes: watchedEpisodes.count,
+        ratings: ratings.count,
+        watchSessions: watchSessions.count,
+        notifications: notifications.count,
+        customLists: customLists.count,
+        customListItems,
+        legacyWatchlistItems: watchlistItems.count,
+        legacyWatchedMovies: watchedMovies.count,
+        legacyFollowingShows: followingShows.count,
+      };
+    }, { maxWait: 10_000, timeout: 60_000 });
+
     return NextResponse.json({
       ok: true,
-      deleted: { media: media.count, watchedEpisodes: watchedEpisodes.count, episodeRatings: episodeRatings.count },
-      source: "Media+WatchedEpisode+Rating:episode-only",
+      deleted,
+      preserved: ["account", "timezone", "country", "preferredPlatforms"],
+      source: "all user-owned TvTime content tables",
     });
   } catch (error) {
     console.error("[library:clear]", error);
-    return NextResponse.json({ error: "Failed to clear library" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to clear all user content" }, { status: 500 });
   }
 }

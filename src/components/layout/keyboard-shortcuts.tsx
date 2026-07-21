@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNav } from "@/lib/store";
+import { requestSearchClose, requestSearchFocus } from "@/lib/search-command";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,9 @@ const SHORTCUTS: { group: string; items: ShortcutItem[] }[] = [
       { keys: ["g", "f"], description: "Go to Arabic Movies" },
       { keys: ["g", "v"], description: "Go to Arabic TV" },
       { keys: ["g", "s"], description: "Go to Stats" },
+      { keys: ["g", "c"], description: "Go to My Media" },
+      { keys: ["g", "y"], description: "Go to Diary" },
+      { keys: ["g", "l"], description: "Go to Custom Lists" },
     ],
   },
   {
@@ -69,6 +73,7 @@ export function KeyboardShortcuts() {
         }
         if (isTyping) {
           (target as HTMLElement).blur();
+          requestSearchClose();
         } else if (view !== "home" && history.length > 0) {
           back();
         }
@@ -122,6 +127,18 @@ export function KeyboardShortcuts() {
             e.preventDefault();
             setView("arabic-tv");
             break;
+          case "c":
+            e.preventDefault();
+            setView("media");
+            break;
+          case "y":
+            e.preventDefault();
+            setView("diary");
+            break;
+          case "l":
+            e.preventDefault();
+            setView("lists");
+            break;
         }
         lastKeyRef.current = "";
         return;
@@ -130,11 +147,7 @@ export function KeyboardShortcuts() {
       // "/" or "s" to focus search when not completing a "g" sequence.
       if (e.key === "/" || e.key.toLowerCase() === "s") {
         e.preventDefault();
-        const input = document.querySelector('input[placeholder*="Search movies"]') as HTMLInputElement | null;
-        if (input) {
-          input.focus();
-          input.select();
-        }
+requestSearchFocus();
         return;
       }
 

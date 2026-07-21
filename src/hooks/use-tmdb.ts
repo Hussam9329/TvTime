@@ -124,7 +124,7 @@ export function useTvGenres() {
   });
 }
 
-export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; certification?: string; runtimeGte?: number; runtimeLte?: number; textQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
+export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; certification?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "movies", "discover", params],
     queryFn: () =>
@@ -141,14 +141,14 @@ export function useDiscoverMovies(params: { genres?: number[]; year?: number; so
         ...(params.certification ? { certification: params.certification } : {}),
         ...(params.runtimeGte != null ? { runtime_gte: params.runtimeGte } : {}),
         ...(params.runtimeLte != null ? { runtime_lte: params.runtimeLte } : {}),
-        ...(params.textQuery ? { text_query: params.textQuery } : {}),
+        ...(params.keywordQuery ? { keyword_query: params.keywordQuery } : {}),
         ...(params.language ? { language: params.language } : {}),
       }),
     enabled: params.enabled !== false,
   });
 }
 
-export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; runtimeGte?: number; runtimeLte?: number; textQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
+export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "tv", "discover", params],
     queryFn: () =>
@@ -165,7 +165,7 @@ export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_b
         ...(params.releaseDateTo ? { release_date_lte: params.releaseDateTo } : {}),
         ...(params.runtimeGte != null ? { runtime_gte: params.runtimeGte } : {}),
         ...(params.runtimeLte != null ? { runtime_lte: params.runtimeLte } : {}),
-        ...(params.textQuery ? { text_query: params.textQuery } : {}),
+        ...(params.keywordQuery ? { keyword_query: params.keywordQuery } : {}),
         ...(params.language ? { language: params.language } : {}),
       }),
     enabled: params.enabled !== false,
@@ -176,6 +176,12 @@ export type FilteredDiscoverResponse = {
   results: MediaItem[];
   has_more: boolean;
   next_cursor: string | null;
+  partial?: boolean;
+  scan?: {
+    pages_fetched: number;
+    page_budget: number;
+    budget_exhausted: boolean;
+  };
 };
 
 export function useFilteredDiscover(params: {
@@ -193,7 +199,7 @@ export function useFilteredDiscover(params: {
   certification?: string;
   runtimeGte?: number;
   runtimeLte?: number;
-  textQuery?: string;
+  keywordQuery?: string;
   language?: "ar" | "ja" | "en-US";
   excludeArabic?: boolean;
   onlyArabic?: boolean;
@@ -217,7 +223,7 @@ export function useFilteredDiscover(params: {
       if (params.certification) url.searchParams.set("certification", params.certification);
       if (params.runtimeGte != null) url.searchParams.set("runtime_gte", String(params.runtimeGte));
       if (params.runtimeLte != null) url.searchParams.set("runtime_lte", String(params.runtimeLte));
-      if (params.textQuery) url.searchParams.set("text_query", params.textQuery);
+      if (params.keywordQuery) url.searchParams.set("keyword_query", params.keywordQuery);
       if (params.language) url.searchParams.set("language", params.language);
       if (params.excludeArabic) url.searchParams.set("exclude_arabic", "true");
       if (params.onlyArabic) url.searchParams.set("only_arabic", "true");
@@ -1637,7 +1643,7 @@ export function useLibraryCounts() {
   });
 }
 
-// Update media item (rate, mark watched, toggle anime)
+// Update mutable media state. World classification is server-owned and immutable here.
 export function useMediaUpdate() {
   const qc = useQueryClient();
   return useMutation({
@@ -1646,8 +1652,6 @@ export function useMediaUpdate() {
       userRating?: number | null;
       watched?: boolean;
       watchedAt?: string | null;
-      isAnime?: boolean;
-      isArabic?: boolean;
       status?: string | null;
     }) => {
       const res = await fetch(withUserId(new URL(`/api/media/${args.id}`, window.location.origin)), {

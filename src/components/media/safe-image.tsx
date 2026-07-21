@@ -105,7 +105,6 @@ export function SafeImage({
 
   const sharedProps = {
     src: finalSrc,
-    alt: alt ?? "",
     className: cn(fill && "object-cover", className),
     priority,
     sizes: fill ? finalSizes : undefined,
@@ -117,7 +116,7 @@ export function SafeImage({
   } as const;
 
   if (fill) {
-    return <Image {...sharedProps} fill />;
+    return <Image {...sharedProps} alt={alt ?? ""} fill />;
   }
 
   // Non-fill mode: use explicit dims or fall back to the variant's intrinsic
@@ -127,6 +126,7 @@ export function SafeImage({
   return (
     <Image
       {...sharedProps}
+      alt={alt ?? ""}
       width={width ?? intrinsicDims.w}
       height={height ?? intrinsicDims.h}
     />

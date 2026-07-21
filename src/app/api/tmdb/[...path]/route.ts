@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { tmdb } from "@/lib/tmdb";
+import { resolveTmdbKeywordIds, tmdb, type TmdbLanguage } from "@/lib/tmdb";
 
 const handler = async (
   req: NextRequest,
@@ -56,12 +56,20 @@ const handler = async (
       case "movies/genres":
         data = await tmdb.movieGenres();
         break;
-      case "movies/discover":
+      case "movies/discover": {
+        const page = Number(queryParams.page) || 1;
+        const language = (queryParams.language as TmdbLanguage) || undefined;
+        const keywordQuery = queryParams.keyword_query?.trim();
+        const keywordIds = keywordQuery ? await resolveTmdbKeywordIds(keywordQuery, language) : undefined;
+        if (keywordQuery && keywordIds?.length === 0) {
+          data = { page, results: [], total_pages: 0, total_results: 0 };
+          break;
+        }
         data = await tmdb.discoverMovies({
           genres: queryParams.genre ? queryParams.genre.split(",").map(Number).filter(Boolean) : undefined,
           year: queryParams.year ? Number(queryParams.year) : undefined,
           sort_by: queryParams.sort_by,
-          page: Number(queryParams.page) || 1,
+          page,
           vote_average_gte: queryParams.rating ? Number(queryParams.rating) : undefined,
           original_language: queryParams.original_language || undefined,
           vote_count_gte: queryParams.vote_count != null ? Number(queryParams.vote_count) : undefined,
@@ -70,10 +78,11 @@ const handler = async (
           certification: queryParams.certification || undefined,
           runtime_gte: queryParams.runtime_gte ? Number(queryParams.runtime_gte) : undefined,
           runtime_lte: queryParams.runtime_lte ? Number(queryParams.runtime_lte) : undefined,
-          text_query: queryParams.text_query || undefined,
-          language: (queryParams.language as "ar" | "ja" | "en-US" | undefined) || undefined,
+          keyword_ids: keywordIds,
+          language,
         });
         break;
+      }
       case "tv/popular":
         data = await tmdb.popularTv(Number(queryParams.page) || 1);
         break;
@@ -89,12 +98,20 @@ const handler = async (
       case "tv/genres":
         data = await tmdb.tvGenres();
         break;
-      case "tv/discover":
+      case "tv/discover": {
+        const page = Number(queryParams.page) || 1;
+        const language = (queryParams.language as TmdbLanguage) || undefined;
+        const keywordQuery = queryParams.keyword_query?.trim();
+        const keywordIds = keywordQuery ? await resolveTmdbKeywordIds(keywordQuery, language) : undefined;
+        if (keywordQuery && keywordIds?.length === 0) {
+          data = { page, results: [], total_pages: 0, total_results: 0 };
+          break;
+        }
         data = await tmdb.discoverTv({
           genres: queryParams.genre ? queryParams.genre.split(",").map(Number).filter(Boolean) : undefined,
           year: queryParams.year ? Number(queryParams.year) : undefined,
           sort_by: queryParams.sort_by,
-          page: Number(queryParams.page) || 1,
+          page,
           vote_average_gte: queryParams.rating ? Number(queryParams.rating) : undefined,
           original_language: queryParams.original_language || undefined,
           vote_count_gte: queryParams.vote_count != null ? Number(queryParams.vote_count) : undefined,
@@ -102,10 +119,11 @@ const handler = async (
           release_date_lte: queryParams.release_date_lte || undefined,
           runtime_gte: queryParams.runtime_gte ? Number(queryParams.runtime_gte) : undefined,
           runtime_lte: queryParams.runtime_lte ? Number(queryParams.runtime_lte) : undefined,
-          text_query: queryParams.text_query || undefined,
-          language: (queryParams.language as "ar" | "ja" | "en-US" | undefined) || undefined,
+          keyword_ids: keywordIds,
+          language,
         });
         break;
+      }
       case "search":
         data = await tmdb.searchMulti(queryParams.q || "", Number(queryParams.page) || 1);
         break;

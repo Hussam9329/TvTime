@@ -2,7 +2,7 @@
 
 import { useNav } from "@/lib/store";
 import { usePersonDetail } from "@/hooks/use-tmdb";
-import { img, imgOrPlaceholder } from "@/lib/tmdb";
+import { img } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";

@@ -10,12 +10,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
+import { WatchProviders } from "@/components/media/watch-providers";
 import {
-  Star, Clock, Calendar, Play, Check, ListPlus, ListMinus, CheckCircle2, Circle, ArrowLeft,
-  DollarSign, Film, Users, Sparkles, Heart, ChevronRight, Loader2,
+  Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
+  DollarSign, Film, Users, Sparkles, Heart, Loader2,
 } from "lucide-react";
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { formatReleaseDateParts } from "@/lib/date-only";
 import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
@@ -332,6 +332,7 @@ export function MovieDetailView() {
             <h3 className="text-lg font-bold mb-2">Synopsis</h3>
             <p className="text-foreground/80 leading-relaxed">{m.overview || "No overview available."}</p>
           </div>
+          <WatchProviders providersData={(m as any)["watch/providers"]} />
           {recommendations.length > 0 && (
             <MediaRow title="Recommendations" icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="movie" />
           )}

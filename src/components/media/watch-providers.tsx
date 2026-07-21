@@ -1,10 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { img } from "@/lib/tmdb";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tv, Play, ExternalLink, Star } from "lucide-react";
-import { getUserPreferences } from "@/lib/user-preferences";
+import { fetchUserPreferences, getUserPreferences, USER_PREFERENCES_EVENT, type UserPreferences } from "@/lib/user-preferences";
 import { SafeImage } from "@/components/media/safe-image";
 
 export interface WatchProvider {
@@ -26,11 +27,26 @@ interface WatchProvidersProps {
  * { results: { IQ: { link, flatrate: [...], rent: [...], buy: [...], ads: [...] } } }
  */
 export function WatchProviders({ providersData }: WatchProvidersProps) {
+  const [prefs, setPrefs] = useState<UserPreferences>(() => getUserPreferences());
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchUserPreferences().then((next) => { if (!cancelled) setPrefs(next); }).catch(() => undefined);
+    const handlePreferences = (event: Event) => {
+      const next = (event as CustomEvent<UserPreferences>).detail;
+      if (next) setPrefs(next);
+    };
+    window.addEventListener(USER_PREFERENCES_EVENT, handlePreferences);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(USER_PREFERENCES_EVENT, handlePreferences);
+    };
+  }, []);
+
   const results = providersData?.results;
   if (!results) return null;
 
-  // TVM-36: Use user's country preference, fallback to US, then first available
-  const prefs = getUserPreferences();
+  // Use the synchronized country preference, then US, then the first region TMDB returned.
   const region = results[prefs.country] ? prefs.country : (results.US ? "US" : Object.keys(results)[0]);
   if (!region) return null;
   const regionData = results[region];
@@ -53,7 +69,7 @@ export function WatchProviders({ providersData }: WatchProvidersProps) {
   const uniqueProviders = Array.from(new Map(allProviders.map((p) => [p.provider_id, p])).values()).slice(0, 8);
 
   // TVM-37: Mark preferred platforms
-  const isPreferred = (p: WatchProvider) => prefs.preferredPlatforms.includes(p.provider_name);
+  const isPreferred = (p: WatchProvider) => prefs.preferredPlatforms.some((name) => name.toLowerCase() === p.provider_name.toLowerCase());
 
   return (
     <Card className="p-4 glass">

@@ -14,6 +14,16 @@ export async function PATCH(
     const user = await getOrCreateUser(parseUserId(req));
     const body = await req.json();
 
+    if (body.isAnime !== undefined || body.isArabic !== undefined) {
+      return NextResponse.json(
+        {
+          error: "Media world classification is automatic and cannot be changed manually.",
+          code: "MEDIA_CLASSIFICATION_IMMUTABLE",
+        },
+        { status: 400 },
+      );
+    }
+
     const hasRatingMutation = body.userRating !== undefined;
     const hasWatchMutation = body.watched !== undefined || body.watchedAt !== undefined || body.status !== undefined;
     if (hasRatingMutation && hasWatchMutation) {
@@ -35,14 +45,6 @@ export async function PATCH(
     if (body.tmdbId !== undefined) data.tmdbId = body.tmdbId === null ? null : Number(body.tmdbId);
     if (body.watched !== undefined) data.watched = Boolean(body.watched);
     if (body.watchedAt !== undefined) data.watchedAt = body.watchedAt ? new Date(body.watchedAt) : null;
-    if (body.isAnime !== undefined) {
-      data.isAnime = Boolean(body.isAnime);
-      if (data.isAnime) data.isArabic = false;
-    }
-    if (body.isArabic !== undefined) {
-      data.isArabic = Boolean(body.isArabic);
-      if (data.isArabic) data.isAnime = false;
-    }
     if (body.status !== undefined) data.status = body.status;
     if (body.ratingStatus !== undefined) data.ratingStatus = body.ratingStatus;
     if (body.notes !== undefined) data.notes = body.notes || null;

@@ -36,8 +36,13 @@ const pkg = JSON.parse(read("package.json"));
 const schemaVerifier = read("scripts/verify-required-schema.mjs");
 
 check(/"x-confirm-delete":\s*"DELETE EVERYTHING"/.test(profile), "Clear-all UI sends the exact destructive-operation confirmation token");
-check(/confirm\s*!==\s*"DELETE EVERYTHING"/.test(clearRoute), "Clear-all API rejects requests without the exact confirmation token");
-check(/db\.\$transaction\(\[/.test(clearRoute), "Clear-all deletes canonical collection data atomically");
+check(/const CONFIRMATION = "DELETE EVERYTHING"/.test(clearRoute)
+  && /req\.headers\.get\("x-confirm-delete"\) !== CONFIRMATION/.test(clearRoute), "Clear-all API rejects requests without the exact confirmation token");
+check(/db\.\$transaction\(async \(tx\) =>/.test(clearRoute)
+  && /tx\.media\.deleteMany/.test(clearRoute)
+  && /tx\.watchSession\.deleteMany/.test(clearRoute)
+  && /tx\.notification\.deleteMany/.test(clearRoute)
+  && /tx\.customList\.deleteMany/.test(clearRoute), "Clear-all deletes the declared user-owned lifecycle atomically");
 
 check(/return DEFAULT_USER_ID/.test(clientUser), "Client API identity is the canonical default user");
 check(/userId:\s*DEFAULT_USER_ID/.test(store), "Navigation/profile store starts with the canonical user identity");

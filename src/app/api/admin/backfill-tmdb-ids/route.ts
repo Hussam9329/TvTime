@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
         await new Promise((r) => setTimeout(r, 1000));
       }
       if ((i + 1) % 100 === 0) {
-        console.log(`[backfill-tmdb-ids] Progress: ${i + 1}/${items.length} (found=${updated}, notFound=${notFound})`);
+        console.info(`[backfill-tmdb-ids] Progress: ${i + 1}/${items.length} (found=${updated}, notFound=${notFound})`);
       }
     }
 

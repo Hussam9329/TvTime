@@ -128,6 +128,11 @@ export interface Genre {
   name: string;
 }
 
+export interface Keyword {
+  id: number;
+  name: string;
+}
+
 export interface Season {
   id: number;
   name: string;
@@ -249,7 +254,7 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/movie/upcoming`, { page }),
   movieGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`),
-  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string; language?: TmdbLanguage } = {}) => {
+  discoverMovies: (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
     // For Arabic media, the default vote_count.gte=100 excludes most Arabic films
     // (which have very few votes on TMDB). Only apply the floor when the caller
@@ -273,7 +278,7 @@ export const tmdb = {
     }
     if (params.runtime_gte != null) p["with_runtime.gte"] = params.runtime_gte;
     if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
-    if (params.text_query) p.with_text_query = params.text_query;
+    if (params.keyword_ids?.length) p.with_keywords = params.keyword_ids.join("|");
     return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p, params.language);
   },
 
@@ -288,7 +293,7 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/airing_today`, { page }),
   tvGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
-  discoverTv: (params: { genres?: number[]; without_genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; text_query?: string; language?: TmdbLanguage } = {}) => {
+  discoverTv: (params: { genres?: number[]; without_genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
     const isArabic = params.original_language === "ar";
     if (params.vote_count_gte != null) {
@@ -305,15 +310,15 @@ export const tmdb = {
     if (params.release_date_lte) p["first_air_date.lte"] = params.release_date_lte;
     if (params.runtime_gte != null) p["with_runtime.gte"] = params.runtime_gte;
     if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
-    if (params.text_query) p.with_text_query = params.text_query;
+    if (params.keyword_ids?.length) p.with_keywords = params.keyword_ids.join("|");
     return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p, params.language);
   },
 
   // Details
   movieDetail: (id: number) =>
-    tmdbFetch<MovieDetail>(`/movie/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,release_dates" }),
+    tmdbFetch<MovieDetail>(`/movie/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,release_dates,watch/providers" }),
   tvDetail: (id: number) =>
-    tmdbFetch<TvDetail>(`/tv/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,external_ids,content_ratings" }),
+    tmdbFetch<TvDetail>(`/tv/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,external_ids,content_ratings,watch/providers" }),
   seasonDetail: (tvId: number, seasonNumber: number) =>
     tmdbFetch<SeasonDetail>(`/tv/${tvId}/season/${seasonNumber}`),
 
@@ -324,6 +329,8 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/search/movie`, { query, page, include_adult: false }),
   searchTv: (query: string, page = 1) =>
     tmdbFetch<PaginatedResponse<MediaItem>>(`/search/tv`, { query, page, include_adult: false }),
+  searchKeywords: (query: string, page = 1, language: TmdbLanguage = "en-US") =>
+    tmdbFetch<PaginatedResponse<Keyword>>(`/search/keyword`, { query, page }, language),
 
   // Person
   personDetail: (id: number) =>
@@ -333,6 +340,16 @@ export const tmdb = {
   tvOnTheAir: (page = 1) =>
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/on_the_air`, { page }),
 };
+
+/** Resolve a human keyword phrase to a bounded set of TMDB keyword IDs. */
+export async function resolveTmdbKeywordIds(query: string | null | undefined, language: TmdbLanguage = "en-US"): Promise<number[]> {
+  const normalized = String(query || "").trim().replace(/\s+/g, " ").slice(0, 100);
+  if (!normalized) return [];
+  const response = await tmdb.searchKeywords(normalized, 1, language);
+  const exact = response.results.filter((item) => item.name.trim().toLocaleLowerCase() === normalized.toLocaleLowerCase());
+  const candidates = exact.length > 0 ? [...exact, ...response.results] : response.results;
+  return [...new Set(candidates.map((item) => Number(item.id)).filter((id) => Number.isInteger(id) && id > 0))].slice(0, 5);
+}
 
 export function getTitle(m: MediaItem): string {
   // For Arabic-language media, prefer the Arabic original_title/name over the

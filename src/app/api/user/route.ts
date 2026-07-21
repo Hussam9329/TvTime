@@ -1,33 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 
-// GET - get or create user
-export async function GET(req: NextRequest) {
-  const userId = parseUserId(req);
-  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
-
-  const user = await getOrCreateUser(userId);
-  return NextResponse.json({ user });
+function validTimezone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-// PATCH - update user name
-export async function PATCH(req: NextRequest) {
-  const userId = parseUserId(req);
-  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+const updateUserSchema = z.object({
+  name: z.string().trim().min(1).max(30).optional(),
+  avatar: z.string().trim().max(2_000).nullable().optional(),
+  timezone: z.string().trim().min(1).max(100).refine(validTimezone, "Invalid IANA timezone").optional(),
+  country: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/).optional(),
+  preferredPlatforms: z.array(z.string().trim().min(1).max(100)).max(100).transform((items) => [...new Set(items)]).optional(),
+}).strict();
 
-  const body = await req.json();
-  const user = await getOrCreateUser(userId);
-  const name = typeof body?.name === "string" ? body.name.trim().slice(0, 30) : undefined;
-  if (body?.name !== undefined && !name) {
-    return NextResponse.json({ error: "Display name cannot be empty" }, { status: 400 });
+export async function GET(req: NextRequest) {
+  try {
+    const user = await getOrCreateUser(await resolveUserId(req));
+    return NextResponse.json({ user }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    console.error("[user] GET", error);
+    return NextResponse.json({ error: "Failed to load profile" }, { status: 500 });
   }
-  const updated = await db.user.update({
-    where: { id: user.id },
-    data: {
-      ...(name ? { name } : {}),
-      ...(body.avatar !== undefined ? { avatar: body.avatar } : {}),
-    },
-  });
-  return NextResponse.json({ user: updated });
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const parsed = updateUserSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid profile update", issues: parsed.error.flatten() }, { status: 400 });
+    }
+    const user = await getOrCreateUser(await resolveUserId(req));
+    const updated = await db.user.update({ where: { id: user.id }, data: parsed.data });
+    return NextResponse.json({ user: updated });
+  } catch (error) {
+    console.error("[user] PATCH", error);
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+  }
 }

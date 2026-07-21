@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
 
 /**
  * TVM Fix: Dedup duplicate Media rows by (userId + type + tmdbId).

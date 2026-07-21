@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { tmdb, type MediaItem, type PaginatedResponse, type TmdbLanguage } from "@/lib/tmdb";
+import { resolveTmdbKeywordIds, tmdb, type MediaItem, type PaginatedResponse, type TmdbLanguage } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
-
-const PAGE_SIZE = 20;
-const MAX_TMDB_PAGE = 500;
-const FETCH_BATCH_SIZE = 5;
+import { resolveUserId } from "@/lib/auth";
+import { buildSeenIdSet } from "@/lib/discover-seen";
+import {
+  DISCOVER_PAGE_SIZE,
+  DISCOVER_TMDB_MAX_PAGE,
+  DISCOVER_TMDB_PAGE_BUDGET,
+  discoverCursorAfter,
+  nextDiscoverPageBatch,
+  parseDiscoverCursor,
+} from "@/lib/discover-budget";
 
 type MediaType = "movie" | "tv";
 type ShowMe = "seen" | "unseen";
-
-type Cursor = {
-  page: number;
-  index: number;
-};
 
 function optionalNumber(value: string | null): number | undefined {
   if (value == null || value === "") return undefined;
@@ -22,40 +22,45 @@ function optionalNumber(value: string | null): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function parseCursor(value: string | null): Cursor {
-  const match = value?.match(/^(\d+):(\d+)$/);
-  if (!match) return { page: 1, index: 0 };
-
-  const page = Math.min(Math.max(Number(match[1]), 1), MAX_TMDB_PAGE);
-  const index = Math.min(Math.max(Number(match[2]), 0), PAGE_SIZE);
-  return { page, index };
-}
-
-function cursorAfter(page: number, index: number, pageLength: number): string {
-  return index + 1 < pageLength ? `${page}:${index + 1}` : `${page + 1}:0`;
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    // Read-only route: resolving the signed request owner is enough. Creating a
+    // User or running legacy migrations during catalogue browsing would turn a
+    // retryable GET into a write operation.
+    const userId = await resolveUserId(req);
     const search = req.nextUrl.searchParams;
     const mediaType: MediaType = search.get("media_type") === "tv" ? "tv" : "movie";
     const showMe: ShowMe = search.get("show_me") === "seen" ? "seen" : "unseen";
-    const start = parseCursor(search.get("cursor"));
+    const start = parseDiscoverCursor(search.get("cursor"));
 
-    const watchedRows = await db.media.findMany({
-      where: {
-        userId: user.id,
-        type: mediaType === "tv" ? "series" : "movie",
-        watched: true,
-        tmdbId: { not: null },
-      },
-      select: { tmdbId: true },
-    });
-    const seenIds = new Set(watchedRows.flatMap((item) => item.tmdbId == null ? [] : [item.tmdbId]));
+    const [mediaRows, legacyRows] = await Promise.all([
+      db.media.findMany({
+        where: {
+          userId,
+          type: mediaType === "tv" ? "series" : "movie",
+          tmdbId: { not: null },
+          ...(mediaType === "tv"
+            ? { OR: [{ watched: true }, { status: { in: ["watching", "uptodate", "up_to_date", "finished", "watched"] } }] }
+            : { watched: true }),
+        },
+        select: { tmdbId: true, watched: true, status: true },
+      }),
+      mediaType === "tv"
+        ? db.watchedEpisode.findMany({ where: { userId }, distinct: ["showId"], select: { showId: true } })
+        : db.watchedMovie.findMany({ where: { userId }, select: { tmdbId: true } }),
+    ]);
+    const legacyIds = mediaType === "tv"
+      ? legacyRows.map((row) => "showId" in row ? row.showId : 0)
+      : legacyRows.map((row) => "tmdbId" in row ? row.tmdbId : 0);
+    const seenIds = buildSeenIdSet(mediaType, mediaRows, legacyIds);
 
     if (showMe === "seen" && seenIds.size === 0) {
-      return NextResponse.json({ results: [], has_more: false, next_cursor: null });
+      return NextResponse.json({
+        results: [],
+        has_more: false,
+        next_cursor: null,
+        scan: { pages_fetched: 0, page_budget: DISCOVER_TMDB_PAGE_BUDGET, budget_exhausted: false },
+      });
     }
 
     const genres = search.get("genre")?.split(",").map(Number).filter(Boolean);
@@ -70,17 +75,27 @@ export async function GET(req: NextRequest) {
       release_date_lte: search.get("release_date_lte") || undefined,
       runtime_gte: optionalNumber(search.get("runtime_gte")),
       runtime_lte: optionalNumber(search.get("runtime_lte")),
-      text_query: search.get("text_query") || undefined,
       language,
     };
+    const keywordQuery = search.get("keyword_query")?.trim();
+    const keywordIds = keywordQuery ? await resolveTmdbKeywordIds(keywordQuery, language) : undefined;
+    if (keywordQuery && keywordIds?.length === 0) {
+      return NextResponse.json({
+        results: [],
+        has_more: false,
+        next_cursor: null,
+        scan: { pages_fetched: 0, page_budget: DISCOVER_TMDB_PAGE_BUDGET, budget_exhausted: false },
+      });
+    }
+
     const certification = search.get("certification") || undefined;
     const maxRating = optionalNumber(search.get("max_rating"));
     const excludeArabic = search.get("exclude_arabic") === "true";
     const onlyArabic = search.get("only_arabic") === "true";
 
     const loadPage = (page: number): Promise<PaginatedResponse<MediaItem>> => mediaType === "tv"
-      ? tmdb.discoverTv({ ...common, page })
-      : tmdb.discoverMovies({ ...common, certification, page });
+      ? tmdb.discoverTv({ ...common, keyword_ids: keywordIds, page })
+      : tmdb.discoverMovies({ ...common, keyword_ids: keywordIds, certification, page });
 
     const matchesState = (item: MediaItem) => {
       const isSeen = seenIds.has(Number(item.id));
@@ -94,53 +109,74 @@ export async function GET(req: NextRequest) {
     const results: MediaItem[] = [];
     let nextCursor: string | null = null;
     let hasMore = false;
-    let totalPages = MAX_TMDB_PAGE;
-    let sourcePage = start.page;
-    let sourceIndex = start.index;
+    let totalPages = DISCOVER_TMDB_MAX_PAGE;
+    let nextPage = start.page;
+    let firstPageIndex = start.index;
+    let pagesFetched = 0;
+    let pageSizeObserved = DISCOVER_PAGE_SIZE;
 
-    const consume = (data: PaginatedResponse<MediaItem>) => {
-      totalPages = Math.min(data.total_pages || 1, MAX_TMDB_PAGE);
-      for (let index = sourceIndex; index < data.results.length; index += 1) {
+    const consume = (data: PaginatedResponse<MediaItem>, startIndex: number) => {
+      totalPages = Math.min(data.total_pages || 1, DISCOVER_TMDB_MAX_PAGE);
+      pageSizeObserved = Math.max(1, data.results.length || DISCOVER_PAGE_SIZE);
+      for (let index = startIndex; index < data.results.length; index += 1) {
         const item = data.results[index];
         if (!matchesCatalogue(item) || !matchesState(item)) continue;
 
-        if (results.length < PAGE_SIZE) {
-          results.push(item);
-          if (results.length === PAGE_SIZE) {
-            nextCursor = cursorAfter(data.page, index, data.results.length);
-          }
-        } else {
-          hasMore = true;
+        results.push(item);
+        if (results.length === DISCOVER_PAGE_SIZE) {
+          nextCursor = discoverCursorAfter(data.page, index, data.results.length);
+          hasMore = index + 1 < data.results.length || data.page < totalPages;
           return true;
         }
       }
       return false;
     };
 
-    const firstPage = await loadPage(sourcePage);
-    let done = consume(firstPage);
-    sourcePage += 1;
-    sourceIndex = 0;
-
-    while (!done && sourcePage <= totalPages) {
-      const pages = Array.from(
-        { length: Math.min(FETCH_BATCH_SIZE, totalPages - sourcePage + 1) },
-        (_, index) => sourcePage + index,
-      );
+    let done = false;
+    while (!done && nextPage <= totalPages && pagesFetched < DISCOVER_TMDB_PAGE_BUDGET) {
+      const pages = nextDiscoverPageBatch({ nextPage, totalPages, pagesFetched });
+      if (pages.length === 0) break;
       const batch = await Promise.all(pages.map(loadPage));
-      for (const data of batch) {
-        done = consume(data);
+      pagesFetched += pages.length;
+
+      for (let index = 0; index < batch.length; index += 1) {
+        const data = batch[index];
+        done = consume(data, index === 0 ? firstPageIndex : 0);
+        nextPage = data.page + 1;
+        firstPageIndex = 0;
         if (done) break;
       }
-      sourcePage += pages.length;
+    }
+
+    const budgetExhausted = !done && nextPage <= totalPages && pagesFetched >= DISCOVER_TMDB_PAGE_BUDGET;
+    if (budgetExhausted) {
+      hasMore = true;
+      nextCursor = `${nextPage}:0`;
+    } else if (!done) {
+      hasMore = false;
+      nextCursor = null;
+    }
+
+    // Defensive cursor cap if TMDB returned an unusual empty page size.
+    if (nextCursor) {
+      const parsed = parseDiscoverCursor(nextCursor);
+      nextCursor = `${parsed.page}:${Math.min(parsed.index, pageSizeObserved)}`;
     }
 
     const response = NextResponse.json({
       results,
       has_more: hasMore,
       next_cursor: hasMore ? nextCursor : null,
+      partial: budgetExhausted,
+      scan: {
+        pages_fetched: pagesFetched,
+        page_budget: DISCOVER_TMDB_PAGE_BUDGET,
+        budget_exhausted: budgetExhausted,
+      },
     });
     response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("X-TvTime-TMDB-Pages", String(pagesFetched));
+    response.headers.set("X-TvTime-TMDB-Page-Budget", String(DISCOVER_TMDB_PAGE_BUDGET));
     return response;
   } catch (error) {
     console.error("[discover:filtered]", error);

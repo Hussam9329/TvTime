@@ -20,7 +20,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -263,7 +262,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {items.map((item, index) => (
-            <CollectionMediaCard key={item.id} item={item} index={index} tab={tab} world={world} />
+            <CollectionMediaCard key={item.id} item={item} index={index} tab={tab} />
           ))}
         </div>
       )}
@@ -294,7 +293,7 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; index: number; tab: CollectionTab; world: CollectionWorld }) {
+function CollectionMediaCard({ item, index, tab }: { item: MediaItemDB; index: number; tab: CollectionTab }) {
   const isWatchedTab = tab === "watched";
   const update = useMediaUpdate();
   const goMovie = useNav((state) => state.goMovie);
@@ -308,7 +307,6 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
 
   // Determine media type explicitly from the item's type field — never guess
   const isMovie = item.type === "movie";
-  const hasLibraryMenuActions = isWatchedTab || tab === "watchlist" || item.type === "movie";
 
   // Navigate to the correct detail page based on type
   const handleOpenDetails = () => {
@@ -370,21 +368,6 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
       status: null,
     });
     toast.success("Removed from watchlist");
-  };
-
-  const handleMoveWorld = async (destination: "standard" | "anime" | "arabic") => {
-    if (destination === "anime") {
-      await update.mutateAsync({ id: item.id, isAnime: true, isArabic: false });
-      toast.success("Moved to Anime");
-      return;
-    }
-    if (destination === "arabic") {
-      await update.mutateAsync({ id: item.id, isArabic: true, isAnime: false });
-      toast.success(`Moved to ${item.type === "movie" ? "Arabic Movies" : "Arabic TV"}`);
-      return;
-    }
-    await update.mutateAsync({ id: item.id, isAnime: false, isArabic: false });
-    toast.success(`Moved to ${item.type === "movie" ? "Movies" : "TV Shows"}`);
   };
 
 
@@ -532,27 +515,6 @@ function CollectionMediaCard({ item, index, tab, world }: { item: MediaItemDB; i
                   </DropdownMenuItem>
                 )}
 
-                {hasLibraryMenuActions && <DropdownMenuSeparator />}
-                {world !== "anime" && (
-                  <DropdownMenuItem onSelect={() => void handleMoveWorld("anime")} disabled={update.isPending}>
-                    To Anime
-                  </DropdownMenuItem>
-                )}
-                {world !== "arabic-movies" && item.type === "movie" && (
-                  <DropdownMenuItem onSelect={() => void handleMoveWorld("arabic")} disabled={update.isPending}>
-                    To Arabic Movies
-                  </DropdownMenuItem>
-                )}
-                {world === "anime" && item.type === "series" && (
-                  <DropdownMenuItem onSelect={() => void handleMoveWorld("arabic")} disabled={update.isPending}>
-                    To Arabic TV
-                  </DropdownMenuItem>
-                )}
-                {(world === "anime" || world === "arabic-movies") && (
-                  <DropdownMenuItem onSelect={() => void handleMoveWorld("standard")} disabled={update.isPending}>
-                    {item.type === "movie" ? "To Movies" : "To TV Shows"}
-                  </DropdownMenuItem>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

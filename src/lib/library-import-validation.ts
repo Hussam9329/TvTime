@@ -3,9 +3,11 @@ import { z } from "zod";
 import { detectIsArabic, normalizeCountryCodes } from "@/lib/arabic-media";
 import {
   LIBRARY_BACKUP_KIND,
-  LIBRARY_BACKUP_VERSION,
   LIBRARY_COLLECTIONS,
   LIBRARY_IMPORT_MAX_RECORDS,
+  LIBRARY_SUPPORTED_BACKUP_VERSIONS,
+  isSupportedBackupApp,
+  normalizeCollectionCounts,
   type LibraryCollection,
   type LibraryTransferRecord,
 } from "@/lib/library-transfer-types";
@@ -142,19 +144,81 @@ const episodeRatingSchema = z.object({
   updatedAt: nullableIsoDate.default(null),
 });
 
+const watchSessionSchema = z.object({
+  mediaType: z.preprocess((value) => String(value ?? "").trim().toLowerCase(), z.string().min(1).max(40).regex(/^[a-z0-9_-]+$/)),
+  tmdbId: z.preprocess((value) => Number(value), z.number().int().positive()),
+  title: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(500)),
+  season: optionalNonNegativeInt.default(null),
+  episode: optionalPositiveInt.default(null),
+  watchedAt: nullableIsoDate.default(null),
+  duration: optionalNonNegativeInt.default(null),
+  rewatch: strictBoolean.default(false),
+  rating: z.preprocess((value) => value === null || value === undefined || value === "" ? null : Number(value), z.number().int().min(0).max(100).nullable()).default(null),
+  source: nullableString(200).default(null),
+  notes: nullableString(100_000).default(null),
+  createdAt: nullableIsoDate.default(null),
+});
+
+const notificationSchema = z.object({
+  type: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(64).regex(/^[a-z0-9_-]+$/i)),
+  title: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(500)),
+  body: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(10_000)),
+  tmdbId: optionalPositiveInt.default(null),
+  mediaType: nullableString(64).default(null),
+  read: strictBoolean.default(false),
+  scheduledFor: nullableIsoDate.default(null),
+  createdAt: nullableIsoDate.default(null),
+});
+
+const customListSchema = z.object({
+  sourceListId: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(200)),
+  name: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(100)),
+  description: nullableString(2_000).default(null),
+  isPublic: strictBoolean.default(false),
+  color: z.preprocess((value) => String(value ?? "#f59e0b").trim(), z.string().regex(/^#[0-9a-fA-F]{6}$/)),
+  slug: nullableString(160).default(null),
+  createdAt: nullableIsoDate.default(null),
+});
+
+const customListItemSchema = z.object({
+  sourceListId: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(200)),
+  tmdbId: z.preprocess((value) => Number(value), z.number().int().positive()),
+  mediaType: z.preprocess((value) => String(value ?? "").trim().toLowerCase(), z.enum(["movie", "tv"])),
+  title: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(500)),
+  posterPath: nullableString(2_000).default(null),
+  addedAt: nullableIsoDate.default(null),
+  order: z.preprocess((value) => value === null || value === undefined || value === "" ? 0 : Number(value), z.number().int().nonnegative().max(1_000_000)).default(0),
+});
+
+const preferencesSchema = z.object({
+  timezone: z.preprocess((value) => String(value ?? "Asia/Baghdad").trim(), z.string().min(1).max(100)),
+  country: z.preprocess((value) => String(value ?? "IQ").trim().toUpperCase(), z.string().regex(/^[A-Z]{2}$/)),
+  preferredPlatforms: stringArray.default([]),
+});
+
+const collectionsSchema = z.preprocess(normalizeCollectionCounts, z.object({
+  media: z.number().int().nonnegative(),
+  watchedEpisodes: z.number().int().nonnegative(),
+  episodeRatings: z.number().int().nonnegative(),
+  watchSessions: z.number().int().nonnegative(),
+  notifications: z.number().int().nonnegative(),
+  customLists: z.number().int().nonnegative(),
+  customListItems: z.number().int().nonnegative(),
+  preferences: z.number().int().nonnegative().max(1),
+}));
+
 export const importStartSchema = z.object({
   manifest: z.object({
     kind: z.literal(LIBRARY_BACKUP_KIND),
-    version: z.literal(LIBRARY_BACKUP_VERSION),
+    version: z.union(LIBRARY_SUPPORTED_BACKUP_VERSIONS.map((version) => z.literal(version)) as [z.ZodLiteral<5>, z.ZodLiteral<6>]),
     format: z.literal("ndjson"),
-    collections: z.object({
-      media: z.number().int().nonnegative(),
-      watchedEpisodes: z.number().int().nonnegative(),
-      episodeRatings: z.number().int().nonnegative(),
+    app: z.string().optional().refine((value) => value === undefined || isSupportedBackupApp(value), {
+      message: "Unsupported backup application identity",
     }),
+    collections: collectionsSchema,
     totalRecords: z.number().int().nonnegative().max(LIBRARY_IMPORT_MAX_RECORDS),
   }).superRefine((manifest, ctx) => {
-    const sum = manifest.collections.media + manifest.collections.watchedEpisodes + manifest.collections.episodeRatings;
+    const sum = Object.values(manifest.collections).reduce((total, value) => total + value, 0);
     if (sum !== manifest.totalRecords) {
       ctx.addIssue({ code: "custom", message: "Manifest collection counts do not match totalRecords" });
     }
@@ -176,9 +240,7 @@ export const importFinalizeSchema = z.object({
   expectedRecords: z.number().int().nonnegative().max(LIBRARY_IMPORT_MAX_RECORDS),
 });
 
-export const importCommitSchema = z.object({
-  confirm: z.string().min(1).max(500),
-});
+export const importCommitSchema = z.object({ confirm: z.string().min(1).max(500) });
 
 export type NormalizedImportRecord = {
   collection: LibraryCollection;
@@ -201,9 +263,7 @@ export function normalizeImportRecord(record: LibraryTransferRecord): Normalized
       payload: {
         ...parsed,
         importId: randomUUID(),
-        status: parsed.type === "series"
-          ? (parsed.status === "planned" ? "planned" : "not_started")
-          : parsed.status,
+        status: parsed.type === "series" ? (parsed.status === "planned" ? "planned" : "not_started") : parsed.status,
         watched: parsed.type === "series" ? false : parsed.watched,
         watchedAt: parsed.type === "series" ? null : parsed.watchedAt,
         userRating: parsed.type === "series" ? null : parsed.userRating,
@@ -218,25 +278,35 @@ export function normalizeImportRecord(record: LibraryTransferRecord): Normalized
   }
 
   if (record.collection === "watchedEpisodes") {
-    const parsed = watchedEpisodeSchema.parse(record.data);
+    return { collection: record.collection, ordinal: record.ordinal, payload: { ...watchedEpisodeSchema.parse(record.data), importId: randomUUID() } };
+  }
+
+  if (record.collection === "episodeRatings") {
+    const parsed = episodeRatingSchema.parse(record.data);
+    const match = /^episode:(\d+):(\d+)$/.exec(parsed.mediaType);
+    if (!match) throw new Error("Invalid episode rating identity");
     return {
       collection: record.collection,
       ordinal: record.ordinal,
-      payload: { ...parsed, importId: randomUUID() },
+      payload: { ...parsed, importId: randomUUID(), seasonNumber: Number(match[1]), episodeNumber: Number(match[2]) },
     };
   }
 
-  const parsed = episodeRatingSchema.parse(record.data);
-  const match = /^episode:(\d+):(\d+)$/.exec(parsed.mediaType);
-  if (!match) throw new Error("Invalid episode rating identity");
-  return {
-    collection: record.collection,
-    ordinal: record.ordinal,
-    payload: {
-      ...parsed,
-      importId: randomUUID(),
-      seasonNumber: Number(match[1]),
-      episodeNumber: Number(match[2]),
-    },
-  };
+  if (record.collection === "watchSessions") {
+    return { collection: record.collection, ordinal: record.ordinal, payload: { ...watchSessionSchema.parse(record.data), importId: randomUUID(), mediaId: null } };
+  }
+
+  if (record.collection === "notifications") {
+    return { collection: record.collection, ordinal: record.ordinal, payload: { ...notificationSchema.parse(record.data), importId: randomUUID() } };
+  }
+
+  if (record.collection === "customLists") {
+    return { collection: record.collection, ordinal: record.ordinal, payload: { ...customListSchema.parse(record.data), importId: randomUUID() } };
+  }
+
+  if (record.collection === "customListItems") {
+    return { collection: record.collection, ordinal: record.ordinal, payload: { ...customListItemSchema.parse(record.data), importId: randomUUID() } };
+  }
+
+  return { collection: record.collection, ordinal: record.ordinal, payload: preferencesSchema.parse(record.data) };
 }

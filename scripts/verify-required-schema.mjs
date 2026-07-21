@@ -27,6 +27,7 @@ const requiredColumns = {
     "airedEpisodeCount", "airedEpisodeKeys", "refreshAfter", "originalLanguage",
     "originCountries", "genreIds", "genreNames", "classificationComplete",
   ],
+  User: ["timezone", "country", "preferredPlatforms"],
   WatchSession: ["userId", "mediaId", "mediaType", "tmdbId", "watchedAt"],
   Notification: ["userId", "type", "read", "createdAt"],
   CustomList: ["userId", "slug", "isPublic", "updatedAt"],
@@ -58,6 +59,13 @@ const requiredConstraints = [
   "LibraryImportChunk_sessionId_fkey",
   "LibraryImportRecord_sessionId_fkey",
   "LibraryImportSession_status_check",
+  "User_country_format_check",
+  "Media_userRating_range_check",
+  "Media_rewatchCount_nonnegative_check",
+  "Rating_value_range_check",
+  "WatchedEpisode_numbers_check",
+  "WatchSession_values_check",
+  "CustomListItem_order_nonnegative_check",
 ];
 
 const requiredPolicies = [
@@ -83,6 +91,7 @@ const requiredMigrations = [
   "20260715000000_feature_tables_and_rls",
   "20260716000000_staged_library_import",
   "20260717000000_tv_metadata_cache_integrity",
+  "20260718000000_data_lifecycle_preferences",
 ];
 
 function assertAll(label, required, present) {

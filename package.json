@@ -30,7 +30,13 @@
     "db:inspect:baseline": "node scripts/assert-production-db.mjs && prisma generate && node scripts/inspect-baseline-readiness.mjs",
     "verify:patch-05": "node scripts/verify-patch-05.mjs",
     "verify:patch-06": "node --experimental-strip-types --loader ./scripts/ts-path-loader.mjs scripts/test-library-import-validation.ts && node scripts/verify-patch-06.mjs",
-    "verify:patch-07": "node --experimental-strip-types scripts/test-tv-cache-regression.ts && node scripts/verify-patch-07.mjs"
+    "verify:patch-07": "node --experimental-strip-types scripts/test-tv-cache-regression.ts && node scripts/verify-patch-07.mjs",
+    "verify:patch-08": "node --experimental-strip-types scripts/test-patch-08.ts && node scripts/verify-patch-08.mjs",
+    "verify:patch-09": "node --experimental-strip-types --loader ./scripts/ts-path-loader.mjs scripts/test-patch-09.ts && node scripts/verify-patch-09.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint:strict": "eslint . --max-warnings=0",
+    "verify:ci": "node scripts/verify-ci.mjs",
+    "verify:patch-10": "node --experimental-strip-types --loader ./scripts/ts-path-loader.mjs scripts/test-patch-10.ts && node scripts/verify-patch-10.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -112,5 +118,8 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20.9.0"
   }
 }

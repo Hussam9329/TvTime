@@ -1,6 +1,6 @@
 "use client";
 
-import { useStats, useWatchedMovies, useWatchedEpisodes, useFollowing, useWatchlist, useRatings, useTvDetail } from "@/hooks/use-tmdb";
+import { useStats, useTvDetail } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
 import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, BarChart3, Languages } from "lucide-react";
@@ -12,7 +12,7 @@ const PIE_COLORS = ["oklch(0.62 0.23 16)", "oklch(0.65 0.18 320)", "oklch(0.7 0.
 
 export function StatsView() {
   const stats = useStats();
-  const { goMovie, goTv, setView } = useNav();
+  const { goTv, setView } = useNav();
   const userName = useNav((s) => s.userName);
 
   if (stats.isLoading) {

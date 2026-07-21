@@ -1,16 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Library, Sparkles } from "lucide-react";
+import { CalendarDays, Film, Library, Sparkles, Tv } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
 
 const ANIMATION_GENRES = [16];
+type AnimeMediaType = "movie" | "tv";
 
 export function AnimeView() {
   const [tab, setTab] = useState<"library" | "discover" | "releases">("library");
+  const [mediaType, setMediaType] = useState<AnimeMediaType>("tv");
+
+  const mediaSwitch = (
+    <div className="mb-4 inline-flex rounded-lg border border-border bg-card p-1" role="group" aria-label="Anime media type">
+      <button type="button" aria-pressed={mediaType === "movie"} onClick={() => setMediaType("movie")} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${mediaType === "movie" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}><Film className="h-4 w-4" /> Movies</button>
+      <button type="button" aria-pressed={mediaType === "tv"} onClick={() => setMediaType("tv")} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${mediaType === "tv" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}><Tv className="h-4 w-4" /> Series</button>
+    </div>
+  );
 
   return (
     <div className="tvtime-world-view tvtime-anime-view space-y-5">
@@ -20,40 +29,42 @@ export function AnimeView() {
           <div className="min-w-0">
             <h1 className="view-page-title text-xl font-extrabold tracking-tight">Anime</h1>
             <p className="view-page-description mt-1 text-sm text-muted-foreground">
-              Organize your anime library, discover Japanese animation, and browse new premieres.
+              Organize anime movies and series, discover Japanese animation, and browse new premieres.
             </p>
           </div>
         </div>
       </section>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-5">
+      <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
         <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
-          <TabsTrigger value="library" className="gap-2 py-2.5">
-            <Library className="h-4 w-4" /> My Library
-          </TabsTrigger>
-          <TabsTrigger value="discover" className="gap-2 py-2.5">
-            <Sparkles className="h-4 w-4" /> Discover
-          </TabsTrigger>
-          <TabsTrigger value="releases" className="gap-2 py-2.5">
-            <CalendarDays className="h-4 w-4" /> Releases
-          </TabsTrigger>
+          <TabsTrigger value="library" className="gap-2 py-2.5"><Library className="h-4 w-4" /> My Library</TabsTrigger>
+          <TabsTrigger value="discover" className="gap-2 py-2.5"><Sparkles className="h-4 w-4" /> Discover</TabsTrigger>
+          <TabsTrigger value="releases" className="gap-2 py-2.5"><CalendarDays className="h-4 w-4" /> Releases</TabsTrigger>
         </TabsList>
 
         <TabsContent value="library" className="mt-0">
           <CollectionWorldView world="anime" embedded />
         </TabsContent>
         <TabsContent value="discover" className="mt-0">
-          <DiscoverView world="anime" embedded />
+          {mediaSwitch}
+          <DiscoverView
+            world="anime"
+            embedded
+            mediaType={mediaType}
+            title={`Discover Anime ${mediaType === "movie" ? "Movies" : "Series"}`}
+            subtitle={`Browse Japanese animation ${mediaType === "movie" ? "films" : "shows"} without mixing in live-action titles.`}
+          />
         </TabsContent>
         <TabsContent value="releases" className="mt-0">
+          {mediaSwitch}
           <ReleaseSchedule
-            mediaType="tv"
+            mediaType={mediaType}
             genres={ANIMATION_GENRES}
             originalLanguage="ja"
             language="ja"
             accentClass="text-fuchsia-400"
-            title="Anime Release Schedule"
-            subtitle="A six-month agenda for new Japanese anime premieres, separate from standard TV shows."
+            title={`Anime ${mediaType === "movie" ? "Movie" : "Series"} Release Schedule`}
+            subtitle={`A six-month agenda for new Japanese anime ${mediaType === "movie" ? "films" : "episodes and premieres"}.`}
           />
         </TabsContent>
       </Tabs>

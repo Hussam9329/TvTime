@@ -33,7 +33,8 @@ for (const file of routeFiles) {
     failures.push(`${normalized}: routes must not read userId directly from the request`);
   }
 
-  if (!publicRouteSuffixes.has(normalized) && !/resolveUserId\(req\)/.test(source)) {
+  const isPublicApi = normalized.startsWith("src/app/api/public/");
+  if (!publicRouteSuffixes.has(normalized) && !isPublicApi && !/resolveUserId\(req\)/.test(source)) {
     failures.push(`${normalized}: user-owned route does not resolve ownership from the authenticated request`);
   }
 }

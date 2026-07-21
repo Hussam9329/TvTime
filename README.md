@@ -114,9 +114,9 @@ Changes to these files require explicit review and must be delivered with verifi
 
 ### Prerequisites
 
-- Node.js 18+ or Bun
+- Node.js 20.9.0 or newer (`.nvmrc` pins the minimum supported runtime), or a current Bun release
 - PostgreSQL database (Neon, Supabase, or local)
-- TMDB API key (optional — has a default)
+- `TMDB_API_KEY` is required; the application has no embedded or fallback key
 
 ### Setup
 
@@ -142,10 +142,17 @@ bun run build  # or npm run build
 # Runs: target guard → migration-history guard → prisma generate → read-only live schema/RLS guard → next build
 ```
 
-### Lint
+### Local quality gates
 
 ```bash
-bun run lint  # or npm run lint
+# ESLint fails on any warning
+npm run lint:strict
+
+# TypeScript without emitting files
+npm run typecheck
+
+# Aggregated static + behavior checks; every stage still runs and is reported
+npm run verify:ci
 ```
 
 ### Database Verification (Read-Only)
@@ -188,7 +195,7 @@ For a database that predates the baseline, read `MIGRATION_BASELINE.md` before r
 
 ### Backup and restore safety
 
-The profile dialog exports **version 5 NDJSON**. It requests Media, watched episodes, and episode ratings in small cursor pages, then assembles the downloadable file in the browser; no single Vercel Function response contains the whole backup. Version 1–4 JSON backups remain accepted through a compatibility adapter.
+The profile dialog exports **version 6 NDJSON**. It requests Media, watched episodes, episode ratings, diary sessions, notifications, custom lists/items, and account preferences in small cursor pages, then assembles the downloadable file in the browser; no single Vercel Function response contains the whole backup. Version 5 NDJSON and version 1–4 JSON backups remain accepted through compatibility adapters.
 
 Restore is intentionally two-phase:
 
@@ -197,11 +204,17 @@ Restore is intentionally two-phase:
 3. Finalize checks contiguous chunk sequences, manifest totals, duplicates, and merge impact, then shows the user a preview.
 4. Only an exact preview-bound confirmation starts the final transaction. Target library tables either all commit together or remain unchanged.
 
-Import sessions expire after 24 hours, are isolated by the authenticated user, and can be cancelled before commit. A restore currently covers the same canonical data as export: Media, watched episodes, and episode-level ratings. Diary, notifications, and custom lists remain scheduled for the data-lifecycle patch.
+Import sessions expire after 24 hours, are isolated by the authenticated user, and can be cancelled before commit. Version 6 restores the full declared lifecycle atomically, including Diary, Notifications, Custom Lists and preferences; account identity and authentication secrets are never imported.
 
 ### TV Tracking
 - `GET /api/tv-tracking` — list shows with derived states + global counts
+- `GET /api/tv-tracking?countsOnly=true` — one read-only aggregate database query; no TMDB call, episode-key load, cache write, or legacy materialization
 - Categories: all, watchlist, uptodate, finished, upcoming, havent-watched, havent-started
+
+### Discover request budget
+- Seen/Unseen catalogue scans fetch at most eight TMDB Discover pages per HTTP request.
+- A budget-limited response returns `partial=true`, `has_more=true`, and a deterministic `next_cursor`; the browser can continue without a long-running 500-page request.
+- Response headers expose the pages used and the enforced budget for monitoring.
 
 ### TV cache and episode-mutation safety
 
@@ -260,13 +273,16 @@ node --experimental-strip-types scripts/test-tvm-06-09.ts
 npm run verify:patch-05
 npm run verify:patch-06
 npm run verify:patch-07
+npm run verify:patch-08
+npm run verify:patch-09
+npm run verify:patch-10
 ```
 
 ## Deployment (Vercel)
 
 1. Push to GitHub `main` branch
 2. For an existing db-push database, complete the clone procedure in `MIGRATION_BASELINE.md`. Before every deployment containing a migration, run `npm run db:migrate:status`, take a verified backup, and run `npm run db:migrate:deploy` from an approved maintenance environment.
-3. Vercel auto-deploys only after the migration is ready; the build guard blocks an incompatible schema.
+3. GitHub runs strict ESLint, TypeScript and maintained behavior suites as independent jobs. The migration workflow also performs a production build against an empty migrated PostgreSQL database. Vercel auto-deploys only after those required checks and the migration are ready.
 4. Environment variables:
    - `DATABASE_URL` — PostgreSQL connection string (must be `postgresql://`)
    - `TMDB_API_KEY` — TMDB server API key

@@ -1,10 +1,13 @@
+import { APP_NAME, BACKUP_FILE_PREFIX } from "@/lib/brand";
 import {
   LIBRARY_BACKUP_KIND,
   LIBRARY_BACKUP_VERSION,
   LIBRARY_COLLECTIONS,
   LIBRARY_IMPORT_MAX_CHUNK_BYTES,
   emptyCollectionCounts,
+  normalizeCollectionCounts,
   isLibraryCollection,
+  isSupportedBackupVersion,
   type LibraryBackupManifest,
   type LibraryBackupRecord,
   type LibraryTransferRecord,
@@ -111,7 +114,7 @@ export async function downloadLibraryBackup(onProgress?: (progress: Progress) =>
     totalRecords: completed,
   })}\n`);
   const date = new Date().toISOString().slice(0, 10);
-  downloadBlob(new Blob(parts, { type: "application/x-ndjson" }), `tvtime-backup-v5-${date}.ndjson`);
+  downloadBlob(new Blob(parts, { type: "application/x-ndjson" }), `${BACKUP_FILE_PREFIX}-v${LIBRARY_BACKUP_VERSION}-${date}.ndjson`);
   return { totalRecords: completed, collections: actualCounts };
 }
 
@@ -215,6 +218,7 @@ function buildLegacySource(data: any): {
   const episodeRatings = Array.isArray(library.episodeRatings) ? library.episodeRatings : [];
   const mediaCount = mediaSources.reduce((sum, items) => sum + items.length, 0);
   const collections = {
+    ...emptyCollectionCounts(),
     media: mediaCount,
     watchedEpisodes: watchedEpisodes.length,
     episodeRatings: episodeRatings.length,
@@ -240,7 +244,7 @@ function buildLegacySource(data: any): {
       kind: LIBRARY_BACKUP_KIND,
       version: LIBRARY_BACKUP_VERSION,
       format: "ndjson",
-      app: "TvTime",
+      app: APP_NAME,
       exportedAt: new Date().toISOString(),
       source: `legacy-json-v${Number(data?.version || 1)}`,
       user: {
@@ -265,10 +269,16 @@ async function openBackup(file: File): Promise<{
     try {
       const candidate = JSON.parse(firstLine);
       if (candidate?.recordType === "manifest" && candidate?.kind === LIBRARY_BACKUP_KIND) {
-        const manifest = candidate as LibraryBackupManifest;
-        if (manifest.version !== LIBRARY_BACKUP_VERSION || manifest.format !== "ndjson") {
-          throw new Error(`Unsupported backup version ${manifest.version}`);
+        if (!isSupportedBackupVersion(candidate.version) || candidate.format !== "ndjson") {
+          throw new Error(`Unsupported backup version ${candidate.version}`);
         }
+        const collections = normalizeCollectionCounts(candidate.collections);
+        const manifest: LibraryBackupManifest = {
+          ...candidate,
+          version: candidate.version,
+          collections,
+          totalRecords: Object.values(collections).reduce((sum, count) => sum + count, 0),
+        };
         async function* records() {
           let first = true;
           for await (const line of ndjsonLines(file)) {

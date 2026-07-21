@@ -90,10 +90,11 @@ interface DiscoverViewProps {
   embedded?: boolean;
   title?: string;
   subtitle?: string;
+  mediaType?: "movie" | "tv";
 }
 
-export function DiscoverView({ world = "movies", embedded = false, title, subtitle }: DiscoverViewProps) {
-  const isTV = world === "tv" || world === "anime" || world === "arabic-tv";
+export function DiscoverView({ world = "movies", embedded = false, title, subtitle, mediaType }: DiscoverViewProps) {
+  const isTV = world === "tv" || world === "arabic-tv" || (world === "anime" && mediaType !== "movie");
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";
   const forcedLang = isAnime ? "ja" : isArabic ? "ar" : undefined;
@@ -148,8 +149,12 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
   const certificationParam = !effectiveIsTV ? (certification || undefined) : undefined;
 
+  const effectiveGenres = isAnime
+    ? [...new Set([16, ...selectedGenres])]
+    : selectedGenres;
+
   const commonParams = {
-    genres: selectedGenres.length > 0 ? selectedGenres : undefined,
+    genres: effectiveGenres.length > 0 ? effectiveGenres : undefined,
     sort_by: sortBy,
     rating: minRating,
     originalLanguage: language || undefined,
@@ -158,11 +163,13 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     releaseDateTo,
     runtimeGte: runtimeFrom,
     runtimeLte: runtimeTo,
-    textQuery: keywordsParam,
+    keywordQuery: keywordsParam,
     language: tmdbLanguage,
   };
 
   const resultMediaType: "movie" | "tv" = effectiveIsTV ? "tv" : "movie";
+  const seenLabel = effectiveIsTV ? "Started" : "Seen";
+  const unseenLabel = effectiveIsTV ? "Not started" : "Haven't seen";
   const movieQuery = useDiscoverMovies({ ...commonParams, certification: certificationParam, page, enabled: !effectiveIsTV && showMe === "all" });
   const tvQuery = useDiscoverTv({ ...commonParams, page, enabled: effectiveIsTV && showMe === "all" });
   const catalogueQuery = effectiveIsTV ? tvQuery : movieQuery;
@@ -271,12 +278,12 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (keywords.trim()) chips.push({ label: `“${keywords.trim().slice(0, 20)}”`, clear: () => { setKeywords(""); resetPagination(); } });
     if (showMe !== "all") {
       chips.push({
-        label: showMe === "seen" ? "Seen" : "Haven't Seen",
+        label: showMe === "seen" ? seenLabel : unseenLabel,
         clear: () => { setShowMe("all"); resetPagination(); },
       });
     }
     return chips;
-  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe, resetPagination]);
+  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe, seenLabel, unseenLabel, resetPagination]);
 
   const headerTitle = title || (embedded
     ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
@@ -371,8 +378,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
               size="sm"
             >
               <ToggleGroupItem value="all" className="h-8 flex-1 px-3 text-xs sm:flex-none">Everything</ToggleGroupItem>
-              <ToggleGroupItem value="unseen" className="h-8 flex-1 px-3 text-xs sm:flex-none">Haven&apos;t Seen</ToggleGroupItem>
-              <ToggleGroupItem value="seen" className="h-8 flex-1 px-3 text-xs sm:flex-none">Seen</ToggleGroupItem>
+              <ToggleGroupItem value="unseen" className="h-8 flex-1 px-3 text-xs sm:flex-none">{unseenLabel}</ToggleGroupItem>
+              <ToggleGroupItem value="seen" className="h-8 flex-1 px-3 text-xs sm:flex-none">{seenLabel}</ToggleGroupItem>
             </ToggleGroup>
           </div>
         </FilterSection>
@@ -646,7 +653,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           ) : (
             <>
               Showing <span className="font-bold text-foreground">{items.length}</span>
-              {showMe === "seen" ? " seen" : " not seen"} titles
+              {showMe === "seen" ? ` ${seenLabel.toLowerCase()}` : ` ${unseenLabel.toLowerCase()}`} titles
             </>
           )
         )}
@@ -668,7 +675,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       {!isLoading && !isError && items.length === 0 && (
         <div className="text-center py-16 text-muted-foreground">
           <SlidersHorizontal className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">{showMe === "all" ? "No results match your filters" : `No ${showMe === "seen" ? "seen" : "not seen"} titles match your filters`}</p>
+          <p className="font-medium">{showMe === "all" ? "No results match your filters" : `No ${showMe === "seen" ? seenLabel.toLowerCase() : unseenLabel.toLowerCase()} titles match your filters`}</p>
           <p className="text-sm mt-1">Try removing some filters to see more results.</p>
           {activeFilters > 0 && (
             <Button variant="outline" size="sm" className="mt-4" onClick={resetAll}>

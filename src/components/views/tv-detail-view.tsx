@@ -1,7 +1,7 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useMediaState, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, useMediaUpdate, type EpisodeCompletion } from "@/hooks/use-tmdb";
+import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useMediaState, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, type EpisodeCompletion } from "@/hooks/use-tmdb";
 import { img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,11 +11,12 @@ import { RatingDialog } from "@/components/media/rating-dialog";
 import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
+import { WatchProviders } from "@/components/media/watch-providers";
 import {
-  Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
+  Star, Clock, Play, ListPlus, CheckCircle2, Circle, ArrowLeft,
   Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -36,7 +37,6 @@ export function TvDetailView() {
   const watchlistToggle = useWatchlistToggle();
   const followingToggle = useFollowingToggle();
   const ratingMutate = useRatingMutate();
-  const mediaUpdate = useMediaUpdate();
   const progress = useShowProgress(tvId);
 
   const [activeTab, setActiveTab] = useState("seasons");
@@ -51,7 +51,6 @@ export function TvDetailView() {
   const myRating = trackedShow?.userRating ?? null;
   // Fix #2: Don't default to "not_started" — use null if show is not tracked
   const showTrackingStatus = (progress.trackingState || trackedShow?.status || null) as TvTrackingState | null;
-  const isFullyWatched = showTrackingStatus === "finished" || showTrackingStatus === "uptodate";
   const tmdbStatus = tData?.status || "";
   const isEnded = /ended|canceled|cancelled/i.test(tmdbStatus);
 
@@ -500,6 +499,7 @@ export function TvDetailView() {
             <h3 className="text-lg font-bold mb-2">Synopsis</h3>
             <p className="text-foreground/80 leading-relaxed">{t.overview || "No overview available."}</p>
           </div>
+          <WatchProviders providersData={(t as any)["watch/providers"]} />
           {t.networks?.length > 0 && (
             <div>
               <h4 className="text-sm font-bold mb-2">Networks</h4>

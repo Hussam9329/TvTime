@@ -16,9 +16,9 @@ export function ArabicMoviesView() {
         <div className="view-page-header flex items-start gap-3">
           <Languages className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
           <div className="min-w-0">
-            <h1 className="view-page-title text-xl font-extrabold tracking-tight">Arabic Movies</h1>
+            <h1 className="view-page-title text-xl font-extrabold tracking-tight">الأفلام العربية</h1>
             <p className="view-page-description mt-1 text-sm text-muted-foreground">
-              Track Arabic films you&apos;ve watched, discover new ones, and stay on top of upcoming releases.
+              تتبّع الأفلام العربية التي شاهدتها، واكتشف أعمالًا جديدة، وتابع الإصدارات القادمة.
             </p>
           </div>
         </div>
@@ -27,13 +27,13 @@ export function ArabicMoviesView() {
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
         <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
           <TabsTrigger value="library" className="gap-2 py-2.5">
-            <Library className="h-4 w-4" /> My Arabic Movies
+            <Library className="h-4 w-4" /> My الأفلام العربية
           </TabsTrigger>
           <TabsTrigger value="discover" className="gap-2 py-2.5">
-            <Sparkles className="h-4 w-4" /> Discover
+            <Sparkles className="h-4 w-4" /> اكتشاف
           </TabsTrigger>
           <TabsTrigger value="releases" className="gap-2 py-2.5">
-            <CalendarDays className="h-4 w-4" /> Releases
+            <CalendarDays className="h-4 w-4" /> الإصدارات
           </TabsTrigger>
         </TabsList>
 
@@ -41,15 +41,15 @@ export function ArabicMoviesView() {
           <CollectionWorldView world="arabic-movies" embedded />
         </TabsContent>
         <TabsContent value="discover" className="mt-0">
-          <DiscoverView world="arabic-movies" embedded />
+          <DiscoverView world="arabic-movies" embedded title="اكتشف أفلامًا عربية" subtitle="ابحث عن أفلام عربية جديدة وأضفها إلى مكتبتك" />
         </TabsContent>
         <TabsContent value="releases" className="mt-0">
           <ReleaseSchedule
             accentClass="text-emerald-400"
             originalLanguage="ar"
             language="ar"
-            title="Arabic Movie Release Schedule"
-            subtitle="A six-month release agenda for Arabic-language films. Dates are handled as date-only values and never shift with timezone conversion."
+            title="جدول إصدارات الأفلام العربية"
+            subtitle="إصدارات الأفلام العربية خلال ستة أشهر، مع الحفاظ على التاريخ كما أعلن دون تغييره بسبب المنطقة الزمنية."
           />
         </TabsContent>
       </Tabs>
