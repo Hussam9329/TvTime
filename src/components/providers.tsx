@@ -31,10 +31,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Data is considered fresh for 2 minutes. After that, react-query
+            // Data is considered fresh for 5 minutes. After that, react-query
             // will refetch on the next mount/focus/interaction. This is a
             // good balance between freshness and server load.
-            staleTime: 2 * 60 * 1000,
+            staleTime: 5 * 60 * 1000,
             // Don't refetch on window focus by default — the manual
             // background refresh below handles slow-changing data, and
             // individual views can opt in with their own refetchOnWindowFocus.

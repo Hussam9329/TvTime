@@ -316,15 +316,15 @@ function RecentlyWatched() {
         <span className="text-xs text-muted-foreground ml-1">({recently.data?.total ?? items.length})</span>
       </div>
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-        {items.map((item) => (
-          <RecentlyWatchedCard key={`${item.kind}-${item.tmdbId ?? item.id}-${item.watchedAt}`} item={item} onGo={() => handleGo(item)} />
+        {items.map((item, index) => (
+          <RecentlyWatchedCard key={`${item.kind}-${item.tmdbId ?? item.id}-${item.watchedAt}`} item={item} index={index} onGo={() => handleGo(item)} />
         ))}
       </div>
     </section>
   );
 }
 
-function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
+function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; onGo: () => void }) {
   const unwatchToggle = useWatchedMovieToggle();
   const title = item.title || "Untitled";
   const posterSrc = imgOrPlaceholder(item.posterPath || null, "w342");
@@ -383,9 +383,9 @@ function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
           alt={title}
           fill
           variant="poster"
-          loading="eager"
+          loading={index < 3 ? "eager" : "lazy"}
           decoding="async"
-          fetchPriority="high"
+          fetchPriority={index === 0 ? "high" : "auto"}
           className="transition-opacity duration-200 group-hover:opacity-95"
         />
         <div className="absolute top-1.5 right-1.5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center gap-1 px-1.5 h-5 text-white pointer-events-none">

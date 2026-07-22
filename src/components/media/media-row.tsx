@@ -89,6 +89,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
                     forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
                     Number(item.id),
                   )] ?? null}
+                  priority={i < 2}
                 />
               </div>
             ))}

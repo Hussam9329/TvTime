@@ -17,9 +17,10 @@ interface MediaCardProps {
   forcedMediaType?: "movie" | "tv";
   libraryState?: MediaBatchState | null;
   enableNativeLink?: boolean;
+  priority?: boolean;
 }
 
-export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, enableNativeLink = true }: MediaCardProps) {
+export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, enableNativeLink = true, priority = false }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
 
@@ -83,7 +84,9 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           <SafeImage
             src={imgOrPlaceholder(item.poster_path, "w342")}
             alt={title}
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
+            decoding="async"
+            fetchPriority={priority ? "high" : "auto"}
             className="relative w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-95"
           />
           {/* gradient overlay */}
@@ -197,6 +200,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
             Number(item.id),
           )] ?? null}
           enableNativeLink={enableNativeLinks}
+          priority={i < 4}
         />
       ))}
     </div>
