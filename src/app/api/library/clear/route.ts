@@ -12,14 +12,12 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({
         error: `Confirmation required. Send header 'x-confirm-delete: ${CONFIRMATION}' to confirm.`,
         code: "CONFIRMATION_REQUIRED",
-        hint: "This deletes the library, notifications and custom lists, but keeps the account preferences.",
+        hint: "This deletes the library and notifications, but keeps the account preferences.",
       }, { status: 409 });
     }
 
     const user = await getOrCreateUser(await resolveUserId(req));
     const deleted = await db.$transaction(async (tx) => {
-      const customListItems = await tx.customListItem.count({ where: { list: { userId: user.id } } });
-      const customLists = await tx.customList.deleteMany({ where: { userId: user.id } });
       const watchSessions = await tx.watchSession.deleteMany({ where: { userId: user.id } });
       const notifications = await tx.notification.deleteMany({ where: { userId: user.id } });
       const ratings = await tx.rating.deleteMany({ where: { userId: user.id } });
@@ -34,8 +32,6 @@ export async function DELETE(req: NextRequest) {
         ratings: ratings.count,
         watchSessions: watchSessions.count,
         notifications: notifications.count,
-        customLists: customLists.count,
-        customListItems,
         legacyWatchlistItems: watchlistItems.count,
         legacyWatchedMovies: watchedMovies.count,
         legacyFollowingShows: followingShows.count,

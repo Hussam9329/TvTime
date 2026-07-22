@@ -11,8 +11,6 @@ async function main() {
   // New tables (should be 0)
   const watchSessions = await prisma.watchSession.count();
   const notifications = await prisma.notification.count();
-  const customLists = await prisma.customList.count();
-  const customListItems = await prisma.customListItem.count();
   
   console.log('=== EXISTING DATA (intact) ===');
   console.log('Media:', media);
@@ -24,8 +22,6 @@ async function main() {
   console.log('=== NEW TABLES (empty, ready to use) ===');
   console.log('WatchSessions:', watchSessions);
   console.log('Notifications:', notifications);
-  console.log('CustomLists:', customLists);
-  console.log('CustomListItems:', customListItems);
   
   // Sample media to confirm rewatchCount field exists
   const sample = await prisma.media.findFirst({

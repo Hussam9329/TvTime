@@ -14,8 +14,6 @@ const requiredTables = [
   "TvMetadataCache",
   "WatchSession",
   "Notification",
-  "CustomList",
-  "CustomListItem",
   "LibraryImportSession",
   "LibraryImportChunk",
   "LibraryImportRecord",
@@ -30,8 +28,6 @@ const requiredColumns = {
   User: ["timezone", "country", "preferredPlatforms"],
   WatchSession: ["userId", "mediaId", "mediaType", "tmdbId", "watchedAt"],
   Notification: ["userId", "type", "read", "createdAt"],
-  CustomList: ["userId", "slug", "isPublic", "updatedAt"],
-  CustomListItem: ["listId", "tmdbId", "mediaType", "order"],
   LibraryImportSession: ["userId", "version", "status", "manifest", "expectedRecords", "receivedRecords", "expiresAt"],
   LibraryImportChunk: ["sessionId", "sequence", "checksum", "recordCount"],
   LibraryImportRecord: ["sessionId", "collection", "ordinal", "payload"],
@@ -41,8 +37,6 @@ const requiredIndexes = [
   "Media_userId_type_tmdbId_key",
   "Media_userId_isArabic_idx",
   "WatchedEpisode_userId_showId_seasonNumber_episodeNumber_key",
-  "CustomList_slug_key",
-  "CustomListItem_listId_tmdbId_mediaType_key",
   "LibraryImportChunk_sessionId_sequence_key",
   "LibraryImportRecord_sessionId_collection_ordinal_key",
 ];
@@ -53,8 +47,6 @@ const requiredConstraints = [
   "WatchSession_userId_fkey",
   "WatchSession_mediaId_fkey",
   "Notification_userId_fkey",
-  "CustomList_userId_fkey",
-  "CustomListItem_listId_fkey",
   "LibraryImportSession_userId_fkey",
   "LibraryImportChunk_sessionId_fkey",
   "LibraryImportRecord_sessionId_fkey",
@@ -66,7 +58,6 @@ const requiredConstraints = [
   "Rating_value_range_check",
   "WatchedEpisode_numbers_check",
   "WatchSession_values_check",
-  "CustomListItem_order_nonnegative_check",
 ];
 
 const requiredPolicies = [
@@ -76,8 +67,6 @@ const requiredPolicies = [
   "user_isolate_own_row",
   "watch_session_isolate_own_rows",
   "notification_isolate_own_rows",
-  "custom_list_isolate_own_rows",
-  "custom_list_item_isolate_own_rows",
   "library_import_session_isolate_own_rows",
   "library_import_chunk_isolate_own_rows",
   "library_import_record_isolate_own_rows",
@@ -94,6 +83,7 @@ const requiredMigrations = [
   "20260717000000_tv_metadata_cache_integrity",
   "20260718000000_data_lifecycle_preferences",
   "20260722000000_remove_dead_mymedia_data",
+  "20260722010000_remove_custom_lists",
 ];
 
 function assertAll(label, required, present) {
@@ -159,7 +149,7 @@ try {
       "RLS-enabled tables",
       [
         "User", "Media", "WatchedEpisode", "Rating", "WatchSession", "Notification",
-        "CustomList", "CustomListItem", "LibraryImportSession", "LibraryImportChunk", "LibraryImportRecord",
+        "LibraryImportSession", "LibraryImportChunk", "LibraryImportRecord",
       ],
       new Set(rlsTables.map((row) => String(row.name))),
     );

@@ -95,26 +95,6 @@ async function loadPage(
     return rows.map((row) => ({ cursor: row.id, data: sanitizeUserOwnedRow(row) }));
   }
 
-  if (collection === "customLists") {
-    const rows = await db.customList.findMany({ where: { userId, ...cursorWhere }, orderBy: { id: "asc" }, take: limit });
-    return rows.map((row) => {
-      const { id, userId: _userId, updatedAt: _updatedAt, ...data } = row;
-      return { cursor: id, data: { ...data, sourceListId: id } };
-    });
-  }
-
-  if (collection === "customListItems") {
-    const rows = await db.customListItem.findMany({
-      where: { list: { userId }, ...cursorWhere },
-      orderBy: { id: "asc" },
-      take: limit,
-    });
-    return rows.map((row) => {
-      const { id, listId, ...data } = row;
-      return { cursor: id, data: { ...data, sourceListId: listId } };
-    });
-  }
-
   if (cursor) return [];
   const user = await db.user.findUniqueOrThrow({
     where: { id: userId },
@@ -124,14 +104,12 @@ async function loadPage(
 }
 
 async function buildManifest(user: Awaited<ReturnType<typeof getOrCreateUser>>) {
-  const [media, watchedEpisodes, episodeRatings, watchSessions, notifications, customLists, customListItems] = await Promise.all([
+  const [media, watchedEpisodes, episodeRatings, watchSessions, notifications] = await Promise.all([
     db.media.count({ where: { userId: user.id } }),
     db.watchedEpisode.count({ where: { userId: user.id } }),
     db.rating.count({ where: { userId: user.id, mediaType: { startsWith: "episode:" } } }),
     db.watchSession.count({ where: { userId: user.id } }),
     db.notification.count({ where: { userId: user.id } }),
-    db.customList.count({ where: { userId: user.id } }),
-    db.customListItem.count({ where: { list: { userId: user.id } } }),
   ]);
   const collections = {
     ...emptyCollectionCounts(),
@@ -140,8 +118,6 @@ async function buildManifest(user: Awaited<ReturnType<typeof getOrCreateUser>>) 
     episodeRatings,
     watchSessions,
     notifications,
-    customLists,
-    customListItems,
     preferences: 1,
   };
   const totalRecords = Object.values(collections).reduce((sum, count) => sum + count, 0);

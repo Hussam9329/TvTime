@@ -43,6 +43,7 @@ const migrations = migrationNames.map((name) => {
 
 const reviewedDestructiveMigrations = new Set([
   "20260722000000_remove_dead_mymedia_data",
+  "20260722010000_remove_custom_lists",
 ]);
 
 const schema = fs.readFileSync(schemaPath, "utf8");
@@ -64,7 +65,7 @@ for (const table of ["User", "Media", "WatchlistItem", "WatchedMovie", "WatchedE
 }
 
 const featureMigration = migrations.find((migration) => migration.name === "20260715000000_feature_tables_and_rls")?.sql || "";
-for (const table of ["WatchSession", "Notification", "CustomList", "CustomListItem"]) {
+for (const table of ["WatchSession", "Notification"]) {
   if (!new RegExp(`CREATE\\s+TABLE\\s+IF\\s+NOT\\s+EXISTS\\s+"${table}"`, "i").test(featureMigration)) {
     fail(`The additive feature migration does not create or reconcile ${table}.`);
   }

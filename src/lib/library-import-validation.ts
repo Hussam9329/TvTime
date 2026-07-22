@@ -168,26 +168,6 @@ const notificationSchema = z.object({
   createdAt: nullableIsoDate.default(null),
 });
 
-const customListSchema = z.object({
-  sourceListId: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(200)),
-  name: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(100)),
-  description: nullableString(2_000).default(null),
-  isPublic: strictBoolean.default(false),
-  color: z.preprocess((value) => String(value ?? "#f59e0b").trim(), z.string().regex(/^#[0-9a-fA-F]{6}$/)),
-  slug: nullableString(160).default(null),
-  createdAt: nullableIsoDate.default(null),
-});
-
-const customListItemSchema = z.object({
-  sourceListId: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(200)),
-  tmdbId: z.preprocess((value) => Number(value), z.number().int().positive()),
-  mediaType: z.preprocess((value) => String(value ?? "").trim().toLowerCase(), z.enum(["movie", "tv"])),
-  title: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(500)),
-  posterPath: nullableString(2_000).default(null),
-  addedAt: nullableIsoDate.default(null),
-  order: z.preprocess((value) => value === null || value === undefined || value === "" ? 0 : Number(value), z.number().int().nonnegative().max(1_000_000)).default(0),
-});
-
 const preferencesSchema = z.object({
   timezone: z.preprocess((value) => String(value ?? "Asia/Baghdad").trim(), z.string().min(1).max(100)),
   country: z.preprocess((value) => String(value ?? "IQ").trim().toUpperCase(), z.string().regex(/^[A-Z]{2}$/)),
@@ -200,8 +180,6 @@ const collectionsSchema = z.preprocess(normalizeCollectionCounts, z.object({
   episodeRatings: z.number().int().nonnegative(),
   watchSessions: z.number().int().nonnegative(),
   notifications: z.number().int().nonnegative(),
-  customLists: z.number().int().nonnegative(),
-  customListItems: z.number().int().nonnegative(),
   preferences: z.number().int().nonnegative().max(1),
 }));
 
@@ -296,14 +274,6 @@ export function normalizeImportRecord(record: LibraryTransferRecord): Normalized
 
   if (record.collection === "notifications") {
     return { collection: record.collection, ordinal: record.ordinal, payload: { ...notificationSchema.parse(record.data), importId: randomUUID() } };
-  }
-
-  if (record.collection === "customLists") {
-    return { collection: record.collection, ordinal: record.ordinal, payload: { ...customListSchema.parse(record.data), importId: randomUUID() } };
-  }
-
-  if (record.collection === "customListItems") {
-    return { collection: record.collection, ordinal: record.ordinal, payload: { ...customListItemSchema.parse(record.data), importId: randomUUID() } };
   }
 
   return { collection: record.collection, ordinal: record.ordinal, payload: preferencesSchema.parse(record.data) };

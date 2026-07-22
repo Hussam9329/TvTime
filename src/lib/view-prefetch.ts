@@ -28,9 +28,6 @@ export function prefetchViewModule(view: ViewName) {
     case "anime":
       request = import("@/components/views/anime-view");
       break;
-    case "lists":
-      request = import("@/components/views/lists-view");
-      break;
     case "stats":
       request = import("@/components/views/stats-view");
       break;

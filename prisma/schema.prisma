@@ -28,7 +28,6 @@ model User {
   ratings         Rating[]
   watchSessions   WatchSession[]
   notifications   Notification[]
-  customLists     CustomList[]
   importSessions  LibraryImportSession[]
 }
 
@@ -196,7 +195,7 @@ model TvMetadataCache {
 
 // ─────────────────────────────────────────────────────────────
 // NEW ADDITIVE MODELS — TvTime+ features
-// Added: Diary (WatchSession), Notifications, Custom Lists
+// Added: Diary (WatchSession) and Notifications
 // All defaults are safe — no migration of existing data needed.
 // ─────────────────────────────────────────────────────────────
 
@@ -242,40 +241,6 @@ model Notification {
   @@index([userId, read])
   @@index([userId, createdAt])
 }
-
-/// User-defined custom lists (e.g., "أفلام رمضان", "Best Horror")
-model CustomList {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  isPublic    Boolean  @default(false)
-  color       String   @default("#f59e0b")
-  slug        String   @unique
-  items       CustomListItem[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([userId])
-}
-
-/// Items inside a CustomList
-model CustomListItem {
-  id          String   @id @default(cuid())
-  listId      String
-  list        CustomList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  tmdbId      Int
-  mediaType   String
-  title       String
-  posterPath  String?
-  addedAt     DateTime @default(now())
-  order       Int      @default(0)
-
-  @@unique([listId, tmdbId, mediaType])
-  @@index([listId])
-}
-
 
 /// Temporary, user-scoped staging session for a validated library restore.
 model LibraryImportSession {

@@ -609,7 +609,7 @@
 .tvtime-arabic-movies-page > :first-child::after, .tvtime-arabic-tv-page > section:first-child::after { content: ""; position: absolute; inset-inline: 1rem; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgb(52 211 153 / .45), transparent); }
 .tvtime-arabic-tv-page > section:first-child::after { background: linear-gradient(90deg, transparent, rgb(251 191 36 / .45), transparent); }
 .tvtime-arabic-movies-page [role="tablist"], .tvtime-arabic-tv-page [role="tablist"] { position: sticky; top: 4.75rem; z-index: 20; backdrop-filter: blur(14px); }
-.tvtime-arabic-movies-page [role="tabpanel"], .tvtime-arabic-tv-page [role="tabpanel"], .tvtime-movie-detail-page section, .tvtime-tv-detail-page section, .tvtime-tv-tracking-page > [data-slot="card"], .tvtime-tv-tracking-page section, .tvtime-collection-world-page, .tvtime-lists-page { min-width: 0; }
+.tvtime-arabic-movies-page [role="tabpanel"], .tvtime-arabic-tv-page [role="tabpanel"], .tvtime-movie-detail-page section, .tvtime-tv-detail-page section, .tvtime-tv-tracking-page > [data-slot="card"], .tvtime-tv-tracking-page section, .tvtime-collection-world-page { min-width: 0; }
 .tvtime-movie-detail-page > button:first-child, .tvtime-tv-detail-page > button:first-child { min-height: 2.5rem; }
 .tvtime-movie-detail-page > .relative.rounded-2xl, .tvtime-tv-detail-page > .relative.rounded-2xl { box-shadow: 0 18px 50px rgb(0 0 0 / .24); }
 .tvtime-movie-detail-page h1, .tvtime-movie-detail-page h2, .tvtime-tv-detail-page h1, .tvtime-tv-detail-page h2 { text-wrap: balance; }
@@ -617,9 +617,7 @@
 .tvtime-tv-tracking-page [data-slot="card"] { scroll-margin-top: 6rem; }
 .tvtime-tv-tracking-page [class*="grid"], .tvtime-collection-world-page [class*="grid"] { align-items: stretch; }
 .tvtime-collection-world-page [data-slot="card"] { min-width: 0; height: 100%; }
-.tvtime-lists-page > *, .tvtime-lists-page [data-slot="card"] { min-width: 0; }
-.tvtime-lists-page button { touch-action: manipulation; }
-@media (max-width: 640px) { .tvtime-arabic-movies-page, .tvtime-arabic-tv-page, .tvtime-movie-detail-page, .tvtime-tv-detail-page, .tvtime-tv-tracking-page { gap: 1rem; } .tvtime-arabic-movies-page > :first-child, .tvtime-arabic-tv-page > section:first-child { padding: 1rem; } .tvtime-lists-page { padding: .75rem; gap: 1rem; } }
+@media (max-width: 640px) { .tvtime-arabic-movies-page, .tvtime-arabic-tv-page, .tvtime-movie-detail-page, .tvtime-tv-detail-page, .tvtime-tv-tracking-page { gap: 1rem; } .tvtime-arabic-movies-page > :first-child, .tvtime-arabic-tv-page > section:first-child { padding: 1rem; } }
 
 /* TVTIME UIUX 29–34: supporting page layouts. */
 .tvtime-stats-page > .grid { align-items: stretch; }

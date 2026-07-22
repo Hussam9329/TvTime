@@ -99,11 +99,10 @@ check(/source:\s*"Media"/.test(watchlist) && !/db\.watchlistItem/.test(watchlist
 check(/source:\s*"Media"/.test(watchedMovies) && !/db\.watchedMovie/.test(watchedMovies), "Watched movies compatibility API is backed only by Media");
 check(/source:\s*"Media"/.test(following) && !/db\.followingShow/.test(following), "Following compatibility API is backed only by Media");
 check(/Media\.userRating/.test(ratings) && /Rating:episode-only/.test(ratings), "Title ratings use Media while episode ratings remain independent");
-check(/episodeRatings/.test(exportRoute) && /watchSessions/.test(exportRoute) && /customLists/.test(exportRoute), "Export uses the declared canonical Backup v6 collections");
+check(/episodeRatings/.test(exportRoute) && /watchSessions/.test(exportRoute), "Export uses the declared canonical backup collections");
 check(/tx\.media\.deleteMany/.test(clearRoute)
   && /tx\.rating\.deleteMany/.test(clearRoute)
   && /tx\.watchSession\.deleteMany/.test(clearRoute)
-  && /tx\.customList\.deleteMany/.test(clearRoute)
   && /tx\.watchlistItem\.deleteMany/.test(clearRoute), "Clear removes the full declared lifecycle and compatibility rows in one transaction");
 
 check(/status:\s*"planned",\s*\n\s*watched:\s*false/.test(watchlist), "Watchlist API requires Planned and watched=false");

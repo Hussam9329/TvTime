@@ -9,8 +9,6 @@ async function main() {
   const tvMetadata = await prisma.tvMetadataCache.count();
   const watchSessions = await prisma.watchSession.count();
   const notifications = await prisma.notification.count();
-  const customLists = await prisma.customList.count();
-  const customListItems = await prisma.customListItem.count();
   
   console.log('=== EXISTING DATA (must be intact) ===');
   console.log('Media:', media);
@@ -22,8 +20,6 @@ async function main() {
   console.log('=== NEW TABLES (expected to be 0 — fresh) ===');
   console.log('WatchSessions:', watchSessions);
   console.log('Notifications:', notifications);
-  console.log('CustomLists:', customLists);
-  console.log('CustomListItems:', customListItems);
   
   const sample = await prisma.media.findFirst({
     select: { id: true, title: true, rewatchCount: true, notifyOnNewEpisode: true }

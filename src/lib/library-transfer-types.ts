@@ -13,8 +13,6 @@ export const LIBRARY_COLLECTIONS = [
   "episodeRatings",
   "watchSessions",
   "notifications",
-  "customLists",
-  "customListItems",
   "preferences",
 ] as const;
 
@@ -65,8 +63,6 @@ export function emptyCollectionCounts(): Record<LibraryCollection, number> {
     episodeRatings: 0,
     watchSessions: 0,
     notifications: 0,
-    customLists: 0,
-    customListItems: 0,
     preferences: 0,
   };
 }

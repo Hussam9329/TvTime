@@ -41,8 +41,7 @@ check(/const CONFIRMATION = "DELETE EVERYTHING"/.test(clearRoute)
 check(/db\.\$transaction\(async \(tx\) =>/.test(clearRoute)
   && /tx\.media\.deleteMany/.test(clearRoute)
   && /tx\.watchSession\.deleteMany/.test(clearRoute)
-  && /tx\.notification\.deleteMany/.test(clearRoute)
-  && /tx\.customList\.deleteMany/.test(clearRoute), "Clear-all deletes the declared user-owned lifecycle atomically");
+  && /tx\.notification\.deleteMany/.test(clearRoute), "Clear-all deletes the declared user-owned lifecycle atomically");
 
 check(/return DEFAULT_USER_ID/.test(clientUser), "Client API identity is the canonical default user");
 check(/userId:\s*DEFAULT_USER_ID/.test(store), "Navigation/profile store starts with the canonical user identity");

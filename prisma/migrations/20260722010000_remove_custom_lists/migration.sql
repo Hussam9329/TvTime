@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS "CustomListItem";
+DROP TABLE IF EXISTS "CustomList";

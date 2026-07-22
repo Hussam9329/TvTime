@@ -45,9 +45,6 @@ const ArabicMoviesView = lazy(() =>
 const ArabicTvView = lazy(() =>
   import("@/components/views/arabic-tv-view").then((m) => ({ default: m.ArabicTvView })),
 );
-const ListsView = lazy(() =>
-  import("@/components/views/lists-view").then((m) => ({ default: m.ListsView })),
-);
 
 function ViewSkeleton() {
   // Mirrors the layout of detail pages and grid views so the first paint
@@ -133,7 +130,6 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
                 {view === "tv-shows" && <TvShowsView />}
                 {view === "arabic-movies" && <ArabicMoviesView />}
                 {view === "arabic-tv" && <ArabicTvView />}
-                {view === "lists" && <ListsView />}
               </Suspense>
             </ErrorBoundary>
           )}

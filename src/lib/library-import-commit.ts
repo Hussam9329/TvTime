@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 
 export type LibraryImportCommitResult = {
@@ -8,27 +7,12 @@ export type LibraryImportCommitResult = {
   seriesProgressRowsAffected: number;
   watchSessionRowsAffected: number;
   notificationRowsAffected: number;
-  customListRowsAffected: number;
-  customListItemRowsAffected: number;
   preferencesUpdated: boolean;
 };
-
-function listSlugStem(value: string): string {
-  return value.trim().toLowerCase()
-    .replace(/[^\w\u0600-\u06FF]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60) || "list";
-}
 
 function asPayload(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
-}
-
-function optionalDate(value: unknown): Date | null {
-  if (value === null || value === undefined || value === "") return null;
-  const date = new Date(String(value));
-  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**
@@ -361,86 +345,6 @@ export async function commitStagedLibraryImport(
     )
   `;
 
-  const stagedLists = await tx.libraryImportRecord.findMany({
-    where: { sessionId, collection: "customLists" },
-    orderBy: { ordinal: "asc" },
-    select: { payload: true },
-  });
-  const targetListIds = new Map<string, string>();
-  let customListRowsAffected = 0;
-  for (const record of stagedLists) {
-    const payload = asPayload(record.payload);
-    const sourceListId = String(payload.sourceListId || "");
-    const name = String(payload.name || "").trim();
-    if (!sourceListId || !name) continue;
-    const existing = await tx.customList.findFirst({
-      where: { userId, name: { equals: name, mode: "insensitive" } },
-      select: { id: true },
-    });
-    let targetId = existing?.id;
-    if (targetId) {
-      await tx.customList.update({
-        where: { id: targetId },
-        data: {
-          description: payload.description == null ? null : String(payload.description),
-          color: String(payload.color || "#f59e0b"),
-          isPublic: Boolean(payload.isPublic),
-        },
-      });
-    } else {
-      const requestedSlug = String(payload.slug || "").trim();
-      const stem = listSlugStem(requestedSlug || name);
-      let slug = stem;
-      if (await tx.customList.findUnique({ where: { slug }, select: { id: true } })) {
-        slug = `${stem}-${randomUUID().slice(0, 10)}`;
-      }
-      const created = await tx.customList.create({
-        data: {
-          userId, name,
-          description: payload.description == null ? null : String(payload.description),
-          color: String(payload.color || "#f59e0b"),
-          isPublic: Boolean(payload.isPublic),
-          slug,
-          createdAt: optionalDate(payload.createdAt) ?? new Date(),
-        },
-        select: { id: true },
-      });
-      targetId = created.id;
-    }
-    targetListIds.set(sourceListId, targetId);
-    customListRowsAffected++;
-  }
-
-  const stagedListItems = await tx.libraryImportRecord.findMany({
-    where: { sessionId, collection: "customListItems" },
-    orderBy: { ordinal: "asc" },
-    select: { payload: true },
-  });
-  const listItemsByTarget = new Map<string, Array<{ tmdbId: number; mediaType: string; title: string; posterPath: string | null; order: number; addedAt: Date }>>();
-  for (const record of stagedListItems) {
-    const payload = asPayload(record.payload);
-    const targetId = targetListIds.get(String(payload.sourceListId || ""));
-    if (!targetId) continue;
-    const rows = listItemsByTarget.get(targetId) ?? [];
-    rows.push({
-      tmdbId: Number(payload.tmdbId),
-      mediaType: String(payload.mediaType),
-      title: String(payload.title),
-      posterPath: payload.posterPath == null ? null : String(payload.posterPath),
-      order: Number(payload.order || 0),
-      addedAt: optionalDate(payload.addedAt) ?? new Date(),
-    });
-    listItemsByTarget.set(targetId, rows);
-  }
-  let customListItemRowsAffected = 0;
-  for (const [listId, rows] of listItemsByTarget) {
-    const result = await tx.customListItem.createMany({
-      data: rows.map((row) => ({ listId, ...row })),
-      skipDuplicates: true,
-    });
-    customListItemRowsAffected += result.count;
-  }
-
   const preferenceRecord = await tx.libraryImportRecord.findFirst({
     where: { sessionId, collection: "preferences" },
     orderBy: { ordinal: "asc" },
@@ -469,8 +373,6 @@ export async function commitStagedLibraryImport(
     seriesProgressRowsAffected: Number(seriesProgressRowsAffected),
     watchSessionRowsAffected: Number(watchSessionRowsAffected),
     notificationRowsAffected: Number(notificationRowsAffected),
-    customListRowsAffected,
-    customListItemRowsAffected,
     preferencesUpdated,
   };
 }

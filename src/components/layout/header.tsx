@@ -13,7 +13,6 @@ import {
   Home,
   Keyboard,
   Languages,
-  ListChecks,
   Menu,
   Moon,
   Play,
@@ -69,7 +68,6 @@ const coreNavItems: NavItem[] = [
   { view: "tv-shows", label: "TV Shows", icon: Clapperboard },
   { view: "anime", label: "Anime", icon: Sparkles },
   { view: "stats", label: "Stats", icon: BarChart3 },
-  { view: "lists", label: "Custom Lists", icon: ListChecks },
 ];
 
 const arabicNavItems: NavItem[] = [

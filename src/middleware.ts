@@ -19,8 +19,6 @@ const PUBLIC_PREFIXES = [
   "/favicon.ico",
   "/placeholder-poster.svg",
   "/api/auth",
-  "/api/public",
-  "/list",
   "/login",
   "/robots.txt",
   "/sitemap.xml",

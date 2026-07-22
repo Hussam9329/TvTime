@@ -19,7 +19,7 @@ const legacyV5 = importStartSchema.parse({
 });
 assert.equal(legacyV5.manifest.collections.watchSessions, 0, "v5 manifests must gain zero-count v6 collections");
 
-const counts = { ...emptyCollectionCounts(), media: 1, watchSessions: 1, notifications: 1, customLists: 1, customListItems: 1, preferences: 1 };
+const counts = { ...emptyCollectionCounts(), media: 1, watchSessions: 1, notifications: 1, preferences: 1 };
 const current = importStartSchema.parse({
   manifest: {
     kind: LIBRARY_BACKUP_KIND,
@@ -53,20 +53,6 @@ const notification = normalizeImportRecord({
   data: { type: "new_episode", title: "New episode", body: "Episode is available", read: false },
 });
 assert.equal(notification.payload.read, false);
-
-const list = normalizeImportRecord({
-  collection: "customLists",
-  ordinal: 0,
-  data: { sourceListId: "source-1", name: "Ramadan", color: "#f59e0b", isPublic: true },
-});
-assert.equal(list.payload.sourceListId, "source-1");
-
-const item = normalizeImportRecord({
-  collection: "customListItems",
-  ordinal: 0,
-  data: { sourceListId: "source-1", tmdbId: 10, mediaType: "tv", title: "Series", order: 0 },
-});
-assert.equal(item.payload.mediaType, "tv");
 
 const preferences = normalizeImportRecord({
   collection: "preferences",

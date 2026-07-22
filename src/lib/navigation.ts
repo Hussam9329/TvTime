@@ -10,8 +10,7 @@ export type ViewName =
   | "stats"
   | "tv-shows"
   | "arabic-movies"
-  | "arabic-tv"
-  | "lists";
+  | "arabic-tv";
 
 export type NavigationEntry = {
   view: ViewName;
@@ -30,7 +29,6 @@ const ROOT_VIEWS = new Set<ViewName>([
   "tv-shows",
   "arabic-movies",
   "arabic-tv",
-  "lists",
 ]);
 
 export const HOME_NAVIGATION_ENTRY: NavigationEntry = {

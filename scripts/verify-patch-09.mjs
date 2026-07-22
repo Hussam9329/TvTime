@@ -14,20 +14,16 @@ requireText("src/lib/library-transfer-types.ts", [
   [/LIBRARY_BACKUP_VERSION\s*=\s*6/, "backup version 6 is missing"],
   [/"watchSessions"/, "diary collection is missing"],
   [/"notifications"/, "notifications collection is missing"],
-  [/"customLists"/, "custom lists collection is missing"],
-  [/"customListItems"/, "custom list items collection is missing"],
   [/"preferences"/, "preferences collection is missing"],
 ]);
 requireText("src/app/api/library/clear/route.ts", [
   [/watchSession\.deleteMany/, "clear-all does not delete diary sessions"],
   [/notification\.deleteMany/, "clear-all does not delete notifications"],
-  [/customList\.deleteMany/, "clear-all does not delete custom lists"],
   [/preferredPlatforms/, "clear-all does not declare preserved preferences"],
 ]);
 requireText("src/lib/library-import-commit.ts", [
   [/collection = 'watchSessions'/, "diary restore merge is missing"],
   [/collection = 'notifications'/, "notification restore merge is missing"],
-  [/collection: "customLists"/, "custom-list restore merge is missing"],
   [/collection: "preferences"/, "preference restore is missing"],
 ]);
 requireText("prisma/schema.prisma", [
@@ -41,12 +37,10 @@ requireText("prisma/migrations/20260718000000_data_lifecycle_preferences/migrati
   [/WatchSession_values_check/, "diary constraints are missing"],
 ]);
 requireText("src/components/layout/header.tsx", [
-  [/view: "lists"/, "Lists navigation is missing"],
   [/TVTIME_SEARCH_FOCUS_EVENT/, "central search command is not wired"],
 ]);
 requireText("src/components/layout/keyboard-shortcuts.tsx", [
   [/requestSearchFocus\(\)/, "keyboard search does not use the shared command"],
-  [/setView\("lists"\)/, "lists keyboard navigation is missing"],
 ]);
 if (/querySelector\([^\n]+Search movies/.test(read("src/components/layout/keyboard-shortcuts.tsx"))) {
   failures.push("keyboard-shortcuts.tsx: placeholder-based search lookup still exists");
