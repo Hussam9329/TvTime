@@ -213,7 +213,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       {tracking.isLoading ? (
         <div className={cn("grid grid-cols-1 gap-4", layout === "grid" && "xl:grid-cols-2 min-[2100px]:grid-cols-3")}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className={cn("shimmer h-[420px] rounded-[28px] sm:h-[300px]", layout === "grid" && "xl:h-[280px]")} />
+            <div key={i} className={cn("shimmer h-[440px] rounded-[28px] sm:h-[310px]", layout === "grid" && "xl:h-[370px]")} />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -313,31 +313,31 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
     >
       <Card className={cn(
         "group relative cursor-pointer overflow-hidden rounded-[28px] border-white/[0.14] bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.07),transparent_30%),linear-gradient(145deg,rgba(21,25,36,0.98),rgba(10,14,23,0.98))] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.03)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_70px_rgba(0,0,0,0.4),0_0_28px_rgba(139,92,246,0.07)]",
-        compact ? "sm:p-4" : "sm:p-6",
+        compact ? "sm:p-6" : "sm:p-[clamp(2rem,5vw,4.5rem)]",
       )}>
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.018)_48%,transparent_72%)]" />
         <div className={cn(
-          "relative flex flex-col gap-5 sm:flex sm:items-stretch",
+          "relative flex flex-col gap-5 sm:grid sm:items-center",
           compact
-            ? "sm:gap-4"
-            : "sm:gap-8",
+            ? "sm:grid-cols-[clamp(112px,24%,150px)_minmax(0,1fr)] sm:gap-5"
+            : "sm:grid-cols-[clamp(150px,24%,340px)_minmax(0,1fr)] sm:gap-[clamp(2rem,4.5vw,4.5rem)]",
         )}>
-          <div className="relative aspect-[2/3] w-[112px] shrink-0 overflow-hidden rounded-[18px] border border-white/10 bg-black/30 shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:w-auto sm:self-stretch">
+          <div className="relative aspect-[0.618/1] w-[112px] overflow-hidden rounded-[18px] border border-white/10 bg-muted shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:w-full sm:self-center">
           {show.poster ? (
-            <SafeImage src={img(show.poster, "w342")} alt={show.title} fill variant="poster" className="object-contain transition-transform duration-500 group-hover:scale-[1.015]" />
+            <SafeImage src={img(show.poster, "w342")} alt={show.title} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
           ) : (
             <div className="flex h-full w-full items-center justify-center"><Tv className="h-8 w-8 text-muted-foreground" /></div>
           )}
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-col">
             <h4 className={cn(
               "line-clamp-2 text-2xl font-black tracking-[-0.035em] text-foreground transition-colors group-hover:text-white",
-              compact ? "sm:text-2xl" : "sm:text-3xl lg:text-4xl",
+              compact ? "sm:text-2xl lg:text-3xl" : "sm:text-4xl lg:text-5xl",
             )}>{show.title}</h4>
-            <div className="mt-3 h-px w-24 bg-gradient-to-r from-primary via-primary/25 to-transparent" />
+            <div className="mt-4 h-px w-28 bg-gradient-to-r from-primary via-primary/25 to-transparent sm:mt-5" />
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-6">
               <TrackingStatusBadge status={trackingStatus} />
               {show.isAnime && <Badge className="h-10 rounded-full border border-purple-400/20 bg-purple-500/15 px-4 text-sm font-bold text-purple-300">Anime</Badge>}
               {seasons != null && seasons > 0 && (
@@ -347,7 +347,7 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
               )}
             </div>
 
-            <div className={cn("h-px bg-white/[0.12]", compact ? "my-3" : "my-4")} />
+            <div className={cn("my-5 h-px bg-white/[0.12]", compact ? "sm:my-5" : "sm:my-7")} />
 
             <div className="grid grid-cols-1 divide-y divide-white/[0.1] min-[420px]:grid-cols-[1fr_2fr_1fr] min-[420px]:divide-x min-[420px]:divide-y-0">
               <ShowMetric icon={Clapperboard} value={totalEps != null ? `${totalEps} eps` : "—"} label="Episodes" compact={compact} />
@@ -356,7 +356,7 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
             </div>
 
             {userRating != null && (
-              <div className="mt-3 flex items-center gap-3 rounded-xl border border-amber-400/10 bg-amber-400/[0.04] px-4 py-2.5">
+              <div className="mt-5 flex items-center gap-3 rounded-xl border border-amber-400/10 bg-amber-400/[0.04] px-4 py-2.5">
                 <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                 <span className="text-sm font-bold text-amber-300">Your rating: {userRating}/100</span>
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
@@ -365,14 +365,14 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
               </div>
             )}
 
-            <div className={cn("h-px bg-white/[0.12]", compact ? "my-3" : "my-4")} />
+            <div className={cn("my-5 h-px bg-white/[0.12]", compact ? "sm:my-5" : "sm:my-7")} />
 
-            <div className={`flex min-h-12 items-center gap-3 rounded-2xl border px-3 py-2 transition-colors sm:mt-auto ${activityTone}`}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-current">
-                <ActivityIcon className="h-4 w-4" />
+            <div className={`flex min-h-14 items-center gap-4 rounded-2xl border px-4 py-3 transition-colors sm:mt-auto ${activityTone}`}>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-current">
+                <ActivityIcon className="h-5 w-5" />
               </span>
-              <span className="min-w-0 flex-1 text-[13px] font-bold leading-snug sm:text-sm">{activity.text}</span>
-              <ChevronRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1" />
+              <span className="min-w-0 flex-1 text-sm font-bold leading-snug sm:text-base">{activity.text}</span>
+              <ChevronRight className="h-6 w-6 shrink-0 transition-transform group-hover:translate-x-1" />
             </div>
           </div>
         </div>
@@ -383,7 +383,7 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
 
 function ShowMetric({ icon: Icon, value, label, compact = false }: { icon: React.ElementType; value: React.ReactNode; label: string; compact?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5 py-3 first:pt-0 last:pb-0 min-[420px]:justify-center min-[420px]:px-2.5 min-[420px]:py-0 first:min-[420px]:pl-0 last:min-[420px]:pr-0">
+    <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 min-[420px]:justify-center min-[420px]:px-3 min-[420px]:py-0 first:min-[420px]:pl-0 last:min-[420px]:pr-0">
       <Icon className={cn("h-5 w-5 shrink-0 text-primary", compact ? "sm:h-5 sm:w-5" : "sm:h-6 sm:w-6")} />
       <div className="min-w-0">
         <p className={cn("truncate text-sm font-bold text-foreground/95", compact ? "sm:text-xs" : "sm:text-base")}>{value}</p>
