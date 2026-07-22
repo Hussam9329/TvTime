@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { SafeImage } from "@/components/media/safe-image";
-import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers } from "lucide-react";
+import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -132,6 +132,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
     { value: "upcoming", label: "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-400" },
     { value: "havent-watched", label: "Haven't Watched", count: counts.haventWatched, icon: <Play className="w-3 h-3" />, color: "bg-orange-500/15 text-orange-400" },
     { value: "havent-started", label: "Haven't Started", count: counts.haventStarted ?? counts.notStarted, icon: <Clock className="w-3 h-3" />, color: "bg-slate-500/15 text-slate-300" },
+    { value: "stale", label: "Paused 30+ Days", count: counts.stale ?? 0, icon: <PauseCircle className="w-3 h-3" />, color: "bg-rose-500/15 text-rose-300" },
   ];
 
   const activeFilterLabel = filters.find((f) => f.value === filter)?.label ?? "All";
@@ -239,8 +240,8 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
   const seasons = show.seasons;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer" onClick={onGo}>
+    <motion.a href={show.tmdbId ? `/tv/${show.tmdbId}` : undefined} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onGo(); }}>
+      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer">
         <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
           {show.poster ? (
             <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
@@ -285,7 +286,7 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
           )}
         </div>
       </Card>
-    </motion.div>
+    </motion.a>
   );
 }
 

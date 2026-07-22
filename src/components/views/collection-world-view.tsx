@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
@@ -80,6 +80,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const [tab, setTab] = useState<CollectionTab>("watchlist");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("addedAt");
+  const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(0);
   const limit = 60;
   const isWatchedTab = tab === "watched";
@@ -213,6 +214,10 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       <p className="text-sm text-muted-foreground">
         Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "arabic-movies" ? "Arabic movies" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
       </p>
+      <div className="flex justify-end gap-1" aria-label="Library layout">
+        <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => setLayout("grid")} title="Poster grid"><Grid2X2 className="h-4 w-4" /></Button>
+        <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="h-8 w-8" onClick={() => setLayout("list")} title="Compact list"><List className="h-4 w-4" /></Button>
+      </div>
 
       {/* Fix #14: Distinguish loading, error, empty, and success states */}
       {media.isLoading ? (
@@ -260,9 +265,9 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
           }
         />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+        <div className={layout === "grid" ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4" : "grid grid-cols-1 md:grid-cols-2 gap-3"}>
           {items.map((item, index) => (
-            <CollectionMediaCard key={item.id} item={item} index={index} tab={tab} />
+            <CollectionMediaCard key={item.id} item={item} index={index} tab={tab} layout={layout} />
           ))}
         </div>
       )}
@@ -293,7 +298,7 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function CollectionMediaCard({ item, index, tab }: { item: MediaItemDB; index: number; tab: CollectionTab }) {
+function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; index: number; tab: CollectionTab; layout: "grid" | "list" }) {
   const isWatchedTab = tab === "watched";
   const update = useMediaUpdate();
   const goMovie = useNav((state) => state.goMovie);
@@ -379,9 +384,9 @@ function CollectionMediaCard({ item, index, tab }: { item: MediaItemDB; index: n
         transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
         className="group"
       >
-        <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card group">
+        <Card className={`overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card group ${layout === "list" ? "grid grid-cols-[92px_1fr]" : ""}`}>
           <div
-            className="relative aspect-[2/3] overflow-hidden bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+            className={`relative overflow-hidden bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${layout === "list" ? "aspect-[2/3] row-span-2" : "aspect-[2/3]"}`}
             onClick={handleOpenDetails}
             onKeyDown={handleKeyDown}
             role="button"

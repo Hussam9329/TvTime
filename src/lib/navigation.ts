@@ -1,5 +1,6 @@
 export type ViewName =
   | "home"
+  | "watch-next"
   | "discover"
   | "search"
   | "movie-detail"
@@ -21,6 +22,7 @@ export type NavigationEntry = {
 
 const ROOT_VIEWS = new Set<ViewName>([
   "home",
+  "watch-next",
   "discover",
   "search",
   "movies",

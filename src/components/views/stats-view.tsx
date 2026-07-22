@@ -3,7 +3,7 @@
 import { useStats, useTvDetail } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
-import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, BarChart3, Languages } from "lucide-react";
+import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, BarChart3, Languages, CalendarDays, Layers3 } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { useNav } from "@/lib/store";
 import { SafeImage } from "@/components/media/safe-image";
@@ -76,6 +76,14 @@ export function StatsView() {
           </div>
         </div>
       </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card className="p-4 bg-gradient-to-br from-primary/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Star className="h-4 w-4 text-primary" /> Most watched genre</p><p className="mt-2 text-2xl font-black">{d.insights?.topGenres?.[0]?.genre ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.topGenres?.[0]?.count ?? 0} titles</p></Card>
+        <Card className="p-4 bg-gradient-to-br from-amber-500/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-amber-400" /> Best release year</p><p className="mt-2 text-2xl font-black">{d.insights?.bestYear?.year ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.bestYear?.count ?? 0} watched titles</p></Card>
+        <Card className="p-4 bg-gradient-to-br from-fuchsia-500/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Layers3 className="h-4 w-4 text-fuchsia-400" /> Longest show</p><p className="mt-2 line-clamp-1 text-xl font-black">{d.insights?.longestShow?.title ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.longestShow?.episodes ?? 0} episodes</p></Card>
+      </div>
+
+      {d.insights?.topGenres && d.insights.topGenres.length > 0 && <Card className="p-4"><h3 className="font-bold mb-3">Your genre profile</h3><div className="space-y-2">{d.insights.topGenres.map((item) => <div key={item.genre} className="grid grid-cols-[110px_1fr_32px] items-center gap-2 text-xs"><span className="truncate">{item.genre}</span><div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${(item.count / Math.max(d.insights!.topGenres[0].count, 1)) * 100}%` }} /></div><span className="text-right text-muted-foreground">{item.count}</span></div>)}</div></Card>}
 
       {/* Grid of charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

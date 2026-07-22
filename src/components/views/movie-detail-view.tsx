@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
+import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
 import { WatchProviders } from "@/components/media/watch-providers";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
@@ -132,6 +133,15 @@ export function MovieDetailView() {
     }
   };
 
+  const onRewatch = async () => {
+    try {
+      await watchedToggle.mutateAsync({ action: "rewatch", tmdbId: m.id, title: m.title || "Untitled", posterPath: m.poster_path, runtime: m.runtime });
+      toast.success("Rewatch recorded");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to record rewatch");
+    }
+  };
+
   const onRateSubmit = async (v: number) => {
     await ratingMutate.mutateAsync({
       action: "set",
@@ -186,7 +196,7 @@ export function MovieDetailView() {
         <div className="w-32 sm:w-48 flex-shrink-0 mx-auto sm:mx-0">
           <Card className="p-0 overflow-hidden border-border/60 shadow-2xl">
             <div className="relative aspect-[2/3]">
-              <SafeImage src={imgOrPlaceholder(m.poster_path, "w342")} alt={m.title} fill variant="poster" />
+              <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={m.title} fill variant="poster" />
             </div>
           </Card>
         </div>
@@ -234,6 +244,7 @@ export function MovieDetailView() {
             const stateLoading = mediaState.isLoading && !stateItem;
             return (
           <div className="flex flex-wrap gap-2">
+            <OfficialPosterPicker tmdbId={m.id} mediaType="movie" title={m.title || "Untitled"} posters={(m as any).images?.posters ?? []} />
             <Button
               variant={isWatched ? "default" : "secondary"}
               onClick={onWatched}
@@ -243,6 +254,7 @@ export function MovieDetailView() {
               {stateLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : isWatched ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Circle className="w-4 h-4 mr-2" />}
               {isWatched ? "Watched" : "Mark watched"}
             </Button>
+            {isWatched && <Button variant="outline" onClick={() => void onRewatch()} className="h-10" disabled={watchedToggle.isPending}>Rewatch ({stateItem?.rewatchCount ?? 0})</Button>}
             <Button
               variant={inWatchlist ? "default" : "secondary"}
               onClick={onWatchlist}

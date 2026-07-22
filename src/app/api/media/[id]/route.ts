@@ -55,6 +55,16 @@ export async function PATCH(
     const existing = await db.media.findFirst({ where: { id, userId: user.id } });
     if (!existing) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
 
+    if (body.rewatchIncrement === true) {
+      if (existing.type !== "movie" || !existing.watched) {
+        return NextResponse.json({ error: "Only an already watched movie can be watched again" }, { status: 409 });
+      }
+      data.rewatch = true;
+      data.rewatchCount = { increment: 1 };
+      data.watchedAt = new Date();
+      data.status = "watched";
+    }
+
     if (existing.type !== "series" && body.status === "planned" && existing.watched) {
       return NextResponse.json(
         {

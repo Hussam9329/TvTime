@@ -64,6 +64,7 @@ type NavItem = { view: ViewName; label: string; icon: React.ElementType };
 
 const coreNavItems: NavItem[] = [
   { view: "home", label: "Home", icon: Home },
+  { view: "watch-next", label: "Watch Next", icon: Play },
   { view: "movies", label: "Movies", icon: Film },
   { view: "tv-shows", label: "TV Shows", icon: Clapperboard },
   { view: "anime", label: "Anime", icon: Sparkles },

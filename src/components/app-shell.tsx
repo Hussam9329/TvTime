@@ -15,6 +15,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 const DiscoverView = lazy(() =>
   import("@/components/views/discover-view").then((m) => ({ default: m.DiscoverView })),
 );
+const WatchNextView = lazy(() => import("@/components/views/watch-next-view").then((m) => ({ default: m.WatchNextView })));
 const SearchView = lazy(() =>
   import("@/components/views/search-view").then((m) => ({ default: m.SearchView })),
 );
@@ -120,6 +121,7 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
             <ErrorBoundary>
               <Suspense fallback={<ViewSkeleton />}>
                 {view === "discover" && <DiscoverView />}
+                {view === "watch-next" && <WatchNextView />}
                 {view === "search" && <SearchView />}
                 {view === "movie-detail" && movieId && <MovieDetailView />}
                 {view === "tv-detail" && tvId && <TvDetailView />}

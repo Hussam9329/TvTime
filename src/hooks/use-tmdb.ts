@@ -681,7 +681,7 @@ export function useWatchedMovieToggle() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
-      action: "add" | "remove";
+      action: "add" | "remove" | "rewatch";
       tmdbId: number;
       title: string;
       posterPath?: string | null;
@@ -695,7 +695,7 @@ export function useWatchedMovieToggle() {
       seasons?: number | null;
       episodes?: number | null;
     }) => {
-      if (args.action === "add") {
+      if (args.action === "add" || args.action === "rewatch") {
         // Find-or-create, then mark as watched (without rating - will be rated via rating dialog)
         const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
@@ -715,7 +715,7 @@ export function useWatchedMovieToggle() {
         const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
-          body: JSON.stringify({ watched: true, watchedAt: new Date().toISOString(), status: "watched" }),
+          body: JSON.stringify(args.action === "rewatch" ? { rewatchIncrement: true } : { watched: true, watchedAt: new Date().toISOString(), status: "watched" }),
         });
         await ensureApiOk(patchRes, "Failed to mark movie watched");
       } else {
@@ -808,13 +808,14 @@ export function useEpisodeToggle() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
-      action: "add" | "remove";
+      action: "add" | "remove" | "rewatch";
       showId: number;
       seasonNumber: number;
       episodeNumber: number;
       episodeName?: string;
+      rewatch?: boolean;
     }): Promise<{ item?: any; ok?: boolean; completion?: EpisodeCompletion | null }> => {
-      if (args.action === "add") {
+      if (args.action === "add" || args.action === "rewatch") {
         const res = await fetch(withUserId(new URL("/api/library/watched-episodes", window.location.origin)), {
           method: "POST",
           headers: { "Content-Type": "application/json", ...userHeaders() },
@@ -823,6 +824,7 @@ export function useEpisodeToggle() {
             seasonNumber: args.seasonNumber,
             episodeNumber: args.episodeNumber,
             episodeName: args.episodeName,
+            rewatch: args.action === "rewatch" || args.rewatch === true,
           }),
         });
         if (!res.ok) {
@@ -1276,7 +1278,8 @@ export type TvTrackingCategory =
   | "finished"
   | "upcoming"
   | "havent-watched"
-  | "havent-started";
+  | "havent-started"
+  | "stale";
 
 export interface TvTrackingCounts {
   all: number;
@@ -1289,6 +1292,7 @@ export interface TvTrackingCounts {
   finished: number;
   upcoming: number;
   haventWatched: number;
+  stale?: number;
 }
 
 export interface TvTrackingItem extends MediaItemDB {
@@ -1527,6 +1531,7 @@ export interface MediaItemDB {
   watchedAt: string | null;
   userRating: number | null;
   rewatch: boolean;
+  rewatchCount: number;
   runtime: number | null;
   ratingStatus: string | null;
   addedAt: string;
@@ -1573,6 +1578,11 @@ export interface MediaStats {
   typeDist: { type: string; count: number }[];
   topRated: { id: string; title: string; poster: string | null; userRating: number | null; type: string; year: string | null }[];
   recentlyAdded: { id: string; title: string; poster: string | null; type: string; year: string | null; addedAt: string }[];
+  insights?: {
+    topGenres: { genre: string; count: number }[];
+    bestYear: { year: string; count: number } | null;
+    longestShow: { tmdbId: number | null; title: string; episodes: number | null } | null;
+  };
   avgRating: number;
 }
 

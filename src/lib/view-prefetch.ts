@@ -16,6 +16,9 @@ export function prefetchViewModule(view: ViewName) {
     case "discover":
       request = import("@/components/views/discover-view");
       break;
+    case "watch-next":
+      request = import("@/components/views/watch-next-view");
+      break;
     case "search":
       request = import("@/components/views/search-view");
       break;

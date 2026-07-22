@@ -204,7 +204,7 @@ export async function GET(req: NextRequest) {
       ? numericShowId
       : null;
 
-    const items = await db.watchedEpisode.findMany({
+    const storedItems = await db.watchedEpisode.findMany({
       where: {
         userId: user.id,
         ...(validShowId ? { showId: validShowId } : {}),
@@ -212,7 +212,18 @@ export async function GET(req: NextRequest) {
       orderBy: { watchedAt: "desc" },
     });
 
-    if (!validShowId) return NextResponse.json({ items });
+    if (!validShowId) return NextResponse.json({ items: storedItems });
+
+    const rewatchSessions = await db.watchSession.findMany({
+      where: { userId: user.id, tmdbId: validShowId, rewatch: true, season: { not: null }, episode: { not: null } },
+      select: { season: true, episode: true },
+    });
+    const rewatchCounts = new Map<string, number>();
+    for (const session of rewatchSessions) {
+      const key = `${session.season}-${session.episode}`;
+      rewatchCounts.set(key, (rewatchCounts.get(key) || 0) + 1);
+    }
+    const items = storedItems.map((item) => ({ ...item, rewatchCount: rewatchCounts.get(`${item.seasonNumber}-${item.episodeNumber}`) || 0 }));
 
     const media = await db.media.findUnique({
       where: { userId_type_tmdbId: { userId: user.id, type: "series", tmdbId: validShowId } },
@@ -262,6 +273,7 @@ export async function POST(req: NextRequest) {
     const user = await getOrCreateUser(await resolveUserId(req));
     const body: unknown = await req.json();
     const objectBody = body && typeof body === "object" ? body as Record<string, unknown> : {};
+    const isRewatch = objectBody.rewatch === true;
     const showId = Number(objectBody.showId);
     if (!Number.isInteger(showId) || showId <= 0) {
       return NextResponse.json({ error: "A valid showId is required" }, { status: 400 });
@@ -366,7 +378,26 @@ export async function POST(req: NextRequest) {
             episodeName,
             runtime: episode.runtime,
           },
-          update: { episodeName, runtime: episode.runtime },
+          update: isRewatch
+            ? { episodeName, runtime: episode.runtime, watchedAt: now }
+            : { episodeName, runtime: episode.runtime },
+        });
+      }
+
+      if (isRewatch) {
+        await tx.watchSession.createMany({
+          data: validation.released.map((episode) => ({
+            userId: user.id,
+            mediaId: lockedMedia.id,
+            mediaType: lockedMedia.isArabic ? "arabic_tv" : lockedMedia.isAnime ? "anime" : "tv",
+            tmdbId: showId,
+            title: lockedMedia.title,
+            season: episode.seasonNumber,
+            episode: episode.episodeNumber,
+            watchedAt: now,
+            duration: episode.runtime,
+            rewatch: true,
+          })),
         });
       }
 
@@ -376,6 +407,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       count: validation.released.length,
+      rewatch: isRewatch,
       completion,
     });
   } catch (error) {

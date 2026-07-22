@@ -11,6 +11,7 @@ import { RatingDialog } from "@/components/media/rating-dialog";
 import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
+import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
 import { WatchProviders } from "@/components/media/watch-providers";
 import {
   Star, Clock, Play, ListPlus, CheckCircle2, Circle, ArrowLeft,
@@ -298,7 +299,7 @@ export function TvDetailView() {
         <div className="w-32 sm:w-48 flex-shrink-0 mx-auto sm:mx-0">
           <Card className="p-0 overflow-hidden border-border/60 shadow-2xl">
             <div className="relative aspect-[2/3]">
-              <SafeImage src={imgOrPlaceholder(t.poster_path, "w342")} alt={t.name} fill variant="poster" />
+              <SafeImage src={mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={t.name} fill variant="poster" />
             </div>
           </Card>
         </div>
@@ -342,6 +343,7 @@ export function TvDetailView() {
           </div>
           {/* Episode progress and following membership are intentionally separate. */}
           <div className="flex flex-wrap gap-2">
+            <OfficialPosterPicker tmdbId={t.id} mediaType="tv" title={t.name || "Untitled"} posters={(t as any).images?.posters ?? []} />
             {effectiveLabel && effectiveLabel !== "planned" && (
               <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
                 {effectiveLabel === "finished" && <Trophy className="w-3.5 h-3.5" />}
@@ -821,6 +823,15 @@ function SeasonEpisodes({
     }
   };
 
+  const recordEpisodeRewatch = async (episode: { season_number: number; episode_number: number; name: string }) => {
+    try {
+      await episodeToggle.mutateAsync({ action: "rewatch", showId: tvId, seasonNumber: episode.season_number, episodeNumber: episode.episode_number, episodeName: episode.name });
+      toast.success(`S${episode.season_number}E${episode.episode_number} rewatch recorded.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to record rewatch");
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Season selector */}
@@ -945,6 +956,7 @@ function SeasonEpisodes({
                       </span>
                     )}
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      {isWatched && <Button type="button" variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => void recordEpisodeRewatch(ep)} disabled={episodeToggle.isPending}>Rewatch ({(watched.data?.items ?? []).find((item: any) => item.seasonNumber === ep.season_number && item.episodeNumber === ep.episode_number)?.rewatchCount ?? 0})</Button>}
                       <Button
                         type="button"
                         variant={ratingByEpisode.has(`${ep.season_number}-${ep.episode_number}`) ? "secondary" : "outline"}

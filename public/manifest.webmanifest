@@ -1,0 +1,19 @@
+{
+  "name": "TvTime",
+  "short_name": "TvTime",
+  "description": "Track movies, TV shows, anime and Arabic content.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "any",
+  "icons": [
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Discover", "url": "/?view=discover", "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "TV Shows", "url": "/?view=tv-shows", "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Stats", "url": "/?view=stats", "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }] }
+  ]
+}

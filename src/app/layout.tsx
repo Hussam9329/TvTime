@@ -39,6 +39,8 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "TvTime" }],
   creator: "TvTime",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "TvTime", statusBarStyle: "black-translucent" },
   icons: {
     icon: "/placeholder-poster.svg",
   },

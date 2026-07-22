@@ -109,6 +109,13 @@ export function SafeImage({
     priority,
     sizes: fill ? finalSizes : undefined,
     onError: () => setErrored(true),
+    draggable: !isLocalAsset,
+    onDragStart: (event: React.DragEvent<HTMLImageElement>) => {
+      if (isLocalAsset) return;
+      event.dataTransfer.setData("text/uri-list", normalizedSrc);
+      event.dataTransfer.setData("text/plain", normalizedSrc);
+      event.dataTransfer.effectAllowed = "copyLink";
+    },
     loading,
     ...(fetchPriority ? { fetchPriority } : {}),
     ...(decoding ? { decoding } : {}),

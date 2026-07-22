@@ -9,11 +9,12 @@ export async function GET(req: NextRequest) {
     const base = { userId: user.id };
     const eligibleRating = eligibleTitleRatingWhere(user.id);
 
-    const [counts, watchedEpisodeRows, ratedItems, watchedMovieRows] = await Promise.all([
+    const [counts, watchedEpisodeRows, ratedItems, watchedMovieRows, watchedMedia] = await Promise.all([
       getCanonicalLibraryCounts(user.id),
       db.watchedEpisode.findMany({ where: base, select: { showId: true, runtime: true, watchedAt: true } }),
       db.media.findMany({ where: eligibleRating, select: { userRating: true } }),
       db.media.findMany({ where: { ...base, type: "movie", watched: true }, select: { runtime: true, watchedAt: true } }),
+      db.media.findMany({ where: { ...base, OR: [{ type: "movie", watched: true }, { type: "series", status: { in: ["watching", "uptodate", "finished"] } }] }, select: { tmdbId: true, title: true, type: true, genres: true, year: true, episodes: true, userRating: true } }),
     ]);
 
     const avgRating = ratedItems.length > 0
@@ -44,6 +45,16 @@ export async function GET(req: NextRequest) {
       ratingDistMap.set(item.userRating, (ratingDistMap.get(item.userRating) || 0) + 1);
     }
 
+    const genreMap = new Map<string, number>();
+    const yearMap = new Map<string, number>();
+    for (const item of watchedMedia) {
+      for (const genre of item.genres) genreMap.set(genre, (genreMap.get(genre) || 0) + 1);
+      if (item.year) yearMap.set(item.year, (yearMap.get(item.year) || 0) + 1);
+    }
+    const topGenres = [...genreMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([genre, count]) => ({ genre, count }));
+    const bestYear = [...yearMap.entries()].sort((a, b) => b[1] - a[1] || b[0].localeCompare(a[0]))[0] ?? null;
+    const longestShow = watchedMedia.filter((item) => item.type === "series" && item.episodes).sort((a, b) => Number(b.episodes || 0) - Number(a.episodes || 0))[0] ?? null;
+
     return NextResponse.json({
       user,
       counts: { ...counts, showsWatched: showsWatched.size },
@@ -68,6 +79,11 @@ export async function GET(req: NextRequest) {
       ratingDist: Array.from(ratingDistMap.entries())
         .sort((a, b) => a[0] - b[0])
         .map(([value, count]) => ({ value, count })),
+      insights: {
+        topGenres,
+        bestYear: bestYear ? { year: bestYear[0], count: bestYear[1] } : null,
+        longestShow: longestShow ? { tmdbId: longestShow.tmdbId, title: longestShow.title, episodes: longestShow.episodes } : null,
+      },
     });
   } catch (error) {
     console.error("[library:stats]", error);

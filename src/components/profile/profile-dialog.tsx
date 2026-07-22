@@ -21,7 +21,7 @@ import {
   type UserPreferences,
 } from "@/lib/user-preferences";
 import { downloadLibraryBackup, restoreLibraryBackup } from "@/lib/library-backup-client";
-import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Globe, Clock, Star, LogOut } from "lucide-react";
+import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Globe, Clock, Star, LogOut, BellRing, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -48,6 +48,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [transferProgress, setTransferProgress] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [authEnabled, setAuthEnabled] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -61,6 +62,19 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       .catch(() => { /* best-effort */ });
     return () => { cancelled = true; };
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    setNotificationPermission("Notification" in window ? Notification.permission : "unsupported");
+  }, [open]);
+
+  const enableNotifications = async () => {
+    if (!("Notification" in window)) return;
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+    if (permission === "granted") toast.success("Device notifications enabled");
+    else toast.info("Notifications were not enabled");
+  };
 
   const onSignOut = async () => {
     setSigningOut(true);
@@ -162,6 +176,14 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       setExporting(false);
       setTransferProgress("");
     }
+  };
+
+  const onExportCsv = () => {
+    const url = withUserId(new URL("/api/library/export/csv", window.location.origin));
+    const anchor = document.createElement("a");
+    anchor.href = url.toString();
+    anchor.download = "tvtime-library.csv";
+    anchor.click();
   };
 
   const onImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -287,11 +309,12 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                 <p className="text-xs text-muted-foreground">Export or restore your library, notifications and account preferences through validated staging.</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button variant="outline" size="sm" onClick={onExport} disabled={exporting || importing}>
                 {exporting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
                 Export
               </Button>
+              <Button variant="outline" size="sm" onClick={onExportCsv} disabled={exporting || importing}><Download className="w-4 h-4 mr-1" />CSV</Button>
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing || exporting}>
                 {importing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
                 Import
@@ -309,6 +332,11 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                 {transferProgress}
               </p>
             )}
+          </div>
+
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="flex items-start gap-2"><Smartphone className="w-4 h-4 text-primary mt-0.5" /><div className="flex-1"><p className="text-sm font-semibold">Install & notifications</p><p className="text-xs text-muted-foreground">Install TvTime from your browser menu and receive alerts for released episodes.</p></div></div>
+            <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => void enableNotifications()} disabled={notificationPermission === "granted" || notificationPermission === "unsupported"}><BellRing className="w-4 h-4 mr-1.5" />{notificationPermission === "granted" ? "Notifications enabled" : notificationPermission === "denied" ? "Blocked in browser settings" : "Enable notifications"}</Button>
           </div>
 
           {/* TVM-35/36/37: Preferences — timezone, country, platform preferences */}

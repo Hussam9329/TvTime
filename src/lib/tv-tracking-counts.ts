@@ -11,6 +11,7 @@ export type TvTrackingCounts = {
   finished: number;
   upcoming: number;
   haventWatched: number;
+  stale?: number;
 };
 
 export type FastTvTrackingRow = {

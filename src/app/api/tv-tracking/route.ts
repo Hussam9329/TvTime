@@ -23,6 +23,7 @@ const CATEGORY_VALUES = new Set([
   "upcoming",
   "havent-watched",
   "havent-started",
+  "stale",
 ]);
 const LEGACY_CATEGORY_ALIASES: Record<string, TvTrackingCategory> = {
   planned: "watchlist",
@@ -42,7 +43,8 @@ type TvTrackingCategory =
   | "finished"
   | "upcoming"
   | "havent-watched"
-  | "havent-started";
+  | "havent-started"
+  | "stale";
 
 type WatchedEpisodeMeta = {
   keys: Set<string>;
@@ -393,6 +395,7 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
     finished: decorated.filter((show) => show._serverTrackingStatus === "finished").length,
     upcoming: decorated.filter(isUpcoming).length,
     haventWatched: decorated.filter(hasUnwatchedReleasedEpisode).length,
+    stale: decorated.filter(isStaleWatching).length,
   };
 
   return { decorated, counts, predicates: { hasUnwatchedReleasedEpisode, isStaleWatching, isUpcoming } };
@@ -463,6 +466,7 @@ export async function GET(req: NextRequest) {
       upcoming: snapshot.predicates.isUpcoming,
       "havent-watched": snapshot.predicates.hasUnwatchedReleasedEpisode,
       "havent-started": (show) => show._serverTrackingStatus === "not_started",
+      stale: snapshot.predicates.isStaleWatching,
     };
 
     const matching = sortShows(filteredBySearch.filter(categoryPredicates[category]), sortBy, order);
