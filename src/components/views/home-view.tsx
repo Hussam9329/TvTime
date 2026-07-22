@@ -16,7 +16,6 @@ import { isArabicMediaItem } from "@/lib/arabic-media";
 export function HomeView() {
   const homeFeed = useHomeFeed();
 
-  const following = useFollowing();
   const stats = useStats();
   const tvTrackingCounts = useTvTrackingCounts("standard");
 
@@ -62,12 +61,7 @@ export function HomeView() {
           <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">
             {greeting}, <span className="text-gradient">{userName}</span> 👋
           </h1>
-          <p className="view-page-description text-sm text-muted-foreground mt-1">Here's what's trending in your cinema world today</p>
         </div>
-        {/* Watch Next CTA - shows when user has followed shows */}
-        {following.data && following.data.items.length > 0 && (
-          <WatchNextCTA />
-        )}
       </div>
 
       {/* Hero featured */}

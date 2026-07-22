@@ -256,15 +256,17 @@ export function MovieDetailView() {
               {isWatched ? "Watched" : "Mark watched"}
             </Button>
             {isWatched && <Button variant="outline" onClick={() => void onRewatch()} className="h-10" disabled={watchedToggle.isPending}>Rewatch ({stateItem?.rewatchCount ?? 0})</Button>}
-            <Button
-              variant={inWatchlist ? "default" : "secondary"}
-              onClick={onWatchlist}
-              className="h-10"
-              disabled={stateLoading || watchlistToggle.isPending}
-            >
-              {inWatchlist ? <Check className="w-4 h-4 mr-2" /> : <ListPlus className="w-4 h-4 mr-2" />}
-              {inWatchlist ? "In watchlist" : "Add to watchlist"}
-            </Button>
+            {!isWatched && (
+              <Button
+                variant={inWatchlist ? "default" : "secondary"}
+                onClick={onWatchlist}
+                className="h-10"
+                disabled={stateLoading || watchlistToggle.isPending}
+              >
+                {inWatchlist ? <Check className="w-4 h-4 mr-2" /> : <ListPlus className="w-4 h-4 mr-2" />}
+                {inWatchlist ? "In watchlist" : "Add to watchlist"}
+              </Button>
+            )}
             {trailer && (
               <Button
                 variant="outline"
