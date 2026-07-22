@@ -16,9 +16,10 @@ interface MediaCardProps {
   showMediaType?: boolean;
   forcedMediaType?: "movie" | "tv";
   libraryState?: MediaBatchState | null;
+  enableNativeLink?: boolean;
 }
 
-export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState }: MediaCardProps) {
+export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, enableNativeLink = false }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
 
@@ -37,9 +38,11 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   const isFollowing = mediaType === "tv" ? Boolean(libraryState?.isFollowing) : false;
   const userRating = libraryState?.userRating ?? null;
 
+  const id = Number(item.id);
+  const detailHref = Number.isFinite(id) && id > 0 ? `/${mediaType}/${id}` : undefined;
+
   const handleClick = () => {
     // Validate tmdbId before navigating — prevents opening broken profiles
-    const id = Number(item.id);
     if (!Number.isFinite(id) || id <= 0) return;
     if (mediaType === "movie") goMovie(id);
     else goTv(id);
@@ -59,12 +62,17 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   const typeLabel = isArabic ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV") : (mediaType === "movie" ? "Movie" : "TV");
 
   return (
-    <motion.div
+    <motion.a
+      href={enableNativeLink ? detailHref : undefined}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3) }}
       className="cursor-pointer group"
-      onClick={handleClick}
+      onClick={(event) => {
+        if (enableNativeLink && (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
+        event.preventDefault();
+        handleClick();
+      }}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
@@ -137,7 +145,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           </div>
         </div>
       </Card>
-    </motion.div>
+    </motion.a>
   );
 }
 
@@ -155,9 +163,10 @@ interface MediaGridProps {
   showMediaType?: boolean;
   forcedMediaType?: "movie" | "tv";
   libraryStates?: Record<string, MediaBatchState>;
+  enableNativeLinks?: boolean;
 }
 
-export function MediaGrid({ items, loading, showMediaType = true, forcedMediaType, libraryStates }: MediaGridProps) {
+export function MediaGrid({ items, loading, showMediaType = true, forcedMediaType, libraryStates, enableNativeLinks = false }: MediaGridProps) {
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
     mediaType: forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
@@ -187,6 +196,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
             forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
             Number(item.id),
           )] ?? null}
+          enableNativeLink={enableNativeLinks}
         />
       ))}
     </div>

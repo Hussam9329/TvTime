@@ -687,7 +687,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
       {/* Grid */}
       {!isLoading && !isError && items.length > 0 && (
-        <MediaGrid items={items} forcedMediaType={resultMediaType} />
+        <MediaGrid items={items} forcedMediaType={resultMediaType} enableNativeLinks />
       )}
 
       {/* Pagination */}
