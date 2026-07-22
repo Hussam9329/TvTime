@@ -62,6 +62,7 @@ const requiredConstraints = [
   "User_country_format_check",
   "Media_userRating_range_check",
   "Media_rewatchCount_nonnegative_check",
+  "Media_type_supported_check",
   "Rating_value_range_check",
   "WatchedEpisode_numbers_check",
   "WatchSession_values_check",
@@ -92,6 +93,7 @@ const requiredMigrations = [
   "20260716000000_staged_library_import",
   "20260717000000_tv_metadata_cache_integrity",
   "20260718000000_data_lifecycle_preferences",
+  "20260722000000_remove_dead_mymedia_data",
 ];
 
 function assertAll(label, required, present) {

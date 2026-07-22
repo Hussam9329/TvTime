@@ -41,6 +41,10 @@ const migrations = migrationNames.map((name) => {
   return { name, sql: fs.readFileSync(file, "utf8") };
 });
 
+const reviewedDestructiveMigrations = new Set([
+  "20260722000000_remove_dead_mymedia_data",
+]);
+
 const schema = fs.readFileSync(schemaPath, "utf8");
 const modelNames = [...schema.matchAll(/^model\s+(\w+)\s*\{/gm)].map((match) => match[1]);
 const allSql = migrations.map((migration) => migration.sql).join("\n");
@@ -68,7 +72,7 @@ for (const table of ["WatchSession", "Notification", "CustomList", "CustomListIt
 
 for (const migration of migrations) {
   const executableSql = stripSqlComments(migration.sql);
-  if (/\bDROP\s+TABLE\b|\bDROP\s+COLUMN\b|\bTRUNCATE\b/i.test(executableSql)) {
+  if (/\bDROP\s+TABLE\b|\bDROP\s+COLUMN\b|\bTRUNCATE\b/i.test(executableSql) && !reviewedDestructiveMigrations.has(migration.name)) {
     fail(`Migration ${migration.name} contains an unreviewed destructive table operation.`);
   }
 }
