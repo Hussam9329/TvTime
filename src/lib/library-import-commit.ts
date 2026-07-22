@@ -59,8 +59,6 @@ export async function commitStagedLibraryImport(
         NULLIF(record.payload->>'seasons', '')::INTEGER AS seasons,
         NULLIF(record.payload->>'duration', '') AS duration,
         NULLIF(record.payload->>'status', '') AS status,
-        NULLIF(record.payload->>'author', '') AS author,
-        NULLIF(record.payload->>'pages', '')::INTEGER AS pages,
         ARRAY(SELECT jsonb_array_elements_text(COALESCE(record.payload->'tags', '[]'::jsonb))) AS tags,
         NULLIF(record.payload->>'notes', '') AS notes,
         COALESCE((record.payload->>'watched')::BOOLEAN, false) AS watched,
@@ -90,14 +88,14 @@ export async function commitStagedLibraryImport(
     )
     INSERT INTO "Media" (
       id, "userId", "tmdbId", title, "originalTitle", year, type, poster, rating,
-      overview, genres, episodes, seasons, duration, status, author, pages, tags,
+      overview, genres, episodes, seasons, duration, status, tags,
       notes, watched, "watchedAt", "userRating", rewatch, runtime, "ratingStatus",
       "isAnime", "isArabic", "originalLanguage", "originCountries", "isFollowing",
       "notifyOnNewEpisode", "rewatchCount", "addedAt", "updatedAt"
     )
     SELECT
       id, ${userId}, "tmdbId", title, "originalTitle", year, type, poster, rating,
-      overview, genres, episodes, seasons, duration, status, author, pages, tags,
+      overview, genres, episodes, seasons, duration, status, tags,
       notes, watched, "watchedAt", "userRating", rewatch, runtime, "ratingStatus",
       "isAnime", "isArabic", "originalLanguage", "originCountries", "isFollowing",
       "notifyOnNewEpisode", "rewatchCount", "addedAt", NOW()
@@ -118,8 +116,6 @@ export async function commitStagedLibraryImport(
         WHEN EXCLUDED.watched AND "Media".type <> 'series' THEN COALESCE(EXCLUDED.status, 'watched')
         ELSE COALESCE("Media".status, EXCLUDED.status)
       END,
-      author = COALESCE("Media".author, EXCLUDED.author),
-      pages = COALESCE("Media".pages, EXCLUDED.pages),
       tags = CASE WHEN cardinality("Media".tags) = 0 THEN EXCLUDED.tags ELSE "Media".tags END,
       notes = COALESCE("Media".notes, EXCLUDED.notes),
       watched = "Media".watched OR EXCLUDED.watched,
@@ -161,7 +157,7 @@ export async function commitStagedLibraryImport(
     )
     INSERT INTO "Media" (
       id, "userId", "tmdbId", title, "originalTitle", year, type, poster, rating,
-      overview, genres, episodes, seasons, duration, status, author, pages, tags,
+      overview, genres, episodes, seasons, duration, status, tags,
       notes, watched, "watchedAt", "userRating", rewatch, runtime, "ratingStatus",
       "isAnime", "isArabic", "originalLanguage", "originCountries", "isFollowing",
       "notifyOnNewEpisode", "rewatchCount", "addedAt", "updatedAt"
@@ -182,8 +178,6 @@ export async function commitStagedLibraryImport(
       NULLIF(payload->>'seasons', '')::INTEGER,
       NULLIF(payload->>'duration', ''),
       NULLIF(payload->>'status', ''),
-      NULLIF(payload->>'author', ''),
-      NULLIF(payload->>'pages', '')::INTEGER,
       ARRAY(SELECT jsonb_array_elements_text(COALESCE(payload->'tags', '[]'::jsonb))),
       NULLIF(payload->>'notes', ''),
       COALESCE((payload->>'watched')::BOOLEAN, false),

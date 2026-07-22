@@ -11,7 +11,7 @@
   preserving the account and its preferences.
 - Preferences synchronize through `/api/user`, affect Where to Watch and diary
   timestamps, and are portable through backup/restore.
-- My Media, Diary and Custom Lists are visible under “My Stuff” on desktop and
+- Custom Lists are available directly in navigation on desktop and
   mobile; keyboard shortcuts are provided for each.
 - Search shortcuts use one explicit command rather than competing listeners or
   placeholder queries.

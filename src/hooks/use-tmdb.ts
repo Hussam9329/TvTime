@@ -1521,8 +1521,6 @@ export interface MediaItemDB {
   seasons: number | null;
   duration: string | null;
   status: string | null;
-  author: string | null;
-  pages: number | null;
   tags: string[];
   notes: string | null;
   watched: boolean;
@@ -1545,8 +1543,6 @@ export interface MediaStats {
     total: number;
     movies: number;
     series: number;
-    books: number;
-    games: number;
     rated: number;
     ratedMovies?: number;
     ratedShows?: number;

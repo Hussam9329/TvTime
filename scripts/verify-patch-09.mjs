@@ -41,7 +41,6 @@ requireText("prisma/migrations/20260718000000_data_lifecycle_preferences/migrati
   [/WatchSession_values_check/, "diary constraints are missing"],
 ]);
 requireText("src/components/layout/header.tsx", [
-  [/const myStuffNavItems/, "My Stuff navigation is missing"],
   [/view: "lists"/, "Lists navigation is missing"],
   [/TVTIME_SEARCH_FOCUS_EVENT/, "central search command is not wired"],
 ]);

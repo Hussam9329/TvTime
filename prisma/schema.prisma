@@ -32,7 +32,7 @@ model User {
   importSessions  LibraryImportSession[]
 }
 
-/// Canonical media record - tracks all types of media (movies, TV, books, games)
+/// Canonical media record - tracks movies and TV series.
 model Media {
   id             String   @id @default(cuid())
   userId         String   @default("cinetrack_default")
@@ -42,7 +42,7 @@ model Media {
   title          String
   originalTitle  String?
   year           String?
-  type           String   // "movie" | "series" | "book" | "game"
+  type           String   // "movie" | "series"
   poster         String?
   rating         String?
   overview       String?
@@ -51,8 +51,6 @@ model Media {
   seasons        Int?
   duration       String?
   status         String?  // list/progress state; independent from isFollowing
-  author         String?
-  pages          Int?
   tags           String[] @default([])
   notes          String?
   watched        Boolean  @default(false)
