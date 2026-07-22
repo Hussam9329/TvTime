@@ -205,7 +205,7 @@ export function MovieDetailView() {
         <div className="min-w-0 space-y-5 md:pt-1">
           {/* Title and badges */}
           <div>
-            <div className="flex items-center gap-2.5 mb-5 flex-wrap [&>*]:h-10 [&>*]:rounded-lg [&>*]:px-3.5">
+            <div className="mb-5 flex flex-wrap items-center gap-2.5 [&>*]:inline-flex [&>*]:h-10 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-4 [&>*]:text-sm [&>*]:font-semibold">
               <Badge variant="secondary" className="bg-primary/20 text-primary border-0">
                 <Film className="w-3 h-3 mr-1" /> Movie
               </Badge>
@@ -244,7 +244,7 @@ export function MovieDetailView() {
           {(() => {
             const stateLoading = mediaState.isLoading && !stateItem;
             return (
-          <div className="flex flex-wrap gap-2.5 [&_button]:h-12 [&_button]:rounded-xl [&_button]:px-5">
+          <div className="flex flex-wrap items-center gap-3 [&>*]:h-12 [&>*]:rounded-xl [&_button]:h-12 [&_button]:min-w-[150px] [&_button]:justify-center [&_button]:rounded-xl [&_button]:px-5 [&_button]:text-sm [&_button]:font-semibold">
             <OfficialPosterPicker tmdbId={m.id} mediaType="movie" title={m.title || "Untitled"} posters={(m as any).images?.posters ?? []} />
             <Button
               variant={isWatched ? "default" : "secondary"}

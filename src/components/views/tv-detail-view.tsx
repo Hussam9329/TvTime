@@ -308,7 +308,7 @@ export function TvDetailView() {
         <div className="min-w-0 space-y-5 md:pt-1">
           {/* Title and badges */}
           <div>
-            <div className="flex items-center gap-2.5 mb-5 flex-wrap [&>*]:h-10 [&>*]:rounded-lg [&>*]:px-3.5">
+            <div className="mb-5 flex flex-wrap items-center gap-2.5 [&>*]:inline-flex [&>*]:h-10 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-4 [&>*]:text-sm [&>*]:font-semibold">
               <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
               {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">Arabic TV</Badge>}
               {effectiveLabel === "finished" && (
@@ -343,7 +343,7 @@ export function TvDetailView() {
             {t.tagline && <p className="text-base sm:text-lg italic text-foreground/70 mt-5">{t.tagline}</p>}
           </div>
           {/* Episode progress and following membership are intentionally separate. */}
-          <div className="flex flex-wrap gap-2.5 [&_button]:h-12 [&_button]:rounded-xl [&_button]:px-5">
+          <div className="flex flex-wrap items-center gap-3 [&>*]:h-12 [&>*]:rounded-xl [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&_button]:h-12 [&_button]:min-w-[150px] [&_button]:justify-center [&_button]:rounded-xl [&_button]:px-5 [&_button]:text-sm [&_button]:font-semibold">
             <OfficialPosterPicker tmdbId={t.id} mediaType="tv" title={t.name || "Untitled"} posters={(t as any).images?.posters ?? []} />
             {effectiveLabel && effectiveLabel !== "planned" && (
               <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
