@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   Bell,
   X,
@@ -148,7 +149,7 @@ export function NotificationCenter({
     toast.success("تم مسح كل الإشعارات");
   };
 
-  return (
+  return createPortal(
     <div className="tvtime-notification-center fixed inset-0 z-50 flex justify-start" onClick={onClose} dir="rtl">
       <div className="tvtime-notification-backdrop absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
@@ -261,7 +262,8 @@ export function NotificationCenter({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
