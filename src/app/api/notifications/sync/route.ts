@@ -5,8 +5,32 @@ import { getOrCreateUser, parseUserId } from "@/lib/user";
 export async function POST(req: NextRequest) {
   try {
     const user = await getOrCreateUser(parseUserId(req));
-    const shows = await db.media.findMany({ where: { userId: user.id, type: "series", isFollowing: true, status: { in: ["watching", "uptodate"] }, tmdbId: { not: null } }, select: { tmdbId: true, title: true } });
+    const shows = await db.media.findMany({
+      where: {
+        userId: user.id,
+        type: "series",
+        isFollowing: true,
+        status: { in: ["watching", "uptodate"] },
+        OR: [{ notifyOnNewEpisode: null }, { notifyOnNewEpisode: true }],
+        tmdbId: { not: null },
+      },
+      select: { tmdbId: true, title: true },
+    });
     const ids = shows.map((show) => show.tmdbId!).filter(Boolean);
+    const seriesNotificationTypes = ["new_episode", "backlog_alert", "season_return"];
+
+    // Notifications created while an item was followed must not survive after
+    // it is moved back to Watchlist, finished, unfollowed, or muted.
+    await db.notification.deleteMany({
+      where: {
+        userId: user.id,
+        type: { in: seriesNotificationTypes },
+        ...(ids.length > 0
+          ? { OR: [{ tmdbId: null }, { tmdbId: { notIn: ids } }] }
+          : {}),
+      },
+    });
+
     if (ids.length === 0) return NextResponse.json({ created: [], count: 0 });
     const start = new Date(); start.setUTCHours(0, 0, 0, 0);
     const [metadata, watched, existingNotifications] = await Promise.all([
