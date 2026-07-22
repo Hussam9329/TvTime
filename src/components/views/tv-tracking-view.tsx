@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { SafeImage } from "@/components/media/safe-image";
-import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle } from "lucide-react";
+import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronRight } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -31,18 +31,18 @@ function deriveTrackingStatus(show: any): TrackingStatus {
 
 function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
   if (status === "finished") {
-    return <Badge data-status="finished" className="text-[9px] bg-emerald-500/20 text-emerald-400 border-0"><Trophy className="w-2.5 h-2.5 mr-1" /> Finished</Badge>;
+    return <Badge data-status="finished" className="h-10 rounded-full border border-emerald-400/20 bg-emerald-500/15 px-4 text-sm font-bold text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Trophy className="mr-2 h-4 w-4" /> Finished</Badge>;
   }
   if (status === "uptodate") {
-    return <Badge data-status="uptodate" className="text-[9px] bg-cyan-500/20 text-cyan-400 border-0"><Zap className="w-2.5 h-2.5 mr-1" /> Up To Date</Badge>;
+    return <Badge data-status="uptodate" className="h-10 rounded-full border border-cyan-400/20 bg-cyan-500/15 px-4 text-sm font-bold text-cyan-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Zap className="mr-2 h-4 w-4" /> Up To Date</Badge>;
   }
   if (status === "watching") {
-    return <Badge data-status="watching" className="text-[9px] bg-blue-500/20 text-blue-400 border-0"><Play className="w-2.5 h-2.5 mr-1" /> Watching</Badge>;
+    return <Badge data-status="watching" className="h-10 rounded-full border border-blue-400/20 bg-blue-500/15 px-4 text-sm font-bold text-blue-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Play className="mr-2 h-4 w-4 fill-current" /> Watching</Badge>;
   }
   if (status === "planned") {
-    return <Badge data-status="planned" className="text-[9px] bg-purple-500/20 text-purple-400 border-0"><BookOpen className="w-2.5 h-2.5 mr-1" /> Planned</Badge>;
+    return <Badge data-status="planned" className="h-10 rounded-full border border-purple-400/20 bg-purple-500/15 px-4 text-sm font-bold text-purple-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><BookOpen className="mr-2 h-4 w-4" /> Planned</Badge>;
   }
-  return <Badge data-status="not_started" className="text-[9px] bg-slate-500/20 text-slate-300 border-0"><Clock className="w-2.5 h-2.5 mr-1" /> Not Started</Badge>;
+  return <Badge data-status="not_started" className="h-10 rounded-full border border-slate-400/20 bg-slate-500/15 px-4 text-sm font-bold text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Clock className="mr-2 h-4 w-4" /> Not Started</Badge>;
 }
 
 export function TvShowsView({ world = "standard", embedded = false }: { world?: "standard" | "arabic"; embedded?: boolean }) {
@@ -170,9 +170,9 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       </FilterPanel>
 
       {tracking.isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="h-[110px] shimmer rounded-lg" />
+        <div className="grid grid-cols-1 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-[440px] shimmer rounded-[28px] sm:h-[310px]" />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -183,7 +183,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
         />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-4 sm:gap-5">
             {items.map((s: any) => (
               <AllShowCard key={s.id} show={{ ...s, _trackingStatus: s._trackingStatus ?? deriveTrackingStatus(s) }} onGo={() => s.tmdbId && onGo(s.tmdbId)} />
             ))}
@@ -238,55 +238,105 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
     : null;
   const totalEps = show._airedEpisodeCount ?? show.episodes;
   const seasons = show.seasons;
+  const watchedEps = show._watchedAiredEpisodeCount ?? 0;
+  const releasedEps = show._airedEpisodeCount ?? totalEps ?? null;
+
+  const activity = show._hasUnwatchedReleasedEpisode
+    ? { tone: "orange", text: "Released episode waiting — continue watching", icon: CirclePlay }
+    : show._nextEpisodeAirDate
+      ? {
+          tone: "amber",
+          text: `Upcoming: ${show._nextEpisodeSeasonNumber ? `S${show._nextEpisodeSeasonNumber}` : ""}${show._nextEpisodeNumber ? `E${show._nextEpisodeNumber}` : ""}${show._nextEpisodeName ? ` · ${show._nextEpisodeName}` : ""} · ${new Date(show._nextEpisodeAirDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+          icon: Calendar,
+        }
+      : show._daysSinceLastWatch != null && show._daysSinceLastWatch >= 30 && trackingStatus !== "finished"
+        ? { tone: "rose", text: `Last watched ${show._daysSinceLastWatch} days ago`, icon: PauseCircle }
+        : { tone: "primary", text: "Open series details", icon: Tv };
+  const ActivityIcon = activity.icon;
+  const activityTone = activity.tone === "orange"
+    ? "border-orange-400/15 bg-orange-500/[0.035] text-orange-400 group-hover:bg-orange-500/[0.07]"
+    : activity.tone === "amber"
+      ? "border-amber-400/15 bg-amber-500/[0.035] text-amber-300 group-hover:bg-amber-500/[0.07]"
+      : activity.tone === "rose"
+        ? "border-rose-400/15 bg-rose-500/[0.035] text-rose-300 group-hover:bg-rose-500/[0.07]"
+        : "border-primary/15 bg-primary/[0.035] text-primary group-hover:bg-primary/[0.07]";
 
   return (
-    <motion.a href={show.tmdbId ? `/tv/${show.tmdbId}` : undefined} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onGo(); }}>
-      <Card className="p-3 flex gap-3 group hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer">
-        <div className="w-14 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 relative">
+    <motion.a
+      href={show.tmdbId ? `/tv/${show.tmdbId}` : undefined}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onGo(); }}
+      className="block rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+    >
+      <Card className="group relative cursor-pointer overflow-hidden rounded-[28px] border-white/[0.14] bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.07),transparent_30%),linear-gradient(145deg,rgba(21,25,36,0.98),rgba(10,14,23,0.98))] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.03)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_70px_rgba(0,0,0,0.4),0_0_28px_rgba(139,92,246,0.07)] sm:p-[clamp(2rem,5vw,4.5rem)]">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.018)_48%,transparent_72%)]" />
+        <div className="relative flex flex-col gap-5 sm:grid sm:grid-cols-[clamp(150px,24%,340px)_minmax(0,1fr)] sm:items-center sm:gap-[clamp(2rem,4.5vw,4.5rem)]">
+          <div className="relative aspect-[0.618/1] w-[112px] overflow-hidden rounded-[18px] border border-white/10 bg-muted shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:w-full sm:self-center">
           {show.poster ? (
-            <SafeImage src={img(show.poster, "w92")} alt={show.title} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
+            <SafeImage src={img(show.poster, "w342")} alt={show.title} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center"><Tv className="w-5 h-5 text-muted-foreground" /></div>
+            <div className="flex h-full w-full items-center justify-center"><Tv className="h-8 w-8 text-muted-foreground" /></div>
           )}
-        </div>
-        <div className="flex-1 min-w-0 flex flex-col">
-          <h4 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{show.title}</h4>
-          <div className="flex items-center gap-1 mt-1 flex-wrap">
-            <TrackingStatusBadge status={trackingStatus} />
-            {show.isAnime && <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-0">Anime</Badge>}
-            {seasons != null && seasons > 0 && <Badge variant="secondary" className="text-[10px]">{seasons} season{seasons > 1 ? "s" : ""}</Badge>}
           </div>
-          <div className="flex items-center gap-3 mt-1 flex-wrap">
-            {totalEps != null && <span className="text-[10px] text-muted-foreground">{totalEps} eps</span>}
-            {show._watchedAiredEpisodeCount != null && <span className="text-[10px] text-muted-foreground">{show._watchedAiredEpisodeCount}/{show._airedEpisodeCount ?? "?"} released watched</span>}
-            {show.year && <span className="text-[10px] text-muted-foreground">{show.year}</span>}
-          </div>
-          {show._hasUnwatchedReleasedEpisode && (
-            <p className="text-[10px] text-orange-400 mt-1 font-medium line-clamp-1">
-              Released episode waiting — continue watching
-            </p>
-          )}
-          {show._nextEpisodeAirDate && (
-            <p className="text-[10px] text-amber-400 mt-1 line-clamp-1">
-              Upcoming: {show._nextEpisodeSeasonNumber ? `S${show._nextEpisodeSeasonNumber}` : ""}{show._nextEpisodeNumber ? `E${show._nextEpisodeNumber}` : ""}
-              {show._nextEpisodeName ? ` · ${show._nextEpisodeName}` : ""} · {new Date(show._nextEpisodeAirDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-            </p>
-          )}
-          {!show._nextEpisodeAirDate && show._daysSinceLastWatch != null && show._daysSinceLastWatch >= 30 && trackingStatus !== "finished" && (
-            <p className="text-[10px] text-orange-400 mt-1">Last watched {show._daysSinceLastWatch} days ago</p>
-          )}
-          {userRating != null && (
-            <div className="flex items-center gap-1 mt-1">
-              <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-              <span className="text-[10px] text-amber-400 font-bold">{userRating}/100</span>
-              <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-amber-400" style={{ width: `${userRating}%` }} />
-              </div>
+
+          <div className="flex min-w-0 flex-col">
+            <h4 className="line-clamp-2 text-2xl font-black tracking-[-0.035em] text-foreground transition-colors group-hover:text-white sm:text-4xl lg:text-5xl">{show.title}</h4>
+            <div className="mt-4 h-px w-28 bg-gradient-to-r from-primary via-primary/25 to-transparent sm:mt-5" />
+
+            <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-6">
+              <TrackingStatusBadge status={trackingStatus} />
+              {show.isAnime && <Badge className="h-10 rounded-full border border-purple-400/20 bg-purple-500/15 px-4 text-sm font-bold text-purple-300">Anime</Badge>}
+              {seasons != null && seasons > 0 && (
+                <Badge variant="secondary" className="h-10 rounded-full border border-white/[0.07] bg-white/[0.06] px-4 text-sm font-semibold text-foreground/90">
+                  {seasons} season{seasons > 1 ? "s" : ""}
+                </Badge>
+              )}
             </div>
-          )}
+
+            <div className="my-5 h-px bg-white/[0.12] sm:my-7" />
+
+            <div className="grid grid-cols-1 divide-y divide-white/[0.1] min-[420px]:grid-cols-[1fr_2fr_1fr] min-[420px]:divide-x min-[420px]:divide-y-0">
+              <ShowMetric icon={Clapperboard} value={totalEps != null ? `${totalEps} eps` : "—"} label="Episodes" />
+              <ShowMetric icon={CirclePlay} value={releasedEps != null ? `${watchedEps}/${releasedEps} released watched` : `${watchedEps} watched`} label="Progress" />
+              <ShowMetric icon={Calendar} value={show.year || "—"} label="Released" />
+            </div>
+
+            {userRating != null && (
+              <div className="mt-5 flex items-center gap-3 rounded-xl border border-amber-400/10 bg-amber-400/[0.04] px-4 py-2.5">
+                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                <span className="text-sm font-bold text-amber-300">Your rating: {userRating}/100</span>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
+                  <div className="h-full rounded-full bg-amber-400" style={{ width: `${userRating}%` }} />
+                </div>
+              </div>
+            )}
+
+            <div className="my-5 h-px bg-white/[0.12] sm:my-7" />
+
+            <div className={`flex min-h-14 items-center gap-4 rounded-2xl border px-4 py-3 transition-colors sm:mt-auto ${activityTone}`}>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-current">
+                <ActivityIcon className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1 text-sm font-bold leading-snug sm:text-base">{activity.text}</span>
+              <ChevronRight className="h-6 w-6 shrink-0 transition-transform group-hover:translate-x-1" />
+            </div>
+          </div>
         </div>
       </Card>
     </motion.a>
+  );
+}
+
+function ShowMetric({ icon: Icon, value, label }: { icon: React.ElementType; value: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 min-[420px]:justify-center min-[420px]:px-3 min-[420px]:py-0 first:min-[420px]:pl-0 last:min-[420px]:pr-0">
+      <Icon className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold text-foreground/95 sm:text-base">{value}</p>
+        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+      </div>
+    </div>
   );
 }
 
