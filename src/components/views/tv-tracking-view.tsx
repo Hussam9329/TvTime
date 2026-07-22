@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { SafeImage } from "@/components/media/safe-image";
-import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronRight } from "lucide-react";
+import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronRight, Grid2X2, List } from "lucide-react";
 import { img } from "@/lib/tmdb";
+import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 
 // Tracking status is calculated by the shared server engine.
@@ -99,6 +100,7 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
 function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void; globalCounts?: any; world: "standard" | "arabic" }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<TvTrackingCategory>("all");
+  const [layout, setLayout] = useState<"list" | "grid">("list");
   const limit = 60;
   const tracking = useTvTracking({ category: filter, sortBy: "title", order: "asc", limit, offset: page * limit, world });
 
@@ -137,6 +139,16 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
 
   const activeFilterLabel = filters.find((f) => f.value === filter)?.label ?? "All";
 
+  useEffect(() => {
+    const savedLayout = window.localStorage.getItem("tvtime:tv-card-layout");
+    if (savedLayout === "list" || savedLayout === "grid") setLayout(savedLayout);
+  }, []);
+
+  const changeLayout = (nextLayout: "list" | "grid") => {
+    setLayout(nextLayout);
+    window.localStorage.setItem("tvtime:tv-card-layout", nextLayout);
+  };
+
   return (
     <div className="space-y-4">
       <FilterPanel
@@ -169,10 +181,39 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
         </FilterSection>
       </FilterPanel>
 
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-card/45 px-3 py-2.5">
+        <div>
+          <p className="text-sm font-bold text-foreground">Card layout</p>
+          <p className="text-[11px] text-muted-foreground">Your choice is saved automatically</p>
+        </div>
+        <div className="flex items-center rounded-xl border border-white/[0.08] bg-background/50 p-1" role="group" aria-label="TV card layout">
+          <Button
+            type="button"
+            size="sm"
+            variant={layout === "list" ? "default" : "ghost"}
+            className="h-8 gap-1.5 rounded-lg px-3"
+            onClick={() => changeLayout("list")}
+            aria-pressed={layout === "list"}
+          >
+            <List className="h-3.5 w-3.5" /> List
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={layout === "grid" ? "default" : "ghost"}
+            className="h-8 gap-1.5 rounded-lg px-3"
+            onClick={() => changeLayout("grid")}
+            aria-pressed={layout === "grid"}
+          >
+            <Grid2X2 className="h-3.5 w-3.5" /> Grid
+          </Button>
+        </div>
+      </div>
+
       {tracking.isLoading ? (
-        <div className="grid grid-cols-1 gap-4">
+        <div className={cn("grid grid-cols-1 gap-4", layout === "grid" && "xl:grid-cols-2 min-[2100px]:grid-cols-3")}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-[440px] shimmer rounded-[28px] sm:h-[310px]" />
+            <div key={i} className={cn("shimmer h-[440px] rounded-[28px] sm:h-[310px]", layout === "grid" && "xl:h-[370px]")} />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -183,9 +224,9 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
         />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:gap-5">
+          <div className={cn("grid grid-cols-1 gap-4 sm:gap-5", layout === "grid" && "xl:grid-cols-2 min-[2100px]:grid-cols-3")}>
             {items.map((s: any) => (
-              <AllShowCard key={s.id} show={{ ...s, _trackingStatus: s._trackingStatus ?? deriveTrackingStatus(s) }} onGo={() => s.tmdbId && onGo(s.tmdbId)} />
+              <AllShowCard key={s.id} show={{ ...s, _trackingStatus: s._trackingStatus ?? deriveTrackingStatus(s) }} onGo={() => s.tmdbId && onGo(s.tmdbId)} layout={layout} />
             ))}
           </div>
           {totalPages > 1 && (
@@ -231,13 +272,14 @@ function FilterChip({ active, onClick, label, icon, count, color }: {
   );
 }
 
-function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
+function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layout: "list" | "grid" }) {
   const trackingStatus = show._trackingStatus as TrackingStatus;
   const userRating = trackingStatus === "finished" && show._isEndedByTmdb === true
     ? show.userRating
     : null;
   const totalEps = show._airedEpisodeCount ?? show.episodes;
   const seasons = show.seasons;
+  const compact = layout === "grid";
   const watchedEps = show._watchedAiredEpisodeCount ?? 0;
   const releasedEps = show._airedEpisodeCount ?? totalEps ?? null;
 
@@ -269,9 +311,17 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
       onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onGo(); }}
       className="block rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
     >
-      <Card className="group relative cursor-pointer overflow-hidden rounded-[28px] border-white/[0.14] bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.07),transparent_30%),linear-gradient(145deg,rgba(21,25,36,0.98),rgba(10,14,23,0.98))] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.03)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_70px_rgba(0,0,0,0.4),0_0_28px_rgba(139,92,246,0.07)] sm:p-[clamp(2rem,5vw,4.5rem)]">
+      <Card className={cn(
+        "group relative cursor-pointer overflow-hidden rounded-[28px] border-white/[0.14] bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.07),transparent_30%),linear-gradient(145deg,rgba(21,25,36,0.98),rgba(10,14,23,0.98))] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.03)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_70px_rgba(0,0,0,0.4),0_0_28px_rgba(139,92,246,0.07)]",
+        compact ? "sm:p-6" : "sm:p-[clamp(2rem,5vw,4.5rem)]",
+      )}>
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.018)_48%,transparent_72%)]" />
-        <div className="relative flex flex-col gap-5 sm:grid sm:grid-cols-[clamp(150px,24%,340px)_minmax(0,1fr)] sm:items-center sm:gap-[clamp(2rem,4.5vw,4.5rem)]">
+        <div className={cn(
+          "relative flex flex-col gap-5 sm:grid sm:items-center",
+          compact
+            ? "sm:grid-cols-[clamp(112px,24%,150px)_minmax(0,1fr)] sm:gap-5"
+            : "sm:grid-cols-[clamp(150px,24%,340px)_minmax(0,1fr)] sm:gap-[clamp(2rem,4.5vw,4.5rem)]",
+        )}>
           <div className="relative aspect-[0.618/1] w-[112px] overflow-hidden rounded-[18px] border border-white/10 bg-muted shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:w-full sm:self-center">
           {show.poster ? (
             <SafeImage src={img(show.poster, "w342")} alt={show.title} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
@@ -281,7 +331,10 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
           </div>
 
           <div className="flex min-w-0 flex-col">
-            <h4 className="line-clamp-2 text-2xl font-black tracking-[-0.035em] text-foreground transition-colors group-hover:text-white sm:text-4xl lg:text-5xl">{show.title}</h4>
+            <h4 className={cn(
+              "line-clamp-2 text-2xl font-black tracking-[-0.035em] text-foreground transition-colors group-hover:text-white",
+              compact ? "sm:text-2xl lg:text-3xl" : "sm:text-4xl lg:text-5xl",
+            )}>{show.title}</h4>
             <div className="mt-4 h-px w-28 bg-gradient-to-r from-primary via-primary/25 to-transparent sm:mt-5" />
 
             <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-6">
@@ -294,12 +347,12 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
               )}
             </div>
 
-            <div className="my-5 h-px bg-white/[0.12] sm:my-7" />
+            <div className={cn("my-5 h-px bg-white/[0.12]", compact ? "sm:my-5" : "sm:my-7")} />
 
             <div className="grid grid-cols-1 divide-y divide-white/[0.1] min-[420px]:grid-cols-[1fr_2fr_1fr] min-[420px]:divide-x min-[420px]:divide-y-0">
-              <ShowMetric icon={Clapperboard} value={totalEps != null ? `${totalEps} eps` : "—"} label="Episodes" />
-              <ShowMetric icon={CirclePlay} value={releasedEps != null ? `${watchedEps}/${releasedEps} released watched` : `${watchedEps} watched`} label="Progress" />
-              <ShowMetric icon={Calendar} value={show.year || "—"} label="Released" />
+              <ShowMetric icon={Clapperboard} value={totalEps != null ? `${totalEps} eps` : "—"} label="Episodes" compact={compact} />
+              <ShowMetric icon={CirclePlay} value={releasedEps != null ? `${watchedEps}/${releasedEps} released watched` : `${watchedEps} watched`} label="Progress" compact={compact} />
+              <ShowMetric icon={Calendar} value={show.year || "—"} label="Released" compact={compact} />
             </div>
 
             {userRating != null && (
@@ -312,7 +365,7 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
               </div>
             )}
 
-            <div className="my-5 h-px bg-white/[0.12] sm:my-7" />
+            <div className={cn("my-5 h-px bg-white/[0.12]", compact ? "sm:my-5" : "sm:my-7")} />
 
             <div className={`flex min-h-14 items-center gap-4 rounded-2xl border px-4 py-3 transition-colors sm:mt-auto ${activityTone}`}>
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-current">
@@ -328,12 +381,12 @@ function AllShowCard({ show, onGo }: { show: any; onGo: () => void }) {
   );
 }
 
-function ShowMetric({ icon: Icon, value, label }: { icon: React.ElementType; value: React.ReactNode; label: string }) {
+function ShowMetric({ icon: Icon, value, label, compact = false }: { icon: React.ElementType; value: React.ReactNode; label: string; compact?: boolean }) {
   return (
     <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 min-[420px]:justify-center min-[420px]:px-3 min-[420px]:py-0 first:min-[420px]:pl-0 last:min-[420px]:pr-0">
-      <Icon className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" />
+      <Icon className={cn("h-5 w-5 shrink-0 text-primary", compact ? "sm:h-5 sm:w-5" : "sm:h-6 sm:w-6")} />
       <div className="min-w-0">
-        <p className="truncate text-sm font-bold text-foreground/95 sm:text-base">{value}</p>
+        <p className={cn("truncate text-sm font-bold text-foreground/95", compact ? "sm:text-xs" : "sm:text-base")}>{value}</p>
         <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
       </div>
     </div>
