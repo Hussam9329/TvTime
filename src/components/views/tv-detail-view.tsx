@@ -280,34 +280,35 @@ export function TvDetailView() {
     : "text-rose-400";
 
   return (
-    <div className="tvtime-tv-detail-page space-y-6">
+    <div className="tvtime-tv-detail-page space-y-5">
       <Button variant="ghost" size="sm" onClick={back} className="text-muted-foreground">
         <ArrowLeft className="w-4 h-4 mr-1" /> Back
       </Button>
 
+      <section className="relative isolate overflow-hidden rounded-[28px] border border-white/15 bg-[#07101f] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
       {/* Hero */}
-      <div data-ui-surface="hero" className="relative rounded-2xl overflow-hidden border border-border/50 -mt-4">
-        <div className="relative aspect-[16/9] sm:aspect-[21/9]">
+      <div data-ui-surface="hero" className="absolute inset-0 -z-20 overflow-hidden">
+        <div className="absolute inset-0">
           <SafeImage src={img(t.backdrop_path, "w1280")} alt={t.name} fill variant="backdrop" priority className="absolute inset-0" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,9,19,0.84)_0%,rgba(4,12,25,0.7)_45%,rgba(3,8,18,0.54)_100%)]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/95 via-[#07101f]/35 to-[#07101f]/35" />
         </div>
       </div>
 
       {/* Poster + title + actions */}
-      <div className="flex flex-col sm:flex-row gap-5 -mt-20 sm:-mt-32 px-2 sm:px-4 relative z-10">
-        <div className="w-32 sm:w-48 flex-shrink-0 mx-auto sm:mx-0">
-          <Card className="p-0 overflow-hidden border-border/60 shadow-2xl">
+      <div className="relative z-10 grid grid-cols-1 gap-6 p-5 sm:p-7 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8 lg:grid-cols-[270px_minmax(0,1fr)] lg:p-10">
+        <div className="w-36 flex-shrink-0 mx-auto sm:w-52 md:w-full md:mx-0">
+          <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
             <div className="relative aspect-[2/3]">
               <SafeImage src={mediaState.data?.tags?.some((tag) => tag.startsWith("custom-poster:")) ? mediaState.data.poster : mediaState.data?.isArabic ? imgOrPlaceholder(t.poster_path, "w342") : mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={t.name} fill variant="poster" />
             </div>
           </Card>
         </div>
 
-        <div className="flex-1 space-y-4 sm:pt-4">
+        <div className="min-w-0 space-y-5 md:pt-1">
           {/* Title and badges */}
           <div>
-            <div className="flex items-end gap-2 mb-2 flex-wrap">
+            <div className="flex items-center gap-2.5 mb-5 flex-wrap [&>*]:h-10 [&>*]:rounded-lg [&>*]:px-3.5">
               <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
               {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">Arabic TV</Badge>}
               {effectiveLabel === "finished" && (
@@ -338,11 +339,11 @@ export function TvDetailView() {
               {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
               {t.status && <Badge variant="secondary" className="border-0">{t.status}</Badge>}
             </div>
-            <h1 className="view-page-title text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">{t.name}</h1>
-            {t.tagline && <p className="text-sm sm:text-base italic text-foreground/70 mt-1">{t.tagline}</p>}
+            <h1 className="view-page-title text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.04em] leading-[0.95]">{t.name}</h1>
+            {t.tagline && <p className="text-base sm:text-lg italic text-foreground/70 mt-5">{t.tagline}</p>}
           </div>
           {/* Episode progress and following membership are intentionally separate. */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5 [&_button]:h-12 [&_button]:rounded-xl [&_button]:px-5">
             <OfficialPosterPicker tmdbId={t.id} mediaType="tv" title={t.name || "Untitled"} posters={(t as any).images?.posters ?? []} />
             {effectiveLabel && effectiveLabel !== "planned" && (
               <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
@@ -388,7 +389,7 @@ export function TvDetailView() {
             )}
           </div>
 
-          <Card className="p-4 glass">
+          <Card className="rounded-2xl border-white/15 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-4">
                 <div>
@@ -452,7 +453,7 @@ export function TvDetailView() {
             </div>
           </Card>
 
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2.5 [&>*]:rounded-xl [&>*]:px-4 [&>*]:py-2">
             {t.genres?.map((g) => (
               <Badge key={g.id} variant="outline" className="border-primary/30 text-primary/90">{g.name}</Badge>
             ))}
@@ -464,9 +465,10 @@ export function TvDetailView() {
           )}
         </div>
       </div>
+      </section>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
+        <TabsList className="flex h-14 w-full justify-stretch overflow-x-auto rounded-2xl border border-white/10 bg-[#0a1220]/90 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:flex-1 [&>*]:rounded-xl">
           <TabsTrigger value="seasons">Seasons & Episodes</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="cast">Cast</TabsTrigger>
