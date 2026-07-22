@@ -202,6 +202,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const existingTitle = await db.media.findUnique({ where: { userId_type_tmdbId: { userId: user.id, type, tmdbId } }, select: { poster: true } });
     const item = await db.media.upsert({
       where: {
         userId_type_tmdbId: { userId: user.id, type, tmdbId },
@@ -219,7 +220,7 @@ export async function POST(req: NextRequest) {
       update: {
         userRating: value,
         ...(body.title ? { title: body.title } : {}),
-        ...(body.posterPath !== undefined ? { poster: body.posterPath || null } : {}),
+        ...(!existingTitle?.poster && body.posterPath !== undefined ? { poster: body.posterPath || null } : {}),
       },
     });
     return NextResponse.json({ item: titleRatingCompat(item), source: "Media" });

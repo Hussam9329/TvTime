@@ -98,6 +98,10 @@ export async function POST(req: NextRequest) {
     let item;
 
     if (parsedTmdbId != null) {
+      const existingIdentity = await db.media.findUnique({
+        where: { userId_type_tmdbId: { userId: user.id, type: mediaType, tmdbId: parsedTmdbId } },
+        select: { poster: true },
+      });
       // The compound database constraint is the final race-condition guard.
       // Metadata updates never overwrite user tracking/rating state.
       item = await db.media.upsert({
@@ -111,7 +115,7 @@ export async function POST(req: NextRequest) {
         create: createData,
         update: {
           title: safeTitle,
-          ...(normalizedPoster ? { poster: normalizedPoster } : {}),
+          ...(!existingIdentity?.poster && normalizedPoster ? { poster: normalizedPoster } : {}),
           ...(year ? { year } : {}),
           ...(overview ? { overview } : {}),
           ...(rating != null ? { rating: String(rating) } : {}),
@@ -144,7 +148,7 @@ export async function POST(req: NextRequest) {
         item = await db.media.update({
           where: { id: item.id },
           data: {
-            ...(normalizedPoster ? { poster: normalizedPoster } : {}),
+            ...(!item.poster && normalizedPoster ? { poster: normalizedPoster } : {}),
             ...(year ? { year } : {}),
             ...(overview ? { overview } : {}),
             ...(rating != null ? { rating: String(rating) } : {}),

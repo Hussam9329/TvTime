@@ -316,10 +316,10 @@ export function useMovieDetail(id: number | null) {
   });
 }
 
-export function useTvDetail(id: number | null) {
+export function useTvDetail(id: number | null, language?: "ar" | "en-US") {
   return useQuery({
-    queryKey: ["tmdb", "tv", id],
-    queryFn: () => tmdbGet<TvDetail>(`tv/${id}`),
+    queryKey: ["tmdb", "tv", id, language || "en-US"],
+    queryFn: () => tmdbGet<TvDetail>(`tv/${id}`, language ? { language } : undefined),
     enabled: id != null,
   });
 }

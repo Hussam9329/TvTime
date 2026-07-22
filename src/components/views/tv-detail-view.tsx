@@ -33,8 +33,8 @@ import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
 
 export function TvDetailView() {
   const { tvId, back, goPerson } = useNav();
-  const detail = useTvDetail(tvId);
   const mediaState = useMediaState(tvId, "tv");
+  const detail = useTvDetail(tvId, mediaState.data?.isArabic ? "ar" : undefined);
   const watchlistToggle = useWatchlistToggle();
   const followingToggle = useFollowingToggle();
   const ratingMutate = useRatingMutate();
@@ -299,7 +299,7 @@ export function TvDetailView() {
         <div className="w-32 sm:w-48 flex-shrink-0 mx-auto sm:mx-0">
           <Card className="p-0 overflow-hidden border-border/60 shadow-2xl">
             <div className="relative aspect-[2/3]">
-              <SafeImage src={mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={t.name} fill variant="poster" />
+              <SafeImage src={mediaState.data?.tags?.some((tag) => tag.startsWith("custom-poster:")) ? mediaState.data.poster : mediaState.data?.isArabic ? imgOrPlaceholder(t.poster_path, "w342") : mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={t.name} fill variant="poster" />
             </div>
           </Card>
         </div>

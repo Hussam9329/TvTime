@@ -133,7 +133,7 @@ const handler = async (
           data = await tmdb.movieDetail(id);
         } else if (segments.match(/^tv\/\d+$/)) {
           const id = Number(segments.split("/")[1]);
-          data = await tmdb.tvDetail(id);
+          data = await tmdb.tvDetail(id, (queryParams.language as TmdbLanguage) || undefined);
         } else if (segments.match(/^tv\/\d+\/season\/\d+$/)) {
           const parts = segments.split("/");
           data = await tmdb.seasonDetail(Number(parts[1]), Number(parts[3]));

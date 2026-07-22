@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { userHeaders, withUserId } from "@/lib/client-user";
+import { useNav } from "@/lib/store";
 
 interface Notification {
   id: string;
@@ -43,10 +44,14 @@ export function NotificationCenter({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
+  const goTv = useNav((state) => state.goTv);
+  const goMovie = useNav((state) => state.goMovie);
 
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
+      const syncUrl = withUserId(new URL("/api/notifications/sync", window.location.origin));
+      await fetch(syncUrl, { method: "POST", headers: userHeaders() }).catch(() => null);
       const url = withUserId(new URL("/api/notifications", window.location.origin));
       const res = await fetch(url, { headers: userHeaders() });
       if (res.ok) {
@@ -88,6 +93,14 @@ export function NotificationCenter({
       onUnreadCountChange?.(next.filter((n) => !n.read).length);
       return next;
     });
+  };
+
+  const openNotification = async (notification: Notification) => {
+    if (!notification.read) await handleMarkRead(notification.id);
+    if (!notification.tmdbId) return;
+    onClose();
+    if (notification.mediaType === "movie") goMovie(notification.tmdbId);
+    else goTv(notification.tmdbId);
   };
 
   const handleMarkAllRead = async () => {
@@ -215,7 +228,7 @@ export function NotificationCenter({
                 return (
                   <div
                     key={n.id}
-                    onClick={() => !n.read && handleMarkRead(n.id)}
+                    onClick={() => void openNotification(n)}
                     className={`tvtime-notification-item p-3 flex items-start gap-3 cursor-pointer hover:bg-accent/50 transition-colors relative group ${!n.read ? "bg-primary/5" : ""}`}
                   >
                     {!n.read && <div className="absolute top-3 right-1 w-2 h-2 rounded-full bg-primary" />}

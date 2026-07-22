@@ -18,6 +18,9 @@ const PUBLIC_PREFIXES = [
   "/_next",
   "/favicon.ico",
   "/placeholder-poster.svg",
+  "/logo.svg",
+  "/manifest.webmanifest",
+  "/sw.js",
   "/api/auth",
   "/login",
   "/robots.txt",
@@ -66,5 +69,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|placeholder-poster.svg).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|placeholder-poster.svg|logo.svg|manifest.webmanifest|sw.js).*)"],
 };

@@ -17,10 +17,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Only official TMDB poster paths are accepted" }, { status: 400 });
     }
     const poster = path ? canonicalMediaPoster(path) : null;
+    const existing = await db.media.findUnique({ where: { userId_type_tmdbId: { userId: user.id, type, tmdbId } }, select: { tags: true } });
+    const tags = [...(existing?.tags ?? []).filter((tag) => !tag.startsWith("custom-poster:")), ...(path ? [`custom-poster:${path}`] : [])];
     const item = await db.media.upsert({
       where: { userId_type_tmdbId: { userId: user.id, type, tmdbId } },
-      create: { userId: user.id, type, tmdbId, title: String(body.title).trim(), poster },
-      update: { poster },
+      create: { userId: user.id, type, tmdbId, title: String(body.title).trim(), poster, tags },
+      update: { poster, tags },
     });
     return NextResponse.json({ item });
   } catch (error) {

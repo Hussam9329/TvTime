@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       },
       update: {
         title: String(body.title),
-        ...(normalizedPoster ? { poster: normalizedPoster } : {}),
+        ...(!existing?.poster && normalizedPoster ? { poster: normalizedPoster } : {}),
         status: nextStatus,
         isFollowing: true,
       },

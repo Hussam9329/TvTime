@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     item = await db.media.upsert({
       where: { userId_type_tmdbId: identity },
       create: { userId: user.id, tmdbId, type, ...common },
-      update: common,
+      update: { ...common, ...(item?.poster ? { poster: item.poster } : {}) },
     });
 
     return NextResponse.json({ item: toCompat(item), source: "Media" });

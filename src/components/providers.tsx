@@ -67,6 +67,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         const response = await fetch(withUserId(new URL("/api/notifications/sync", window.location.origin)), { method: "POST", headers: userHeaders() });
         if (!response.ok) return;
         const payload = await response.json();
+        await client.invalidateQueries({ queryKey: ["notifications"] });
         if (Notification.permission !== "granted" || !Array.isArray(payload.created)) return;
         const registration = await navigator.serviceWorker?.ready;
         for (const item of payload.created.slice(0, 3)) {
@@ -77,7 +78,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     void syncNotifications();
     const timer = window.setInterval(() => void syncNotifications(), BACKGROUND_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [userId]);
+  }, [client, userId]);
 
   // Hydrate the display name from the server once on mount. This is a
   // single GET /api/user — not polled.
