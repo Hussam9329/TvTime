@@ -864,11 +864,12 @@ export function useBulkEpisodeToggle() {
     mutationFn: async (args: {
       showId: number;
       episodes: { seasonNumber: number; episodeNumber: number; episodeName?: string | null }[];
+      rewatch?: boolean;
     }): Promise<{ ok?: boolean; count?: number; completion?: EpisodeCompletion | null }> => {
       const res = await fetch(withUserId(new URL("/api/library/watched-episodes", window.location.origin)), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...userHeaders() },
-        body: JSON.stringify({ showId: args.showId, episodes: args.episodes }),
+        body: JSON.stringify({ showId: args.showId, episodes: args.episodes, rewatch: args.rewatch === true }),
       });
       if (!res.ok) {
         const errorBody = await res.json().catch(() => ({}));

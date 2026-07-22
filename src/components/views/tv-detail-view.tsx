@@ -15,7 +15,7 @@ import { OfficialPosterPicker } from "@/components/media/official-poster-picker"
 import { WatchProviders } from "@/components/media/watch-providers";
 import {
   Star, Clock, Play, ListPlus, CheckCircle2, Circle, ArrowLeft,
-  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2,
+  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2, RotateCcw,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -735,6 +735,24 @@ function SeasonEpisodes({
     await applyWatchPlan(plan, false);
   };
 
+  const rewatchSeason = async () => {
+    if (releasedEpisodes.length === 0 || releasedEpisodes.some((episode: any) => !isEpisodeWatched(episode))) {
+      toast.info("Finish every released episode in this season before recording a full-season rewatch.");
+      return;
+    }
+    if (!window.confirm(`Record one rewatch for all ${releasedEpisodes.length} released episodes in ${currentSeason?.name || `Season ${season}`}?`)) return;
+    try {
+      await bulkEpisodeToggle.mutateAsync({
+        showId: tvId,
+        rewatch: true,
+        episodes: releasedEpisodes.map((episode: any) => ({ seasonNumber: episode.season_number, episodeNumber: episode.episode_number, episodeName: episode.name || null })),
+      });
+      toast.success(`${currentSeason?.name || `Season ${season}`} rewatch recorded for every released episode.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to record season rewatch");
+    }
+  };
+
   const toggleEpisode = async (episode: { season_number: number; episode_number: number; name: string; air_date?: string | null }) => {
     if (!isReleased(episode)) {
       toast.info("This episode has not aired yet.");
@@ -864,9 +882,14 @@ function SeasonEpisodes({
           )}
         </div>
 
-        <Button variant="outline" size="sm" onClick={markAllWatched} disabled={seasonData.isLoading || bulkEpisodeToggle.isPending || episodeToggle.isPending || releasedEpisodes.length === 0 || !watchPlanReady}>
-          <CheckCheck className="w-4 h-4 mr-1.5" /> Mark season watched
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={markAllWatched} disabled={seasonData.isLoading || bulkEpisodeToggle.isPending || episodeToggle.isPending || releasedEpisodes.length === 0 || !watchPlanReady}>
+            <CheckCheck className="w-4 h-4 mr-1.5" /> Mark season watched
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => void rewatchSeason()} disabled={seasonData.isLoading || bulkEpisodeToggle.isPending || episodeToggle.isPending || releasedEpisodes.length === 0 || releasedEpisodes.some((episode: any) => !isEpisodeWatched(episode))}>
+            <RotateCcw className="w-4 h-4 mr-1.5" /> Rewatch season
+          </Button>
+        </div>
       </div>
 
       {/* Progress */}

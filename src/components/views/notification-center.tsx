@@ -47,11 +47,9 @@ export function NotificationCenter({
   const goTv = useNav((state) => state.goTv);
   const goMovie = useNav((state) => state.goMovie);
 
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
-      const syncUrl = withUserId(new URL("/api/notifications/sync", window.location.origin));
-      await fetch(syncUrl, { method: "POST", headers: userHeaders() }).catch(() => null);
+      if (showLoading) setLoading(true);
       const url = withUserId(new URL("/api/notifications", window.location.origin));
       const res = await fetch(url, { headers: userHeaders() });
       if (res.ok) {
@@ -63,12 +61,17 @@ export function NotificationCenter({
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [onUnreadCountChange]);
 
   useEffect(() => {
-    fetchNotifications();
+    void (async () => {
+      await fetchNotifications();
+      const syncUrl = withUserId(new URL("/api/notifications/sync", window.location.origin));
+      const synced = await fetch(syncUrl, { method: "POST", headers: userHeaders() }).catch(() => null);
+      if (synced?.ok) await fetchNotifications(false);
+    })();
   }, [fetchNotifications]);
 
   const filtered = notifications.filter((n) => {
