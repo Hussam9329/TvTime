@@ -329,6 +329,10 @@ function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
   const title = item.title || "Untitled";
   const posterSrc = imgOrPlaceholder(item.posterPath || null, "w342");
   const isMovie = item.kind === "movie";
+  const tmdbId = Number(item.tmdbId);
+  const detailHref = item.hasProfile && Number.isFinite(tmdbId) && tmdbId > 0
+    ? `/${isMovie ? "movie" : "tv"}/${tmdbId}`
+    : undefined;
 
   const handleUnwatch = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -357,19 +361,22 @@ function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
 
   return (
     <div
-      role="button"
-      tabIndex={item.hasProfile ? 0 : -1}
       aria-disabled={!item.hasProfile}
-      onClick={item.hasProfile ? onGo : undefined}
-      onKeyDown={(event) => {
-        if (item.hasProfile && (event.key === "Enter" || event.key === " ")) {
-          event.preventDefault();
-          onGo();
-        }
-      }}
       className="flex-shrink-0 w-[110px] sm:w-[130px] group cursor-pointer relative text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
       title={title}
     >
+      {detailHref && (
+        <a
+          href={detailHref}
+          aria-label={`Open ${title}`}
+          className="absolute inset-0 z-10 rounded-lg"
+          onClick={(event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            onGo();
+          }}
+        />
+      )}
       <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
         <SafeImage
           src={posterSrc}
@@ -392,7 +399,7 @@ function RecentlyWatchedCard({ item, onGo }: { item: any; onGo: () => void }) {
             disabled={unwatchToggle.isPending}
             aria-label="Remove from watched"
             title="Remove from watched"
-            className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-black/70 backdrop-blur flex items-center justify-center text-white/90 hover:bg-rose-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+            className="absolute z-20 top-1.5 left-1.5 w-6 h-6 rounded-full bg-black/70 backdrop-blur flex items-center justify-center text-white/90 hover:bg-rose-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
           >
             <X className="w-3.5 h-3.5" />
           </button>
