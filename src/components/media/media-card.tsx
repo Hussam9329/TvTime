@@ -19,7 +19,7 @@ interface MediaCardProps {
   enableNativeLink?: boolean;
 }
 
-export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, enableNativeLink = false }: MediaCardProps) {
+export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, enableNativeLink = true }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
 
@@ -166,7 +166,7 @@ interface MediaGridProps {
   enableNativeLinks?: boolean;
 }
 
-export function MediaGrid({ items, loading, showMediaType = true, forcedMediaType, libraryStates, enableNativeLinks = false }: MediaGridProps) {
+export function MediaGrid({ items, loading, showMediaType = true, forcedMediaType, libraryStates, enableNativeLinks = true }: MediaGridProps) {
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
     mediaType: forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
