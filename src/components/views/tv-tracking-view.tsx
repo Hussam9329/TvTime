@@ -317,20 +317,20 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
       )}>
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.018)_48%,transparent_72%)]" />
         <div className={cn(
-          "relative flex flex-col gap-5 sm:grid sm:items-stretch",
+          "relative flex flex-col gap-5 sm:flex sm:items-stretch",
           compact
-            ? "sm:grid-cols-[clamp(112px,24%,150px)_minmax(0,1fr)] sm:gap-5"
-            : "sm:grid-cols-[clamp(150px,24%,340px)_minmax(0,1fr)] sm:gap-[clamp(2rem,4.5vw,4.5rem)]",
+            ? "sm:gap-5"
+            : "sm:gap-[clamp(2rem,4.5vw,4.5rem)]",
         )}>
-          <div className="relative aspect-[0.618/1] w-[112px] overflow-hidden rounded-[18px] border border-white/10 bg-muted shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:h-full sm:w-full sm:self-stretch sm:aspect-auto">
+          <div className="relative aspect-[2/3] w-[112px] shrink-0 overflow-hidden rounded-[18px] border border-white/10 bg-black/30 shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:w-auto sm:self-stretch">
           {show.poster ? (
-            <SafeImage src={img(show.poster, "w342")} alt={show.title} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
+            <SafeImage src={img(show.poster, "w342")} alt={show.title} fill variant="poster" className="object-contain transition-transform duration-500 group-hover:scale-[1.015]" />
           ) : (
             <div className="flex h-full w-full items-center justify-center"><Tv className="h-8 w-8 text-muted-foreground" /></div>
           )}
           </div>
 
-          <div className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col">
             <h4 className={cn(
               "line-clamp-2 text-2xl font-black tracking-[-0.035em] text-foreground transition-colors group-hover:text-white",
               compact ? "sm:text-2xl lg:text-3xl" : "sm:text-4xl lg:text-5xl",
