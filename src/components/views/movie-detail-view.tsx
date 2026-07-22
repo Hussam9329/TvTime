@@ -143,6 +143,7 @@ export function MovieDetailView() {
   };
 
   const onRateSubmit = async (v: number) => {
+    if (!isWatched) return;
     await ratingMutate.mutateAsync({
       action: "set",
       mediaType: "movie",
@@ -302,7 +303,7 @@ export function MovieDetailView() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              {isWatched && <div className="flex items-center gap-2">
                 {myRating != null && (
                   <Button variant="outline" size="sm" onClick={onRemoveRating}>
                     Remove rating
@@ -312,7 +313,7 @@ export function MovieDetailView() {
                   <Star className="w-4 h-4 mr-1 fill-current" />
                   {myRating != null ? "Re-rate" : "Rate out of 100"}
                 </Button>
-              </div>
+              </div>}
               <div className="text-right">
                 <p className="text-xs text-muted-foreground mb-1">TMDB score</p>
                 <div className="flex items-center gap-1 text-amber-400 font-bold text-lg">
@@ -440,7 +441,7 @@ export function MovieDetailView() {
 
       {/* Rating dialog — out of 100 */}
       <RatingDialog
-        open={ratingOpen}
+        open={isWatched && ratingOpen}
         onOpenChange={setRatingOpen}
         title={m.title || ""}
         poster={m.poster_path ? img(m.poster_path, "w185") : null}
