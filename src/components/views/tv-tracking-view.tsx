@@ -317,12 +317,12 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
       )}>
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.018)_48%,transparent_72%)]" />
         <div className={cn(
-          "relative flex flex-col gap-5 sm:grid sm:items-center",
+          "relative flex flex-col gap-5 sm:grid sm:items-stretch",
           compact
             ? "sm:grid-cols-[clamp(112px,24%,150px)_minmax(0,1fr)] sm:gap-5"
             : "sm:grid-cols-[clamp(150px,24%,340px)_minmax(0,1fr)] sm:gap-[clamp(2rem,4.5vw,4.5rem)]",
         )}>
-          <div className="relative aspect-[0.618/1] w-[112px] overflow-hidden rounded-[18px] border border-white/10 bg-muted shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:w-full sm:self-center">
+          <div className="relative aspect-[0.618/1] w-[112px] overflow-hidden rounded-[18px] border border-white/10 bg-muted shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:h-full sm:w-full sm:self-stretch sm:aspect-auto">
           {show.poster ? (
             <SafeImage src={img(show.poster, "w342")} alt={show.title} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
           ) : (
