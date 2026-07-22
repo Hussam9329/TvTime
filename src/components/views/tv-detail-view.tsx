@@ -390,8 +390,8 @@ export function TvDetailView() {
           </div>
 
           <Card className="rounded-2xl border-white/15 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-4">
+            <div className="grid grid-cols-1 items-center gap-5 md:grid-cols-[minmax(220px,1fr)_auto] xl:grid-cols-[minmax(260px,1fr)_auto_minmax(220px,auto)]">
+              <div className="flex min-w-0 items-center gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Your rating</p>
                   {displayedShowRating != null ? (
@@ -414,7 +414,7 @@ export function TvDetailView() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 md:justify-self-end xl:justify-self-center">
                 {myRating != null && (
                   <Button variant="outline" size="sm" onClick={onRemoveRating}>
                     Remove rating
@@ -436,13 +436,7 @@ export function TvDetailView() {
                   {displayedShowRating != null ? "Re-rate" : canRateShow ? "Rate out of 100" : "Rating locked"}
                 </Button>
               </div>
-              {showRatingLockMessage && (
-                <div className="basis-full flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90">
-                  <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <span>{showRatingLockMessage}</span>
-                </div>
-              )}
-              <div className="text-right">
+              <div className="md:col-span-2 md:justify-self-end xl:col-span-1 xl:text-right">
                 <p className="text-xs text-muted-foreground mb-1">TMDB score</p>
                 <div className="flex items-center gap-1 text-amber-400 font-bold text-lg">
                   <Star className="w-5 h-5 fill-amber-400" />
@@ -450,6 +444,12 @@ export function TvDetailView() {
                   <span className="text-xs text-muted-foreground font-normal">/10 ({t.vote_count.toLocaleString()})</span>
                 </div>
               </div>
+              {showRatingLockMessage && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 text-xs text-amber-100/90 md:col-span-2 xl:col-span-3">
+                  <Lock className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-300" />
+                  <span className="leading-relaxed">{showRatingLockMessage}</span>
+                </div>
+              )}
             </div>
           </Card>
 
