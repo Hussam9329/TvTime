@@ -308,10 +308,10 @@ export function useSearchAccumulated(query: string) {
   };
 }
 
-export function useMovieDetail(id: number | null) {
+export function useMovieDetail(id: number | null, language?: "ar" | "en-US") {
   return useQuery({
-    queryKey: ["tmdb", "movie", id],
-    queryFn: () => tmdbGet<MovieDetail>(`movie/${id}`),
+    queryKey: ["tmdb", "movie", id, language || "en-US"],
+    queryFn: () => tmdbGet<MovieDetail>(`movie/${id}`, language ? { language } : undefined),
     enabled: id != null,
   });
 }

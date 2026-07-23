@@ -23,11 +23,11 @@ import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
 
 export function MovieDetailView() {
   const { movieId, back, goPerson } = useNav();
-  const detail = useMovieDetail(movieId);
   // Fix #3/#15: Use direct state lookup by tmdbId instead of paginated hooks
   // that only return first 100 items. This fixes movies beyond page 1 not
   // showing as watched/rated/watchlisted.
   const mediaState = useMediaState(movieId, "movie");
+  const detail = useMovieDetail(movieId, mediaState.data?.isArabic ? "ar" : undefined);
   const watchlistToggle = useWatchlistToggle();
   const watchedToggle = useWatchedMovieToggle();
   const ratingMutate = useRatingMutate();
