@@ -79,7 +79,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       tabIndex={0}
       aria-label={`${title}${year ? ` (${year})` : ""}`}
     >
-      <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card">
+      <Card className="h-full overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           <SafeImage
             src={imgOrPlaceholder(item.poster_path, "w342")}
@@ -89,9 +89,6 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             fetchPriority={priority ? "high" : "auto"}
             className="relative w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-95"
           />
-          {/* gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-80" />
-
           {/* top badges */}
           <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
             {showMediaType && (
@@ -112,38 +109,16 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             )}
           </div>
 
-          {/* Fix #10: Status indicators moved to bottom-left (next to title)
-              to avoid overlap with TMDB score at top-right.
-              Each has a text label, not just color. */}
-          <div className="absolute bottom-0 left-0 right-0 p-3">
-            {/* Status icons row — above the title, with labels */}
-            <div className="flex items-center gap-1.5 mb-1">
-              {inWatchlist && (
-                <span className="inline-flex items-center gap-0.5 text-[9px] text-primary bg-primary/20 rounded px-1 py-0.5" title="In Watchlist">
-                  <ListPlus className="w-2.5 h-2.5" /> Watchlist
-                </span>
-              )}
-              {watched && (
-                <span data-status="watched" className="inline-flex items-center gap-0.5 text-[9px] text-emerald-400 bg-emerald-500/20 rounded px-1 py-0.5" title="Watched">
-                  <Check className="w-2.5 h-2.5" /> Watched
-                </span>
-              )}
-              {isFollowing && (
-                <span data-status="following" className="inline-flex items-center gap-0.5 text-[9px] text-amber-400 bg-amber-500/20 rounded px-1 py-0.5" title="Following">
-                  <Bell className="w-2.5 h-2.5" /> Following
-                </span>
-              )}
-              {userRating != null && (
-                <span data-status="rated" className="inline-flex items-center gap-0.5 text-[9px] text-amber-300 bg-amber-500/20 rounded px-1 py-0.5" title="Your rating">
-                  <Star className="w-2.5 h-2.5 fill-current" /> {userRating}/100
-                </span>
-              )}
-            </div>
-            <h3 className="font-semibold text-white text-sm line-clamp-2 leading-tight drop-shadow">
-              {title}
-            </h3>
-            <div className="flex items-center gap-2 mt-0.5">
-              {year && <p className="text-white/70 text-xs">{year}</p>}
+        </div>
+        <div className="min-h-[5.5rem] border-t border-border/50 bg-card px-3 py-2.5">
+          <h3 className="line-clamp-2 min-h-10 text-sm font-semibold leading-tight text-foreground">{title}</h3>
+          <div className="mt-1.5 flex min-h-5 items-center justify-between gap-2">
+            {year && <p className="text-xs text-muted-foreground">{year}</p>}
+            <div className="ml-auto flex items-center gap-1">
+              {inWatchlist && <span className="inline-flex items-center gap-0.5 rounded bg-primary/20 px-1 py-0.5 text-[9px] text-primary"><ListPlus className="h-2.5 w-2.5" /> Watchlist</span>}
+              {watched && <span data-status="watched" className="inline-flex items-center gap-0.5 rounded bg-emerald-500/20 px-1 py-0.5 text-[9px] text-emerald-400"><Check className="h-2.5 w-2.5" /> Watched</span>}
+              {isFollowing && <span data-status="following" className="inline-flex items-center gap-0.5 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] text-amber-400"><Bell className="h-2.5 w-2.5" /> Following</span>}
+              {userRating != null && <span data-status="rated" className="inline-flex items-center gap-0.5 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] text-amber-300"><Star className="h-2.5 w-2.5 fill-current" /> {userRating}/100</span>}
             </div>
           </div>
         </div>
@@ -156,6 +131,7 @@ export function MediaCardSkeleton() {
   return (
     <Card className="feedback-skeleton overflow-hidden p-0 border-border/50 bg-card" aria-hidden="true">
       <div className="aspect-[2/3] shimmer" />
+      <div className="h-[5.5rem] border-t border-border/50 bg-card" />
     </Card>
   );
 }
