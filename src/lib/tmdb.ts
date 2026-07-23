@@ -408,10 +408,13 @@ export async function resolveTmdbKeywordIds(query: string | null | undefined, la
 }
 
 export function getTitle(m: MediaItem): string {
-  // For Arabic-language media, prefer the Arabic original_title/name over the
-  // English-localized title. For other media, keep the previous behavior.
+  // Arabic originals are sometimes stored by TMDB as Latin transliterations
+  // (for example "80 Bako"). Prefer an actual Arabic-script localized value.
   if (m.original_language === "ar") {
-    return m.original_title || m.original_name || m.title || m.name || "Untitled";
+    const candidates = [m.title, m.name, m.original_title, m.original_name];
+    return candidates.find((value) => HAS_ARABIC_TEXT.test(String(value || "")))
+      || candidates.find(Boolean)
+      || "Untitled";
   }
   return m.title || m.name || m.original_title || m.original_name || "Untitled";
 }

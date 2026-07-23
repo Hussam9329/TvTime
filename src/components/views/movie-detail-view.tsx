@@ -2,7 +2,7 @@
 
 import { useNav } from "@/lib/store";
 import { useMovieDetail, useWatchlistToggle, useWatchedMovieToggle, useRatingMutate, useMediaState } from "@/hooks/use-tmdb";
-import { img, imgOrPlaceholder } from "@/lib/tmdb";
+import { getTitle, img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -61,6 +61,7 @@ export function MovieDetailView() {
   }
 
   const m = detail.data;
+  const displayTitle = getTitle(m);
   // Direct identity lookup is the only source for detail-page state. It does
   // not depend on the first page of Watchlist/Watched/Ratings collections.
   const stateItem = mediaState.data;
@@ -95,7 +96,7 @@ export function MovieDetailView() {
         action: inWatchlist ? "remove" : "add",
         mediaType: "movie",
         tmdbId: m.id,
-        title: m.title || "Untitled",
+        title: displayTitle,
         posterPath: m.poster_path,
         backdropPath: m.backdrop_path,
         overview: m.overview,
@@ -117,7 +118,7 @@ export function MovieDetailView() {
       await watchedToggle.mutateAsync({
         action: isWatched ? "remove" : "add",
         tmdbId: m.id,
-        title: m.title || "Untitled",
+        title: displayTitle,
         posterPath: m.poster_path,
         runtime: m.runtime,
         releaseDate: m.release_date,
@@ -135,7 +136,7 @@ export function MovieDetailView() {
 
   const onRewatch = async () => {
     try {
-      await watchedToggle.mutateAsync({ action: "rewatch", tmdbId: m.id, title: m.title || "Untitled", posterPath: m.poster_path, runtime: m.runtime });
+      await watchedToggle.mutateAsync({ action: "rewatch", tmdbId: m.id, title: displayTitle, posterPath: m.poster_path, runtime: m.runtime });
       toast.success("Rewatch recorded");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to record rewatch");
@@ -149,7 +150,7 @@ export function MovieDetailView() {
       mediaType: "movie",
       tmdbId: m.id,
       value: v,
-      title: m.title || "Untitled",
+      title: displayTitle,
       posterPath: m.poster_path,
       releaseDate: m.release_date,
       voteAverage: m.vote_average,
@@ -187,7 +188,7 @@ export function MovieDetailView() {
       {/* Hero backdrop */}
       <div data-ui-surface="hero" className="absolute inset-0 -z-20 overflow-hidden">
         <div className="absolute inset-0">
-          <SafeImage src={img(m.backdrop_path, "w1280")} alt={m.title} fill variant="backdrop" priority className="absolute inset-0" />
+          <SafeImage src={img(m.backdrop_path, "w1280")} alt={displayTitle} fill variant="backdrop" priority className="absolute inset-0" />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,9,19,0.82)_0%,rgba(4,12,25,0.68)_45%,rgba(3,8,18,0.52)_100%)]" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/95 via-[#07101f]/35 to-[#07101f]/35" />
         </div>
@@ -198,7 +199,7 @@ export function MovieDetailView() {
         <div className="w-36 flex-shrink-0 mx-auto sm:w-52 md:w-full md:mx-0">
           <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
             <div className="relative aspect-[2/3]">
-              <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={m.title} fill variant="poster" />
+              <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={displayTitle} fill variant="poster" />
             </div>
           </Card>
         </div>
@@ -235,7 +236,7 @@ export function MovieDetailView() {
               {m.status && <Badge variant="secondary" className="border-0">{m.status}</Badge>}
             </div>
             <h1 className="view-page-title text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.04em] leading-[0.95]">
-              {m.title}
+              {displayTitle}
             </h1>
             {m.tagline && <p className="text-base sm:text-lg italic text-foreground/70 mt-5">{m.tagline}</p>}
           </div>
@@ -246,7 +247,7 @@ export function MovieDetailView() {
             const stateLoading = mediaState.isLoading && !stateItem;
             return (
           <div className="flex flex-wrap items-center gap-3 [&>*]:h-12 [&>*]:rounded-xl [&_button]:h-12 [&_button]:min-w-[150px] [&_button]:justify-center [&_button]:rounded-xl [&_button]:px-5 [&_button]:text-sm [&_button]:font-semibold">
-            <OfficialPosterPicker tmdbId={m.id} mediaType="movie" title={m.title || "Untitled"} posters={(m as any).images?.posters ?? []} />
+            <OfficialPosterPicker tmdbId={m.id} mediaType="movie" title={displayTitle} posters={(m as any).images?.posters ?? []} />
             <Button
               variant={isWatched ? "default" : "secondary"}
               onClick={onWatched}
@@ -443,7 +444,7 @@ export function MovieDetailView() {
       <RatingDialog
         open={isWatched && ratingOpen}
         onOpenChange={setRatingOpen}
-        title={m.title || ""}
+        title={displayTitle}
         poster={m.poster_path ? img(m.poster_path, "w185") : null}
         onRate={onRateSubmit}
         initialRating={myRating ?? null}

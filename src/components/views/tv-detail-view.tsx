@@ -2,7 +2,7 @@
 
 import { useNav } from "@/lib/store";
 import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useMediaState, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, type EpisodeCompletion } from "@/hooks/use-tmdb";
-import { img, imgOrPlaceholder } from "@/lib/tmdb";
+import { getTitle, img, imgOrPlaceholder } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -105,6 +105,7 @@ export function TvDetailView() {
 
   // After early returns, detail.data is guaranteed to be defined.
   const t = detail.data;
+  const displayTitle = getTitle(t);
   const inWatchlist = Boolean(mediaState.data?.status === "planned");
   // Following membership and episode progress are separate concepts. A show
   // can retain a Watching/Up To Date progress badge while isFollowing is false.
@@ -143,7 +144,7 @@ export function TvDetailView() {
         action: inWatchlist ? "remove" : "add",
         mediaType: "tv",
         tmdbId: t.id,
-        title: t.name || "",
+        title: displayTitle,
         posterPath: t.poster_path,
         backdropPath: t.backdrop_path,
         overview: t.overview,
@@ -167,7 +168,7 @@ export function TvDetailView() {
         const result = await followingToggle.mutateAsync({
           action: "add",
           tmdbId: t.id,
-          title: t.name || "",
+          title: displayTitle,
           posterPath: t.poster_path,
           releaseDate: t.first_air_date,
           overview: t.overview,
@@ -195,7 +196,7 @@ export function TvDetailView() {
       const result = await followingToggle.mutateAsync({
         action: "remove",
         tmdbId: t.id,
-        title: t.name || "",
+        title: displayTitle,
         keepProgress: true,
       });
       if (result.changed) toast.success("Unfollowed");
@@ -210,7 +211,7 @@ export function TvDetailView() {
       const result = await followingToggle.mutateAsync({
         action: "remove",
         tmdbId: t.id,
-        title: t.name || "",
+        title: displayTitle,
         keepProgress: true,
       });
       if (result.changed) toast.success("Unfollowed. Episode progress was kept.");
@@ -226,7 +227,7 @@ export function TvDetailView() {
       const result = await followingToggle.mutateAsync({
         action: "remove",
         tmdbId: t.id,
-        title: t.name || "",
+        title: displayTitle,
         keepProgress: false,
       });
       if (result.changed) {
@@ -250,7 +251,7 @@ export function TvDetailView() {
       mediaType: "tv",
       tmdbId: t.id,
       value: rating,
-      title: t.name || `TV ${t.id}`,
+      title: displayTitle,
       posterPath: t.poster_path,
       releaseDate: t.first_air_date,
       overview: t.overview,
@@ -289,7 +290,7 @@ export function TvDetailView() {
       {/* Hero */}
       <div data-ui-surface="hero" className="absolute inset-0 -z-20 overflow-hidden">
         <div className="absolute inset-0">
-          <SafeImage src={img(t.backdrop_path, "w1280")} alt={t.name} fill variant="backdrop" priority className="absolute inset-0" />
+          <SafeImage src={img(t.backdrop_path, "w1280")} alt={displayTitle} fill variant="backdrop" priority className="absolute inset-0" />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,9,19,0.84)_0%,rgba(4,12,25,0.7)_45%,rgba(3,8,18,0.54)_100%)]" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/95 via-[#07101f]/35 to-[#07101f]/35" />
         </div>
@@ -300,7 +301,7 @@ export function TvDetailView() {
         <div className="w-36 flex-shrink-0 mx-auto sm:w-52 md:w-full md:mx-0">
           <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
             <div className="relative aspect-[2/3]">
-              <SafeImage src={mediaState.data?.tags?.some((tag) => tag.startsWith("custom-poster:")) ? mediaState.data.poster : mediaState.data?.isArabic ? imgOrPlaceholder(t.poster_path, "w342") : mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={t.name} fill variant="poster" />
+              <SafeImage src={mediaState.data?.tags?.some((tag) => tag.startsWith("custom-poster:")) ? mediaState.data.poster : mediaState.data?.isArabic ? imgOrPlaceholder(t.poster_path, "w342") : mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={displayTitle} fill variant="poster" />
             </div>
           </Card>
         </div>
@@ -339,12 +340,12 @@ export function TvDetailView() {
               {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
               {t.status && <Badge variant="secondary" className="border-0">{t.status}</Badge>}
             </div>
-            <h1 className="view-page-title text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.04em] leading-[0.95]">{t.name}</h1>
+            <h1 className="view-page-title text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.04em] leading-[0.95]">{displayTitle}</h1>
             {t.tagline && <p className="text-base sm:text-lg italic text-foreground/70 mt-5">{t.tagline}</p>}
           </div>
           {/* Episode progress and following membership are intentionally separate. */}
           <div className="flex flex-wrap items-center gap-3 [&>*]:h-12 [&>*]:rounded-xl [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&_button]:h-12 [&_button]:min-w-[150px] [&_button]:justify-center [&_button]:rounded-xl [&_button]:px-5 [&_button]:text-sm [&_button]:font-semibold">
-            <OfficialPosterPicker tmdbId={t.id} mediaType="tv" title={t.name || "Untitled"} posters={(t as any).images?.posters ?? []} />
+            <OfficialPosterPicker tmdbId={t.id} mediaType="tv" title={displayTitle} posters={(t as any).images?.posters ?? []} />
             {effectiveLabel && effectiveLabel !== "planned" && (
               <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
                 {effectiveLabel === "finished" && <Trophy className="w-3.5 h-3.5" />}
@@ -482,7 +483,7 @@ export function TvDetailView() {
             defaultSeason={selectedSeason ?? defaultSeason}
             onSelectSeason={setSelectedSeason}
             isEnded={isEnded}
-            showTitle={t.name || `TV ${t.id}`}
+            showTitle={displayTitle}
             showPoster={t.poster_path}
             releasedEpisodeTimeline={progressEpisodesToWatchRefs(progress.allEpisodes)}
             watchPlanReady={!progress.isLoading && !progress.isError}
@@ -580,7 +581,7 @@ export function TvDetailView() {
       <RatingDialog
         open={ratingOpen}
         onOpenChange={setRatingOpen}
-        title={t.name || ""}
+        title={displayTitle}
         poster={t.poster_path ? img(t.poster_path, "w185") : null}
         onRate={onRateSubmit}
         initialRating={myRating ?? null}
@@ -596,7 +597,7 @@ export function TvDetailView() {
                 <BellOff className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <h3 className="font-bold text-lg">Unfollow "{t.name}"?</h3>
+                <h3 className="font-bold text-lg">Unfollow "{displayTitle}"?</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   This show has watched episode progress. Choose how to handle it:
                 </p>
