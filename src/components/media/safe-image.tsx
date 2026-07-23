@@ -91,10 +91,10 @@ export function SafeImage({
   fetchPriority,
   decoding,
 }: SafeImageProps) {
-  const [errored, setErrored] = useState(false);
+  const [failureStage, setFailureStage] = useState<0 | 1 | 2>(0);
 
   const normalizedSrc = src && src.length > 0 ? src : fallbackSrc;
-  const finalSrc = errored ? fallbackSrc : normalizedSrc;
+  const finalSrc = failureStage === 2 ? fallbackSrc : normalizedSrc;
   const finalSizes = sizes ?? DEFAULT_SIZES[variant];
 
   // YouTube's CDN does not support content-type negotiation — it would 404
@@ -108,7 +108,7 @@ export function SafeImage({
     className: cn(fill && "object-cover", className),
     priority,
     sizes: fill ? finalSizes : undefined,
-    onError: () => setErrored(true),
+    onError: () => setFailureStage((stage) => stage === 0 ? 1 : 2),
     draggable: !isLocalAsset,
     onDragStart: (event: React.DragEvent<HTMLImageElement>) => {
       if (isLocalAsset) return;
@@ -119,11 +119,11 @@ export function SafeImage({
     loading,
     ...(fetchPriority ? { fetchPriority } : {}),
     ...(decoding ? { decoding } : {}),
-    ...(isYoutube || isLocalAsset ? { unoptimized: true } : {}),
+    ...(isYoutube || isLocalAsset || failureStage === 1 ? { unoptimized: true } : {}),
   } as const;
 
   if (fill) {
-    return <Image {...sharedProps} alt={alt ?? ""} fill />;
+    return <Image key={`${finalSrc}:${failureStage}`} {...sharedProps} alt={alt ?? ""} fill />;
   }
 
   // Non-fill mode: use explicit dims or fall back to the variant's intrinsic
@@ -132,6 +132,7 @@ export function SafeImage({
   const intrinsicDims = INTRINSIC_DIMS[variant];
   return (
     <Image
+      key={`${finalSrc}:${failureStage}`}
       {...sharedProps}
       alt={alt ?? ""}
       width={width ?? intrinsicDims.w}

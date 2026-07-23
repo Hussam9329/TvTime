@@ -518,7 +518,7 @@ export async function GET(req: NextRequest) {
             const localized = await tmdb.localizedTvProfile(tmdbId, "ar");
             return {
               ...show,
-              title: localized.original_name || localized.name || show.title,
+              title: localized.name || localized.original_name || show.title,
               originalTitle: localized.original_name || show.originalTitle,
               overview: localized.overview || show.overview,
             };

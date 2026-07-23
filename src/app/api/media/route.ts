@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
                 }));
             return {
               ...item,
-              title: localized.originalTitle || localized.title || item.title,
+              title: localized.title || localized.originalTitle || item.title,
               originalTitle: localized.originalTitle || item.originalTitle,
               overview: localized.overview || item.overview,
             };
