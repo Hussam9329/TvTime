@@ -120,6 +120,7 @@ function toMediaItem(item: any): MediaItem {
     first_air_date: isTv ? item.releaseDate : undefined,
     vote_average: Number(item.voteAverage || item.rating || 0),
     vote_count: 0,
+    popularity: 0,
     overview: item.overview || "",
     genre_ids: [],
     original_language: item.originalLanguage || "",
