@@ -319,6 +319,10 @@ export const tmdb = {
     tmdbFetch<MovieDetail>(`/movie/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,release_dates,watch/providers" }, language),
   tvDetail: (id: number, language?: TmdbLanguage) =>
     tmdbFetch<TvDetail>(`/tv/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,external_ids,content_ratings,watch/providers" }, language),
+  localizedMovieProfile: (id: number, language: TmdbLanguage = "ar") =>
+    tmdbFetch<Pick<MovieDetail, "title" | "original_title" | "overview">>(`/movie/${id}`, {}, language),
+  localizedTvProfile: (id: number, language: TmdbLanguage = "ar") =>
+    tmdbFetch<Pick<TvDetail, "name" | "original_name" | "overview">>(`/tv/${id}`, {}, language),
   seasonDetail: (tvId: number, seasonNumber: number) =>
     tmdbFetch<SeasonDetail>(`/tv/${tvId}/season/${seasonNumber}`),
 

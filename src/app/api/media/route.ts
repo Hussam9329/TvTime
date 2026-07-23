@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMediaMany } from "@/lib/media-normalize";
+import { tmdb } from "@/lib/tmdb";
 
 const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
@@ -58,7 +59,31 @@ export async function GET(req: NextRequest) {
       db.media.count({ where }),
     ]);
 
-    return NextResponse.json({ items: normalizeMediaMany(items), total, limit, offset });
+    const displayItems = isArabic === "true"
+      ? await Promise.all(items.map(async (item) => {
+          const tmdbId = Number(item.tmdbId || 0);
+          if (!tmdbId) return item;
+          try {
+            const localized = item.type === "movie"
+              ? await tmdb.localizedMovieProfile(tmdbId, "ar")
+              : await tmdb.localizedTvProfile(tmdbId, "ar");
+            const originalTitle = "original_title" in localized
+              ? localized.original_title
+              : localized.original_name;
+            const localizedTitle = "title" in localized ? localized.title : localized.name;
+            return {
+              ...item,
+              title: originalTitle || localizedTitle || item.title,
+              originalTitle: originalTitle || item.originalTitle,
+              overview: localized.overview || item.overview,
+            };
+          } catch {
+            return item;
+          }
+        }))
+      : items;
+
+    return NextResponse.json({ items: normalizeMediaMany(displayItems), total, limit, offset });
   } catch (error) {
     console.error("[media:list]", error);
     return NextResponse.json({ error: "Failed to load media library" }, { status: 500 });

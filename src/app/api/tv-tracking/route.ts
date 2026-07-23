@@ -14,6 +14,7 @@ import {
 import { getTvStatusMetadata, batchReadDbMetadata, type TvStatusMetadata } from "@/lib/tv-status-server";
 import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
+import { tmdb } from "@/lib/tmdb";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -509,8 +510,26 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    const displayItems = world === "arabic"
+      ? await mapWithConcurrency(pageItems, 6, async (show: any) => {
+          const tmdbId = Number(show.tmdbId || 0);
+          if (!tmdbId) return show;
+          try {
+            const localized = await tmdb.localizedTvProfile(tmdbId, "ar");
+            return {
+              ...show,
+              title: localized.original_name || localized.name || show.title,
+              originalTitle: localized.original_name || show.originalTitle,
+              overview: localized.overview || show.overview,
+            };
+          } catch {
+            return show;
+          }
+        })
+      : pageItems;
+
     return NextResponse.json({
-      items: normalizeMediaMany(pageItems),
+      items: normalizeMediaMany(displayItems),
       total: matching.length,
       limit,
       offset,
