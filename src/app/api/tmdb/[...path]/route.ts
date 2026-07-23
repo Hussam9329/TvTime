@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveTmdbKeywordIds, tmdb, type TmdbLanguage } from "@/lib/tmdb";
+import { isArabicMediaItem } from "@/lib/arabic-media";
 
 const handler = async (
   req: NextRequest,
@@ -130,10 +131,14 @@ const handler = async (
       default:
         if (segments.match(/^movie\/\d+$/)) {
           const id = Number(segments.split("/")[1]);
-          data = await tmdb.movieDetail(id, (queryParams.language as TmdbLanguage) || undefined);
+          const language = (queryParams.language as TmdbLanguage) || undefined;
+          data = await tmdb.movieDetail(id, language);
+          if (!language && isArabicMediaItem(data as any)) data = await tmdb.movieDetail(id, "ar");
         } else if (segments.match(/^tv\/\d+$/)) {
           const id = Number(segments.split("/")[1]);
-          data = await tmdb.tvDetail(id, (queryParams.language as TmdbLanguage) || undefined);
+          const language = (queryParams.language as TmdbLanguage) || undefined;
+          data = await tmdb.tvDetail(id, language);
+          if (!language && isArabicMediaItem(data as any)) data = await tmdb.tvDetail(id, "ar");
         } else if (segments.match(/^tv\/\d+\/season\/\d+$/)) {
           const parts = segments.split("/");
           data = await tmdb.seasonDetail(Number(parts[1]), Number(parts[3]));
