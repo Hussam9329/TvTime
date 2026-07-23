@@ -1,48 +1,57 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useId } from "react";
+import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
   icon?: ReactNode;
   title: string;
   description?: string;
   action?: ReactNode;
-  /** Optional className for the container */
   className?: string;
 }
 
 /**
- * EmptyState — friendly placeholder for empty collections, no-search-results,
- * no-data-yet states. Replaces the previous pattern of rendering an empty
- * grid that made the page look broken.
- *
- * Usage:
- *   <EmptyState
- *     icon={<Film className="w-12 h-12" />}
- *     title="Watchlist is empty"
- *     description="Start adding movies from the Discover page."
- *     action={<Button onClick={() => setView("discover")}>Explore movies</Button>}
- *   />
+ * Friendly placeholder for empty collections, no-search-results, and
+ * no-data-yet states. The labelled status region is announced once when the
+ * state replaces loaded content.
  */
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
+  const id = useId();
+  const titleId = `${id}-title`;
+  const descriptionId = description ? `${id}-description` : undefined;
+
   return (
     <div
       role="status"
       aria-live="polite"
-      className={`feedback-state feedback-state--empty flex flex-col items-center justify-center px-4 py-14 text-center ${className ?? ""}`}
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
+      className={cn(
+        "feedback-state feedback-state--empty flex flex-col items-center justify-center px-4 py-14 text-center",
+        className,
+      )}
     >
       {icon && (
-        <div className="feedback-state__icon mb-4 flex size-20 items-center justify-center rounded-2xl bg-muted/45 text-muted-foreground">
+        <div
+          aria-hidden="true"
+          className="feedback-state__icon mb-4 flex size-20 items-center justify-center rounded-2xl bg-muted/45 text-muted-foreground"
+        >
           {icon}
         </div>
       )}
-      <h3 className="feedback-state__title mb-1.5 text-lg font-bold">{title}</h3>
+      <h3 id={titleId} className="feedback-state__title mb-1.5 text-lg font-bold">
+        {title}
+      </h3>
       {description && (
-        <p className="feedback-state__description mb-5 max-w-md text-sm leading-relaxed text-muted-foreground">
+        <p
+          id={descriptionId}
+          className="feedback-state__description mb-5 max-w-md text-sm leading-relaxed text-muted-foreground"
+        >
           {description}
         </p>
       )}
-      {action}
+      {action && <div className="mt-1 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   );
 }

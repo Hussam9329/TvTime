@@ -155,6 +155,22 @@ npm run typecheck
 npm run verify:ci
 ```
 
+### UI foundation and accessibility (Patch 11)
+
+Patch 11 provides the first shared UI quality pass across the application:
+theme-aware surfaces, consistent shared controls, SPA route announcements and
+focus restoration, scoped Arabic RTL metadata, resilient loading/empty/error
+states, mobile touch targets, reduced-motion support and safer recovery copy.
+It does not change the database schema or API contracts.
+
+Run the focused gate with:
+
+```bash
+npm run verify:patch-11
+```
+
+See `PATCH_11.md` for scope, acceptance criteria and rollback details.
+
 ### Database Verification (Read-Only)
 
 ```bash

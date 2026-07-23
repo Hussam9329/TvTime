@@ -184,16 +184,19 @@ export function HomeView() {
 function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactNode; label: string; value: number | string; suffix?: string; onClick?: () => void }) {
   return (
     <button
+      type="button"
+      data-ui-action="surface"
       onClick={onClick}
-      className="glass rounded-xl p-3 sm:p-4 text-left hover:border-primary/40 transition-colors group"
+      className="glass group rounded-xl p-3 text-left transition-[border-color,box-shadow,transform] hover:border-primary/40 sm:p-4"
+      aria-label={`${label}: ${value}${suffix ?? ""}`}
     >
-      <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-        <span className="text-primary">{icon}</span>
+      <span className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="text-primary" aria-hidden="true">{icon}</span>
         {label}
-      </div>
-      <div className="text-2xl sm:text-3xl font-extrabold text-gradient inline-block">
-        {value}{suffix && <span className="text-sm text-muted-foreground font-normal">{suffix}</span>}
-      </div>
+      </span>
+      <span className="inline-block text-2xl font-extrabold text-gradient sm:text-3xl">
+        {value}{suffix && <span className="text-sm font-normal text-muted-foreground">{suffix}</span>}
+      </span>
     </button>
   );
 }
@@ -209,9 +212,10 @@ function Hero({ item, greeting, userName }: { item: any; greeting: string; userN
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="relative overflow-hidden rounded-3xl border border-white/15 mb-2 shadow-[0_18px_60px_rgba(0,0,0,0.3)]"
+      className="relative mb-2 overflow-hidden rounded-3xl border border-border/70 shadow-[0_18px_60px_rgba(0,0,0,0.3)]"
+      aria-label={`Featured ${mediaType === "movie" ? "movie" : "TV show"}: ${getTitle(item)}`}
     >
-      <div className="relative aspect-[16/10] sm:aspect-[21/9] w-full">
+      <div className="relative aspect-[16/10] w-full sm:aspect-[21/9]">
         <SafeImage
           src={img(item.backdrop_path, "w1280")}
           alt={getTitle(item)}
@@ -220,44 +224,44 @@ function Hero({ item, greeting, userName }: { item: any; greeting: string; userN
           priority
           className="absolute inset-0"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/25" aria-hidden="true" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/35 to-transparent" aria-hidden="true" />
 
         <div className="absolute left-5 top-6 z-10 sm:left-10 sm:top-9 lg:left-12">
-          <h1 className="text-2xl font-black tracking-tight text-white drop-shadow-lg sm:text-3xl lg:text-4xl">
-            {greeting}, <span className="bg-gradient-to-r from-pink-300 to-pink-500 bg-clip-text text-transparent">{userName}</span> 👋
-          </h1>
-          <span className="mt-4 block h-1 w-14 rounded-full bg-gradient-to-r from-primary to-transparent" />
+          <p className="text-2xl font-black tracking-tight text-white drop-shadow-lg sm:text-3xl lg:text-4xl">
+            {greeting}, <span className="text-white">{userName}</span> <span aria-hidden="true">👋</span>
+          </p>
+          <span className="mt-4 block h-1 w-14 rounded-full bg-gradient-to-r from-primary to-transparent" aria-hidden="true" />
         </div>
 
         <div className="absolute inset-0 flex items-end p-4 pt-28 sm:p-8 sm:pt-32 lg:p-12 lg:pt-36">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-3">
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/20 backdrop-blur text-primary text-xs font-bold uppercase tracking-wide">
-                <Flame className="w-3 h-3" /> Featured
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/85 px-2 py-1 text-xs font-bold uppercase tracking-wide text-primary-foreground backdrop-blur">
+                <Flame className="h-3 w-3" aria-hidden="true" /> Featured
               </span>
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs uppercase tracking-wider text-white/75">
                 {mediaType === "movie" ? "Movie" : "TV Show"}
               </span>
-              {getYear(item) && <span className="text-xs text-muted-foreground">{getYear(item)}</span>}
+              {getYear(item) && <span className="text-xs text-white/75">{getYear(item)}</span>}
               {item.vote_average > 0 && (
                 <span className="flex items-center gap-1 text-xs text-amber-400">
-                  <Star className="w-3 h-3 fill-amber-400" /> {item.vote_average.toFixed(1)}
+                  <Star className="h-3 w-3 fill-amber-400" aria-hidden="true" /> {item.vote_average.toFixed(1)}
                 </span>
               )}
             </div>
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground drop-shadow-lg mb-2 sm:mb-4">
+            <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-white drop-shadow-lg sm:mb-4 sm:text-4xl lg:text-5xl">
               {getTitle(item)}
             </h1>
-            <p className="text-sm sm:text-base text-foreground/80 line-clamp-2 sm:line-clamp-3 mb-4 max-w-xl">
+            <p className="mb-4 max-w-xl line-clamp-2 text-sm text-white/85 sm:line-clamp-3 sm:text-base">
               {item.overview}
             </p>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="h-9" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
-                <Play className="w-4 h-4 mr-1.5 fill-current" /> View Details
+              <Button size="sm" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
+                <Play className="mr-1.5 h-4 w-4 fill-current" aria-hidden="true" /> View Details
               </Button>
-              <Button size="sm" variant="secondary" className="h-9" onClick={() => setView("discover")}>
-                <Clock className="w-4 h-4 mr-1.5" /> Browse More
+              <Button size="sm" variant="secondary" onClick={() => setView("discover")}>
+                <Clock className="mr-1.5 h-4 w-4" aria-hidden="true" /> Browse More
               </Button>
             </div>
           </div>
@@ -285,16 +289,17 @@ function RecentlyWatched() {
 
   if (recently.isLoading) {
     return (
-      <section className="mb-8">
-        <div className="flex items-center gap-2 mb-3 px-1">
-          <Clock className="w-5 h-5 text-primary" />
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight">Recently Watched</h2>
+      <section className="mb-8" role="status" aria-busy="true" aria-label="Loading recently watched titles">
+        <span className="sr-only">Loading recently watched titles…</span>
+        <div className="mb-3 flex items-center gap-2 px-1" aria-hidden="true">
+          <Clock className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-bold tracking-tight sm:text-xl">Recently Watched</h2>
         </div>
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+        <div className="no-scrollbar flex gap-3 overflow-x-auto pb-2" aria-hidden="true">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="flex-shrink-0 w-[110px] sm:w-[130px]">
-              <div className="aspect-[2/3] shimmer rounded-lg" />
-              <div className="h-3 shimmer rounded mt-2" />
+            <div key={index} className="w-[110px] flex-shrink-0 sm:w-[130px]">
+              <div className="aspect-[2/3] rounded-lg shimmer" />
+              <div className="mt-2 h-3 rounded shimmer" />
             </div>
           ))}
         </div>
@@ -365,7 +370,7 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
         <a
           href={detailHref}
           aria-label={`Open ${title}`}
-          className="absolute inset-0 z-10 rounded-lg"
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           onClick={(event) => {
             if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
             event.preventDefault();
@@ -385,19 +390,20 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           className="transition-opacity duration-200 group-hover:opacity-95"
         />
         <div className="absolute top-1.5 right-1.5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center gap-1 px-1.5 h-5 text-white pointer-events-none">
-          <Check className="w-3 h-3" />
+          <Check className="h-3 w-3" aria-hidden="true" />
           <span className="text-[9px] font-bold uppercase">{isMovie ? "Movie" : "TV"}</span>
         </div>
         {isMovie && (
           <button
             type="button"
+            data-ui-action="icon"
             onClick={handleUnwatch}
             disabled={unwatchToggle.isPending}
             aria-label="Remove from watched"
             title="Remove from watched"
-            className="absolute z-20 top-1.5 left-1.5 w-6 h-6 rounded-full bg-black/70 backdrop-blur flex items-center justify-center text-white/90 hover:bg-rose-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+            className="absolute left-1.5 top-1.5 z-20 flex size-8 items-center justify-center rounded-full bg-black/75 text-white/90 opacity-0 backdrop-blur transition-colors hover:bg-destructive hover:text-destructive-foreground focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white group-hover:opacity-100 disabled:opacity-50"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -418,13 +424,15 @@ function WatchNextCTA() {
 
   return (
     <motion.button
+      type="button"
+      data-ui-action="primary"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       onClick={() => setView("watch-next")}
-      className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-[box-shadow,background-color,transform] duration-200 active:translate-y-px"
+      className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-[box-shadow,background-color,transform] duration-200 active:translate-y-px"
     >
       <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
-        <Play className="w-4 h-4 fill-current" />
+        <Play className="h-4 w-4 fill-current" aria-hidden="true" />
       </div>
       <div className="text-left">
         <p className="text-[10px] uppercase tracking-wide font-bold opacity-80">Watch Next</p>

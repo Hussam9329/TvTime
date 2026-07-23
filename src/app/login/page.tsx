@@ -14,7 +14,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="tvtime-login-loading min-h-screen flex items-center justify-center bg-background">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <Loader2 aria-hidden="true" className="w-6 h-6 animate-spin text-muted-foreground" /><span className="sr-only">Loading sign-in…</span>
         </div>
       }
     >
@@ -81,16 +81,16 @@ function LoginPageInner() {
         // For rate-limited responses, show the message but keep the form
         // disabled briefly so the user doesn't immediately retry.
         if (data?.code === "RATE_LIMITED") {
-          setError(data?.error || "تم تجاوز عدد المحاولات. حاول لاحقاً.");
+          setError(data?.error || "Too many attempts. Try again later.");
         } else if (data?.code === "INVALID_CREDENTIALS") {
           const remaining = data?.remainingAttempts;
           setError(
             typeof remaining === "number" && remaining > 0
-              ? `بيانات الدخول غير صحيحة. ${remaining} محاولات متبقية.`
-              : "بيانات الدخول غير صحيحة."
+              ? `Incorrect credentials. ${remaining} attempts remaining.`
+              : "Incorrect credentials."
           );
         } else {
-          setError(data?.error || "فشل تسجيل الدخول.");
+          setError(data?.error || "Sign-in failed.");
         }
         return;
       }
@@ -106,7 +106,7 @@ function LoginPageInner() {
   if (checkingAuth) {
     return (
       <div className="tvtime-login-loading feedback-state--loading min-h-screen flex items-center justify-center bg-background" role="status" aria-busy="true" aria-label="Checking authentication">
-        <Loader2 className="feedback-state__spinner w-6 h-6 animate-spin text-muted-foreground" />
+        <Loader2 aria-hidden="true" className="feedback-state__spinner w-6 h-6 animate-spin text-muted-foreground" /><span className="sr-only">Checking authentication…</span>
       </div>
     );
   }
@@ -119,7 +119,7 @@ function LoginPageInner() {
             <div className="mx-auto w-12 h-12 rounded-xl bg-rose-500/15 flex items-center justify-center">
               <ShieldAlert className="w-6 h-6 text-rose-400" />
             </div>
-            <CardTitle>Authentication configuration required</CardTitle>
+            <CardTitle role="heading" aria-level={1}>Authentication configuration required</CardTitle>
             <CardDescription>
               This deployment is locked because its login secrets are missing or too weak.
             </CardDescription>
@@ -150,14 +150,14 @@ function LoginPageInner() {
             <Film className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-extrabold">{APP_NAME}</CardTitle>
+            <CardTitle role="heading" aria-level={1} className="text-2xl font-extrabold">{APP_NAME}</CardTitle>
             <CardDescription className="mt-1">
               Sign in to access your cinema library
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="tvtime-login-form space-y-4">
+          <form onSubmit={handleSubmit} className="tvtime-login-form space-y-4" aria-busy={loading}>
             {requiresUsername && (
               <div className="tvtime-login-field space-y-2">
                 <label
@@ -177,6 +177,8 @@ function LoginPageInner() {
                     className="pl-9 h-10"
                     autoComplete="username"
                     disabled={loading}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? "login-error" : undefined}
                     required
                   />
                 </div>
@@ -202,19 +204,21 @@ function LoginPageInner() {
                   autoFocus={!requiresUsername}
                   autoComplete="current-password"
                   disabled={loading}
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "login-error" : undefined}
                   required
                 />
               </div>
             </div>
 
             {error && (
-              <p className="tvtime-login-error text-sm text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-md px-3 py-2" role="alert">
+              <p id="login-error" className="tvtime-login-error rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
                 {error}
               </p>
             )}
 
-            <Button type="submit" className="tvtime-login-submit w-full h-10" disabled={loading || !password || (requiresUsername && !username)}>
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            <Button type="submit" className="tvtime-login-submit w-full" aria-busy={loading} disabled={loading || !password || (requiresUsername && !username)}>
+              {loading ? <Loader2 aria-hidden="true" className="w-4 h-4 mr-2 animate-spin" /> : null}
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>

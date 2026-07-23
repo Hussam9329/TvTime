@@ -15,6 +15,7 @@ changes land before functional or visual work.
 | 08 | Lists and Discover contract/semantics fixes | Implemented in this delivery |
 | 09 | Data lifecycle, preferences, navigation, RTL, and accessibility | Implemented in this delivery |
 | 10 | Performance budgets, CI consolidation, documentation, and dead-code cleanup | Implemented in this delivery |
+| 11 | Theme-aware UI foundation, shared component consistency, route accessibility, RTL metadata, and resilient feedback states | Implemented in this delivery |
 
 Patches 01 and 02 clean the current working tree, but an operator still must
 rotate the exposed credential and purge sensitive objects from the remote Git

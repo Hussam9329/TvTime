@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { APP_NAME } from "@/lib/brand";
+import { getViewLabel } from "@/lib/view-metadata";
 
 const ProfileDialog = dynamic(
   () => import("@/components/profile/profile-dialog").then((module) => module.ProfileDialog),
@@ -51,26 +52,20 @@ const NotificationCenter = dynamic(
   { ssr: false },
 );
 
-type NavItem = { view: ViewName; label: string; icon: React.ElementType };
+type NavItem = { view: ViewName; icon: React.ElementType };
 
 const coreNavItems: NavItem[] = [
-  { view: "home", label: "Home", icon: Home },
-  { view: "watch-next", label: "Watch Next", icon: Play },
-  { view: "movies", label: "Movies", icon: Film },
-  { view: "tv-shows", label: "TV Shows", icon: Clapperboard },
-  { view: "anime", label: "Anime", icon: Sparkles },
-  { view: "stats", label: "Stats", icon: BarChart3 },
+  { view: "home", icon: Home },
+  { view: "watch-next", icon: Play },
+  { view: "movies", icon: Film },
+  { view: "tv-shows", icon: Clapperboard },
+  { view: "anime", icon: Sparkles },
+  { view: "stats", icon: BarChart3 },
 ];
 
 const arabicNavItems: NavItem[] = [
-  { view: "arabic-movies", label: "Arabic Movies", icon: Film },
-  { view: "arabic-tv", label: "Arabic TV", icon: Clapperboard },
-];
-
-const allNavItems: NavItem[] = [
-  ...coreNavItems,
-  { view: "search", label: "Search", icon: Search },
-  ...arabicNavItems,
+  { view: "arabic-movies", icon: Film },
+  { view: "arabic-tv", icon: Clapperboard },
 ];
 
 const NOTIFICATION_QUERY_KEY = ["notifications", "unread-count", getClientUserId()] as const;
@@ -167,12 +162,12 @@ export function Header() {
     queryClient.setQueryData(NOTIFICATION_QUERY_KEY, { unreadCount: Math.max(0, unreadCount) });
   }, [queryClient]);
 
-  const currentLabel = allNavItems.find((item) => item.view === view)?.label
-    ?? (view === "movie-detail" ? "Movie Details" : view === "tv-detail" ? "TV Details" : APP_NAME);
+  const currentLabel = getViewLabel(view);
   const isDetailView = view === "movie-detail" || view === "tv-detail" || view === "person-detail";
 
   const navButton = (item: NavItem, compact = false) => {
     const active = item.view === view;
+    const label = getViewLabel(item.view);
     return (
       <button
         data-ui-action="nav"
@@ -186,23 +181,32 @@ export function Header() {
           "group relative inline-flex items-center rounded-xl font-semibold transition-[color,background-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
           compact ? "w-full gap-3 px-3 py-2.5 text-sm" : "tvtime-primary-nav-item gap-2 px-3 py-2 text-[13px]",
           active
-            ? "bg-gradient-to-r from-rose-600 to-pink-500 text-white shadow-[0_0_24px_rgba(244,63,94,0.38)]"
+            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
             : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
         )}
       >
         <item.icon className={cn("shrink-0 transition-colors", compact ? "h-4.5 w-4.5" : "h-4 w-4")} />
-        <span>{item.label}</span>
+        <span>{label}</span>
         {!compact && active && <span className="absolute -bottom-[9px] left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-primary" />}
       </button>
     );
   };
 
   return (
-    <header className="tvtime-app-header sticky top-0 z-40 border-b border-white/5 bg-background/90 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/80" data-mobile-search-open={mobileSearchOpen ? "true" : "false"}>
+    <header
+      className="tvtime-app-header sticky top-0 z-40 border-b border-border/70 bg-background/90 shadow-[0_8px_32px_rgba(0,0,0,0.16)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/80"
+      data-mobile-search-open={mobileSearchOpen ? "true" : "false"}
+    >
       <div className="mx-auto flex h-16 max-w-[1920px] items-center gap-2 px-3 sm:h-20 sm:px-5 lg:px-8">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl xl:hidden" aria-label="Open navigation">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-xl xl:hidden"
+              aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+              aria-expanded={mobileOpen}
+            >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </SheetTrigger>
@@ -258,7 +262,7 @@ export function Header() {
               onFocus={() => prefetchViewModule("search")}
               placeholder="Search titles, people..."
               aria-label="Search movies, shows, anime and people"
-              className="h-11 rounded-2xl border-white/5 bg-white/[0.045] pl-10 pr-10 shadow-inner shadow-black/10 transition-[background-color,border-color,box-shadow] duration-200 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/35"
+              className="h-11 rounded-2xl border-border/70 bg-muted/45 pl-10 pr-10 shadow-inner shadow-black/5 transition-[background-color,border-color,box-shadow] duration-200 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/35"
             />
             {searchVal ? (
               <button data-ui-action="icon" type="button" onClick={() => setSearchVal("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Clear search">
@@ -276,23 +280,34 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={() => {
-            setMobileSearchOpen((open) => !open);
-            prefetchViewModule("search");
-            window.requestAnimationFrame(() => mobileSearchInputRef.current?.focus());
+            const nextOpen = !mobileSearchOpen;
+            setMobileSearchOpen(nextOpen);
+            if (nextOpen) {
+              prefetchViewModule("search");
+              window.requestAnimationFrame(() => mobileSearchInputRef.current?.focus());
+            }
           }}
           className="h-10 w-10 rounded-xl md:hidden"
-          aria-label="Open search"
+          aria-label={mobileSearchOpen ? "Close search" : "Open search"}
+          aria-expanded={mobileSearchOpen}
+          aria-controls="tvtime-mobile-search"
         >
-          <Search className="h-5 w-5" />
+          {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
         </Button>
 
         <TooltipProvider delayDuration={250}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => setNotifOpen(true)} aria-label="Notifications" className="relative h-10 w-10 rounded-xl">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setNotifOpen(true)}
+                aria-label={notifUnread > 0 ? `Notifications, ${notifUnread} unread` : "Notifications"}
+                className="relative h-10 w-10 rounded-xl"
+              >
                 <Bell className="h-5 w-5" />
                 {notifUnread > 0 && (
-                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black leading-none text-white ring-2 ring-background">
+                  <span aria-hidden="true" className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-black leading-none text-primary-foreground ring-2 ring-background">
                     {notifUnread > 9 ? "9+" : notifUnread}
                   </span>
                 )}
@@ -303,7 +318,13 @@ export function Header() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} aria-label="Toggle theme" className="hidden h-10 w-10 rounded-xl sm:inline-flex">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                className="hidden h-10 w-10 rounded-xl sm:inline-flex"
+              >
                 {mounted && resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
             </TooltipTrigger>
@@ -320,9 +341,9 @@ export function Header() {
           </Tooltip>
         </TooltipProvider>
 
-        <button data-ui-action="profile" type="button" onClick={() => setProfileOpen(true)} className="flex shrink-0 items-center gap-2 rounded-xl p-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70" aria-label="Open profile">
+        <button data-ui-action="profile" type="button" onClick={() => setProfileOpen(true)} className="flex shrink-0 items-center gap-2 rounded-xl p-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70" aria-label={`Open ${userName} profile`}>
           <Avatar className="h-9 w-9 border border-primary/40 shadow-sm shadow-primary/15">
-            <AvatarFallback className="bg-gradient-to-br from-primary/25 to-fuchsia-500/15 text-xs font-black text-primary">
+            <AvatarFallback className="bg-gradient-to-br from-primary/25 to-secondary text-xs font-black text-primary">
               {userName.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -334,7 +355,7 @@ export function Header() {
       </div>
 
       {mobileSearchOpen && (
-        <form onSubmit={onSubmitSearch} className="border-t border-border/50 px-3 py-2 md:hidden">
+        <form id="tvtime-mobile-search" onSubmit={onSubmitSearch} className="border-t border-border/50 px-3 py-2 md:hidden">
           <div className="relative mx-auto max-w-xl">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
             <Input
@@ -344,7 +365,6 @@ export function Header() {
               placeholder="Search movies, shows, anime and people..."
               aria-label="Search movies, shows, anime and people"
               className="h-11 rounded-xl bg-muted/50 pl-9 pr-10"
-              autoFocus
             />
             <button data-ui-action="icon" type="button" onClick={() => { setSearchVal(""); setMobileSearchOpen(false); }} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent" aria-label="Close search">
               <X className="h-4 w-4" />
@@ -367,7 +387,7 @@ export function Header() {
 
 function BrandMark() {
   return (
-    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary via-rose-500 to-fuchsia-600 text-white shadow-[0_0_22px_rgba(244,63,94,0.3)] transition-[box-shadow,filter] duration-200 group-hover:brightness-105 sm:h-11 sm:w-11">
+    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary via-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/25 transition-[box-shadow,filter] duration-200 group-hover:brightness-105 sm:h-11 sm:w-11">
       <Play className="h-4 w-4 translate-x-px fill-current" />
       <span className="absolute inset-x-1.5 top-1 h-px bg-white/45" />
     </span>

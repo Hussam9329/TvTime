@@ -2,6 +2,7 @@
 
 import { Component, ErrorInfo, ReactNode } from "react";
 import * as Sentry from "@sentry/nextjs";
+import { AlertTriangle, RefreshCcw, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -14,19 +15,8 @@ interface State {
 }
 
 /**
- * ErrorBoundary — catches runtime errors in its children and renders a
- * recovery UI instead of crashing the whole page.
- *
- * Usage:
- *   <ErrorBoundary>
- *     <RiskyComponent />
- *   </ErrorBoundary>
- *
- * The default fallback shows a friendly message with "Try again" (resets
- * the boundary, re-mounting children) and "Reload page" (full refresh).
- *
- * For custom UI, pass a fallback render function:
- *   <ErrorBoundary fallback={(err, reset) => <MyErrorUI error={err} onRetry={reset} />}>
+ * Catches runtime errors in a view and provides a recovery path without
+ * crashing the entire application shell.
  */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
@@ -36,10 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log to console for dev debugging.
     console.error("[ErrorBoundary]", error, errorInfo);
-    // Send to Sentry in production. If Sentry is not configured (no DSN),
-    // this is a no-op — the SDK's captureException checks enabled flag.
     Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
   }
 
@@ -57,37 +44,60 @@ export class ErrorBoundary extends Component<Props, State> {
 }
 
 function DefaultErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }) {
-  const isNetworkError =
-    error.message.includes("fetch") ||
-    error.message.includes("network") ||
-    error.message.includes("Failed to fetch") ||
-    error.message.includes("TMDB");
+  const normalizedMessage = error.message.toLowerCase();
+  const isNetworkError = ["fetch", "network", "tmdb", "offline"].some((term) =>
+    normalizedMessage.includes(term),
+  );
+  const showTechnicalDetails = process.env.NODE_ENV !== "production" && Boolean(error.message);
 
   return (
-    <div className="feedback-state feedback-state--error flex flex-col items-center justify-center space-y-4 px-4 py-14 text-center">
-      <div className="feedback-state__icon flex size-16 items-center justify-center rounded-2xl bg-rose-500/10">
-        <span className="text-rose-500 text-3xl" aria-hidden>
-          ⚠
-        </span>
+    <section
+      className="feedback-state feedback-state--error flex flex-col items-center justify-center gap-5 px-4 py-14 text-center"
+      role="alert"
+      aria-live="assertive"
+      aria-labelledby="tvtime-view-error-title"
+      aria-describedby="tvtime-view-error-description"
+    >
+      <div
+        aria-hidden="true"
+        className="feedback-state__icon flex size-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"
+      >
+        <AlertTriangle className="size-7" />
       </div>
+
       <div className="space-y-1.5">
-        <h3 className="feedback-state__title text-lg font-bold">
-          {isNetworkError ? "تعذّر تحميل البيانات" : "حدث خطأ غير متوقع"}
-        </h3>
-        <p className="feedback-state__description max-w-md text-sm text-muted-foreground">
+        <h2 id="tvtime-view-error-title" className="feedback-state__title text-xl font-bold">
+          {isNetworkError ? "We couldn’t load this page" : "Something went wrong"}
+        </h2>
+        <p
+          id="tvtime-view-error-description"
+          className="feedback-state__description max-w-md text-sm leading-relaxed text-muted-foreground"
+        >
           {isNetworkError
-            ? "تحقق من اتصال الإنترنت وحاول مرة أخرى. إذا استمرت المشكلة، قد يكون الخادم مؤقتاً غير متاح."
-            : error.message || "يرجى المحاولة مرة أخرى أو تحديث الصفحة."}
+            ? "Check your connection, then try again. The service may also be temporarily unavailable."
+            : "Your data has not been changed. Try the action again or reload the application."}
         </p>
       </div>
-      <div className="flex gap-2 flex-wrap justify-center">
-        <Button onClick={onRetry} variant="default" size="sm">
-          إعادة المحاولة
+
+      <div className="flex flex-wrap justify-center gap-2">
+        <Button onClick={onRetry}>
+          <RotateCcw className="size-4" aria-hidden="true" />
+          Try again
         </Button>
-        <Button onClick={() => window.location.reload()} variant="outline" size="sm">
-          تحديث الصفحة
+        <Button onClick={() => window.location.reload()} variant="outline">
+          <RefreshCcw className="size-4" aria-hidden="true" />
+          Reload page
         </Button>
       </div>
-    </div>
+
+      {showTechnicalDetails && (
+        <details className="max-w-xl rounded-lg border border-border/70 bg-muted/35 px-3 py-2 text-left text-xs text-muted-foreground">
+          <summary className="cursor-pointer font-semibold text-foreground">
+            Technical details
+          </summary>
+          <code className="mt-2 block whitespace-pre-wrap break-words">{error.message}</code>
+        </details>
+      )}
+    </section>
   );
 }

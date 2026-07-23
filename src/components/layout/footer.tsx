@@ -1,6 +1,6 @@
 "use client";
 
-import { Film, Heart, Clapperboard, Sparkles } from "lucide-react";
+import { Clapperboard, Film, Heart, Sparkles } from "lucide-react";
 import { useStats } from "@/hooks/use-tmdb";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 
@@ -8,51 +8,75 @@ export function Footer() {
   const stats = useStats();
 
   return (
-    <footer className="mt-auto border-t border-border/60 glass relative overflow-hidden">
-      {/* Decorative gradient glow */}
-      <div className="absolute -top-12 left-1/4 w-48 h-24 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-      <div className="absolute -top-12 right-1/4 w-48 h-24 rounded-full bg-purple-500/5 blur-3xl pointer-events-none" />
+    <footer
+      className="tvtime-app-footer relative mt-auto overflow-hidden border-t border-border/60 glass"
+      aria-label="Application footer"
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-12 left-1/4 h-24 w-48 rounded-full bg-primary/10 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-12 right-1/4 h-24 w-48 rounded-full bg-secondary/45 blur-3xl"
+      />
 
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 relative">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
+      <div className="relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
+        <div className="flex flex-col items-center justify-between gap-4 text-sm sm:flex-row">
           <div className="flex items-center gap-2.5">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/40 blur-md rounded-md" />
-              <div className="relative w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-                <Clapperboard className="w-4 h-4 text-primary-foreground" />
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-extrabold text-gradient text-base">{APP_NAME}</span>
-              <span className="text-muted-foreground/40 hidden sm:inline">·</span>
-              <span className="text-muted-foreground hidden sm:inline">{APP_TAGLINE}</span>
-            </div>
+            <span className="relative" aria-hidden="true">
+              <span className="absolute inset-0 rounded-md bg-primary/35 blur-md" />
+              <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-primary">
+                <Clapperboard className="h-4 w-4 text-primary-foreground" />
+              </span>
+            </span>
+            <span className="flex items-baseline gap-2">
+              <span className="text-gradient text-base font-extrabold">{APP_NAME}</span>
+              <span className="hidden text-muted-foreground/40 sm:inline" aria-hidden="true">
+                ·
+              </span>
+              <span className="hidden text-muted-foreground sm:inline">{APP_TAGLINE}</span>
+            </span>
           </div>
 
-          {/* Live mini stats */}
           {stats.data && (
-            <div className="flex items-center gap-4 text-xs">
-              <span className="flex items-center gap-1.5">
-                <Film className="w-3.5 h-3.5 text-primary" />
-                <span className="font-bold text-foreground">{stats.data.counts.watchedMovies}</span>
-                <span className="text-muted-foreground hidden sm:inline">movies</span>
-              </span>
-              <span className="text-muted-foreground/30">|</span>
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
-                <span className="font-bold text-foreground">{stats.data.counts.watchedEpisodes}</span>
-                <span className="text-muted-foreground hidden sm:inline">episodes</span>
-              </span>
-            </div>
+            <dl
+              className="flex items-center gap-4 text-xs"
+              aria-label="Viewing summary"
+            >
+              <div className="flex items-center gap-1.5">
+                <Film className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                <dt className="sr-only">Watched movies</dt>
+                <dd className="font-bold text-foreground tabular-nums">
+                  {stats.data.counts.watchedMovies}
+                </dd>
+                <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
+                  movies
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 border-l border-border/60 pl-4">
+                <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                <dt className="sr-only">Watched episodes</dt>
+                <dd className="font-bold text-foreground tabular-nums">
+                  {stats.data.counts.watchedEpisodes}
+                </dd>
+                <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
+                  episodes
+                </span>
+              </div>
+            </dl>
           )}
 
-          <div className="flex items-center gap-3 text-xs">
-            <span className="text-muted-foreground">
-              Powered by <span className="font-semibold text-foreground">TMDB</span>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span>
+              Data by <span className="font-semibold text-foreground">TMDB</span>
             </span>
-            <span className="text-muted-foreground/30 hidden sm:inline">|</span>
-            <span className="flex items-center gap-1 text-muted-foreground">
-              Built with <Heart className="w-3 h-3 fill-primary text-primary" />
+            <span className="hidden text-muted-foreground/30 sm:inline" aria-hidden="true">
+              |
+            </span>
+            <span className="flex items-center gap-1">
+              Built with <Heart className="h-3 w-3 fill-primary text-primary" aria-hidden="true" />
+              <span className="sr-only">care</span>
             </span>
           </div>
         </div>

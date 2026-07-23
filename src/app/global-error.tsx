@@ -1,16 +1,9 @@
 "use client";
 
 /**
- * global-error.tsx — Next.js App Router's top-level error boundary.
- *
- * This catches errors that escape the regular error.tsx boundary —
- * specifically errors in the root layout itself. It MUST render its own
- * <html> and <body> tags because the root layout is the thing that broke.
- *
- * Kept intentionally minimal: no Tailwind classes (in case the CSS chunk
- * failed to load), no external components (in case they're the source of
- * the error). Just enough to tell the user something went wrong and give
- * them a way to recover.
+ * Top-level recovery UI. It intentionally avoids application components and
+ * external styles because the root layout or CSS chunk may be the failing
+ * surface.
  */
 export default function GlobalError({
   error,
@@ -19,56 +12,79 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const buttonBase = {
+    minHeight: "44px",
+    padding: "0.65rem 1rem",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontSize: "0.95rem",
+    fontWeight: 650,
+  } as const;
+
   return (
-    <html lang="en">
+    <html lang="en" dir="ltr">
       <body
         style={{
           margin: 0,
-          padding: 0,
+          padding: "1rem",
           fontFamily:
-            "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-          background: "#0a0a0a",
+            "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          background: "#0a0a0f",
           color: "#fafafa",
-          minHeight: "100vh",
+          minHeight: "100dvh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <div style={{ textAlign: "center", padding: "2rem", maxWidth: "480px" }}>
+        <main
+          role="alert"
+          aria-live="assertive"
+          aria-labelledby="global-error-title"
+          aria-describedby="global-error-description"
+          style={{ textAlign: "center", padding: "2rem", maxWidth: "520px" }}
+        >
           <div
             style={{
               width: "64px",
               height: "64px",
-              borderRadius: "50%",
-              background: "rgba(244, 63, 94, 0.1)",
+              borderRadius: "18px",
+              background: "rgba(225, 29, 72, 0.14)",
+              color: "#fb7185",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               margin: "0 auto 1rem",
               fontSize: "2rem",
             }}
-            aria-hidden
+            aria-hidden="true"
           >
             ⚠
           </div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0 0 0.5rem" }}>
-            حدث خطأ في التطبيق
+
+          <h1
+            id="global-error-title"
+            style={{ fontSize: "1.6rem", lineHeight: 1.2, fontWeight: 750, margin: "0 0 0.6rem" }}
+          >
+            TvTime could not start
           </h1>
-          <p style={{ color: "#a1a1aa", fontSize: "0.9rem", margin: "0 0 1.5rem" }}>
-            نعتذر عن هذا الانقطاع. يمكنك المحاولة مرة أخرى أو تحديث الصفحة.
+          <p
+            id="global-error-description"
+            style={{ color: "#a1a1aa", lineHeight: 1.6, fontSize: "0.95rem", margin: "0 0 1.5rem" }}
+          >
+            No data was changed. Try starting the application again or reload this page.
             {error.digest && (
               <>
                 <br />
                 <code
                   style={{
                     display: "inline-block",
-                    marginTop: "0.5rem",
-                    padding: "0.25rem 0.5rem",
-                    background: "rgba(255,255,255,0.05)",
-                    borderRadius: "4px",
+                    marginTop: "0.75rem",
+                    padding: "0.3rem 0.55rem",
+                    background: "rgba(255,255,255,0.06)",
+                    borderRadius: "6px",
                     fontSize: "0.75rem",
-                    fontFamily: "monospace",
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                   }}
                 >
                   Error ID: {error.digest}
@@ -76,39 +92,34 @@ export default function GlobalError({
               </>
             )}
           </p>
-          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", justifyContent: "center" }}>
             <button
+              type="button"
               onClick={reset}
               style={{
-                padding: "0.5rem 1rem",
+                ...buttonBase,
                 background: "#e11d48",
                 color: "white",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.9rem",
-                fontWeight: 500,
+                border: "1px solid #e11d48",
               }}
             >
-              إعادة المحاولة
+              Try again
             </button>
             <button
+              type="button"
               onClick={() => window.location.reload()}
               style={{
-                padding: "0.5rem 1rem",
+                ...buttonBase,
                 background: "transparent",
                 color: "#fafafa",
                 border: "1px solid #3f3f46",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.9rem",
-                fontWeight: 500,
               }}
             >
-              تحديث الصفحة
+              Reload page
             </button>
           </div>
-        </div>
+        </main>
       </body>
     </html>
   );

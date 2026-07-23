@@ -1,8 +1,17 @@
 "use client";
 
-import { Suspense, lazy, useEffect, useLayoutEffect, useMemo } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNav, getBrowserNavigationIndex, initializeBrowserNavigation } from "@/lib/store";
 import { navigationEntryFromPath, normalizeNavigationEntry, type NavigationEntry } from "@/lib/navigation";
+import { getViewMetadata } from "@/lib/view-metadata";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { HomeView } from "@/components/views/home-view";
@@ -15,7 +24,9 @@ import { ErrorBoundary } from "@/components/error-boundary";
 const DiscoverView = lazy(() =>
   import("@/components/views/discover-view").then((m) => ({ default: m.DiscoverView })),
 );
-const WatchNextView = lazy(() => import("@/components/views/watch-next-view").then((m) => ({ default: m.WatchNextView })));
+const WatchNextView = lazy(() =>
+  import("@/components/views/watch-next-view").then((m) => ({ default: m.WatchNextView })),
+);
 const SearchView = lazy(() =>
   import("@/components/views/search-view").then((m) => ({ default: m.SearchView })),
 );
@@ -51,9 +62,19 @@ function ViewSkeleton() {
   // Mirrors the layout of detail pages and grid views so the first paint
   // is visually stable while the chunk loads.
   return (
-    <div className="feedback-state feedback-state--loading space-y-5 py-6" aria-busy="true" aria-live="polite" role="status">
-      <div className="h-8 w-full max-w-sm shimmer rounded-lg" />
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+    <div
+      className="feedback-state feedback-state--loading space-y-5 py-6"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="Loading page content"
+      role="status"
+    >
+      <span className="sr-only">Loading page content…</span>
+      <div aria-hidden="true" className="h-8 w-full max-w-sm shimmer rounded-lg" />
+      <div
+        aria-hidden="true"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+      >
         {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className="aspect-[2/3] shimmer rounded-xl border border-border/40" />
         ))}
@@ -73,6 +94,12 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
   const personId = useNav((state) => state.personId);
   const syncRoute = useNav((state) => state.syncRoute);
   const routeReady = useNav((state) => state.routeReady);
+  const mainRef = useRef<HTMLElement>(null);
+  const hasMountedRoute = useRef(false);
+  const [routeAnnouncement, setRouteAnnouncement] = useState("");
+
+  const viewMetadata = getViewMetadata(view);
+  const routeKey = `${view}-${movieId ?? ""}-${tvId ?? ""}-${personId ?? ""}`;
 
   useLayoutEffect(() => {
     const navigationIndex = initializeBrowserNavigation(normalizedInitialRoute);
@@ -89,22 +116,64 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
   }, [syncRoute]);
 
   useEffect(() => {
-    if (routeReady) window.scrollTo({ top: 0, behavior: "auto" });
-  }, [routeReady, view, movieId, tvId, personId]);
+    if (!routeReady) return;
+
+    window.scrollTo({ top: 0, behavior: "auto" });
+
+    // Do not move focus during the initial hydration. After an in-app route
+    // change, focus the new main region and announce it like a real page load.
+    if (!hasMountedRoute.current) {
+      hasMountedRoute.current = true;
+      return;
+    }
+
+    setRouteAnnouncement(viewMetadata.announcement);
+    const frame = window.requestAnimationFrame(() => {
+      mainRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [routeKey, routeReady, viewMetadata.announcement]);
 
   if (!routeReady) {
-    return <div className="min-h-screen bg-background" aria-busy="true" />;
+    return (
+      <div
+        className="min-h-dvh bg-background"
+        aria-busy="true"
+        aria-label="Loading application"
+        role="status"
+      />
+    );
   }
 
   return (
-    <div className="tvtime-app min-h-screen flex flex-col">
+    <div className="tvtime-app min-h-dvh flex flex-col">
       <a href="#tvtime-main-content" className="tvtime-skip-link">
         Skip to main content
       </a>
+
+      <div
+        className="sr-only"
+        aria-atomic="true"
+        aria-live="polite"
+        dir={viewMetadata.direction}
+        lang={viewMetadata.language}
+      >
+        {routeAnnouncement}
+      </div>
+
       <Header />
       <KeyboardShortcuts />
-      <main id="tvtime-main-content" tabIndex={-1} className="flex-1 max-w-[1400px] w-full mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
-        <div key={`${view}-${movieId ?? ""}-${tvId ?? ""}-${personId ?? ""}`} className="animate-fade-in-up">
+
+      <main
+        ref={mainRef}
+        id="tvtime-main-content"
+        tabIndex={-1}
+        lang={viewMetadata.language}
+        dir={viewMetadata.direction}
+        aria-label={viewMetadata.accessibleLabel}
+        className="tvtime-main-content flex-1 max-w-[1400px] w-full mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6"
+      >
+        <div key={routeKey} className="animate-fade-in-up">
           {/* HomeView stays eager — it is the landing page and the first thing
               the user sees after login. */}
           {view === "home" && (
@@ -137,6 +206,7 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
           )}
         </div>
       </main>
+
       <Footer />
     </div>
   );
