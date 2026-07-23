@@ -61,7 +61,9 @@ function CuratedContent() {
   });
 
   const valid = (items: MediaItem[]) => items.filter((item) => item.id && item.poster_path).slice(0, 20);
-  const becauseItems = valid((latestIsTv ? tvDetail.data?.recommendations?.results : movieDetail.data?.recommendations?.results) ?? []);
+  const becauseItems = valid((latestIsTv
+    ? (tvDetail.data as any)?.recommendations?.results
+    : (movieDetail.data as any)?.recommendations?.results) ?? []);
   const episodeItems = valid(newEpisodes.data?.results ?? []);
   const hiddenItems = valid((hiddenGems.data?.results ?? []).filter((item) => Number(item.vote_count || 0) < 2500));
   const acclaimedItems = valid(acclaimed.data?.results ?? []);
