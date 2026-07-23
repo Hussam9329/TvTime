@@ -4,6 +4,7 @@ import { parseDateOnly } from "@/lib/date-only";
 
 const MAX_RANGE_DAYS = 370;
 const MAX_PAGES = 5;
+const ARABIC_TEXT = /[\u0600-\u06FF]/;
 
 function dayNumber(value: string) {
   const parts = parseDateOnly(value);
@@ -70,6 +71,9 @@ export async function GET(req: NextRequest) {
       if (excludedOriginalLanguage && item.original_language === excludedOriginalLanguage) continue;
       byId.set(item.id, {
         ...item,
+        name: ARABIC_TEXT.test(item.name || "")
+          ? item.name
+          : ARABIC_TEXT.test(item.original_name || "") ? item.original_name : item.name,
         poster_path: item.poster_path || fallbackPosterById.get(item.id) || null,
         media_type: "tv",
       });
