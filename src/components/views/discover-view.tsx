@@ -195,7 +195,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const items = useMemo(() => {
     let filtered = allResults.filter((media) => media.poster_path && (isArabic || !isArabicMediaItem(media)));
     if (forcedLang === "ar") {
-      filtered = filtered.filter((m) => m.original_language === "ar");
+      filtered = filtered.filter(isArabicMediaItem);
     }
     if (forcedLang === "ja" && isAnime) {
       filtered = filtered.filter((m) => m.original_language === "ja");

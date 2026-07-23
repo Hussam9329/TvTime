@@ -31,6 +31,10 @@ export function normalizeCountryCodes(value: unknown): string[] {
 // co-produced in Arab countries without being Arabic-language originals.
 export function detectIsArabic(input: ArabicDetectionInput): boolean {
   const language = String(input.originalLanguage || "").trim().toLowerCase();
+  const countries = normalizeCountryCodes(input.originCountry);
+  // TMDB occasionally labels dubbed Turkish productions as Arabic. Country
+  // metadata is authoritative for this known false-positive class.
+  if (countries.includes("TR")) return false;
   return language === ARABIC_LANGUAGE_CODE;
 }
 
