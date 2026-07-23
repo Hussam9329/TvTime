@@ -400,9 +400,6 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
                 {item.type === "movie" ? <Film className="w-12 h-12" /> : <Tv className="w-12 h-12" />}
               </div>
             )}
-            {/* gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-80" />
-
             {/* type badge */}
             <div className="absolute top-2 left-2">
               <Badge variant="secondary" className="bg-black/60 backdrop-blur border-0 text-[10px] h-6 px-2">
@@ -435,13 +432,11 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
               </div>
             ) : null}
 
-            {/* bottom title */}
-            <div className="absolute bottom-0 left-0 right-0 p-3">
-              <h3 className="font-semibold text-white text-sm line-clamp-2 leading-tight drop-shadow">{item.title}</h3>
-              <div className="flex items-center gap-2 mt-0.5">
-                {item.year && <p className="text-white/70 text-xs">{item.year}</p>}
-              </div>
-            </div>
+          </div>
+
+          <div className={`border-t border-border/60 bg-card px-3 py-2.5 ${layout === "list" ? "flex min-w-0 flex-col justify-center" : "min-h-[4.75rem]"}`}>
+            <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">{item.title}</h3>
+            {item.year && <p className="mt-1 text-xs text-muted-foreground">{item.year}</p>}
           </div>
 
           <div className="flex items-center gap-1.5 border-t border-border/60 bg-card p-2">
