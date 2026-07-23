@@ -7,12 +7,16 @@ import {
   ArrowLeft,
   BarChart3,
   Bell,
+  ChevronDown,
   Clapperboard,
+  Compass,
   Film,
   Home,
   Keyboard,
+  Languages,
   Menu,
   Moon,
+  MoreHorizontal,
   Play,
   Search,
   Sparkles,
@@ -20,14 +24,18 @@ import {
   X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useNav, type ViewName } from "@/lib/store";
-import { prefetchViewModule } from "@/lib/view-prefetch";
-import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
-import { cn } from "@/lib/utils";
-import { TVTIME_SEARCH_CLOSE_EVENT, TVTIME_SEARCH_FOCUS_EVENT } from "@/lib/search-command";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -37,7 +45,13 @@ import {
 } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { APP_NAME } from "@/lib/brand";
+import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
+import { TVTIME_SEARCH_CLOSE_EVENT, TVTIME_SEARCH_FOCUS_EVENT } from "@/lib/search-command";
+import { useNav, type ViewName } from "@/lib/store";
+import { PRIMARY_NAV_VIEWS, SECONDARY_NAV_VIEWS, isDetailView } from "@/lib/navigation-layout";
+import { cn } from "@/lib/utils";
 import { getViewLabel } from "@/lib/view-metadata";
+import { prefetchViewModule } from "@/lib/view-prefetch";
 
 const ProfileDialog = dynamic(
   () => import("@/components/profile/profile-dialog").then((module) => module.ProfileDialog),
@@ -54,19 +68,25 @@ const NotificationCenter = dynamic(
 
 type NavItem = { view: ViewName; icon: React.ElementType };
 
-const coreNavItems: NavItem[] = [
-  { view: "home", icon: Home },
-  { view: "watch-next", icon: Play },
-  { view: "movies", icon: Film },
-  { view: "tv-shows", icon: Clapperboard },
-  { view: "anime", icon: Sparkles },
-  { view: "stats", icon: BarChart3 },
-];
+const navigationIcons: Partial<Record<ViewName, React.ElementType>> = {
+  home: Home,
+  "watch-next": Play,
+  discover: Compass,
+  movies: Film,
+  "tv-shows": Clapperboard,
+  anime: Sparkles,
+  stats: BarChart3,
+  "arabic-movies": Languages,
+  "arabic-tv": Clapperboard,
+};
 
-const arabicNavItems: NavItem[] = [
-  { view: "arabic-movies", icon: Film },
-  { view: "arabic-tv", icon: Clapperboard },
-];
+const toNavItem = (view: ViewName): NavItem => ({
+  view,
+  icon: navigationIcons[view] ?? Film,
+});
+
+const primaryNavItems = PRIMARY_NAV_VIEWS.map(toNavItem);
+const secondaryNavItems = SECONDARY_NAV_VIEWS.map(toNavItem);
 
 const NOTIFICATION_QUERY_KEY = ["notifications", "unread-count", getClientUserId()] as const;
 
@@ -163,14 +183,17 @@ export function Header() {
   }, [queryClient]);
 
   const currentLabel = getViewLabel(view);
-  const isDetailView = view === "movie-detail" || view === "tv-detail" || view === "person-detail";
+  const detailView = isDetailView(view);
+  const secondaryActive = secondaryNavItems.some((item) => item.view === view);
 
   const navButton = (item: NavItem, compact = false) => {
     const active = item.view === view;
     const label = getViewLabel(item.view);
+
     return (
       <button
         data-ui-action="nav"
+        data-active={active ? "true" : "false"}
         key={item.view}
         type="button"
         onClick={() => goTo(item.view)}
@@ -178,57 +201,59 @@ export function Header() {
         onFocus={() => prefetchViewModule(item.view)}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group relative inline-flex items-center rounded-xl font-semibold transition-[color,background-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
-          compact ? "w-full gap-3 px-3 py-2.5 text-sm" : "tvtime-primary-nav-item gap-2 px-3 py-2 text-[13px]",
+          "group relative inline-flex items-center font-semibold transition-[color,background-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/65",
+          compact
+            ? "w-full gap-3 rounded-xl px-3 py-2.5 text-sm"
+            : "tvtime-primary-nav-item gap-2 rounded-xl px-3 py-2 text-[13px]",
           active
-            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-            : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
+            ? "bg-primary/12 text-foreground shadow-sm"
+            : "text-foreground/62 hover:bg-accent/70 hover:text-foreground",
         )}
       >
-        <item.icon className={cn("shrink-0 transition-colors", compact ? "h-4.5 w-4.5" : "h-4 w-4")} />
+        <item.icon className={cn("shrink-0 transition-colors", compact ? "h-[18px] w-[18px]" : "h-4 w-4", active && "text-primary")} />
         <span>{label}</span>
-        {!compact && active && <span className="absolute -bottom-[9px] left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-primary" />}
+        {!compact && active && <span className="tvtime-nav-active-indicator" aria-hidden="true" />}
       </button>
     );
   };
 
   return (
     <header
-      className="tvtime-app-header sticky top-0 z-40 border-b border-border/70 bg-background/90 shadow-[0_8px_32px_rgba(0,0,0,0.16)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/80"
+      className="tvtime-app-header sticky top-0 z-40"
       data-mobile-search-open={mobileSearchOpen ? "true" : "false"}
     >
-      <div className="mx-auto flex h-16 max-w-[1920px] items-center gap-2 px-3 sm:h-20 sm:px-5 lg:px-8">
+      <div className="tvtime-header-inner mx-auto flex h-16 max-w-[1600px] items-center gap-2 px-3 sm:h-[72px] sm:px-4 lg:px-5">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 rounded-xl xl:hidden"
+              className="tvtime-header-icon h-10 w-10 xl:hidden"
               aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
               aria-expanded={mobileOpen}
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[min(88vw,340px)] border-r-border/70 p-0">
+          <SheetContent side="left" className="tvtime-navigation-sheet w-[min(88vw,360px)] border-r-border/70 p-0">
             <SheetHeader className="border-b border-border/60 p-5 text-left">
               <SheetTitle className="flex items-center gap-3">
                 <BrandMark />
                 <span>
                   <span className="block text-lg font-black tracking-tight">{APP_NAME}</span>
-                  <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Your watch universe</span>
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Your watch universe</span>
                 </span>
               </SheetTitle>
             </SheetHeader>
             <nav className="flex max-h-[calc(100dvh-88px)] flex-col gap-5 overflow-y-auto p-4" aria-label="Mobile navigation">
-              <NavGroup label="Explore">{coreNavItems.map((item) => navButton(item, true))}</NavGroup>
-              <NavGroup label="Arabic World">{arabicNavItems.map((item) => navButton(item, true))}</NavGroup>
+              <NavGroup label="Explore">{primaryNavItems.map((item) => navButton(item, true))}</NavGroup>
+              <NavGroup label="Library & worlds">{secondaryNavItems.map((item) => navButton(item, true))}</NavGroup>
             </nav>
           </SheetContent>
         </Sheet>
 
-        {isDetailView && historyLength > 0 && (
-          <Button variant="ghost" size="icon" onClick={back} className="h-10 w-10 rounded-xl" aria-label="Go back">
+        {detailView && historyLength > 0 && (
+          <Button variant="ghost" size="icon" onClick={back} className="tvtime-header-icon h-10 w-10" aria-label="Go back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
@@ -238,23 +263,69 @@ export function Header() {
           type="button"
           onClick={() => goTo("home")}
           onPointerEnter={() => prefetchViewModule("home")}
-          className="group flex shrink-0 items-center gap-2 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+          className="group flex shrink-0 items-center gap-2.5 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
           aria-label={`${APP_NAME} home`}
         >
           <BrandMark />
           <span className="tvtime-brand-copy hidden sm:block">
-            <span className="block text-lg font-black leading-none tracking-[-0.04em]">Tv<span className="text-primary">Time</span></span>
+            <span className="block text-lg font-black leading-none tracking-[-0.045em]">{APP_NAME}</span>
+            <span className="tvtime-brand-tagline mt-1 block text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Watch. Track. Remember.</span>
           </span>
         </button>
 
-        <nav className="tvtime-primary-nav ml-2 hidden xl:flex items-center gap-1" aria-label="Primary navigation">
-          {coreNavItems.map((item) => navButton(item))}
-          {arabicNavItems.map((item) => navButton(item))}
+        <nav className="tvtime-primary-nav ml-2 hidden items-center gap-1 xl:flex" aria-label="Primary navigation">
+          {primaryNavItems.map((item) => navButton(item))}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                data-ui-action="nav-more"
+                data-active={secondaryActive ? "true" : "false"}
+                aria-current={secondaryActive ? "page" : undefined}
+                className={cn(
+                  "tvtime-primary-nav-item group relative inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-[color,background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/65",
+                  secondaryActive
+                    ? "bg-primary/12 text-foreground shadow-sm"
+                    : "text-foreground/62 hover:bg-accent/70 hover:text-foreground",
+                )}
+              >
+                <MoreHorizontal className={cn("h-4 w-4", secondaryActive && "text-primary")} />
+                <span>More</span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-65" />
+                {secondaryActive && <span className="tvtime-nav-active-indicator" aria-hidden="true" />}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" sideOffset={10} className="w-60">
+              <DropdownMenuLabel>More destinations</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {secondaryNavItems.map((item) => {
+                const label = getViewLabel(item.view);
+                return (
+                  <DropdownMenuItem
+                    key={item.view}
+                    className="gap-3 py-2.5"
+                    onFocus={() => prefetchViewModule(item.view)}
+                    onSelect={() => goTo(item.view)}
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      <item.icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold">{label}</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {item.view === "stats" ? "Insights from your viewing history" : "Browse a dedicated Arabic catalogue"}
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
-        <form onSubmit={onSubmitSearch} className="tvtime-header-search ml-auto hidden min-w-0 max-w-[300px] flex-1 md:block 2xl:max-w-sm">
+        <form onSubmit={onSubmitSearch} className="tvtime-header-search ml-auto hidden min-w-0 max-w-[300px] flex-1 md:block 2xl:max-w-[360px]">
           <div className="group relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <Input
               ref={desktopSearchInputRef}
               value={searchVal}
@@ -262,10 +333,16 @@ export function Header() {
               onFocus={() => prefetchViewModule("search")}
               placeholder="Search titles, people..."
               aria-label="Search movies, shows, anime and people"
-              className="h-11 rounded-2xl border-border/70 bg-muted/45 pl-10 pr-10 shadow-inner shadow-black/5 transition-[background-color,border-color,box-shadow] duration-200 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/35"
+              className="tvtime-command-search h-11 rounded-xl border-border/70 bg-muted/35 pl-10 pr-10"
             />
             {searchVal ? (
-              <button data-ui-action="icon" type="button" onClick={() => setSearchVal("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Clear search">
+              <button
+                data-ui-action="icon"
+                type="button"
+                onClick={() => setSearchVal("")}
+                className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="Clear search"
+              >
                 <X className="h-3.5 w-3.5" />
               </button>
             ) : (
@@ -287,7 +364,7 @@ export function Header() {
               window.requestAnimationFrame(() => mobileSearchInputRef.current?.focus());
             }
           }}
-          className="h-10 w-10 rounded-xl md:hidden"
+          className="tvtime-header-icon h-10 w-10 md:hidden"
           aria-label={mobileSearchOpen ? "Close search" : "Open search"}
           aria-expanded={mobileSearchOpen}
           aria-controls="tvtime-mobile-search"
@@ -303,7 +380,7 @@ export function Header() {
                 size="icon"
                 onClick={() => setNotifOpen(true)}
                 aria-label={notifUnread > 0 ? `Notifications, ${notifUnread} unread` : "Notifications"}
-                className="relative h-10 w-10 rounded-xl"
+                className="tvtime-header-icon relative h-10 w-10"
               >
                 <Bell className="h-5 w-5" />
                 {notifUnread > 0 && (
@@ -323,7 +400,7 @@ export function Header() {
                 size="icon"
                 onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                 aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                className="hidden h-10 w-10 rounded-xl sm:inline-flex"
+                className="tvtime-header-icon hidden h-10 w-10 sm:inline-flex"
               >
                 {mounted && resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
@@ -333,7 +410,13 @@ export function Header() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => setHelpOpen(true)} aria-label="Keyboard shortcuts" className="hidden h-10 w-10 rounded-xl 2xl:inline-flex">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setHelpOpen(true)}
+                aria-label="Keyboard shortcuts"
+                className="tvtime-header-icon hidden h-10 w-10 2xl:inline-flex"
+              >
                 <Keyboard className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
@@ -341,9 +424,15 @@ export function Header() {
           </Tooltip>
         </TooltipProvider>
 
-        <button data-ui-action="profile" type="button" onClick={() => setProfileOpen(true)} className="flex shrink-0 items-center gap-2 rounded-xl p-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70" aria-label={`Open ${userName} profile`}>
-          <Avatar className="h-9 w-9 border border-primary/40 shadow-sm shadow-primary/15">
-            <AvatarFallback className="bg-gradient-to-br from-primary/25 to-secondary text-xs font-black text-primary">
+        <button
+          data-ui-action="profile"
+          type="button"
+          onClick={() => setProfileOpen(true)}
+          className="tvtime-profile-trigger flex shrink-0 items-center gap-2 rounded-xl p-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+          aria-label={`Open ${userName} profile`}
+        >
+          <Avatar className="h-9 w-9 border border-primary/30 shadow-sm">
+            <AvatarFallback className="bg-primary/12 text-xs font-black text-primary">
               {userName.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -355,18 +444,27 @@ export function Header() {
       </div>
 
       {mobileSearchOpen && (
-        <form id="tvtime-mobile-search" onSubmit={onSubmitSearch} className="border-t border-border/50 px-3 py-2 md:hidden">
+        <form id="tvtime-mobile-search" onSubmit={onSubmitSearch} className="tvtime-mobile-search-panel px-3 pb-2.5 pt-1 md:hidden">
           <div className="relative mx-auto max-w-xl">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
             <Input
               ref={mobileSearchInputRef}
               value={searchVal}
               onChange={(event) => setSearchVal(event.target.value)}
               placeholder="Search movies, shows, anime and people..."
               aria-label="Search movies, shows, anime and people"
-              className="h-11 rounded-xl bg-muted/50 pl-9 pr-10"
+              className="h-11 rounded-xl bg-card pl-10 pr-11"
             />
-            <button data-ui-action="icon" type="button" onClick={() => { setSearchVal(""); setMobileSearchOpen(false); }} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent" aria-label="Close search">
+            <button
+              data-ui-action="icon"
+              type="button"
+              onClick={() => {
+                setSearchVal("");
+                setMobileSearchOpen(false);
+              }}
+              className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
+              aria-label="Close search"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -387,9 +485,10 @@ export function Header() {
 
 function BrandMark() {
   return (
-    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary via-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/25 transition-[box-shadow,filter] duration-200 group-hover:brightness-105 sm:h-11 sm:w-11">
+    <span className="tvtime-brand-mark relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-[box-shadow,filter,transform] duration-200 group-hover:brightness-105 sm:h-11 sm:w-11">
+      <span className="absolute inset-1 rounded-[10px] border border-white/18" aria-hidden="true" />
       <Play className="h-4 w-4 translate-x-px fill-current" />
-      <span className="absolute inset-x-1.5 top-1 h-px bg-white/45" />
+      <span className="absolute inset-x-2 top-1.5 h-px bg-white/45" aria-hidden="true" />
     </span>
   );
 }

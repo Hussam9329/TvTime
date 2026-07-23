@@ -17,6 +17,8 @@ const checks = [
   ["Patch 10 source guards", ["scripts/verify-patch-10.mjs"]],
   ["Patch 11 behavior tests", ["--experimental-strip-types", "scripts/test-patch-11.ts"]],
   ["Patch 11 source guards", ["scripts/verify-patch-11.mjs"]],
+  ["Patch 12 navigation hierarchy tests", ["--experimental-strip-types", "scripts/test-patch-12.ts"]],
+  ["Patch 12 visual source guards", ["scripts/verify-patch-12.mjs"]],
   ["Auth boundary tests", ["--experimental-strip-types", "scripts/test-auth-boundary.ts"]],
   ["Auth boundary source verification", ["scripts/verify-auth-boundary.mjs"]],
   ["Request identity and admin command tests", ["--experimental-strip-types", "scripts/test-request-authorization.ts"]],

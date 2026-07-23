@@ -71,7 +71,7 @@ requireCheck(!/\{error\.message\}/.test(globalError), "global error exposes raw 
 requireCheck(/role="alert"/.test(globalError) && /minHeight:\s*"44px"/.test(globalError), "global recovery screen is not accessible");
 
 requireCheck((home.match(/<h1/g) || []).length === 1, "home hero must expose one primary heading");
-requireCheck(/from-black\/85/.test(home) && /text-white\/85/.test(home), "home hero contrast is not independent of the selected theme");
+requireCheck(/tvtime-home-hero__scrim/.test(home) && /tvtime-home-hero__overview/.test(home) && /\.tvtime-home-hero__title[\s\S]*color:\s*white/.test(css), "home hero contrast is not independent of the selected theme");
 requireCheck(/Loading recently watched titles/.test(home), "home loading state lacks an accessible status");
 
 requireCheck(/"arabic-movies"[\s\S]*language:\s*"ar"/.test(viewMetadata) || /ARABIC_VIEW[\s\S]*language:\s*"ar"/.test(viewMetadata), "Arabic routes are not mapped to Arabic metadata");

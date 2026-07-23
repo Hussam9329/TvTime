@@ -27,6 +27,8 @@ const header = read("src/components/layout/header.tsx");
 const shell = read("src/components/app-shell.tsx");
 const store = read("src/lib/store.ts");
 const navigation = read("src/lib/navigation.ts");
+const navigationLayout = read("src/lib/navigation-layout.ts");
+const viewMetadata = read("src/lib/view-metadata.ts");
 const collection = read("src/components/views/collection-world-view.tsx");
 const movies = read("src/components/views/movies-view.tsx");
 const anime = read("src/components/views/anime-view.tsx");
@@ -43,19 +45,25 @@ check(/url\s*=\s*env\("DATABASE_URL"\)/.test(schema), "DATABASE_URL remains the 
 check(!/sqlite/i.test(schema), "No SQLite source was introduced");
 
 const navOrder = [
-  'view: "movies", label: "Movies"',
-  'view: "tv-shows", label: "TV Shows"',
-  'view: "anime", label: "Anime"',
+  ["movies", "Movies"],
+  ["tv-shows", "TV Shows"],
+  ["anime", "Anime"],
 ];
 let navAt = -1;
-for (const entry of navOrder) {
-  const at = header.indexOf(entry);
-  check(at > navAt, `Top navigation contains ${entry.split('label: ')[1]} in the requested order`);
+for (const [view, label] of navOrder) {
+  const at = navigationLayout.indexOf(`"${view}"`);
+  const metadataKey = view.includes("-") ? `"${view}":` : `${view}:`;
+  const metadataAt = viewMetadata.indexOf(metadataKey);
+  const labelAt = viewMetadata.indexOf(`label: "${label}"`, metadataAt);
+  check(
+    at > navAt && metadataAt >= 0 && labelAt > metadataAt && labelAt - metadataAt < 180,
+    `Top navigation contains "${label}" in the requested order`,
+  );
   navAt = at;
 }
-check(!/label:\s*"TV Track"/.test(header), "TV Track label was fully replaced by TV Shows");
-check(!/label:\s*"Library"/.test(header), "Library was removed from top navigation");
-check(/xl:hidden/.test(header) && /hidden xl:flex/.test(header), "Expanded navigation remains responsive on smaller desktop widths");
+check(!/label:\s*"TV Track"/.test(viewMetadata), "TV Track label was fully replaced by TV Shows");
+check(!/label:\s*"Library"/.test(viewMetadata), "Library was removed from top navigation");
+check(/xl:hidden/.test(header) && /hidden items-center gap-1 xl:flex/.test(header), "Expanded navigation remains responsive on smaller desktop widths");
 
 check(/\| "movies"/.test(navigation) && /\| "tv-shows"/.test(navigation) && /\| "anime"/.test(navigation), "Navigation state has separate Movies, TV Shows and Anime worlds");
 check(!/\| "library"/.test(navigation) && !/\| "tv-tracking"/.test(navigation), "Old Library and TV Track view names are retired");
