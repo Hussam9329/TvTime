@@ -400,21 +400,6 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
                 {item.type === "movie" ? <Film className="w-12 h-12" /> : <Tv className="w-12 h-12" />}
               </div>
             )}
-            {/* type badge */}
-            <div className="absolute top-2 left-2">
-              <Badge variant="secondary" className="bg-black/60 backdrop-blur border-0 text-[10px] h-6 px-2">
-                {item.isArabic ? (
-                  <><span className="mr-1 text-[11px] font-black">ع</span>{item.type === "movie" ? "Arabic Movie" : "Arabic TV"}</>
-                ) : item.isAnime ? (
-                  <><Sparkles className="w-3 h-3 mr-1 text-purple-400" />Anime</>
-                ) : item.type === "movie" ? (
-                  <><Film className="w-3 h-3 mr-1" />Movie</>
-                ) : (
-                  <><Tv className="w-3 h-3 mr-1" />TV</>
-                )}
-              </Badge>
-            </div>
-
             {/* Fix #8: Rating labels — user rating shows /100, TMDB shows /10 */}
             {userRating != null ? (
               <div className="absolute top-2 right-2">
@@ -434,52 +419,15 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
 
           </div>
 
-          <div className={`border-t border-border/60 bg-card px-3 py-2.5 ${layout === "list" ? "flex min-w-0 flex-col justify-center" : "min-h-[4.75rem]"}`}>
-            <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">{item.title}</h3>
-            {item.year && <p className="mt-1 text-xs text-muted-foreground">{item.year}</p>}
-          </div>
-
-          <div className="flex items-center gap-1.5 border-t border-border/60 bg-card p-2">
-            <Button size="sm" className="h-8 min-w-0 flex-1 px-2 text-xs" onClick={handleOpenDetails}>
-              <Play className="mr-1 h-3.5 w-3.5 fill-current" /> Details
-            </Button>
-
-            {!isWatchedTab ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 w-8 shrink-0 p-0"
-                onClick={() => void handleMarkWatched()}
-                disabled={update.isPending}
-                title={item.type === "series" ? "Open episode tracking" : "Mark watched"}
-                aria-label={item.type === "series" ? `Track episodes for ${item.title}` : `Mark ${item.title} as watched`}
-              >
-                {item.type === "series" ? <Play className="h-3.5 w-3.5 fill-current" /> : <Check className="h-3.5 w-3.5" />}
-              </Button>
-            ) : item.type === "movie" ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 w-8 shrink-0 p-0"
-                onClick={() => setRatingOpen(true)}
-                title={userRating != null ? "Change rating" : "Rate"}
-                aria-label={`${userRating != null ? "Change rating for" : "Rate"} ${item.title}`}
-              >
-                <Star className="h-3.5 w-3.5" />
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 w-8 shrink-0 p-0"
-                onClick={() => { if (item.tmdbId) goTv(item.tmdbId); else toast.info("Open the show and change released episodes individually."); }}
-                title="Open episodes"
-                aria-label={`Open episodes for ${item.title}`}
-              >
-                <Play className="h-3.5 w-3.5 fill-current" />
-              </Button>
-            )}
-
+          <div className={`flex min-w-0 items-center gap-2 border-t border-border/60 bg-card px-3 py-2.5 ${layout === "list" ? "" : "min-h-[4.5rem]"}`}>
+            <div className="min-w-0 flex-1">
+              <h3 className="line-clamp-1 text-sm font-semibold leading-tight text-foreground">{item.title}</h3>
+              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                {item.year && <span>{item.year}</span>}
+                {item.year && <span aria-hidden="true">•</span>}
+                <span>{item.isAnime ? "Anime" : item.isArabic ? (isMovie ? "Arabic Movie" : "Arabic TV") : isMovie ? "Movie" : "TV"}</span>
+              </div>
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -494,7 +442,15 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{item.title}</DropdownMenuLabel>
-                {!isWatchedTab && item.type === "movie" && (
+                <DropdownMenuItem onSelect={handleOpenDetails}>
+                  <Play /> Open details
+                </DropdownMenuItem>
+                {!isWatchedTab && (
+                  <DropdownMenuItem onSelect={() => void handleMarkWatched()} disabled={update.isPending}>
+                    <Check /> {item.type === "series" ? "Open episode tracking" : "Mark as watched"}
+                  </DropdownMenuItem>
+                )}
+                {isWatchedTab && item.type === "movie" && (
                   <DropdownMenuItem onSelect={() => setRatingOpen(true)}>
                     <Star /> {userRating != null ? "Change rating" : "Rate"}
                   </DropdownMenuItem>
