@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { Award, BellRing, Clapperboard, Gem, History, Languages, Sparkles, Star, Timer, Trophy } from "lucide-react";
 import {
   useDiscoverMovies,
@@ -12,8 +12,10 @@ import {
   useTvDetail,
   useWatchlist,
 } from "@/hooks/use-tmdb";
-import { MediaRow } from "@/components/media/media-row";
+import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import type { MediaItem } from "@/lib/tmdb";
+
+const MediaRow = (props: ComponentProps<typeof BaseMediaRow>) => <BaseMediaRow {...props} compactCards={false} />;
 
 export function HomeCuratedSections() {
   const anchorRef = useRef<HTMLDivElement>(null);

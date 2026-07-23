@@ -3,12 +3,15 @@
 import { imgOrPlaceholder, getYear, getTitle, type MediaItem } from "@/lib/tmdb";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, Film, Tv, Check, ListPlus, Bell } from "lucide-react";
+import { Star, Film, Tv, Check, ListPlus, Bell, MoreHorizontal, Play } from "lucide-react";
 import { useNav } from "@/lib/store";
-import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use-tmdb";
+import { mediaStateKey, useMediaStates, useWatchlistToggle, useWatchedMovieToggle, type MediaBatchState } from "@/hooks/use-tmdb";
 import { motion } from "framer-motion";
 import { SafeImage } from "@/components/media/safe-image";
 import { isArabicMediaItem } from "@/lib/arabic-media";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -18,11 +21,14 @@ interface MediaCardProps {
   libraryState?: MediaBatchState | null;
   enableNativeLink?: boolean;
   priority?: boolean;
+  compactActions?: boolean;
 }
 
-export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, enableNativeLink = true, priority = false }: MediaCardProps) {
+export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, enableNativeLink = true, priority = false, compactActions = true }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
+  const watchlistToggle = useWatchlistToggle();
+  const watchedToggle = useWatchedMovieToggle();
 
   // Fix #1: Use forcedMediaType if provided (e.g., TV rows in Home/Discover).
   // Otherwise fall back to item.media_type. Default to "movie" only when
@@ -61,6 +67,19 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   const year = getYear(item);
   const isArabic = isArabicMediaItem(item);
   const typeLabel = isArabic ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV") : (mediaType === "movie" ? "Movie" : "TV");
+  const actionPayload = { tmdbId: id, title, posterPath: item.poster_path, releaseDate: item.release_date || item.first_air_date, voteAverage: item.vote_average, overview: item.overview, originalLanguage: item.original_language, originCountry: item.origin_country };
+  const toggleWatchlist = async () => {
+    try {
+      await watchlistToggle.mutateAsync({ ...actionPayload, mediaType, action: inWatchlist ? "remove" : "add" });
+      toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
+    } catch { toast.error("Failed to update watchlist"); }
+  };
+  const toggleWatched = async () => {
+    try {
+      await watchedToggle.mutateAsync({ ...actionPayload, action: watched ? "remove" : "add" });
+      toast.success(watched ? "Removed from watched" : "Marked as watched");
+    } catch { toast.error("Failed to update watched status"); }
+  };
 
   return (
     <motion.a
@@ -91,7 +110,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           />
           {/* top badges */}
           <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
-            {showMediaType && (
+            {showMediaType && !compactActions && (
               <Badge
                 variant="secondary"
                 className="bg-black/60 backdrop-blur text-white border-0 text-[10px] h-6 px-2"
@@ -110,17 +129,37 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           </div>
 
         </div>
-        <div className="min-h-[5.5rem] border-t border-border/50 bg-card px-3 py-2.5">
-          <h3 className="line-clamp-2 min-h-10 text-sm font-semibold leading-tight text-foreground">{title}</h3>
-          <div className="mt-1.5 flex min-h-5 items-center justify-between gap-2">
-            {year && <p className="text-xs text-muted-foreground">{year}</p>}
+        <div className={`${compactActions ? "flex min-h-[4.5rem] items-center gap-2" : "min-h-[5.5rem]"} border-t border-border/50 bg-card px-3 py-2.5`}>
+          <div className="min-w-0 flex-1">
+            <h3 className={`${compactActions ? "line-clamp-1" : "line-clamp-2 min-h-10"} text-sm font-semibold leading-tight text-foreground`}>{title}</h3>
+            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              {year && <span>{year}</span>}
+              {year && compactActions && <span>•</span>}
+              {compactActions && <span>{typeLabel}</span>}
+            </div>
+          </div>
+          {compactActions ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 w-8 shrink-0 p-0" aria-label={`More actions for ${title}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{title}</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={handleClick}><Play /> Open details</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => void toggleWatchlist()} disabled={watchlistToggle.isPending}><ListPlus /> {inWatchlist ? "Remove from watchlist" : "Add to watchlist"}</DropdownMenuItem>
+                {mediaType === "movie" && <DropdownMenuItem onSelect={() => void toggleWatched()} disabled={watchedToggle.isPending}><Check /> {watched ? "Remove from watched" : "Mark as watched"}</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
             <div className="ml-auto flex items-center gap-1">
               {inWatchlist && <span className="inline-flex items-center gap-0.5 rounded bg-primary/20 px-1 py-0.5 text-[9px] text-primary"><ListPlus className="h-2.5 w-2.5" /> Watchlist</span>}
               {watched && <span data-status="watched" className="inline-flex items-center gap-0.5 rounded bg-emerald-500/20 px-1 py-0.5 text-[9px] text-emerald-400"><Check className="h-2.5 w-2.5" /> Watched</span>}
               {isFollowing && <span data-status="following" className="inline-flex items-center gap-0.5 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] text-amber-400"><Bell className="h-2.5 w-2.5" /> Following</span>}
               {userRating != null && <span data-status="rated" className="inline-flex items-center gap-0.5 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] text-amber-300"><Star className="h-2.5 w-2.5 fill-current" /> {userRating}/100</span>}
             </div>
-          </div>
+          )}
         </div>
       </Card>
     </motion.a>

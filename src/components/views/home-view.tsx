@@ -1,7 +1,7 @@
 "use client";
 
 import { useFollowing, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackingCounts, useWatchedMovieToggle } from "@/hooks/use-tmdb";
-import { MediaRow } from "@/components/media/media-row";
+import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
 import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X, Languages } from "lucide-react";
@@ -10,9 +10,11 @@ import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
 import { SafeImage } from "@/components/media/safe-image";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentProps } from "react";
 import { toast } from "sonner";
 import { isArabicMediaItem } from "@/lib/arabic-media";
+
+const MediaRow = (props: ComponentProps<typeof BaseMediaRow>) => <BaseMediaRow {...props} compactCards={false} />;
 
 export function HomeView() {
   const homeFeed = useHomeFeed();

@@ -16,9 +16,10 @@ interface MediaRowProps {
   onSeeAll?: () => void;
   forcedMediaType?: "movie" | "tv";
   libraryStateSource?: { data?: Record<string, MediaBatchState> };
+  compactCards?: boolean;
 }
 
-export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType, libraryStateSource }: MediaRowProps) {
+export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType, libraryStateSource, compactCards = true }: MediaRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
@@ -90,6 +91,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
                     Number(item.id),
                   )] ?? null}
                   priority={i < 2}
+                  compactActions={compactCards}
                 />
               </div>
             ))}
