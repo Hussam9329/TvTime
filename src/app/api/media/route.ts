@@ -65,16 +65,20 @@ export async function GET(req: NextRequest) {
           if (!tmdbId) return item;
           try {
             const localized = item.type === "movie"
-              ? await tmdb.localizedMovieProfile(tmdbId, "ar")
-              : await tmdb.localizedTvProfile(tmdbId, "ar");
-            const originalTitle = "original_title" in localized
-              ? localized.original_title
-              : localized.original_name;
-            const localizedTitle = "title" in localized ? localized.title : localized.name;
+              ? await tmdb.localizedMovieProfile(tmdbId, "ar").then((profile) => ({
+                  originalTitle: profile.original_title,
+                  title: profile.title,
+                  overview: profile.overview,
+                }))
+              : await tmdb.localizedTvProfile(tmdbId, "ar").then((profile) => ({
+                  originalTitle: profile.original_name,
+                  title: profile.name,
+                  overview: profile.overview,
+                }));
             return {
               ...item,
-              title: originalTitle || localizedTitle || item.title,
-              originalTitle: originalTitle || item.originalTitle,
+              title: localized.originalTitle || localized.title || item.title,
+              originalTitle: localized.originalTitle || item.originalTitle,
               overview: localized.overview || item.overview,
             };
           } catch {
