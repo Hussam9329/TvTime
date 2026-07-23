@@ -7,12 +7,10 @@ import {
   ArrowLeft,
   BarChart3,
   Bell,
-  ChevronDown,
   Clapperboard,
   Film,
   Home,
   Keyboard,
-  Languages,
   Menu,
   Moon,
   Play,
@@ -37,13 +35,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { APP_NAME } from "@/lib/brand";
 
@@ -83,10 +74,6 @@ const allNavItems: NavItem[] = [
 ];
 
 const NOTIFICATION_QUERY_KEY = ["notifications", "unread-count", getClientUserId()] as const;
-
-function activeIn(view: ViewName, items: NavItem[]) {
-  return items.some((item) => item.view === view);
-}
 
 export function Header() {
   const view = useNav((state) => state.view);
@@ -199,7 +186,7 @@ export function Header() {
           "group relative inline-flex items-center rounded-xl font-semibold transition-[color,background-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
           compact ? "w-full gap-3 px-3 py-2.5 text-sm" : "tvtime-primary-nav-item gap-2 px-3 py-2 text-[13px]",
           active
-            ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+            ? "bg-gradient-to-r from-rose-600 to-pink-500 text-white shadow-[0_0_24px_rgba(244,63,94,0.38)]"
             : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
         )}
       >
@@ -211,8 +198,8 @@ export function Header() {
   };
 
   return (
-    <header className="tvtime-app-header sticky top-0 z-40 border-b border-border/70 bg-background/82 shadow-[0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72" data-mobile-search-open={mobileSearchOpen ? "true" : "false"}>
-      <div className="mx-auto flex h-15 max-w-[1600px] items-center gap-2 px-3 sm:h-16 sm:px-4 lg:px-6">
+    <header className="tvtime-app-header sticky top-0 z-40 border-b border-white/5 bg-background/90 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/80" data-mobile-search-open={mobileSearchOpen ? "true" : "false"}>
+      <div className="mx-auto flex h-16 max-w-[1920px] items-center gap-2 px-3 sm:h-20 sm:px-5 lg:px-8">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl xl:hidden" aria-label="Open navigation">
@@ -256,35 +243,12 @@ export function Header() {
           </span>
         </button>
 
-        <nav className="tvtime-primary-nav ml-1 hidden xl:flex items-center gap-0.5" aria-label="Primary navigation">
+        <nav className="tvtime-primary-nav ml-2 hidden xl:flex items-center gap-1" aria-label="Primary navigation">
           {coreNavItems.map((item) => navButton(item))}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                data-ui-action="nav"
-                type="button"
-                onPointerEnter={() => arabicNavItems.forEach((item) => prefetchViewModule(item.view))}
-                className={cn(
-                  "tvtime-primary-nav-item inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors",
-                  activeIn(view, arabicNavItems) ? "bg-emerald-500/12 text-emerald-400" : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
-                )}
-              >
-                <Languages className="h-4 w-4" /> Arabic <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 rounded-xl p-1.5">
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Arabic world</DropdownMenuLabel>
-              {arabicNavItems.map((item) => (
-                <DropdownMenuItem key={item.view} onSelect={() => goTo(item.view)} onFocus={() => prefetchViewModule(item.view)} className={cn("gap-2.5 rounded-lg py-2", view === item.view && "bg-accent text-accent-foreground")}>
-                  <item.icon className="h-4 w-4" /> {item.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {arabicNavItems.map((item) => navButton(item))}
         </nav>
 
-        <form onSubmit={onSubmitSearch} className="tvtime-header-search ml-auto hidden min-w-0 max-w-[280px] flex-1 md:block lg:max-w-[340px] 2xl:max-w-sm">
+        <form onSubmit={onSubmitSearch} className="tvtime-header-search ml-auto hidden min-w-0 max-w-[300px] flex-1 md:block 2xl:max-w-sm">
           <div className="group relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <Input
@@ -294,7 +258,7 @@ export function Header() {
               onFocus={() => prefetchViewModule("search")}
               placeholder="Search titles, people..."
               aria-label="Search movies, shows, anime and people"
-              className="h-10 rounded-xl border-border/60 bg-muted/45 pl-9 pr-10 shadow-inner shadow-black/5 transition-[background-color,border-color,box-shadow] duration-200 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/35"
+              className="h-11 rounded-2xl border-white/5 bg-white/[0.045] pl-10 pr-10 shadow-inner shadow-black/10 transition-[background-color,border-color,box-shadow] duration-200 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/35"
             />
             {searchVal ? (
               <button data-ui-action="icon" type="button" onClick={() => setSearchVal("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Clear search">
@@ -403,7 +367,7 @@ export function Header() {
 
 function BrandMark() {
   return (
-    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary via-rose-500 to-fuchsia-600 text-white shadow-lg shadow-primary/20 transition-[box-shadow,filter] duration-200 group-hover:brightness-105">
+    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary via-rose-500 to-fuchsia-600 text-white shadow-[0_0_22px_rgba(244,63,94,0.3)] transition-[box-shadow,filter] duration-200 group-hover:brightness-105 sm:h-11 sm:w-11">
       <Play className="h-4 w-4 translate-x-px fill-current" />
       <span className="absolute inset-x-1.5 top-1 h-px bg-white/45" />
     </span>

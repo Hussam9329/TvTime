@@ -55,17 +55,8 @@ export function HomeView() {
 
   return (
     <div className="tvtime-home-view space-y-6">
-      {/* Greeting */}
-      <div className="view-page-header tvtime-home-header flex items-center justify-between flex-wrap gap-2">
-        <div className="min-w-0">
-          <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">
-            {greeting}, <span className="text-gradient">{userName}</span> 👋
-          </h1>
-        </div>
-      </div>
-
       {/* Hero featured */}
-      {heroItem && <Hero item={heroItem} />}
+      {heroItem && <Hero item={heroItem} greeting={greeting} userName={userName} />}
 
       {/* Quick stats */}
       {stats.data && (
@@ -203,7 +194,7 @@ function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactN
   );
 }
 
-function Hero({ item }: { item: any }) {
+function Hero({ item, greeting, userName }: { item: any; greeting: string; userName: string }) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
@@ -214,7 +205,7 @@ function Hero({ item }: { item: any }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="relative rounded-2xl overflow-hidden border border-border/50 mb-2"
+      className="relative overflow-hidden rounded-3xl border border-white/15 mb-2 shadow-[0_18px_60px_rgba(0,0,0,0.3)]"
     >
       <div className="relative aspect-[16/10] sm:aspect-[21/9] w-full">
         <SafeImage
@@ -228,7 +219,14 @@ function Hero({ item }: { item: any }) {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
 
-        <div className="absolute inset-0 flex items-end p-4 sm:p-8 lg:p-12">
+        <div className="absolute left-5 top-6 z-10 sm:left-10 sm:top-9 lg:left-12">
+          <h1 className="text-2xl font-black tracking-tight text-white drop-shadow-lg sm:text-3xl lg:text-4xl">
+            {greeting}, <span className="bg-gradient-to-r from-pink-300 to-pink-500 bg-clip-text text-transparent">{userName}</span> 👋
+          </h1>
+          <span className="mt-4 block h-1 w-14 rounded-full bg-gradient-to-r from-primary to-transparent" />
+        </div>
+
+        <div className="absolute inset-0 flex items-end p-4 pt-28 sm:p-8 sm:pt-32 lg:p-12 lg:pt-36">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-3">
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/20 backdrop-blur text-primary text-xs font-bold uppercase tracking-wide">

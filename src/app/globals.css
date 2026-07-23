@@ -784,6 +784,13 @@
 .tvtime-home-header {
   min-height: 3.75rem;
 }
+.tvtime-app-header .tvtime-primary-nav-item {
+  min-height: 2.75rem;
+  border-radius: 0.9rem;
+}
+.tvtime-app-header .tvtime-brand-copy {
+  font-size: 1.15rem;
+}
 @media (max-width: 640px) {
   .tvtime-page-hero { border-radius: 0.875rem; }
   .tvtime-home-header { align-items: flex-start; }
