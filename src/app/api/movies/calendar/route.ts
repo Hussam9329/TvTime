@@ -55,12 +55,26 @@ export async function GET(req: NextRequest) {
         })))
       : [];
 
+    const fallbackPosterById = new Map<number, string>();
+    if (language === "ar") {
+      const fallbackPages = await Promise.all(Array.from({ length: pages }, (_, index) =>
+        tmdb.discoverMovies({ ...baseParams, page: index + 1, language: "en-US" }),
+      ));
+      for (const item of fallbackPages.flatMap((page) => page.results || [])) {
+        if (item.id && item.poster_path) fallbackPosterById.set(item.id, item.poster_path);
+      }
+    }
+
     const byId = new Map<number, MediaItem>();
     for (const item of [first, ...rest].flatMap((page) => page.results || [])) {
       if (!item.id || !item.release_date) continue;
       // If original_language filter was set, double-check server-side (TMDB is usually correct, but be safe).
       if (originalLanguage && item.original_language !== originalLanguage) continue;
-      byId.set(item.id, { ...item, media_type: "movie" });
+      byId.set(item.id, {
+        ...item,
+        poster_path: item.poster_path || fallbackPosterById.get(item.id) || null,
+        media_type: "movie",
+      });
     }
     const items = [...byId.values()].sort((left, right) =>
       String(left.release_date || "").localeCompare(String(right.release_date || ""))

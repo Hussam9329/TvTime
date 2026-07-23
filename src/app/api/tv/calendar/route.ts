@@ -53,12 +53,26 @@ export async function GET(req: NextRequest) {
         })))
       : [];
 
+    const fallbackPosterById = new Map<number, string>();
+    if (language === "ar") {
+      const fallbackPages = await Promise.all(Array.from({ length: pages }, (_, index) =>
+        tmdb.discoverTv({ ...baseParams, page: index + 1, language: "en-US" }),
+      ));
+      for (const item of fallbackPages.flatMap((page) => page.results || [])) {
+        if (item.id && item.poster_path) fallbackPosterById.set(item.id, item.poster_path);
+      }
+    }
+
     const byId = new Map<number, MediaItem>();
     for (const item of [first, ...rest].flatMap((page) => page.results || [])) {
       if (!item.id || !item.first_air_date) continue;
       if (originalLanguage && item.original_language !== originalLanguage) continue;
       if (excludedOriginalLanguage && item.original_language === excludedOriginalLanguage) continue;
-      byId.set(item.id, { ...item, media_type: "tv" });
+      byId.set(item.id, {
+        ...item,
+        poster_path: item.poster_path || fallbackPosterById.get(item.id) || null,
+        media_type: "tv",
+      });
     }
     const items = [...byId.values()].sort((left, right) =>
       String(left.first_air_date || "").localeCompare(String(right.first_air_date || ""))
