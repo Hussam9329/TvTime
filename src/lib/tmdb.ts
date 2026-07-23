@@ -359,6 +359,16 @@ export function pickArabicPoster(profile: any): string | null {
   return arabic[0]?.file_path || profile?.poster_path || null;
 }
 
+const HAS_ARABIC_TEXT = /[\u0600-\u06FF]/;
+
+export function pickArabicTitle(profile: any, mediaType: "movie" | "tv", fallback: string): string {
+  const localized = mediaType === "movie" ? profile?.title : profile?.name;
+  const original = mediaType === "movie" ? profile?.original_title : profile?.original_name;
+  if (HAS_ARABIC_TEXT.test(String(localized || ""))) return localized;
+  if (HAS_ARABIC_TEXT.test(String(original || ""))) return original;
+  return localized || original || fallback;
+}
+
 export async function localizeArabicPosters(items: MediaItem[], mediaType: "movie" | "tv"): Promise<MediaItem[]> {
   const results: MediaItem[] = new Array(items.length);
   let cursor = 0;
@@ -370,7 +380,14 @@ export async function localizeArabicPosters(items: MediaItem[], mediaType: "movi
         const profile = mediaType === "movie"
           ? await tmdb.localizedMovieProfile(Number(item.id), "ar")
           : await tmdb.localizedTvProfile(Number(item.id), "ar");
-        results[index] = { ...item, poster_path: pickArabicPoster(profile) || item.poster_path };
+        const fallbackTitle = mediaType === "movie" ? item.title : item.name;
+        results[index] = {
+          ...item,
+          ...(mediaType === "movie"
+            ? { title: pickArabicTitle(profile, "movie", fallbackTitle || "") }
+            : { name: pickArabicTitle(profile, "tv", fallbackTitle || "") }),
+          poster_path: pickArabicPoster(profile) || item.poster_path,
+        };
       } catch {
         results[index] = item;
       }

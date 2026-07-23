@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser, parseUserId } from "@/lib/user";
 import { normalizeMediaMany } from "@/lib/media-normalize";
-import { pickArabicPoster, tmdb } from "@/lib/tmdb";
+import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
 
 const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
                 }));
             return {
               ...item,
-              title: localized.title || localized.originalTitle || item.title,
+              title: pickArabicTitle(localized, item.type === "movie" ? "movie" : "tv", item.title),
               originalTitle: localized.originalTitle || item.originalTitle,
               overview: localized.overview || item.overview,
               poster: pickArabicPoster(localized) || item.poster,

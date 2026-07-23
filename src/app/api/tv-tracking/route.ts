@@ -14,7 +14,7 @@ import {
 import { getTvStatusMetadata, batchReadDbMetadata, type TvStatusMetadata } from "@/lib/tv-status-server";
 import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
-import { pickArabicPoster, tmdb } from "@/lib/tmdb";
+import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -518,7 +518,7 @@ export async function GET(req: NextRequest) {
             const localized = await tmdb.localizedTvProfile(tmdbId, "ar");
             return {
               ...show,
-              title: localized.name || localized.original_name || show.title,
+              title: pickArabicTitle(localized, "tv", show.title),
               originalTitle: localized.original_name || show.originalTitle,
               overview: localized.overview || show.overview,
               poster: pickArabicPoster(localized) || show.poster,
