@@ -3,6 +3,7 @@
 import { useFollowing, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackingCounts, useWatchedMovieToggle } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
+import { HomeCuratedSections } from "@/components/media/home-curated-sections";
 import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
@@ -173,6 +174,7 @@ export function HomeView() {
 
       {/* Genre-based recommendations */}
       <GenreRecommendations />
+      <HomeCuratedSections />
     </div>
   );
 }
