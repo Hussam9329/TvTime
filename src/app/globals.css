@@ -1495,6 +1495,143 @@ body {
   }
 }
 
+/* Responsive system pass: one predictable layout language on every screen. */
+.tvtime-media-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(10.5rem, calc(50% - 0.5rem)), 1fr));
+  align-items: stretch;
+}
+
+.tvtime-standard-media-card,
+.tvtime-standard-media-card__surface {
+  min-width: 0;
+  height: 100%;
+}
+
+.tvtime-standard-media-card__surface {
+  border-radius: clamp(0.9rem, 1.4vw, 1.25rem);
+}
+
+.tvtime-standard-media-card__surface > div:first-child {
+  width: 100%;
+}
+
+.tvtime-watch-card-grid {
+  align-items: stretch;
+}
+
+.tvtime-watch-card {
+  min-width: 0;
+  height: 100%;
+}
+
+.tvtime-app :is([data-slot="button"], [data-slot="tabs-trigger"], [data-slot="select-trigger"]) {
+  max-width: 100%;
+}
+
+.tvtime-app [data-slot="button"] {
+  line-height: 1.2;
+}
+
+.tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+  width: min(calc(100vw - 1.5rem), 42rem);
+}
+
+@media (min-width: 1536px) {
+  .tvtime-media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  }
+
+  .tvtime-watch-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .tvtime-main-content {
+    overflow-x: clip;
+  }
+
+  .tvtime-app :is(.view-page-header, [data-ui-surface="hero"]) {
+    overflow: hidden;
+  }
+
+  .tvtime-app :is(.view-page-header, [data-ui-surface="hero"]) h1 {
+    font-size: clamp(1.65rem, 8vw, 2.35rem);
+    line-height: 1.08;
+  }
+
+  .tvtime-app [data-slot="tabs-list"] {
+    width: 100%;
+    max-width: 100%;
+    scroll-padding-inline: 0.35rem;
+  }
+
+  .tvtime-app [data-slot="tabs-trigger"] {
+    min-height: 2.6rem;
+    padding-inline: 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  .tvtime-app [data-slot="card"] {
+    gap: 0.85rem;
+  }
+
+  .tvtime-watch-card {
+    grid-template-columns: 94px minmax(0, 1fr);
+  }
+
+  .tvtime-watch-card > div:last-child {
+    padding: 0.85rem;
+  }
+
+  .tvtime-notification-panel {
+    max-width: 100vw;
+  }
+}
+
+@media (max-width: 399px) {
+  .tvtime-main-content {
+    padding-inline: 0.625rem;
+  }
+
+  .tvtime-media-grid {
+    gap: 0.625rem;
+  }
+
+  .tvtime-standard-media-card__surface > div:last-child {
+    min-height: 4.25rem;
+    padding: 0.55rem 0.625rem;
+  }
+
+  .tvtime-standard-media-card__surface h3 {
+    font-size: 0.78rem;
+  }
+
+  .tvtime-watch-card {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .tvtime-watch-card h3 {
+    font-size: 0.86rem;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tvtime-app :is(
+    [data-slot="button"],
+    [data-slot="tabs-trigger"],
+    [data-slot="select-trigger"],
+    button[data-ui-action]
+  ) {
+    min-height: 2.75rem;
+  }
+
+  .tvtime-app [data-slot="button"][data-size="icon"],
+  .tvtime-app button[data-ui-action="icon"] {
+    min-width: 2.75rem;
+  }
+}
+
 /* Fine-pointer hover is feedback only; touch layouts never depend on hover. */
 @media (hover: hover) and (pointer: fine) {
   .tvtime-app :is(

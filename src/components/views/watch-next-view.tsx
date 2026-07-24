@@ -65,11 +65,11 @@ function EmptyReady() {
 function UpcomingSection({ items, onOpen }: { items: UpcomingItem[]; onOpen: (id: number) => void }) {
   return <section className="space-y-3">
     <div><h2 className="text-xl font-extrabold">Upcoming episodes</h2><p className="text-xs text-muted-foreground">The next announced episode for every show you follow</p></div>
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map((item) => {
+    <div className="tvtime-watch-card-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map((item) => {
       const remaining = daysUntil(item.airDate);
       const code = `S${String(item.seasonNumber).padStart(2, "0")}E${String(item.episodeNumber).padStart(2, "0")}`;
       return <a key={item.tmdbId} href={`/tv/${item.tmdbId}`} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(item.tmdbId); }} className="group block">
-        <Card className="grid grid-cols-[104px_1fr] overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10">
+        <Card className="tvtime-watch-card grid grid-cols-[104px_1fr] overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10">
           <div className="relative aspect-[2/3] bg-muted"><SafeImage src={item.poster} alt={item.title} fill variant="poster" /></div>
           <div className="flex min-w-0 flex-col p-4">
             <Badge variant="secondary" className="w-fit"><CalendarDays className="mr-1 h-3 w-3" />{item.airDate}</Badge>
@@ -87,11 +87,11 @@ function UpcomingSection({ items, onOpen }: { items: UpcomingItem[]; onOpen: (id
 function WatchSection({ title, subtitle, items, onOpen, paused = false }: { title: string; subtitle: string; items: WatchNextItem[]; onOpen: (id: number) => void; paused?: boolean }) {
   if (items.length === 0) return null;
   return <section className="space-y-3"><div className="flex items-end justify-between"><div><h2 className="text-xl font-extrabold">{title}</h2><p className="text-xs text-muted-foreground">{subtitle}</p></div><Badge variant="secondary">{items.length}</Badge></div>
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{items.map((item) => {
+    <div className="tvtime-watch-card-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{items.map((item) => {
       const progress = Math.round((item.watchedEpisodes / Math.max(item.releasedEpisodes, 1)) * 100);
       const href = `/tv/${item.tmdbId}`;
       return <a key={item.tmdbId} href={href} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(item.tmdbId); }} className="group block">
-        <Card className="grid grid-cols-[104px_1fr] overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10">
+        <Card className="tvtime-watch-card grid grid-cols-[104px_1fr] overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10">
           <div className="relative aspect-[2/3] bg-muted"><SafeImage src={item.poster} alt={item.title} fill variant="poster" /><span className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" /></div>
           <div className="flex min-w-0 flex-col p-4"><div className="flex items-center gap-1.5"><Badge variant="secondary" className="h-5 text-[9px]">{item.isArabic ? <Languages className="mr-1 h-3 w-3" /> : item.isAnime ? <Sparkles className="mr-1 h-3 w-3" /> : <Tv className="mr-1 h-3 w-3" />}{item.isArabic ? "Arabic TV" : item.isAnime ? "Anime" : "TV"}</Badge>{paused && <Badge className="h-5 border-0 bg-amber-500/15 text-[9px] text-amber-300"><Clock3 className="mr-1 h-3 w-3" />{daysSince(item.lastActivity)}d</Badge>}</div>
             <h3 className="mt-2 line-clamp-2 font-bold group-hover:text-primary">{item.title}</h3><p className="mt-1 text-sm font-black text-primary">S{item.seasonNumber} · E{item.episodeNumber}</p>
@@ -105,4 +105,4 @@ function WatchSection({ title, subtitle, items, onOpen, paused = false }: { titl
 
 function daysSince(value: string) { const time = Date.parse(value); return Number.isFinite(time) ? Math.max(0, Math.floor((Date.now() - time) / 86400000)) : 0; }
 function daysUntil(value: string) { const time = Date.parse(`${value}T00:00:00Z`); const today = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`); return Number.isFinite(time) ? Math.max(0, Math.ceil((time - today) / 86400000)) : 0; }
-function WatchNextSkeleton() { return <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-40 shimmer rounded-xl" />)}</div>; }
+function WatchNextSkeleton() { return <div className="tvtime-watch-card-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-40 shimmer rounded-xl" />)}</div>; }

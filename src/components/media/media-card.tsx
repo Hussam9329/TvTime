@@ -87,7 +87,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3) }}
-      className="cursor-pointer group"
+      className="tvtime-standard-media-card cursor-pointer group min-w-0"
       onClick={(event) => {
         if (enableNativeLink && (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
         event.preventDefault();
@@ -98,7 +98,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       tabIndex={0}
       aria-label={`${title}${year ? ` (${year})` : ""}`}
     >
-      <Card className="h-full overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card">
+      <Card className="tvtime-standard-media-card__surface h-full overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           <SafeImage
             src={imgOrPlaceholder(item.poster_path, "w342")}
@@ -194,7 +194,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
 
   if (loading) {
     return (
-      <div className="feedback-grid feedback-grid--loading grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4" role="status" aria-busy="true" aria-label="Loading media">
+      <div className="tvtime-media-grid feedback-grid feedback-grid--loading grid gap-3 sm:gap-4" role="status" aria-busy="true" aria-label="Loading media">
         {Array.from({ length: 12 }).map((_, i) => (
           <MediaCardSkeleton key={i} />
         ))}
@@ -202,7 +202,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
     );
   }
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+    <div className="tvtime-media-grid grid gap-3 sm:gap-4">
       {items.map((item, i) => (
         <MediaCard
           key={`${item.id}-${item.media_type || ""}`}
