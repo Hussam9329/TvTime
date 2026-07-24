@@ -12,9 +12,10 @@ import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
 import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
 import { WatchProviders } from "@/components/media/watch-providers";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
-  DollarSign, Film, Users, Sparkles, Heart, Loader2, ExternalLink,
+  DollarSign, Film, Users, Sparkles, Heart, Loader2, ExternalLink, ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -278,17 +279,22 @@ export function MovieDetailView() {
                 <Play className="w-4 h-4 mr-2 fill-current" /> Trailer
               </Button>
             )}
-            <Button
-              variant="outline"
-              className="h-10"
-              onClick={() => window.open(
-                `https://filmween.net/search?q=${encodeURIComponent(displayTitle)}&mode=title`,
-                "_blank",
-                "noopener,noreferrer",
-              )}
-            >
-              <ExternalLink className="w-4 h-4 mr-2" /> Watch
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-10">
+                  <ExternalLink className="w-4 h-4 mr-2" /> Watch
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onSelect={() => window.open(`https://filmween.net/search?q=${encodeURIComponent(displayTitle)}&mode=title`, "_blank", "noopener,noreferrer")}>
+                  <ExternalLink /> Filmween
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => window.open(`https://movie.vodu.me/index.php?do=list&title=${encodeURIComponent(displayTitle)}`, "_blank", "noopener,noreferrer")}>
+                  <ExternalLink /> Vodu
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
             );
           })()}

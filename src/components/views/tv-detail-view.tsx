@@ -13,6 +13,7 @@ import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
 import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
 import { WatchProviders } from "@/components/media/watch-providers";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Star, Clock, Play, ListPlus, CheckCircle2, Circle, ArrowLeft,
   Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2, RotateCcw, ExternalLink,
@@ -388,17 +389,22 @@ export function TvDetailView() {
                 <Play className="w-4 h-4 mr-2 fill-current" /> Trailer
               </Button>
             )}
-            <Button
-              variant="outline"
-              className="h-10"
-              onClick={() => window.open(
-                `https://filmween.net/search?q=${encodeURIComponent(displayTitle)}&mode=title`,
-                "_blank",
-                "noopener,noreferrer",
-              )}
-            >
-              <ExternalLink className="w-4 h-4 mr-2" /> Watch
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-10">
+                  <ExternalLink className="w-4 h-4 mr-2" /> Watch
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onSelect={() => window.open(`https://filmween.net/search?q=${encodeURIComponent(displayTitle)}&mode=title`, "_blank", "noopener,noreferrer")}>
+                  <ExternalLink /> Filmween
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => window.open(`https://movie.vodu.me/index.php?do=list&title=${encodeURIComponent(displayTitle)}`, "_blank", "noopener,noreferrer")}>
+                  <ExternalLink /> Vodu
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <Card className="rounded-2xl border-white/15 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
