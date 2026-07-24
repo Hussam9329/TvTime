@@ -171,22 +171,6 @@ npm run verify:patch-11
 
 See `PATCH_11.md` for scope, acceptance criteria and rollback details.
 
-### Premium cinematic visual system (Patch 12)
-
-Patch 12 builds on the shared foundation with a more professional product
-identity: a floating command header, clearer desktop navigation hierarchy,
-one-tap mobile dock, cinematic Home composition, poster-first media cards,
-labelled horizontal collections and direction-safe Arabic card controls. It
-preserves all data, API, authentication and mutation behavior.
-
-Run the focused gate with:
-
-```bash
-npm run verify:patch-12
-```
-
-See `PATCH_12.md` for visual rationale, acceptance criteria and rollback details.
-
 ### Database Verification (Read-Only)
 
 ```bash
@@ -308,8 +292,6 @@ npm run verify:patch-07
 npm run verify:patch-08
 npm run verify:patch-09
 npm run verify:patch-10
-npm run verify:patch-11
-npm run verify:patch-12
 ```
 
 ## Deployment (Vercel)

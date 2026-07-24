@@ -37,8 +37,7 @@
     "lint:strict": "eslint . --max-warnings=0",
     "verify:ci": "node scripts/verify-ci.mjs",
     "verify:patch-10": "node --experimental-strip-types --loader ./scripts/ts-path-loader.mjs scripts/test-patch-10.ts && node scripts/verify-patch-10.mjs",
-    "verify:patch-11": "node --experimental-strip-types scripts/test-patch-11.ts && node scripts/verify-patch-11.mjs",
-    "verify:patch-12": "node --experimental-strip-types scripts/test-patch-12.ts && node scripts/verify-patch-12.mjs"
+    "verify:patch-11": "node --experimental-strip-types scripts/test-patch-11.ts && node scripts/verify-patch-11.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

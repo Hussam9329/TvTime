@@ -14,8 +14,6 @@ const arabicLib = read("src/lib/arabic-media.ts");
 const navigation = read("src/lib/navigation.ts");
 const shell = read("src/components/app-shell.tsx");
 const header = read("src/components/layout/header.tsx");
-const navigationLayout = read("src/lib/navigation-layout.ts");
-const viewMetadata = read("src/lib/view-metadata.ts");
 const shortcuts = read("src/components/layout/keyboard-shortcuts.tsx");
 const arabicMovies = read("src/components/views/arabic-movies-view.tsx");
 const arabicTv = read("src/components/views/arabic-tv-view.tsx");
@@ -66,7 +64,7 @@ check(/view === "arabic-movies"[\s\S]*<ArabicMoviesView/.test(shell), "App shell
 check(/view === "arabic-tv"[\s\S]*<ArabicTvView/.test(shell), "App shell renders Arabic TV independently");
 check(/view: "arabic-movies"/.test(read("src/app/arabic/movies/page.tsx")), "Arabic Movies direct route initializes the correct view");
 check(/view: "arabic-tv"/.test(read("src/app/arabic/tv/page.tsx")), "Arabic TV direct route initializes the correct view");
-check(/SECONDARY_NAV_VIEWS/.test(header) && /"arabic-movies"/.test(navigationLayout) && /"arabic-tv"/.test(navigationLayout) && /label:\s*"Arabic Movies"/.test(viewMetadata) && /label:\s*"Arabic TV"/.test(viewMetadata), "Header exposes both Arabic worlds");
+check(/Arabic Movies/.test(header) && /Arabic TV/.test(header), "Header exposes both Arabic worlds");
 check(/Go to Arabic Movies/.test(shortcuts) && /Go to Arabic TV/.test(shortcuts), "Keyboard navigation reaches both Arabic worlds");
 
 check(/value="library"/.test(arabicMovies) && /value="discover"/.test(arabicMovies) && /value="releases"/.test(arabicMovies) && /CollectionWorldView/.test(arabicMovies) && /DiscoverView/.test(arabicMovies) && /ReleaseSchedule/.test(arabicMovies), "Arabic Movies has its own library, discovery and release schedule");

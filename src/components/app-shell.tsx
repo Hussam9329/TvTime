@@ -14,7 +14,6 @@ import { navigationEntryFromPath, normalizeNavigationEntry, type NavigationEntry
 import { getViewMetadata } from "@/lib/view-metadata";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { MobileDock } from "@/components/layout/mobile-dock";
 import { HomeView } from "@/components/views/home-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -172,9 +171,9 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
         lang={viewMetadata.language}
         dir={viewMetadata.direction}
         aria-label={viewMetadata.accessibleLabel}
-        className="tvtime-main-content mx-auto w-full max-w-[1440px] flex-1 px-3 py-4 sm:px-5 sm:py-6 lg:px-8 lg:py-8"
+        className="tvtime-main-content flex-1 max-w-[1400px] w-full mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6"
       >
-        <div key={routeKey} className="tvtime-view-transition animate-fade-in-up">
+        <div key={routeKey} className="animate-fade-in-up">
           {/* HomeView stays eager — it is the landing page and the first thing
               the user sees after login. */}
           {view === "home" && (
@@ -208,7 +207,6 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
         </div>
       </main>
 
-      <MobileDock />
       <Footer />
     </div>
   );

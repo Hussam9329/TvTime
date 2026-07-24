@@ -1,7 +1,6 @@
 "use client";
 
 import { Clapperboard, Film, Heart, Sparkles } from "lucide-react";
-
 import { useStats } from "@/hooks/use-tmdb";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 
@@ -9,39 +8,73 @@ export function Footer() {
   const stats = useStats();
 
   return (
-    <footer className="tvtime-app-footer mt-auto" aria-label="Application footer">
-      <div className="tvtime-footer-inner mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="tvtime-footer-mark flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm" aria-hidden="true">
-              <Clapperboard className="h-4 w-4" />
+    <footer
+      className="tvtime-app-footer relative mt-auto overflow-hidden border-t border-border/60 glass"
+      aria-label="Application footer"
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-12 left-1/4 h-24 w-48 rounded-full bg-primary/10 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-12 right-1/4 h-24 w-48 rounded-full bg-secondary/45 blur-3xl"
+      />
+
+      <div className="relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
+        <div className="flex flex-col items-center justify-between gap-4 text-sm sm:flex-row">
+          <div className="flex items-center gap-2.5">
+            <span className="relative" aria-hidden="true">
+              <span className="absolute inset-0 rounded-md bg-primary/35 blur-md" />
+              <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-primary">
+                <Clapperboard className="h-4 w-4 text-primary-foreground" />
+              </span>
             </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-extrabold tracking-tight text-foreground">{APP_NAME}</span>
-              <span className="block truncate text-xs text-muted-foreground">{APP_TAGLINE}</span>
+            <span className="flex items-baseline gap-2">
+              <span className="text-gradient text-base font-extrabold">{APP_NAME}</span>
+              <span className="hidden text-muted-foreground/40 sm:inline" aria-hidden="true">
+                ·
+              </span>
+              <span className="hidden text-muted-foreground sm:inline">{APP_TAGLINE}</span>
             </span>
           </div>
 
           {stats.data && (
-            <dl className="tvtime-footer-stats flex items-center gap-2" aria-label="Viewing summary">
-              <div className="tvtime-footer-stat">
+            <dl
+              className="flex items-center gap-4 text-xs"
+              aria-label="Viewing summary"
+            >
+              <div className="flex items-center gap-1.5">
                 <Film className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                <dt>Watched movies</dt>
-                <dd className="tabular-nums">{stats.data.counts.watchedMovies}</dd>
+                <dt className="sr-only">Watched movies</dt>
+                <dd className="font-bold text-foreground tabular-nums">
+                  {stats.data.counts.watchedMovies}
+                </dd>
+                <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
+                  movies
+                </span>
               </div>
-              <div className="tvtime-footer-stat">
+              <div className="flex items-center gap-1.5 border-l border-border/60 pl-4">
                 <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                <dt>Watched episodes</dt>
-                <dd className="tabular-nums">{stats.data.counts.watchedEpisodes}</dd>
+                <dt className="sr-only">Watched episodes</dt>
+                <dd className="font-bold text-foreground tabular-nums">
+                  {stats.data.counts.watchedEpisodes}
+                </dd>
+                <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
+                  episodes
+                </span>
               </div>
             </dl>
           )}
 
-          <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground sm:justify-end">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>
-              Metadata by <span className="font-semibold text-foreground">TMDB</span>
+              Data by <span className="font-semibold text-foreground">TMDB</span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="hidden text-muted-foreground/30 sm:inline" aria-hidden="true">
+              |
+            </span>
+            <span className="flex items-center gap-1">
               Built with <Heart className="h-3 w-3 fill-primary text-primary" aria-hidden="true" />
               <span className="sr-only">care</span>
             </span>
