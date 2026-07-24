@@ -204,7 +204,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (maxRating !== undefined) {
       filtered = filtered.filter((m) => (m.vote_average || 0) <= maxRating);
     }
-    if (world === "arabic-tv") {
+    if (world === "arabic-movies" || world === "arabic-tv") {
       filtered.sort((left, right) => arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right));
     }
     return filtered;
