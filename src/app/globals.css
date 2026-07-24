@@ -3220,3 +3220,58 @@ body {
     background-color: rgb(6 10 18 / 0.96) !important;
   }
 }
+
+/* Watch Next cards: prevent portrait aspect-ratio from expanding over the
+   details column on narrow phones. Poster and content always own their cells. */
+.tvtime-app .tvtime-watch-card {
+  display: grid !important;
+  grid-template-columns: 104px minmax(0, 1fr) !important;
+  min-height: 156px;
+}
+
+.tvtime-app .tvtime-watch-card > :first-child {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  min-height: 156px;
+  aspect-ratio: auto !important;
+  overflow: hidden;
+}
+
+.tvtime-app .tvtime-watch-card > :last-child {
+  min-width: 0 !important;
+  overflow: hidden;
+}
+
+.tvtime-app .tvtime-watch-card > :last-child :is(h3, p, span) {
+  max-width: 100%;
+}
+
+@media (max-width: 479px) {
+  .tvtime-app .tvtime-watch-card {
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+    min-height: 160px;
+  }
+
+  .tvtime-app .tvtime-watch-card > :first-child {
+    min-height: 160px;
+  }
+
+  .tvtime-app .tvtime-watch-card > :last-child {
+    padding: 0.75rem !important;
+  }
+
+  .tvtime-app .tvtime-watch-card > :last-child h3 {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 339px) {
+  .tvtime-app .tvtime-watch-card {
+    grid-template-columns: 78px minmax(0, 1fr) !important;
+  }
+
+  .tvtime-app .tvtime-watch-card > :last-child {
+    padding: 0.625rem !important;
+  }
+}

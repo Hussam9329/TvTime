@@ -116,7 +116,7 @@ function WatchSection({ title, subtitle, items, onOpen, paused = false }: { titl
             aria-label={`Open ${item.title}`}
             title={`Open ${item.title}`}
             onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(item.tmdbId); }}
-            className="relative block aspect-[2/3] overflow-hidden bg-muted focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+            className="relative block h-full min-h-[156px] overflow-hidden bg-muted focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
           >
             <SafeImage src={item.poster} alt={item.title} fill variant="poster" />
             <span className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent transition-colors group-hover:from-black/30" />
