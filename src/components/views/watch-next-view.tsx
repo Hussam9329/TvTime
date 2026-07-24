@@ -110,35 +110,37 @@ function WatchSection({ title, subtitle, items, onOpen, paused = false }: { titl
       const href = `/tv/${item.tmdbId}`;
       const isMarking = episodeToggle.isPending && episodeToggle.variables?.showId === item.tmdbId;
       return <div key={item.tmdbId} className="group relative">
-        <a
-          href={href}
-          aria-label={`Open ${item.title}`}
-          onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(item.tmdbId); }}
-          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        />
         <Card className="tvtime-watch-card grid grid-cols-[104px_1fr] overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10">
-          <div className="relative aspect-[2/3] bg-muted"><SafeImage src={item.poster} alt={item.title} fill variant="poster" /><span className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" /></div>
-          <div className="flex min-w-0 flex-col p-4"><div className="flex items-center gap-1.5"><Badge variant="secondary" className="h-5 text-[9px]">{item.isArabic ? <Languages className="mr-1 h-3 w-3" /> : item.isAnime ? <Sparkles className="mr-1 h-3 w-3" /> : <Tv className="mr-1 h-3 w-3" />}{item.isArabic ? "Arabic TV" : item.isAnime ? "Anime" : "TV"}</Badge>{paused && <Badge className="h-5 border-0 bg-amber-500/15 text-[9px] text-amber-300"><Clock3 className="mr-1 h-3 w-3" />{daysSince(item.lastActivity)}d</Badge>}</div>
+          <a
+            href={href}
+            aria-label={`Open ${item.title}`}
+            title={`Open ${item.title}`}
+            onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(item.tmdbId); }}
+            className="relative block aspect-[2/3] overflow-hidden bg-muted focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+          >
+            <SafeImage src={item.poster} alt={item.title} fill variant="poster" />
+            <span className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent transition-colors group-hover:from-black/30" />
+          </a>
+          <div className="relative flex min-w-0 flex-col p-4"><div className="flex items-center gap-1.5"><Badge variant="secondary" className="h-5 text-[9px]">{item.isArabic ? <Languages className="mr-1 h-3 w-3" /> : item.isAnime ? <Sparkles className="mr-1 h-3 w-3" /> : <Tv className="mr-1 h-3 w-3" />}{item.isArabic ? "Arabic TV" : item.isAnime ? "Anime" : "TV"}</Badge>{paused && <Badge className="h-5 border-0 bg-amber-500/15 text-[9px] text-amber-300"><Clock3 className="mr-1 h-3 w-3" />{daysSince(item.lastActivity)}d</Badge>}</div>
             <h3 className="mt-2 line-clamp-2 font-bold group-hover:text-primary">{item.title}</h3><p className="mt-1 text-sm font-black text-primary">S{item.seasonNumber} · E{item.episodeNumber}</p>
             <div className="mt-auto pt-3">
               <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>{item.watchedEpisodes}/{item.releasedEpisodes} watched</span><span>{progress}%</span></div>
               <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${progress}%` }} /></div>
-              <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="mt-2 flex min-h-9 items-center pe-12">
                 <span className="inline-flex items-center text-xs font-bold text-primary"><Play className="mr-1 h-3 w-3 fill-current" /> Continue</span>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={episodeToggle.isPending}
-                  onClick={() => void markWatched(item)}
-                  className="relative z-20 h-9 min-w-9 gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 px-3 text-xs font-extrabold text-white shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-300"
-                  aria-label={`Mark S${item.seasonNumber}E${item.episodeNumber} watched`}
-                  title="Mark watched and show next episode"
-                >
-                  {isMarking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  <span className="hidden min-[420px]:inline">Watched</span>
-                </Button>
               </div>
             </div>
+            <Button
+              type="button"
+              size="icon"
+              disabled={episodeToggle.isPending}
+              onClick={() => void markWatched(item)}
+              className="absolute bottom-3 end-3 z-20 size-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/20 hover:scale-105 hover:from-emerald-300 hover:to-emerald-500"
+              aria-label={`Mark S${item.seasonNumber}E${item.episodeNumber} watched and show the next episode`}
+              title="Mark watched and show next episode"
+            >
+              {isMarking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
+            </Button>
           </div>
         </Card>
       </div>;
