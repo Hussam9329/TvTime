@@ -25,6 +25,7 @@ const CATEGORY_VALUES = new Set([
   "havent-watched",
   "havent-started",
   "stale",
+  "stopped",
 ]);
 const LEGACY_CATEGORY_ALIASES: Record<string, TvTrackingCategory> = {
   planned: "watchlist",
@@ -45,7 +46,8 @@ type TvTrackingCategory =
   | "upcoming"
   | "havent-watched"
   | "havent-started"
-  | "stale";
+  | "stale"
+  | "stopped";
 
 type WatchedEpisodeMeta = {
   keys: Set<string>;
@@ -345,13 +347,15 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
       legacyCompleted,
     });
 
-    const effectiveState = derived.verified
-      ? derived.state
-      : watched.count > 0
-        ? "watching"
-        : persisted === "planned"
-          ? "planned"
-          : "not_started";
+    const effectiveState = persisted === "stopped"
+      ? "stopped"
+      : derived.verified
+        ? derived.state
+        : watched.count > 0
+          ? "watching"
+          : persisted === "planned"
+            ? "planned"
+            : "not_started";
     const repaired = await repairShowIfNeeded(
       show,
       effectiveState,
@@ -383,7 +387,8 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
     const since = daysSince(show._serverWatchedMeta.lastWatchedAt);
     return since != null && since >= STALE_WATCH_DAYS;
   };
-  const isUpcoming = (show: DecoratedShow) => Boolean(show._serverTvMeta?.nextEpisode);
+  const isUpcoming = (show: DecoratedShow) =>
+    show._serverTrackingStatus !== "stopped" && Boolean(show._serverTvMeta?.nextEpisode);
 
   const counts = {
     all: decorated.length,
@@ -394,6 +399,7 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
     watching: decorated.filter((show) => show._serverTrackingStatus === "watching").length,
     uptodate: decorated.filter((show) => show._serverTrackingStatus === "uptodate").length,
     finished: decorated.filter((show) => show._serverTrackingStatus === "finished").length,
+    stopped: decorated.filter((show) => show._serverTrackingStatus === "stopped").length,
     upcoming: decorated.filter(isUpcoming).length,
     haventWatched: decorated.filter(hasUnwatchedReleasedEpisode).length,
     stale: decorated.filter(isStaleWatching).length,
@@ -464,6 +470,7 @@ export async function GET(req: NextRequest) {
       watchlist: (show) => show._serverTrackingStatus === "planned",
       uptodate: (show) => show._serverTrackingStatus === "uptodate",
       finished: (show) => show._serverTrackingStatus === "finished",
+      stopped: (show) => show._serverTrackingStatus === "stopped",
       upcoming: snapshot.predicates.isUpcoming,
       "havent-watched": snapshot.predicates.hasUnwatchedReleasedEpisode,
       "havent-started": (show) => show._serverTrackingStatus === "not_started",

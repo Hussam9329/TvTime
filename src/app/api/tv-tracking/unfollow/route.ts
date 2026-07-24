@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const tmdbId = Number(body?.tmdbId);
     const keep = body?.keepProgress !== false;
+    const stopWatching = body?.stopWatching === true;
 
     if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
       return NextResponse.json(
@@ -54,13 +55,13 @@ export async function POST(req: NextRequest) {
         || activeProgressStates.has(String(media.status || ""));
       const needsStateCleanup = !hasProgress
         && (media.status !== null || media.watched || media.watchedAt !== null);
-      const changed = media.isFollowing || needsStateCleanup;
+      const changed = media.isFollowing || needsStateCleanup || (stopWatching && media.status !== "stopped");
 
       if (!changed) {
         return NextResponse.json({
           ok: true,
           changed: false,
-          action: "unfollow_keep_progress",
+          action: stopWatching ? "stop_watching" : "unfollow_keep_progress",
           item: normalizeMedia(media),
           message: "The show was already unfollowed. Episode progress is unchanged.",
         });
@@ -70,16 +71,20 @@ export async function POST(req: NextRequest) {
         where: { id: media.id },
         data: {
           isFollowing: false,
-          ...(hasProgress ? {} : { status: null, watched: false, watchedAt: null }),
+          ...(stopWatching
+            ? { status: "stopped", watched: false }
+            : hasProgress ? {} : { status: null, watched: false, watchedAt: null }),
         },
       });
 
       return NextResponse.json({
         ok: true,
         changed,
-        action: "unfollow_keep_progress",
+        action: stopWatching ? "stop_watching" : "unfollow_keep_progress",
         item: normalizeMedia(updated),
-        message: "Unfollowed. Episode progress was kept.",
+        message: stopWatching
+          ? "Stopped watching. Episode progress was kept."
+          : "Unfollowed. Episode progress was kept.",
       });
     }
 

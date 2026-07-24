@@ -616,6 +616,8 @@ export function useWatchlistToggle() {
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+      qc.invalidateQueries({ queryKey: ["watch-next"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -1038,6 +1040,7 @@ export function useFollowingToggle() {
       seasons?: number | null;
       episodes?: number | null;
       keepProgress?: boolean;
+      stopWatching?: boolean;
     }): Promise<FollowingToggleResult> => {
       if (args.action === "remove") {
         const res = await fetch(withUserId(new URL("/api/tv-tracking/unfollow", window.location.origin)), {
@@ -1046,6 +1049,7 @@ export function useFollowingToggle() {
           body: JSON.stringify({
             tmdbId: args.tmdbId,
             keepProgress: args.keepProgress !== false,
+            stopWatching: args.stopWatching === true,
           }),
         });
         await ensureApiOk(res, "Failed to unfollow TV show");
@@ -1281,7 +1285,8 @@ export type TvTrackingCategory =
   | "upcoming"
   | "havent-watched"
   | "havent-started"
-  | "stale";
+  | "stale"
+  | "stopped";
 
 export interface TvTrackingCounts {
   all: number;
@@ -1292,6 +1297,7 @@ export interface TvTrackingCounts {
   watching: number;
   uptodate: number;
   finished: number;
+  stopped: number;
   upcoming: number;
   haventWatched: number;
   stale?: number;

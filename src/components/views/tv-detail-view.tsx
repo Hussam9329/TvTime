@@ -16,7 +16,7 @@ import { WatchProviders } from "@/components/media/watch-providers";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Star, Clock, Play, ListPlus, CheckCircle2, Circle, ArrowLeft,
-  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2, RotateCcw, ExternalLink,
+  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2, RotateCcw, ExternalLink, CircleStop,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -45,6 +45,7 @@ export function TvDetailView() {
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [ratingOpen, setRatingOpen] = useState(false);
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
+  const [showStopDialog, setShowStopDialog] = useState(false);
   const [lastAutoPromptedShowId, setLastAutoPromptedShowId] = useState<string | null>(null);
 
   // Derive values needed for effects BEFORE early returns (rules-of-hooks).
@@ -112,9 +113,10 @@ export function TvDetailView() {
   // can retain a Watching/Up To Date progress badge while isFollowing is false.
   const isFollowing = progress.isFollowing;
   const effectiveLabel = showTrackingStatus;
+  const isStopped = showTrackingStatus === "stopped";
   const hasSavedProgress = progress.watchedItems.length > 0
     || trackedShow?.watched === true
-    || ["watching", "uptodate", "finished"].includes(String(showTrackingStatus || ""));
+    || ["watching", "uptodate", "finished", "stopped"].includes(String(showTrackingStatus || ""));
 
   const year = t.first_air_date?.slice(0, 4);
   const runtime = t.episode_run_time?.[0] ? `${t.episode_run_time[0]}m` : null;
@@ -182,7 +184,7 @@ export function TvDetailView() {
           seasons: t.number_of_seasons,
           episodes: t.number_of_episodes,
         });
-        if (result.changed) toast.success("Following — track episodes!");
+        if (result.changed) toast.success(isStopped ? "Watching resumed — the next episode is active again." : "Following — track episodes!");
         else toast.info("This show is already followed.");
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to follow");
@@ -206,6 +208,23 @@ export function TvDetailView() {
       else toast.info("This show was already unfollowed.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to unfollow");
+    }
+  };
+
+  const onStopWatching = async () => {
+    try {
+      const result = await followingToggle.mutateAsync({
+        action: "remove",
+        tmdbId: t.id,
+        title: displayTitle,
+        keepProgress: true,
+        stopWatching: true,
+      });
+      if (result.changed) toast.success("Stopped watching. Your episode progress was kept.");
+      else toast.info("This show is already stopped.");
+      setShowStopDialog(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to stop watching");
     }
   };
 
@@ -355,14 +374,24 @@ export function TvDetailView() {
                 {effectiveLabel === "uptodate" && <Zap className="w-3.5 h-3.5" />}
                 {effectiveLabel === "watching" && <Play className="w-3.5 h-3.5" />}
                 {effectiveLabel === "not_started" && <Circle className="w-3.5 h-3.5" />}
+                {effectiveLabel === "stopped" && <CircleStop className="w-3.5 h-3.5" />}
                 <span className="capitalize">{effectiveLabel.replace("_", " ")}</span>
               </Badge>
             )}
 
-            {isFollowing ? (
+            {isStopped ? (
               <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
-                <Bell className="w-4 h-4 mr-2" /> Following
+                <Play className="w-4 h-4 mr-2 fill-current" /> Resume Watching
               </Button>
+            ) : isFollowing ? (
+              <>
+                <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
+                  <Bell className="w-4 h-4 mr-2" /> Following
+                </Button>
+                <Button variant="outline" onClick={() => setShowStopDialog(true)} className="h-10 border-rose-400/30 text-rose-300 hover:bg-rose-500/10 hover:text-rose-200" disabled={followingToggle.isPending}>
+                  <CircleStop className="w-4 h-4 mr-2" /> Stop Watching
+                </Button>
+              </>
             ) : inWatchlist ? (
               <>
                 <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-purple-500/20 text-purple-400 border-0">
@@ -605,6 +634,28 @@ export function TvDetailView() {
         onRate={onRateSubmit}
         initialRating={myRating ?? null}
       />
+
+      {showStopDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowStopDialog(false)}>
+          <div className="w-full max-w-md space-y-5 rounded-2xl border border-rose-400/20 bg-card p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500/15">
+                <CircleStop className="h-5 w-5 text-rose-300" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Stop watching “{displayTitle}”?</h3>
+                <p className="mt-1 text-sm text-muted-foreground">All watched episodes, ratings and rewatches will remain saved. The show will leave Watch Next and notifications.</p>
+              </div>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="ghost" onClick={() => setShowStopDialog(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={onStopWatching} disabled={followingToggle.isPending}>
+                <CircleStop className="mr-2 h-4 w-4" /> Stop Watching
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Unfollow dialog — shown when user tries to unfollow a show with episode progress.
           Offers two clear options instead of a silent no-op. */}

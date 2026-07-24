@@ -9,6 +9,7 @@ export type TvTrackingCounts = {
   watching: number;
   uptodate: number;
   finished: number;
+  stopped: number;
   upcoming: number;
   haventWatched: number;
   stale?: number;
@@ -54,6 +55,10 @@ export function deriveFastTvTrackingState(row: FastTvTrackingRow): {
   const airedEpisodeCount = row.metadataFresh && row.airedEpisodeCount != null
     ? safeCount(row.airedEpisodeCount)
     : null;
+
+  if (persisted === "stopped") {
+    return { state: "stopped", hasUnwatchedReleasedEpisode: false, verified: true };
+  }
 
   if (episodeCount > 0) {
     if (airedEpisodeCount != null && airedEpisodeCount > 0) {
@@ -102,6 +107,7 @@ export function buildFastTvTrackingSummary(
     watching: 0,
     uptodate: 0,
     finished: 0,
+    stopped: 0,
     upcoming: 0,
     haventWatched: 0,
   };
@@ -126,10 +132,12 @@ export function buildFastTvTrackingSummary(
       counts.uptodate += 1;
     } else if (derived.state === "finished") {
       counts.finished += 1;
+    } else if (derived.state === "stopped") {
+      counts.stopped += 1;
     }
 
-    if (derived.hasUnwatchedReleasedEpisode) counts.haventWatched += 1;
-    if (row.metadataFresh && row.nextEpisodeAirDate && isFutureEpisode(row.nextEpisodeAirDate, now)) {
+    if (derived.state !== "stopped" && derived.hasUnwatchedReleasedEpisode) counts.haventWatched += 1;
+    if (derived.state !== "stopped" && row.metadataFresh && row.nextEpisodeAirDate && isFutureEpisode(row.nextEpisodeAirDate, now)) {
       counts.upcoming += 1;
     }
   }

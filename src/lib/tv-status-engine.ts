@@ -1,4 +1,4 @@
-export type TvTrackingState = "planned" | "not_started" | "watching" | "uptodate" | "finished";
+export type TvTrackingState = "planned" | "not_started" | "watching" | "uptodate" | "finished" | "stopped";
 
 export type TvEpisodeIdentity = {
   seasonNumber: number;
@@ -67,6 +67,7 @@ export function normalizeTvTrackingState(status?: string | null): TvTrackingStat
   if (normalized === "watching" || normalized === "in_progress") return "watching";
   if (normalized === "uptodate" || normalized === "up_to_date") return "uptodate";
   if (normalized === "finished" || normalized === "completed") return "finished";
+  if (normalized === "stopped" || normalized === "stopped_watching") return "stopped";
   if (normalized === "watched") return "finished"; // legacy completed marker; official status still decides final state.
   return null;
 }
@@ -277,6 +278,19 @@ export function deriveTvTrackingState(input: DeriveTvTrackingStateInput): Derive
     || input.officiallyEnded === true;
   const verified = boundaryKnown && progressIntersectionKnown;
 
+  // Stopped Watching is an explicit user decision. Metadata refreshes and
+  // episode-count derivation must never silently resume the show.
+  if (persisted === "stopped") {
+    return {
+      state: "stopped",
+      watchedAiredEpisodeCount: airedKeys.size > 0 ? watchedAiredEpisodeCount : watchedKeys.size,
+      airedEpisodeCount,
+      futureOrUnknownWatchedEpisodeCount,
+      legacyCompletionAssumed,
+      verified,
+    };
+  }
+
   // Finished and Up To Date both require a verified released-episode boundary.
   // When TMDB cannot be verified, keep real episode progress as Watching and
   // never trust a stale persisted completion label.
@@ -345,7 +359,7 @@ export function tvStateToMediaPatch(
   if (state === "finished") {
     return { status: state, watched: true, watchedAt: safeDate };
   }
-  if (state === "uptodate" || state === "watching") {
+  if (state === "uptodate" || state === "watching" || state === "stopped") {
     return { status: state, watched: false, watchedAt: safeDate };
   }
   return { status: state, watched: false, watchedAt: null };
@@ -354,5 +368,6 @@ export function tvStateToMediaPatch(
 export function tvTrackingStateLabel(state: TvTrackingState): string {
   if (state === "not_started") return "Not Started";
   if (state === "uptodate") return "Up To Date";
+  if (state === "stopped") return "Stopped Watching";
   return state.charAt(0).toUpperCase() + state.slice(1);
 }

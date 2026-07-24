@@ -137,7 +137,11 @@ async function updateShowStatusInTransaction(
     : persistedState === "planned"
       ? "planned"
       : "not_started";
-  const effectiveState = derived.verified ? derived.state : safeUnverifiedState;
+  const effectiveState = persistedState === "stopped"
+    ? "stopped"
+    : derived.verified
+      ? derived.state
+      : safeUnverifiedState;
   const lastWatchedAt = watchedEpisodes[0]?.watchedAt ?? null;
   const classification = classificationFromMetadata(metadata);
   const update: Prisma.MediaUpdateInput = {

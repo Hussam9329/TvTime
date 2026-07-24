@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { SafeImage } from "@/components/media/safe-image";
-import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronRight, Grid2X2, List } from "lucide-react";
+import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronRight, Grid2X2, List, CircleStop } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 
 
 // Tracking status is calculated by the shared server engine.
-type TrackingStatus = "planned" | "not_started" | "watching" | "uptodate" | "finished";
+type TrackingStatus = "planned" | "not_started" | "watching" | "uptodate" | "finished" | "stopped";
 
 function deriveTrackingStatus(show: any): TrackingStatus {
   const value = String(show?._trackingStatus || show?.status || "not_started").toLowerCase();
@@ -23,7 +23,7 @@ function deriveTrackingStatus(show: any): TrackingStatus {
     if (show?._isEndedByTmdb === true) return "finished";
     return show?._hasUnwatchedReleasedEpisode ? "watching" : "uptodate";
   }
-  if (value === "planned" || value === "not_started" || value === "watching" || value === "uptodate") {
+  if (value === "planned" || value === "not_started" || value === "watching" || value === "uptodate" || value === "stopped") {
     return value;
   }
   if (value === "watched") return show?._isEndedByTmdb === true ? "finished" : "uptodate";
@@ -31,6 +31,9 @@ function deriveTrackingStatus(show: any): TrackingStatus {
 }
 
 function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
+  if (status === "stopped") {
+    return <Badge data-status="stopped" className="h-10 rounded-full border border-rose-400/20 bg-rose-500/15 px-4 text-sm font-bold text-rose-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><CircleStop className="mr-2 h-4 w-4" /> Stopped Watching</Badge>;
+  }
   if (status === "finished") {
     return <Badge data-status="finished" className="h-10 rounded-full border border-emerald-400/20 bg-emerald-500/15 px-4 text-sm font-bold text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Trophy className="mr-2 h-4 w-4" /> Finished</Badge>;
   }
@@ -71,11 +74,12 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
       )}
 
       {/* TV Shows filters, all backed by full-collection counters. */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
         <StatCard icon={<Layers className="w-5 h-5" />} label="All" value={counts?.all ?? "…"} color="from-purple-500/20 to-purple-500/5" />
         <StatCard icon={<BookOpen className="w-5 h-5" />} label="Watchlist" value={counts?.watchlist ?? counts?.planned ?? "…"} color="from-violet-500/20 to-violet-500/5" />
         <StatCard icon={<Zap className="w-5 h-5" />} label="Up To Date" value={counts?.uptodate ?? "…"} color="from-cyan-500/20 to-cyan-500/5" />
         <StatCard icon={<Trophy className="w-5 h-5" />} label="Finished" value={counts?.finished ?? "…"} color="from-emerald-500/20 to-emerald-500/5" />
+        <StatCard icon={<CircleStop className="w-5 h-5" />} label="Stopped Watching" value={counts?.stopped ?? "…"} color="from-rose-500/20 to-rose-500/5" />
         <StatCard icon={<Calendar className="w-5 h-5" />} label="Upcoming" value={counts?.upcoming ?? "…"} color="from-amber-500/20 to-amber-500/5" />
         <StatCard icon={<Play className="w-5 h-5" />} label="Haven't Watched" value={counts?.haventWatched ?? "…"} color="from-orange-500/20 to-orange-500/5" />
         <StatCard icon={<Clock className="w-5 h-5" />} label="Haven't Started" value={counts?.haventStarted ?? counts?.notStarted ?? "…"} color="from-slate-500/20 to-slate-500/5" />
@@ -114,6 +118,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
     watching: 0,
     uptodate: 0,
     finished: 0,
+    stopped: 0,
     upcoming: 0,
     haventWatched: 0,
     haventStarted: 0,
@@ -131,6 +136,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
     { value: "watchlist", label: "Watchlist", count: counts.watchlist ?? counts.planned, icon: <BookOpen className="w-3 h-3" />, color: "bg-purple-500/15 text-purple-400" },
     { value: "uptodate", label: "Up To Date", count: counts.uptodate, icon: <Zap className="w-3 h-3" />, color: "bg-cyan-500/15 text-cyan-400" },
     { value: "finished", label: "Finished", count: counts.finished, icon: <Trophy className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-400" },
+    { value: "stopped", label: "Stopped Watching", count: counts.stopped ?? 0, icon: <CircleStop className="w-3 h-3" />, color: "bg-rose-500/15 text-rose-300" },
     { value: "upcoming", label: "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-400" },
     { value: "havent-watched", label: "Haven't Watched", count: counts.haventWatched, icon: <Play className="w-3 h-3" />, color: "bg-orange-500/15 text-orange-400" },
     { value: "havent-started", label: "Haven't Started", count: counts.haventStarted ?? counts.notStarted, icon: <Clock className="w-3 h-3" />, color: "bg-slate-500/15 text-slate-300" },
@@ -283,8 +289,10 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
   const watchedEps = show._watchedAiredEpisodeCount ?? 0;
   const releasedEps = show._airedEpisodeCount ?? totalEps ?? null;
 
-  const activity = show._hasUnwatchedReleasedEpisode
-    ? { tone: "orange", text: "Released episode waiting — continue watching", icon: CirclePlay }
+  const activity = trackingStatus === "stopped"
+    ? { tone: "rose", text: "Stopped watching — progress saved", icon: CircleStop }
+    : show._hasUnwatchedReleasedEpisode
+      ? { tone: "orange", text: "Released episode waiting — continue watching", icon: CirclePlay }
     : show._nextEpisodeAirDate
       ? {
           tone: "amber",
