@@ -139,13 +139,35 @@ const handler = async (
         if (segments.match(/^movie\/\d+$/)) {
           const id = Number(segments.split("/")[1]);
           const language = (queryParams.language as TmdbLanguage) || undefined;
-          data = await tmdb.movieDetail(id, language);
-          if (!language && isArabicMediaItem(data as any)) data = await tmdb.movieDetail(id, "ar");
+          if (language === "ar") {
+            const [arabicProfile, englishProfile] = await Promise.all([
+              tmdb.movieDetail(id, "ar"),
+              tmdb.movieDetail(id, "en-US"),
+            ]);
+            data = { ...arabicProfile, english_title: englishProfile.title || englishProfile.original_title };
+          } else {
+            data = await tmdb.movieDetail(id, language);
+            if (!language && isArabicMediaItem(data as any)) {
+              const arabicProfile = await tmdb.movieDetail(id, "ar");
+              data = { ...arabicProfile, english_title: (data as any).title || (data as any).original_title };
+            }
+          }
         } else if (segments.match(/^tv\/\d+$/)) {
           const id = Number(segments.split("/")[1]);
           const language = (queryParams.language as TmdbLanguage) || undefined;
-          data = await tmdb.tvDetail(id, language);
-          if (!language && isArabicMediaItem(data as any)) data = await tmdb.tvDetail(id, "ar");
+          if (language === "ar") {
+            const [arabicProfile, englishProfile] = await Promise.all([
+              tmdb.tvDetail(id, "ar"),
+              tmdb.tvDetail(id, "en-US"),
+            ]);
+            data = { ...arabicProfile, english_name: englishProfile.name || englishProfile.original_name };
+          } else {
+            data = await tmdb.tvDetail(id, language);
+            if (!language && isArabicMediaItem(data as any)) {
+              const arabicProfile = await tmdb.tvDetail(id, "ar");
+              data = { ...arabicProfile, english_name: (data as any).name || (data as any).original_name };
+            }
+          }
         } else if (segments.match(/^tv\/\d+\/season\/\d+$/)) {
           const parts = segments.split("/");
           data = await tmdb.seasonDetail(Number(parts[1]), Number(parts[3]));

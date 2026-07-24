@@ -75,6 +75,8 @@ export function MovieDetailView() {
   const originCountries = (m.production_countries ?? []).map((country) => country.iso_3166_1);
   const genreNames = (m.genres ?? []).map((genre) => genre.name);
   const isArabicMovie = detectIsArabic({ originalLanguage: m.original_language, originCountry: originCountries });
+  const filmweenSearchTitle = isArabicMovie ? ((m as any).english_title || displayTitle) : displayTitle;
+  const voduSearchTitle = displayTitle;
 
   const cast = (m as any).credits?.cast?.slice(0, 16) ?? [];
   const recommendations = ((m as any).recommendations?.results ?? [])
@@ -287,10 +289,10 @@ export function MovieDetailView() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem onSelect={() => window.open(`https://filmween.net/search?q=${encodeURIComponent(displayTitle)}&mode=title`, "_blank", "noopener,noreferrer")}>
+                <DropdownMenuItem onSelect={() => window.open(`https://filmween.net/search?q=${encodeURIComponent(filmweenSearchTitle)}&mode=title`, "_blank", "noopener,noreferrer")}>
                   <ExternalLink /> Filmween
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => window.open(`https://movie.vodu.me/index.php?do=list&title=${encodeURIComponent(displayTitle)}`, "_blank", "noopener,noreferrer")}>
+                <DropdownMenuItem onSelect={() => window.open(`https://movie.vodu.me/index.php?do=list&title=${encodeURIComponent(voduSearchTitle)}`, "_blank", "noopener,noreferrer")}>
                   <ExternalLink /> Vodu
                 </DropdownMenuItem>
               </DropdownMenuContent>
