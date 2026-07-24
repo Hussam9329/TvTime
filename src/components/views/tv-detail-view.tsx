@@ -438,6 +438,9 @@ export function TvDetailView() {
                 <DropdownMenuItem onSelect={() => window.open(`https://cinemana.shabakaty.com/search?videoTitle=${encodeURIComponent(cinemanaSearchTitle)}&staffTitle=${encodeURIComponent(cinemanaSearchTitle)}&year=1900,${new Date().getFullYear()}&type=series`, "_blank", "noopener,noreferrer")}>
                   <ExternalLink /> Cinemana
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => window.open(`https://cinemana.cc/?s=${encodeURIComponent(displayTitle)}`, "_blank", "noopener,noreferrer")}>
+                  <ExternalLink /> Cinemana Mod
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
