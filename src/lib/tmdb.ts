@@ -254,7 +254,7 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/movie/upcoming`, { page }),
   movieGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`),
-  discoverMovies: async (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
+  discoverMovies: async (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
     // For Arabic media, the default vote_count.gte=100 excludes most Arabic films
     // (which have very few votes on TMDB). Only apply the floor when the caller
@@ -269,6 +269,7 @@ export const tmdb = {
     if (params.year) p.primary_release_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
     if (params.original_language) p.with_original_language = params.original_language;
+    if (params.originCountries) p.with_origin_country = params.originCountries;
     if (params.release_date_gte) p["primary_release_date.gte"] = params.release_date_gte;
     if (params.release_date_lte) p["primary_release_date.lte"] = params.release_date_lte;
     // Certification: TMDB requires certification_country alongside the rating filter.
@@ -296,7 +297,7 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/airing_today`, { page }),
   tvGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
-  discoverTv: async (params: { genres?: number[]; without_genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
+  discoverTv: async (params: { genres?: number[]; without_genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
     const isArabic = params.original_language === "ar";
     if (params.vote_count_gte != null) {
@@ -309,6 +310,7 @@ export const tmdb = {
     if (params.year) p.first_air_date_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
     if (params.original_language) p.with_original_language = params.original_language;
+    if (params.originCountries) p.with_origin_country = params.originCountries;
     if (params.release_date_gte) p["first_air_date.gte"] = params.release_date_gte;
     if (params.release_date_lte) p["first_air_date.lte"] = params.release_date_lte;
     if (params.runtime_gte != null) p["with_runtime.gte"] = params.runtime_gte;
