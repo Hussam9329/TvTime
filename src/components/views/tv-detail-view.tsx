@@ -123,6 +123,7 @@ export function TvDetailView() {
   const isArabicShow = detectIsArabic({ originalLanguage: t.original_language, originCountry: t.origin_country });
   const filmweenSearchTitle = isArabicShow ? ((t as any).english_name || displayTitle) : displayTitle;
   const voduSearchTitle = displayTitle;
+  const cinemanaSearchTitle = displayTitle;
 
   const cast = (t as any).credits?.cast?.slice(0, 16) ?? [];
   const recommendations = ((t as any).recommendations?.results ?? [])
@@ -433,6 +434,9 @@ export function TvDetailView() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => window.open(`https://movie.vodu.me/index.php?do=list&title=${encodeURIComponent(voduSearchTitle)}`, "_blank", "noopener,noreferrer")}>
                   <ExternalLink /> Vodu
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => window.open(`https://cinemana.shabakaty.com/search?videoTitle=${encodeURIComponent(cinemanaSearchTitle)}&staffTitle=${encodeURIComponent(cinemanaSearchTitle)}&year=1900,${new Date().getFullYear()}&type=series`, "_blank", "noopener,noreferrer")}>
+                  <ExternalLink /> Cinemana
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
