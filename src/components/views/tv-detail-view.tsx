@@ -15,7 +15,7 @@ import { OfficialPosterPicker } from "@/components/media/official-poster-picker"
 import { WatchProviders } from "@/components/media/watch-providers";
 import {
   Star, Clock, Play, ListPlus, CheckCircle2, Circle, ArrowLeft,
-  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2, RotateCcw,
+  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2, RotateCcw, ExternalLink,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -388,6 +388,17 @@ export function TvDetailView() {
                 <Play className="w-4 h-4 mr-2 fill-current" /> Trailer
               </Button>
             )}
+            <Button
+              variant="outline"
+              className="h-10"
+              onClick={() => window.open(
+                `https://filmween.net/search?q=${encodeURIComponent(displayTitle)}&mode=title`,
+                "_blank",
+                "noopener,noreferrer",
+              )}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" /> Watch
+            </Button>
           </div>
 
           <Card className="rounded-2xl border-white/15 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">

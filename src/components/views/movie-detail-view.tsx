@@ -14,7 +14,7 @@ import { OfficialPosterPicker } from "@/components/media/official-poster-picker"
 import { WatchProviders } from "@/components/media/watch-providers";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
-  DollarSign, Film, Users, Sparkles, Heart, Loader2,
+  DollarSign, Film, Users, Sparkles, Heart, Loader2, ExternalLink,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -278,6 +278,17 @@ export function MovieDetailView() {
                 <Play className="w-4 h-4 mr-2 fill-current" /> Trailer
               </Button>
             )}
+            <Button
+              variant="outline"
+              className="h-10"
+              onClick={() => window.open(
+                `https://filmween.net/search?q=${encodeURIComponent(displayTitle)}&mode=title`,
+                "_blank",
+                "noopener,noreferrer",
+              )}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" /> Watch
+            </Button>
           </div>
             );
           })()}
