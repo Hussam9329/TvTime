@@ -44,3 +44,16 @@ export function isArabicMediaItem(item: Pick<MediaItem, "original_language" | "o
     originCountry: item.origin_country,
   });
 }
+
+const GULF_COUNTRY_CODES = new Set(["SA", "AE", "KW", "QA", "BH", "OM"]);
+
+export function arabicMovieCountryPriority(item: Pick<MediaItem, "origin_country">): number {
+  const countries = normalizeCountryCodes(item.origin_country);
+  if (countries.includes("EG")) return 0;
+  if (countries.includes("SY")) return 1;
+  if (countries.includes("LB")) return 2;
+  if (countries.includes("IQ")) return 3;
+  if (countries.some((country) => GULF_COUNTRY_CODES.has(country))) return 4;
+  if (countries.some((country) => ARAB_COUNTRY_CODES.has(country))) return 5;
+  return 6;
+}

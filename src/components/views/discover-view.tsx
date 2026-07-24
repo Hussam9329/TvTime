@@ -27,7 +27,7 @@ import {
   Sparkles, Info,
 } from "lucide-react";
 import { toast } from "sonner";
-import { isArabicMediaItem } from "@/lib/arabic-media";
+import { arabicMovieCountryPriority, isArabicMediaItem } from "@/lib/arabic-media";
 
 export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv";
 
@@ -204,8 +204,11 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (maxRating !== undefined) {
       filtered = filtered.filter((m) => (m.vote_average || 0) <= maxRating);
     }
+    if (world === "arabic-movies") {
+      filtered.sort((left, right) => arabicMovieCountryPriority(left) - arabicMovieCountryPriority(right));
+    }
     return filtered;
-  }, [allResults, forcedLang, isAnime, isArabic, maxRating]);
+  }, [allResults, forcedLang, isAnime, isArabic, maxRating, world]);
 
   const resetPagination = useCallback(() => {
     setPage(1);

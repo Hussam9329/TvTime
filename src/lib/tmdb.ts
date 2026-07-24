@@ -384,8 +384,18 @@ export async function localizeArabicPosters(items: MediaItem[], mediaType: "movi
         results[index] = {
           ...item,
           ...(mediaType === "movie"
-            ? { title: pickArabicTitle(profile, "movie", fallbackTitle || "") }
-            : { name: pickArabicTitle(profile, "tv", fallbackTitle || "") }),
+            ? {
+                title: pickArabicTitle(profile, "movie", fallbackTitle || ""),
+                origin_country: Array.isArray(profile?.production_countries)
+                  ? profile.production_countries.map((country: any) => country?.iso_3166_1).filter(Boolean)
+                  : item.origin_country,
+              }
+            : {
+                name: pickArabicTitle(profile, "tv", fallbackTitle || ""),
+                origin_country: Array.isArray(profile?.origin_country)
+                  ? profile.origin_country
+                  : item.origin_country,
+              }),
           poster_path: pickArabicPoster(profile) || item.poster_path,
         };
       } catch {
