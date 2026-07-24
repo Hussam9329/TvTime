@@ -1,10 +1,10 @@
 "use client";
 
-import { useFollowing, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackingCounts, useWatchedMovieToggle } from "@/hooks/use-tmdb";
+import { useFollowing, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackingCounts } from "@/hooks/use-tmdb";
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
-import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, X, Languages } from "lucide-react";
+import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
@@ -326,7 +326,6 @@ function RecentlyWatched() {
 }
 
 function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; onGo: () => void }) {
-  const unwatchToggle = useWatchedMovieToggle();
   const title = item.title || "Untitled";
   const posterSrc = imgOrPlaceholder(item.posterPath || null, "w342");
   const isMovie = item.kind === "movie";
@@ -334,31 +333,6 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
   const detailHref = item.hasProfile && Number.isFinite(tmdbId) && tmdbId > 0
     ? `/${isMovie ? "movie" : "tv"}/${tmdbId}`
     : undefined;
-
-  const handleUnwatch = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!isMovie || !item.tmdbId) {
-      toast.info(isMovie ? "This movie is missing a valid TMDB id." : "Episode unwatching is handled from the TV profile.");
-      return;
-    }
-    unwatchToggle.mutate(
-      {
-        action: "remove",
-        tmdbId: Number(item.tmdbId),
-        title,
-        posterPath: item.posterPath,
-      },
-      {
-        onSuccess: () => {
-          toast.success(`Removed "${title}" from watched`);
-        },
-        onError: () => {
-          toast.error("Failed to unwatch");
-        },
-      }
-    );
-  };
 
   return (
     <div
@@ -393,19 +367,6 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           <Check className="h-3 w-3" aria-hidden="true" />
           <span className="text-[9px] font-bold uppercase">{isMovie ? "Movie" : "TV"}</span>
         </div>
-        {isMovie && (
-          <button
-            type="button"
-            data-ui-action="icon"
-            onClick={handleUnwatch}
-            disabled={unwatchToggle.isPending}
-            aria-label="Remove from watched"
-            title="Remove from watched"
-            className="absolute left-1.5 top-1.5 z-20 flex size-8 items-center justify-center rounded-full bg-black/75 text-white/90 opacity-0 backdrop-blur transition-colors hover:bg-destructive hover:text-destructive-foreground focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white group-hover:opacity-100 disabled:opacity-50"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        )}
       </div>
       <p className="mt-1.5 text-xs font-medium line-clamp-1">{title}</p>
       <p className="text-[10px] text-muted-foreground line-clamp-1">
