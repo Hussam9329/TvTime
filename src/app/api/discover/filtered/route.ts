@@ -4,6 +4,7 @@ import { resolveTmdbKeywordIds, tmdb, type MediaItem, type PaginatedResponse, ty
 import { isArabicMediaItem } from "@/lib/arabic-media";
 import { resolveUserId } from "@/lib/auth";
 import { buildSeenIdSet } from "@/lib/discover-seen";
+import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import {
   DISCOVER_PAGE_SIZE,
   DISCOVER_TMDB_MAX_PAGE,
@@ -93,9 +94,17 @@ export async function GET(req: NextRequest) {
     const excludeArabic = search.get("exclude_arabic") === "true";
     const onlyArabic = search.get("only_arabic") === "true";
 
-    const loadPage = (page: number): Promise<PaginatedResponse<MediaItem>> => mediaType === "tv"
-      ? tmdb.discoverTv({ ...common, keyword_ids: keywordIds, page })
-      : tmdb.discoverMovies({ ...common, keyword_ids: keywordIds, certification, page });
+    const loadPage = (page: number): Promise<PaginatedResponse<MediaItem>> => {
+      if (onlyArabic) {
+        const params = mediaType === "tv"
+          ? { ...common, keyword_ids: keywordIds }
+          : { ...common, keyword_ids: keywordIds, certification };
+        return discoverArabicByCountryPriority(mediaType, params, page);
+      }
+      return mediaType === "tv"
+        ? tmdb.discoverTv({ ...common, keyword_ids: keywordIds, page })
+        : tmdb.discoverMovies({ ...common, keyword_ids: keywordIds, certification, page });
+    };
 
     const matchesState = (item: MediaItem) => {
       const isSeen = seenIds.has(Number(item.id));
