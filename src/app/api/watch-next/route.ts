@@ -23,7 +23,19 @@ export async function GET(req: NextRequest) {
     const ids = shows.map((show) => show.tmdbId!).filter(Boolean);
     if (ids.length === 0) return NextResponse.json({ items: [] });
     const [metadata, watched] = await Promise.all([
-      db.tvMetadataCache.findMany({ where: { tmdbId: { in: ids } }, select: { tmdbId: true, posterPath: true, officiallyEnded: true, airedEpisodeKeys: true } }),
+      db.tvMetadataCache.findMany({
+        where: { tmdbId: { in: ids } },
+        select: {
+          tmdbId: true,
+          posterPath: true,
+          officiallyEnded: true,
+          airedEpisodeKeys: true,
+          nextEpisodeAirDate: true,
+          nextEpisodeName: true,
+          nextEpisodeSeasonNumber: true,
+          nextEpisodeEpisodeNumber: true,
+        },
+      }),
       db.watchedEpisode.findMany({ where: { userId: user.id, showId: { in: ids } }, select: { showId: true, seasonNumber: true, episodeNumber: true } }),
     ]);
     const watchedByShow = new Map<number, Set<string>>();
@@ -43,7 +55,29 @@ export async function GET(req: NextRequest) {
       const poster = posterUrl(show.poster) || posterUrl(meta?.posterPath);
       return next ? [{ tmdbId: show.tmdbId!, title: show.title, poster, seasonNumber: next.season, episodeNumber: next.episode, watchedEpisodes: seen.size, releasedEpisodes: meta?.airedEpisodeKeys.length ?? 0, lastActivity: show.watchedAt || show.updatedAt, isAnime: show.isAnime, isArabic: show.isArabic }] : [];
     }).sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
-    return NextResponse.json({ items: items.slice(0, 20) });
+    const today = new Date().toISOString().slice(0, 10);
+    const upcoming = shows.flatMap((show) => {
+      const meta = metadataById.get(show.tmdbId!);
+      if (
+        show.status === "finished"
+        || !meta?.nextEpisodeAirDate
+        || meta.nextEpisodeAirDate <= today
+        || meta.nextEpisodeSeasonNumber == null
+        || meta.nextEpisodeEpisodeNumber == null
+      ) return [];
+      return [{
+        tmdbId: show.tmdbId!,
+        title: show.title,
+        poster: posterUrl(show.poster) || posterUrl(meta.posterPath),
+        seasonNumber: meta.nextEpisodeSeasonNumber,
+        episodeNumber: meta.nextEpisodeEpisodeNumber,
+        episodeName: meta.nextEpisodeName,
+        airDate: meta.nextEpisodeAirDate,
+        isAnime: show.isAnime,
+        isArabic: show.isArabic,
+      }];
+    }).sort((a, b) => a.airDate.localeCompare(b.airDate));
+    return NextResponse.json({ items: items.slice(0, 20), upcoming });
   } catch (error) {
     console.error("[watch-next]", error);
     return NextResponse.json({ error: "Failed to build Watch Next" }, { status: 500 });
