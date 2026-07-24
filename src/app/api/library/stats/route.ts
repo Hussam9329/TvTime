@@ -9,19 +9,30 @@ export async function GET(req: NextRequest) {
     const base = { userId: user.id };
     const eligibleRating = eligibleTitleRatingWhere(user.id);
 
-    const [counts, watchedEpisodeRows, ratedItems, watchedMovieRows, watchedMedia] = await Promise.all([
+    const [counts, watchedEpisodeRows, ratedItems, watchedMovieRows, watchedMedia, episodeRewatchRows] = await Promise.all([
       getCanonicalLibraryCounts(user.id),
       db.watchedEpisode.findMany({ where: base, select: { showId: true, runtime: true, watchedAt: true } }),
       db.media.findMany({ where: eligibleRating, select: { userRating: true } }),
-      db.media.findMany({ where: { ...base, type: "movie", watched: true }, select: { runtime: true, watchedAt: true } }),
+      db.media.findMany({ where: { ...base, type: "movie", watched: true }, select: { runtime: true, watchedAt: true, rewatchCount: true } }),
       db.media.findMany({ where: { ...base, OR: [{ type: "movie", watched: true }, { type: "series", status: { in: ["watching", "uptodate", "finished"] } }] }, select: { tmdbId: true, title: true, type: true, genres: true, year: true, episodes: true, userRating: true } }),
+      db.watchSession.findMany({
+        where: { ...base, rewatch: true, season: { not: null }, episode: { not: null } },
+        select: { duration: true },
+      }),
     ]);
 
     const avgRating = ratedItems.length > 0
       ? ratedItems.reduce((sum, item) => sum + (item.userRating || 0), 0) / ratedItems.length
       : 0;
-    const movieMinutes = watchedMovieRows.reduce((sum, movie) => sum + (movie.runtime || 120), 0);
-    const episodeMinutes = watchedEpisodeRows.reduce((sum, episode) => sum + (episode.runtime || 45), 0);
+    const movieBaseMinutes = watchedMovieRows.reduce((sum, movie) => sum + (movie.runtime || 120), 0);
+    const movieRewatchMinutes = watchedMovieRows.reduce(
+      (sum, movie) => sum + (movie.runtime || 120) * Math.max(0, movie.rewatchCount),
+      0,
+    );
+    const episodeBaseMinutes = watchedEpisodeRows.reduce((sum, episode) => sum + (episode.runtime || 45), 0);
+    const episodeRewatchMinutes = episodeRewatchRows.reduce((sum, session) => sum + (session.duration || 45), 0);
+    const movieMinutes = movieBaseMinutes + movieRewatchMinutes;
+    const episodeMinutes = episodeBaseMinutes + episodeRewatchMinutes;
     const totalMinutes = movieMinutes + episodeMinutes;
 
     const showsWatched = new Set(watchedEpisodeRows.map((episode) => episode.showId));
@@ -65,6 +76,7 @@ export async function GET(req: NextRequest) {
         totalHours: Math.round(totalMinutes / 60),
         movieMinutes,
         episodeMinutes,
+        rewatchMinutes: movieRewatchMinutes + episodeRewatchMinutes,
       },
       episodesByShow: Array.from(episodesByShowMap.entries())
         .sort((a, b) => b[1] - a[1])  // TVM-25: sort by episode count descending (most watched first)

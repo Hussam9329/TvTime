@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
       allRated,
       watchedMovieRows,
       watchedEpisodeRows,
+      episodeRewatchRows,
     ] = await Promise.all([
       getCanonicalLibraryCounts(user.id),
       db.media.groupBy({
@@ -31,15 +32,26 @@ export async function GET(req: NextRequest) {
       db.media.groupBy({ by: ["type"], where: base, _count: true }),
       db.media.findMany({ where: base, orderBy: { addedAt: "desc" }, take: 10 }),
       db.media.findMany({ where: eligibleRating, select: { userRating: true } }),
-      db.media.findMany({ where: { ...base, type: "movie", watched: true }, select: { runtime: true } }),
+      db.media.findMany({ where: { ...base, type: "movie", watched: true }, select: { runtime: true, rewatchCount: true } }),
       db.watchedEpisode.findMany({ where: base, select: { runtime: true } }),
+      db.watchSession.findMany({
+        where: { ...base, rewatch: true, season: { not: null }, episode: { not: null } },
+        select: { duration: true },
+      }),
     ]);
 
     const avgRating = allRated.length > 0
       ? allRated.reduce((sum, item) => sum + (item.userRating || 0), 0) / allRated.length
       : 0;
-    const movieMinutes = watchedMovieRows.reduce((sum, item) => sum + (item.runtime || 120), 0);
-    const episodeMinutes = watchedEpisodeRows.reduce((sum, item) => sum + (item.runtime || 45), 0);
+    const movieBaseMinutes = watchedMovieRows.reduce((sum, item) => sum + (item.runtime || 120), 0);
+    const movieRewatchMinutes = watchedMovieRows.reduce(
+      (sum, item) => sum + (item.runtime || 120) * Math.max(0, item.rewatchCount),
+      0,
+    );
+    const episodeBaseMinutes = watchedEpisodeRows.reduce((sum, item) => sum + (item.runtime || 45), 0);
+    const episodeRewatchMinutes = episodeRewatchRows.reduce((sum, session) => sum + (session.duration || 45), 0);
+    const movieMinutes = movieBaseMinutes + movieRewatchMinutes;
+    const episodeMinutes = episodeBaseMinutes + episodeRewatchMinutes;
     const totalMinutes = movieMinutes + episodeMinutes;
 
     return NextResponse.json({
@@ -51,6 +63,7 @@ export async function GET(req: NextRequest) {
         totalHours: Math.round(totalMinutes / 60),
         movieMinutes,
         episodeMinutes,
+        rewatchMinutes: movieRewatchMinutes + episodeRewatchMinutes,
       },
       ratingDist: ratingDist.map((row) => ({ value: row.userRating, count: row._count })),
       typeDist: typeDist.map((row) => ({ type: row.type, count: row._count })),
