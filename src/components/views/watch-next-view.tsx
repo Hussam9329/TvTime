@@ -1,13 +1,16 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Play, Clock3, Flame, CheckCircle2, Tv, Sparkles, Languages, CalendarDays } from "lucide-react";
+import { Play, Clock3, Flame, CheckCircle2, Tv, Sparkles, Languages, CalendarDays, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SafeImage } from "@/components/media/safe-image";
 import { useNav } from "@/lib/store";
 import { userHeaders, withUserId } from "@/lib/client-user";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEpisodeToggle } from "@/hooks/use-tmdb";
+import { toast } from "sonner";
 
 type WatchNextItem = { tmdbId: number; title: string; poster: string | null; seasonNumber: number; episodeNumber: number; watchedEpisodes: number; releasedEpisodes: number; lastActivity: string; isAnime: boolean; isArabic: boolean };
 type UpcomingItem = { tmdbId: number; title: string; poster: string | null; seasonNumber: number; episodeNumber: number; episodeName: string | null; airDate: string; isAnime: boolean; isArabic: boolean };
@@ -85,20 +88,60 @@ function UpcomingSection({ items, onOpen }: { items: UpcomingItem[]; onOpen: (id
 }
 
 function WatchSection({ title, subtitle, items, onOpen, paused = false }: { title: string; subtitle: string; items: WatchNextItem[]; onOpen: (id: number) => void; paused?: boolean }) {
+  const episodeToggle = useEpisodeToggle();
+  const markWatched = async (item: WatchNextItem) => {
+    try {
+      await episodeToggle.mutateAsync({
+        action: "add",
+        showId: item.tmdbId,
+        seasonNumber: item.seasonNumber,
+        episodeNumber: item.episodeNumber,
+      });
+      toast.success(`S${item.seasonNumber}E${item.episodeNumber} watched — loading the next episode`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to mark episode watched");
+    }
+  };
+
   if (items.length === 0) return null;
   return <section className="space-y-3"><div className="flex items-end justify-between"><div><h2 className="text-xl font-extrabold">{title}</h2><p className="text-xs text-muted-foreground">{subtitle}</p></div><Badge variant="secondary">{items.length}</Badge></div>
     <div className="tvtime-watch-card-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{items.map((item) => {
       const progress = Math.round((item.watchedEpisodes / Math.max(item.releasedEpisodes, 1)) * 100);
       const href = `/tv/${item.tmdbId}`;
-      return <a key={item.tmdbId} href={href} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(item.tmdbId); }} className="group block">
+      const isMarking = episodeToggle.isPending && episodeToggle.variables?.showId === item.tmdbId;
+      return <div key={item.tmdbId} className="group relative">
+        <a
+          href={href}
+          aria-label={`Open ${item.title}`}
+          onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(item.tmdbId); }}
+          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        />
         <Card className="tvtime-watch-card grid grid-cols-[104px_1fr] overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10">
           <div className="relative aspect-[2/3] bg-muted"><SafeImage src={item.poster} alt={item.title} fill variant="poster" /><span className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" /></div>
           <div className="flex min-w-0 flex-col p-4"><div className="flex items-center gap-1.5"><Badge variant="secondary" className="h-5 text-[9px]">{item.isArabic ? <Languages className="mr-1 h-3 w-3" /> : item.isAnime ? <Sparkles className="mr-1 h-3 w-3" /> : <Tv className="mr-1 h-3 w-3" />}{item.isArabic ? "Arabic TV" : item.isAnime ? "Anime" : "TV"}</Badge>{paused && <Badge className="h-5 border-0 bg-amber-500/15 text-[9px] text-amber-300"><Clock3 className="mr-1 h-3 w-3" />{daysSince(item.lastActivity)}d</Badge>}</div>
             <h3 className="mt-2 line-clamp-2 font-bold group-hover:text-primary">{item.title}</h3><p className="mt-1 text-sm font-black text-primary">S{item.seasonNumber} · E{item.episodeNumber}</p>
-            <div className="mt-auto pt-3"><div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>{item.watchedEpisodes}/{item.releasedEpisodes} watched</span><span>{progress}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${progress}%` }} /></div><span className="mt-2 inline-flex items-center text-xs font-bold text-primary"><Play className="mr-1 h-3 w-3 fill-current" /> Continue</span></div>
+            <div className="mt-auto pt-3">
+              <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>{item.watchedEpisodes}/{item.releasedEpisodes} watched</span><span>{progress}%</span></div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${progress}%` }} /></div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="inline-flex items-center text-xs font-bold text-primary"><Play className="mr-1 h-3 w-3 fill-current" /> Continue</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={episodeToggle.isPending}
+                  onClick={() => void markWatched(item)}
+                  className="relative z-20 h-9 min-w-9 gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 px-3 text-xs font-extrabold text-white shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-300"
+                  aria-label={`Mark S${item.seasonNumber}E${item.episodeNumber} watched`}
+                  title="Mark watched and show next episode"
+                >
+                  {isMarking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  <span className="hidden min-[420px]:inline">Watched</span>
+                </Button>
+              </div>
+            </div>
           </div>
         </Card>
-      </a>;
+      </div>;
     })}</div>
   </section>;
 }

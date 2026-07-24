@@ -854,6 +854,7 @@ export function useEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
       qc.invalidateQueries({ queryKey: ["episode-watch-plan"] });
+      qc.invalidateQueries({ queryKey: ["watch-next"] });
     },
   });
 }
