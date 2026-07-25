@@ -397,9 +397,9 @@ export function MovieDetailView() {
                   className="p-3 flex items-center gap-3 hover:border-primary/40 transition-colors cursor-pointer group"
                   onClick={() => goPerson(c.id)}
                 >
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                  <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
                     {c.profile_path ? (
-                      <SafeImage src={img(c.profile_path, "w92")} alt={c.name} fill variant="profile" className="transition-opacity duration-200 group-hover:opacity-90" />
+                      <SafeImage src={img(c.profile_path, "w185")} alt={c.name} fill variant="profile" sizes="48px" className="transition-opacity duration-200 group-hover:opacity-90" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Users className="w-5 h-5" /></div>
                     )}
