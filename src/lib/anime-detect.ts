@@ -20,6 +20,7 @@ const KNOWN_ANIME_TITLES = [
   "jujutsu kaisen", "demon slayer", "black clover", "fairy tail",
   "one-punch man", "mob psycho 100", "bocchi the rock", "chainsaw",
   "agatha christie's great detectives poirot and marple",
+  "detective conan", "case closed", "meitantei conan",
 ];
 
 export function isKnownAnimeTitle(title: string): boolean {
