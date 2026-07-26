@@ -67,7 +67,14 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   const title = getTitle(item);
   const year = getYear(item);
   const isArabic = isArabicMediaItem(item);
-  const typeLabel = isArabic ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV") : (mediaType === "movie" ? "Movie" : "TV");
+  const isAnime = mediaType === "tv"
+    && item.genre_ids?.includes(16)
+    && (item.original_language === "ja" || item.origin_country?.includes("JP"));
+  const typeLabel = isAnime
+    ? "Anime"
+    : isArabic
+      ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV")
+      : (mediaType === "movie" ? "Movie" : "TV");
   const actionPayload = { tmdbId: id, title, posterPath: item.poster_path, releaseDate: item.release_date || item.first_air_date, voteAverage: item.vote_average, overview: item.overview, originalLanguage: item.original_language, originCountry: item.origin_country };
   const toggleWatchlist = async () => {
     try {
@@ -121,19 +128,21 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           </div>
 
         </div>
-        <div className="flex min-w-0 flex-col border-t border-border/60 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.96))] px-2.5 py-2.5 sm:px-3">
-          <h3 className="truncate text-center text-[13px] font-semibold leading-[1.25] text-foreground sm:text-sm" title={title}>
+        <div className="flex min-w-0 flex-col border-t border-border/60 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.96))] px-2 py-2 sm:px-2.5 sm:py-2.5">
+          <h3 className="truncate text-left text-[12px] font-semibold leading-5 text-foreground sm:text-[13px]" title={title}>
             {title}
           </h3>
 
-          <div className="my-2 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
+          <div className="my-1.5 h-px w-full bg-border/45" />
 
-          <div className="flex min-h-6 min-w-0 items-center justify-center gap-2 text-[11px] text-muted-foreground">
+          <div className="flex min-h-5 min-w-0 items-center justify-between gap-1.5 text-[10px] text-muted-foreground sm:text-[11px]">
             {year && <span className="shrink-0">{year}</span>}
             {showMediaType && (
               <span
-                className={`inline-flex h-5 min-w-0 max-w-[70%] items-center gap-1 rounded-full border px-2 text-[9px] font-semibold shadow-sm ${
-                  mediaType === "movie"
+                className={`inline-flex h-5 min-w-0 max-w-[72%] items-center gap-1 rounded-md border px-1.5 text-[9px] font-semibold ${
+                  isAnime
+                    ? "border-violet-400/45 bg-violet-500/10 text-violet-300"
+                    : mediaType === "movie"
                     ? "border-fuchsia-400/45 bg-fuchsia-500/10 text-fuchsia-300 shadow-fuchsia-500/10"
                     : "border-cyan-400/45 bg-cyan-500/10 text-cyan-300 shadow-cyan-500/10"
                 }`}
@@ -144,28 +153,26 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             )}
           </div>
 
-          <div className="mt-auto flex min-w-0 items-center gap-1.5 pt-2">
+          {(watched || inWatchlist || isFollowing || compactActions) && <div className="flex min-w-0 items-center gap-1 pt-1.5">
             {watched ? (
-              <span data-status="watched" className="inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-2 text-[11px] font-semibold text-emerald-400 shadow-[inset_0_0_14px_rgba(16,185,129,0.06)]">
-                <Check className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Watched</span>
+              <span data-status="watched" className="inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md border border-emerald-400/35 bg-emerald-500/10 px-1.5 text-[10px] font-semibold text-emerald-400">
+                <Check className="h-3 w-3 shrink-0" /> <span className="truncate">Watched</span>
               </span>
             ) : inWatchlist ? (
-              <span className="inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-pink-500/35 bg-pink-500/10 px-2 text-[11px] font-semibold text-pink-400 shadow-[inset_0_0_14px_rgba(236,72,153,0.06)]">
-                <ListPlus className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Watchlist</span>
+              <span className="inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md border border-pink-500/30 bg-pink-500/10 px-1.5 text-[10px] font-semibold text-pink-400">
+                <ListPlus className="h-3 w-3 shrink-0" /> <span className="truncate">Watchlist</span>
               </span>
             ) : isFollowing ? (
-              <span data-status="following" className="inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/10 px-2 text-[11px] font-semibold text-amber-400 shadow-[inset_0_0_14px_rgba(245,158,11,0.06)]">
-                <Bell className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Following</span>
+              <span data-status="following" className="inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md border border-amber-400/35 bg-amber-500/10 px-1.5 text-[10px] font-semibold text-amber-400">
+                <Bell className="h-3 w-3 shrink-0" /> <span className="truncate">Following</span>
               </span>
-            ) : (
-              <span className="h-8 min-w-0 flex-1" aria-hidden="true" />
-            )}
+            ) : null}
 
             {compactActions && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 w-8 shrink-0 rounded-lg p-0" aria-label={`More actions for ${title}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
-                  <MoreHorizontal className="h-4 w-4" />
+                <Button variant="outline" size="sm" className="ml-auto h-7 w-7 shrink-0 rounded-md p-0" aria-label={`More actions for ${title}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
+                  <MoreHorizontal className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
@@ -176,7 +183,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
               </DropdownMenuContent>
             </DropdownMenu>
             )}
-          </div>
+          </div>}
         </div>
       </Card>
     </motion.a>
