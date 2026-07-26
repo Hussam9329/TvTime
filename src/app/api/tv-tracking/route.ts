@@ -15,6 +15,7 @@ import { getTvStatusMetadata, batchReadDbMetadata, type TvStatusMetadata } from 
 import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
 import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
+import { detectIsAnime } from "@/lib/anime-detect";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -146,6 +147,11 @@ async function repairShowIfNeeded(
 
 type FastTrackingDatabaseRow = {
   tmdbId: number | null;
+  title: string;
+  isAnime: boolean;
+  originalLanguage: string | null;
+  originCountries: string[];
+  genres: string[];
   status: string | null;
   watched: boolean;
   episodeCount: bigint | number;
@@ -155,6 +161,21 @@ type FastTrackingDatabaseRow = {
   nextEpisodeAirDate: string | null;
   metadataFresh: boolean;
 };
+
+function storedRecordIsAnime(show: {
+  title?: string | null;
+  isAnime?: boolean | null;
+  originalLanguage?: string | null;
+  originCountries?: string[] | null;
+  genres?: string[] | null;
+}) {
+  return Boolean(show.isAnime) || detectIsAnime({
+    title: show.title || undefined,
+    originalLanguage: show.originalLanguage,
+    originCountry: show.originCountries,
+    genres: show.genres,
+  });
+}
 
 /**
  * A single read-only SQL statement powers the header counters. It never reads
@@ -166,6 +187,11 @@ async function buildTrackingCounts(userId: string, world: "standard" | "arabic",
   const rows = await db.$queryRaw<FastTrackingDatabaseRow[]>`
     SELECT
       media."tmdbId" AS "tmdbId",
+      media."title" AS "title",
+      media."isAnime" AS "isAnime",
+      media."originalLanguage" AS "originalLanguage",
+      media."originCountries" AS "originCountries",
+      media."genres" AS "genres",
       media."status" AS "status",
       media."watched" AS "watched",
       COALESCE(progress."episodeCount", 0)::bigint AS "episodeCount",
@@ -187,12 +213,11 @@ async function buildTrackingCounts(userId: string, world: "standard" | "arabic",
     LEFT JOIN "TvMetadataCache" AS metadata ON metadata."tmdbId" = media."tmdbId"
     WHERE media."userId" = ${userId}
       AND media."type" = 'series'
-      AND media."isAnime" = FALSE
       AND media."isArabic" = ${world === "arabic"}
       AND (media."status" IS NOT NULL OR media."watched" = TRUE OR COALESCE(progress."episodeCount", 0) > 0)
   `;
 
-  return buildFastTvTrackingSummary(rows.map((row): FastTvTrackingRow => ({
+  return buildFastTvTrackingSummary(rows.filter((row) => !storedRecordIsAnime(row)).map((row): FastTvTrackingRow => ({
     ...row,
     episodeCount: Number(row.episodeCount),
   })), now);
@@ -233,11 +258,10 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
     showIdsWithEpisodeProgress.push(showId);
   }
 
-  const series = await db.media.findMany({
+  const seriesCandidates = await db.media.findMany({
     where: {
       userId,
       type: "series",
-      isAnime: false,
       isArabic: world === "arabic",
       OR: [
         { status: { not: null } },
@@ -248,6 +272,7 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
       ],
     },
   });
+  const series = seriesCandidates.filter((show) => !storedRecordIsAnime(show));
 
   // ── BATCH METADATA READ ───────────────────────────────────────────────
   // Pre-fetch ALL TV metadata for ALL tracked shows in a single DB round-trip.
