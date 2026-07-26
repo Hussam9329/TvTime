@@ -259,12 +259,7 @@ export const tmdb = {
     // For Arabic media, the default vote_count.gte=100 excludes most Arabic films
     // (which have very few votes on TMDB). Only apply the floor when the caller
     // didn't explicitly set one AND we're not filtering for Arabic.
-    const isArabic = params.original_language === "ar";
-    if (params.vote_count_gte != null) {
-      p["vote_count.gte"] = params.vote_count_gte;
-    } else if (!isArabic) {
-      p["vote_count.gte"] = 100;
-    }
+    if (params.vote_count_gte != null) p["vote_count.gte"] = params.vote_count_gte;
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.primary_release_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
@@ -299,12 +294,7 @@ export const tmdb = {
     tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
   discoverTv: async (params: { genres?: number[]; without_genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
-    const isArabic = params.original_language === "ar";
-    if (params.vote_count_gte != null) {
-      p["vote_count.gte"] = params.vote_count_gte;
-    } else if (!isArabic) {
-      p["vote_count.gte"] = 100;
-    }
+    if (params.vote_count_gte != null) p["vote_count.gte"] = params.vote_count_gte;
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.without_genres && params.without_genres.length > 0) p.without_genres = params.without_genres.join(",");
     if (params.year) p.first_air_date_year = params.year;
