@@ -11,11 +11,12 @@ import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { img } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
+import { isAnimeMediaItem } from "@/lib/anime-detect";
 
 export function SearchView() {
   const { searchQuery, setSearchQuery, goPerson } = useNav();
   const [local, setLocal] = useState(searchQuery);
-  const [filter, setFilter] = useState<"all" | "movie" | "tv" | "arabic-movies" | "arabic-tv" | "people">("all");
+  const [filter, setFilter] = useState<"all" | "movie" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "people">("all");
 
   const search = useSearchAccumulated(searchQuery);
 
@@ -33,13 +34,16 @@ export function SearchView() {
       ? allResults.filter((result) => result.media_type === "movie" && isArabicMediaItem(result))
       : filter === "arabic-tv"
         ? allResults.filter((result) => result.media_type === "tv" && isArabicMediaItem(result))
+        : filter === "anime"
+          ? allResults.filter((result) => result.media_type === "tv" && isAnimeMediaItem(result))
         : filter === "movie"
-          ? allResults.filter((result) => result.media_type === "movie" && !isArabicMediaItem(result))
+          ? allResults.filter((result) => result.media_type === "movie" && !isArabicMediaItem(result) && !isAnimeMediaItem(result))
           : filter === "tv"
-            ? allResults.filter((result) => result.media_type === "tv" && !isArabicMediaItem(result))
+            ? allResults.filter((result) => result.media_type === "tv" && !isArabicMediaItem(result) && !isAnimeMediaItem(result))
             : [];
   const arabicMovieCount = allResults.filter((result) => result.media_type === "movie" && isArabicMediaItem(result)).length;
   const arabicTvCount = allResults.filter((result) => result.media_type === "tv" && isArabicMediaItem(result)).length;
+  const animeCount = allResults.filter((result) => result.media_type === "tv" && isAnimeMediaItem(result)).length;
   const people = search.people;
 
   return (
@@ -90,6 +94,7 @@ export function SearchView() {
                   <TabsTrigger value="all">All ({allResults.length})</TabsTrigger>
                   <TabsTrigger value="movie">Movies</TabsTrigger>
                   <TabsTrigger value="tv">TV</TabsTrigger>
+                  {animeCount > 0 && <TabsTrigger value="anime">Anime ({animeCount})</TabsTrigger>}
                   {arabicMovieCount > 0 && (
                     <TabsTrigger value="arabic-movies" className="gap-1.5">
                       <Languages className="h-3.5 w-3.5" /> Arabic Movies ({arabicMovieCount})

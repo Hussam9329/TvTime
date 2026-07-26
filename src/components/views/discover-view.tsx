@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-media";
+import { isAnimeMediaItem } from "@/lib/anime-detect";
 
 export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv";
 
@@ -194,6 +195,9 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
   const items = useMemo(() => {
     let filtered = allResults.filter((media) => media.poster_path && (isArabic || !isArabicMediaItem(media)));
+    if (effectiveIsTV && !isAnime && !isArabic) {
+      filtered = filtered.filter((media) => !isAnimeMediaItem(media));
+    }
     if (forcedLang === "ar") {
       filtered = filtered.filter(isArabicMediaItem);
     }
@@ -208,7 +212,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       filtered.sort((left, right) => arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right));
     }
     return filtered;
-  }, [allResults, forcedLang, isAnime, isArabic, maxRating, world]);
+  }, [allResults, effectiveIsTV, forcedLang, isAnime, isArabic, maxRating, world]);
 
   const resetPagination = useCallback(() => {
     setPage(1);

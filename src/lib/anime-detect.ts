@@ -19,6 +19,7 @@ const KNOWN_ANIME_TITLES = [
   "re:zero", "konosuba", "overlord", "no game no life", "tokyo revengers",
   "jujutsu kaisen", "demon slayer", "black clover", "fairy tail",
   "one-punch man", "mob psycho 100", "bocchi the rock", "chainsaw",
+  "agatha christie's great detectives poirot and marple",
 ];
 
 export function isKnownAnimeTitle(title: string): boolean {
@@ -35,7 +36,7 @@ export function isKnownAnimeTitle(title: string): boolean {
 export function detectIsAnime(params: {
   originCountry?: string[] | null;
   originalLanguage?: string | null;
-  genres?: string[] | { name: string }[] | null;
+  genres?: Array<string | number | { id?: number; name: string }> | null;
   title?: string;
 }): boolean {
   // 1. Known anime title (manual override list)
@@ -70,14 +71,34 @@ export function detectIsAnime(params: {
   return false;
 }
 
-function normalizeGenres(genres: string[] | { name: string }[] | null | undefined): string[] {
+function normalizeGenres(genres: Array<string | number | { id?: number; name: string }> | null | undefined): string[] {
   if (!genres) return [];
   if (Array.isArray(genres)) {
     return genres.map((g) => {
       if (typeof g === "string") return g.toLowerCase();
+      if (typeof g === "number") return g === 16 ? "animation" : String(g);
+      if (g && g.id === 16) return "animation";
       if (g && typeof g.name === "string") return g.name.toLowerCase();
       return "";
     });
   }
   return [];
+}
+
+export function isAnimeMediaItem(item: {
+  title?: string;
+  name?: string;
+  original_title?: string;
+  original_name?: string;
+  original_language?: string;
+  origin_country?: string[];
+  genre_ids?: number[];
+  genres?: Array<string | number | { id?: number; name: string }>;
+}): boolean {
+  return detectIsAnime({
+    title: item.title || item.name || item.original_title || item.original_name,
+    originalLanguage: item.original_language,
+    originCountry: item.origin_country,
+    genres: item.genre_ids ?? item.genres,
+  });
 }

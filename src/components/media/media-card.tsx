@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
+import { isAnimeMediaItem } from "@/lib/anime-detect";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -72,9 +73,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   const title = getTitle(item);
   const year = getYear(item);
   const isArabic = isArabicMediaItem(item);
-  const isAnime = mediaType === "tv"
-    && item.genre_ids?.includes(16)
-    && (item.original_language === "ja" || item.origin_country?.includes("JP"));
+  const isAnime = mediaType === "tv" && isAnimeMediaItem(item);
   const typeLabel = isAnime
     ? "Anime"
     : isArabic
