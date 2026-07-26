@@ -1,4 +1,6 @@
 import { isAsianMediaItem } from "@/lib/asian-media";
+import { isAnimeMediaItem } from "@/lib/anime-detect";
+import { isArabicMediaItem } from "@/lib/arabic-media";
 import { tmdb, type MediaItem, type PaginatedResponse } from "@/lib/tmdb";
 
 const PRIORITY_COUNTRIES = ["KR", "JP", "CN"] as const;
@@ -9,17 +11,37 @@ export async function discoverAsianTvByPriority(
   page: number,
 ): Promise<PaginatedResponse<MediaItem>> {
   const withoutGenres = [...new Set([...(params.without_genres ?? []), 16])];
-  const base = { ...params, page, originCountries: undefined, without_genres: withoutGenres, vote_count_gte: params.vote_count_gte ?? 0 };
+  const sourcePage = Math.max(1, (page - 1) * 2 + 1);
+  const base = { ...params, originCountries: undefined, without_genres: withoutGenres, vote_count_gte: params.vote_count_gte ?? 0 };
+  const fetchPool = async (originCountries?: string) => {
+    const [first, second] = await Promise.all([
+      tmdb.discoverTv({ ...base, page: sourcePage, originCountries }),
+      tmdb.discoverTv({ ...base, page: sourcePage + 1, originCountries }),
+    ]);
+    return {
+      results: [...first.results, ...second.results],
+      total_pages: Math.max(first.total_pages, second.total_pages),
+      total_results: Math.max(first.total_results, second.total_results),
+    };
+  };
   const [korean, japanese, chinese, worldwide] = await Promise.all([
-    tmdb.discoverTv({ ...base, originCountries: "KR" }),
-    tmdb.discoverTv({ ...base, originCountries: "JP" }),
-    tmdb.discoverTv({ ...base, originCountries: "CN" }),
-    tmdb.discoverTv(base),
+    fetchPool("KR"),
+    fetchPool("JP"),
+    fetchPool("CN"),
+    fetchPool(),
   ]);
+
+  const eligible = (item: MediaItem) => Boolean(item.poster_path)
+    && isAsianMediaItem(item)
+    && !isAnimeMediaItem(item)
+    && !isArabicMediaItem(item);
+  korean.results = korean.results.filter(eligible);
+  japanese.results = japanese.results.filter(eligible);
+  chinese.results = chinese.results.filter(eligible);
 
   const otherAsian = worldwide.results.filter((item) => {
     const countries = item.origin_country ?? [];
-    return isAsianMediaItem(item) && !countries.some((country) => PRIORITY_COUNTRIES.includes(country as typeof PRIORITY_COUNTRIES[number]));
+    return eligible(item) && !countries.some((country) => PRIORITY_COUNTRIES.includes(country as typeof PRIORITY_COUNTRIES[number]));
   });
   const pools = [korean.results, japanese.results, chinese.results, otherAsian];
   const quotas = [8, 5, 4, 3];
@@ -41,7 +63,7 @@ export async function discoverAsianTvByPriority(
   return {
     page,
     results: selected,
-    total_pages: Math.max(korean.total_pages, japanese.total_pages, chinese.total_pages, worldwide.total_pages),
-    total_results: korean.total_results + japanese.total_results + chinese.total_results + otherAsian.length,
+    total_pages: Math.ceil(Math.max(korean.total_pages, japanese.total_pages, chinese.total_pages, worldwide.total_pages) / 2),
+    total_results: korean.total_results + japanese.total_results + chinese.total_results + worldwide.total_results,
   };
 }
