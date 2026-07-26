@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import { ensureLegacyLibraryMigrated } from "@/lib/legacy-library-migration";
 
 function authorized(req: NextRequest) {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const report = await ensureLegacyLibraryMigrated(user.id);
     return NextResponse.json({ ok: true, report, atomic: true, sourceAfterMigration: "Media" });
   } catch (error) {

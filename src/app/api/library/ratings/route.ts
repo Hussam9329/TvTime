@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import {
   clampRatingOutOf100,
   episodeRatingMediaType,
@@ -46,7 +47,7 @@ function titleRatingCompat(item: any) {
 // independent episode ratings.
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const url = new URL(req.url);
     const mediaType = url.searchParams.get("mediaType");
     const showId = positiveInteger(url.searchParams.get("showId"));
@@ -113,7 +114,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const body = await req.json();
 
     if (body.mediaType === "episode") {
@@ -232,7 +233,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const url = new URL(req.url);
     const mediaType = url.searchParams.get("mediaType");
 

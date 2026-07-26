@@ -30,8 +30,3 @@ export async function getOrCreateUser(userId?: string | null, name?: string) {
 
   return user;
 }
-
-export function parseUserId(req: Request): string {
-  const url = new URL(req.url);
-  return sanitizeUserId(url.searchParams.get("userId") || req.headers.get("x-user-id"));
-}

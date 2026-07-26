@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const shows = await db.media.findMany({
       where: {
         userId: user.id,

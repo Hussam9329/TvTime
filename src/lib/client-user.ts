@@ -9,10 +9,9 @@ export function getClientUserId(): string {
 }
 
 export function withUserId(url: URL): URL {
-  url.searchParams.set("userId", getClientUserId());
   return url;
 }
 
 export function userHeaders(): HeadersInit {
-  return { "x-user-id": getClientUserId() };
+  return {};
 }

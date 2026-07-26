@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import { eligibleTitleRatingWhere, getCanonicalLibraryCounts } from "@/lib/library-counts";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const base = { userId: user.id };
     const eligibleRating = eligibleTitleRatingWhere(user.id);
 

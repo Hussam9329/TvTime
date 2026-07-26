@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 
 function episodeParts(key: string) {
   const [season, episode] = key.split("-").map(Number);
@@ -15,7 +16,7 @@ function posterUrl(value: string | null | undefined) {
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const shows = await db.media.findMany({
       where: { userId: user.id, type: "series", isFollowing: true, tmdbId: { not: null } },
       select: { tmdbId: true, title: true, poster: true, watchedAt: true, updatedAt: true, watched: true, status: true, userRating: true, isAnime: true, isArabic: true },

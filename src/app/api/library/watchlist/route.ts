@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import { canonicalMediaPoster } from "@/lib/media-poster";
 
 function canonicalType(mediaType: string | null) {
@@ -21,7 +22,7 @@ function toCompat(item: any) {
 // is migrated/cleaned by TVM-10 and is never read here.
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const type = canonicalType(new URL(req.url).searchParams.get("mediaType"));
     const items = await db.media.findMany({
       where: {
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const body = await req.json();
     const type = canonicalType(body.mediaType);
     const tmdbId = Number(body.tmdbId);
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const url = new URL(req.url);
     const type = canonicalType(url.searchParams.get("mediaType"));
     const tmdbId = Number(url.searchParams.get("tmdbId"));

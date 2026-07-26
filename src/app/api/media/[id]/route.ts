@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import { normalizeMedia } from "@/lib/media-normalize";
 import { normalizeTvTrackingState } from "@/lib/tv-status-engine";
 import { getTvRatingEligibility, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
@@ -11,7 +12,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const body = await req.json();
 
     if (body.isAnime !== undefined || body.isArabic !== undefined) {
@@ -166,7 +167,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const result = await db.media.deleteMany({ where: { id, userId: user.id } });
     if (result.count === 0) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
     return NextResponse.json({ ok: true });

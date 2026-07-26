@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import { getCanonicalLibraryCounts } from "@/lib/library-counts";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const counts = await getCanonicalLibraryCounts(user.id);
     return NextResponse.json({ counts, countsAreGlobal: true, source: "Media" });
   } catch (error) {

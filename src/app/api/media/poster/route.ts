@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import { canonicalMediaPoster } from "@/lib/media-poster";
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const body = await req.json();
     const tmdbId = Number(body.tmdbId);
     const type = body.mediaType === "tv" ? "series" : body.mediaType === "movie" ? "movie" : null;

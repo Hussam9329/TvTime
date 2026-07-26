@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 
 function csv(value: unknown) { const text = value == null ? "" : Array.isArray(value) ? value.join("|") : String(value); return `"${text.replaceAll('"', '""')}"`; }
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const [media, episodes] = await Promise.all([
       db.media.findMany({ where: { userId: user.id }, orderBy: { addedAt: "asc" } }),
       db.watchedEpisode.findMany({ where: { userId: user.id }, orderBy: [{ showId: "asc" }, { seasonNumber: "asc" }, { episodeNumber: "asc" }] }),

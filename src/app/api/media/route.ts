@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
 
@@ -9,7 +10,7 @@ const ORDERS = new Set(["asc", "desc"]);
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const url = new URL(req.url);
     const type = url.searchParams.get("type");
     const status = url.searchParams.get("status");

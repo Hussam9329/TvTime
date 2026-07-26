@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 
 function toCompat(item: any) {
   return {
@@ -12,7 +13,7 @@ function toCompat(item: any) {
 // Compatibility endpoint backed only by Media. Rating remains independent.
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const items = await db.media.findMany({
       where: { userId: user.id, type: "movie", watched: true },
       orderBy: [{ watchedAt: "desc" }, { updatedAt: "desc" }],
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const body = await req.json();
     const tmdbId = Number(body.tmdbId);
     if (!Number.isInteger(tmdbId) || tmdbId <= 0 || !body.title) {
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const tmdbId = Number(new URL(req.url).searchParams.get("tmdbId"));
     if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
       return NextResponse.json({ error: "tmdbId required" }, { status: 400 });

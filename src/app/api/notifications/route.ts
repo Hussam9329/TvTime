@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 
 // GET /api/notifications — list user notifications
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const { searchParams } = new URL(req.url);
     const filter = searchParams.get("filter"); // "unread" | "read" | null
     const countOnly = searchParams.get("countOnly") === "true";
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
 // POST /api/notifications — create a notification (mostly for testing/manual)
 export async function POST(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const body = await req.json();
     const { type, title, body: notificationBody, tmdbId, mediaType } = body;
     if (!type || !title || !notificationBody) {
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
 // PATCH /api/notifications?id=xxx — mark as read
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const action = searchParams.get("action"); // "read" | "unread"
@@ -89,7 +90,7 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/notifications?id=xxx — delete a notification (or all)
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const action = searchParams.get("action");

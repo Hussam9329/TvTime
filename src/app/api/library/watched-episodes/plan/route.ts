@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateUser, parseUserId } from "@/lib/user";
+import { getOrCreateUser } from "@/lib/user";
+import { resolveUserId } from "@/lib/auth";
 import { episodeKey } from "@/lib/tv-status-engine";
 import { getAllReleasedEpisodes } from "@/lib/tv-status-server";
 import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
@@ -12,7 +13,7 @@ import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getOrCreateUser(parseUserId(req));
+    const user = await getOrCreateUser(await resolveUserId(req));
     const showId = Number(new URL(req.url).searchParams.get("showId"));
     if (!Number.isInteger(showId) || showId <= 0) {
       return NextResponse.json({ error: "A valid showId is required" }, { status: 400 });

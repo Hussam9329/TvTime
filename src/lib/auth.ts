@@ -1,5 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthConfiguration, type AuthConfiguration } from "@/lib/auth-config";
+import { resolveRequestIdentity } from "@/lib/request-identity";
 
 /**
  * TvTime authentication layer.
@@ -38,10 +40,7 @@ export interface SessionPayload {
  * without it — but login requires only the password (legacy behavior).
  */
 export function getOwnerUsername(): string | null {
-  const value = process.env.APP_USERNAME;
-  if (!value) return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  return getAuthConfiguration().ownerUsername;
 }
 
 /**
@@ -49,9 +48,7 @@ export function getOwnerUsername(): string | null {
  * Returns null when auth is not configured (PUBLIC mode).
  */
 export function getOwnerPassword(): string | null {
-  const value = process.env.APP_PASSWORD;
-  if (!value || value.trim().length < 4) return null;
-  return value;
+  return getAuthConfiguration().ownerPassword;
 }
 
 /**
@@ -59,25 +56,21 @@ export function getOwnerPassword(): string | null {
  * public-by-default behavior is preserved.
  */
 export function isAuthEnabled(): boolean {
-  return getOwnerPassword() !== null;
+  return getAuthConfiguration().mode === "authenticated";
 }
 
-function getSessionSecret(): Uint8Array {
-  const raw = process.env.SESSION_SECRET;
-  if (!raw || raw.length < 32) {
-    // Fall back to a derived value from APP_PASSWORD so that auth still works
-    // in a single-env setup. This is NOT as strong as a dedicated secret —
-    // the operator is urged to set SESSION_SECRET separately.
-    const fallback = process.env.APP_PASSWORD ?? "tvtime-insecure-fallback-secret";
-    return ENCODER.encode(fallback.padEnd(32, "0").slice(0, 64));
+function sessionSecret(configuration: AuthConfiguration): Uint8Array {
+  if (configuration.mode !== "authenticated" || !configuration.sessionSecret) {
+    throw new Error("Authentication configuration is invalid.");
   }
-  return ENCODER.encode(raw);
+  return ENCODER.encode(configuration.sessionSecret);
 }
 
 /**
  * Issue a signed JWT and write it as an httpOnly cookie on the response.
  */
 export async function issueSession(res: NextResponse, payload: SessionPayload): Promise<NextResponse> {
+  const configuration = getAuthConfiguration();
   const token = await new SignJWT({ name: payload.name })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
@@ -85,7 +78,7 @@ export async function issueSession(res: NextResponse, payload: SessionPayload): 
     .setAudience(SESSION_AUDIENCE)
     .setIssuedAt()
     .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
-    .sign(getSessionSecret());
+    .sign(sessionSecret(configuration));
 
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -116,13 +109,14 @@ export function clearSession(res: NextResponse): NextResponse {
  * OR when auth is disabled (PUBLIC mode).
  */
 export async function getSession(req: NextRequest): Promise<SessionPayload | null> {
-  if (!isAuthEnabled()) return null;
+  const configuration = getAuthConfiguration();
+  if (configuration.mode !== "authenticated") return null;
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, getSessionSecret(), {
+    const { payload } = await jwtVerify(token, sessionSecret(configuration), {
       issuer: SESSION_ISSUER,
       audience: SESSION_AUDIENCE,
     });
@@ -142,14 +136,15 @@ export async function getSession(req: NextRequest): Promise<SessionPayload | nul
  *   don't break while the operator migrates to APP_PASSWORD.
  */
 export async function resolveUserId(req: NextRequest): Promise<string> {
+  const configuration = getAuthConfiguration();
   const session = await getSession(req);
-  if (session) return session.sub;
-
-  // PUBLIC mode fallback — keep behavior identical to legacy parseUserId.
   const url = new URL(req.url);
-  const raw = url.searchParams.get("userId") || req.headers.get("x-user-id") || "";
-  const trimmed = String(raw).trim();
-  return trimmed.length > 0 ? trimmed.slice(0, 120) : "cinetrack_default";
+  return resolveRequestIdentity({
+    mode: configuration.mode,
+    sessionUserId: session?.sub,
+    queryUserId: url.searchParams.get("userId"),
+    headerUserId: req.headers.get("x-user-id"),
+  });
 }
 
 /**
@@ -159,7 +154,9 @@ export async function resolveUserId(req: NextRequest): Promise<string> {
  * - Auth disabled: always true (legacy behavior).
  */
 export async function isAuthorized(req: NextRequest): Promise<boolean> {
-  if (!isAuthEnabled()) return true;
+  const configuration = getAuthConfiguration();
+  if (configuration.mode === "public") return true;
+  if (configuration.mode === "invalid") return false;
   const session = await getSession(req);
   return session !== null;
 }
