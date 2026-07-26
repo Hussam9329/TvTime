@@ -1496,25 +1496,6 @@ body {
 }
 
 /* Responsive system pass: one predictable layout language on every screen. */
-.tvtime-media-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(10.5rem, calc(50% - 0.5rem)), 1fr));
-  align-items: stretch;
-}
-
-.tvtime-standard-media-card,
-.tvtime-standard-media-card__surface {
-  min-width: 0;
-  height: 100%;
-}
-
-.tvtime-standard-media-card__surface {
-  border-radius: clamp(0.9rem, 1.4vw, 1.25rem);
-}
-
-.tvtime-standard-media-card__surface > div:first-child {
-  width: 100%;
-}
-
 .tvtime-watch-card-grid {
   align-items: stretch;
 }
@@ -1537,10 +1518,6 @@ body {
 }
 
 @media (min-width: 1536px) {
-  .tvtime-media-grid {
-    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  }
-
   .tvtime-watch-card-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1592,19 +1569,6 @@ body {
 @media (max-width: 399px) {
   .tvtime-main-content {
     padding-inline: 0.625rem;
-  }
-
-  .tvtime-media-grid {
-    gap: 0.625rem;
-  }
-
-  .tvtime-standard-media-card__surface > div:last-child {
-    min-height: 4.25rem;
-    padding: 0.55rem 0.625rem;
-  }
-
-  .tvtime-standard-media-card__surface h3 {
-    font-size: 0.78rem;
   }
 
   .tvtime-watch-card {

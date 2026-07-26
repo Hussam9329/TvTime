@@ -111,7 +111,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       tabIndex={0}
       aria-label={`${title}${year ? ` (${year})` : ""}`}
     >
-      <Card className="h-full overflow-hidden border-border/50 bg-card p-0 transition-[border-color,box-shadow,background-color] duration-200 hover:border-primary/55 hover:shadow-lg hover:shadow-primary/10">
+      <Card className="h-full gap-0 overflow-hidden rounded-[clamp(0.9rem,1.4vw,1.25rem)] border-border/50 bg-card p-0 transition-[border-color,box-shadow,background-color] duration-200 hover:border-primary/55 hover:shadow-lg hover:shadow-primary/10">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           <SafeImage
             src={imgOrPlaceholder(item.poster_path, "w342")}
@@ -197,7 +197,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
 
 export function MediaCardSkeleton() {
   return (
-    <Card className="feedback-skeleton overflow-hidden p-0 border-border/50 bg-card" aria-hidden="true">
+    <Card className="feedback-skeleton gap-0 overflow-hidden rounded-[clamp(0.9rem,1.4vw,1.25rem)] border-border/50 bg-card p-0" aria-hidden="true">
       <div className="aspect-[2/3] shimmer" />
       <div className="h-[86px] border-t border-border/50 bg-card" />
     </Card>
