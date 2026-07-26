@@ -112,15 +112,6 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           {watched && <WatchedIndicator rating={userRating} />}
           {/* top badges */}
           <div className="absolute left-1 right-1 top-1 flex min-w-0 items-start justify-between gap-1 sm:left-2 sm:right-2 sm:top-2 sm:gap-2">
-            {showMediaType && !compactActions && !(mediaType === "movie" && watched) && (
-              <Badge
-                variant="secondary"
-                className="h-5 min-w-0 max-w-[calc(100%-3.5rem)] shrink overflow-hidden border-0 bg-black/65 px-1.5 text-[9px] text-white backdrop-blur sm:h-6 sm:max-w-[calc(100%-4rem)] sm:px-2 sm:text-[10px]"
-              >
-                {mediaType === "movie" ? <Film className="mr-1 h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" /> : <Tv className="mr-1 h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />}
-                <span className="truncate">{typeLabel}</span>
-              </Badge>
-            )}
             {!watched && rating > 0 ? (
               <Badge className="ml-auto h-5 shrink-0 border-0 bg-black/65 px-1.5 text-[9px] text-amber-300 backdrop-blur sm:h-6 sm:px-2 sm:text-[10px]" title="TMDB Score">
                 <Star className="mr-1 h-2.5 w-2.5 shrink-0 fill-amber-300 sm:h-3 sm:w-3" />
@@ -135,8 +126,18 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             <h3 className={`${compactActions ? "line-clamp-1" : "line-clamp-2 min-h-10"} text-sm font-semibold leading-tight text-foreground`}>{title}</h3>
             <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
               {year && <span>{year}</span>}
-              {year && compactActions && <span>•</span>}
-              {compactActions && <span>{typeLabel}</span>}
+              {showMediaType && (
+                <span
+                  className={`inline-flex h-5 max-w-full items-center gap-1 rounded-md border px-1.5 text-[9px] font-semibold ${
+                    mediaType === "movie"
+                      ? "border-fuchsia-400/30 bg-fuchsia-500/15 text-fuchsia-300"
+                      : "border-cyan-400/30 bg-cyan-500/15 text-cyan-300"
+                  }`}
+                >
+                  {mediaType === "movie" ? <Film className="h-2.5 w-2.5 shrink-0" /> : <Tv className="h-2.5 w-2.5 shrink-0" />}
+                  <span className="truncate">{typeLabel}</span>
+                </span>
+              )}
             </div>
           </div>
           {compactActions ? (
