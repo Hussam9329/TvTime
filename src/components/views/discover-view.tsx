@@ -148,7 +148,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
   // For Arabic world, set voteCount=0 default (Arabic films have few TMDB votes).
   // For other worlds, leave undefined → lib default of 100.
-  const effectiveVoteCount = isArabic ? (voteCount ?? 0) : voteCount;
+  const effectiveVoteCount = isArabic || isAsian ? (voteCount ?? 0) : voteCount;
 
   const certificationParam = !effectiveIsTV ? (certification || undefined) : undefined;
 

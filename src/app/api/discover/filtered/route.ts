@@ -5,6 +5,8 @@ import { isArabicMediaItem } from "@/lib/arabic-media";
 import { resolveUserId } from "@/lib/auth";
 import { buildSeenIdSet } from "@/lib/discover-seen";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
+import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
+import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
 import {
   DISCOVER_PAGE_SIZE,
   DISCOVER_TMDB_MAX_PAGE,
@@ -101,6 +103,9 @@ export async function GET(req: NextRequest) {
           ? { ...common, keyword_ids: keywordIds }
           : { ...common, keyword_ids: keywordIds, certification };
         return discoverArabicByCountryPriority(mediaType, params, page);
+      }
+      if (mediaType === "tv" && common.originCountries === ASIAN_ORIGIN_COUNTRY_QUERY) {
+        return discoverAsianTvByPriority({ ...common, keyword_ids: keywordIds }, page);
       }
       return mediaType === "tv"
         ? tmdb.discoverTv({ ...common, keyword_ids: keywordIds, page })

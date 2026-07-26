@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveTmdbKeywordIds, tmdb, type TmdbLanguage } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
+import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
+import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
 
 const handler = async (
   req: NextRequest,
@@ -128,7 +130,9 @@ const handler = async (
           keyword_ids: keywordIds,
           language,
         };
-        data = queryParams.original_language === "ar"
+        data = queryParams.origin_country === ASIAN_ORIGIN_COUNTRY_QUERY
+          ? await discoverAsianTvByPriority(discoverParams, page)
+          : queryParams.original_language === "ar"
           ? await discoverArabicByCountryPriority("tv", discoverParams, page)
           : await tmdb.discoverTv(discoverParams);
         break;
