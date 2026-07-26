@@ -1,11 +1,10 @@
 "use client";
 
 import { useRef } from "react";
-import { MediaCard } from "./media-card";
+import { MEDIA_CARD_ROW_WIDTH_CLASS, MediaCard, MediaCardSkeleton } from "./media-card";
 import type { MediaItem } from "@/lib/tmdb";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use-tmdb";
 
 interface MediaRowProps {
@@ -76,12 +75,12 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
       >
         {loading
           ? Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-[130px] sm:w-[160px]">
-                <div className="aspect-[2/3] shimmer rounded-lg" />
+              <div key={i} className={`flex-shrink-0 ${MEDIA_CARD_ROW_WIDTH_CLASS}`}>
+                <MediaCardSkeleton />
               </div>
             ))
           : items.map((item, i) => (
-              <div key={`${item.id}-${item.media_type || ""}`} className={cn("flex-shrink-0 w-[130px] sm:w-[160px]")}>
+              <div key={`${item.id}-${item.media_type || ""}`} className={`flex-shrink-0 ${MEDIA_CARD_ROW_WIDTH_CLASS}`}>
                 <MediaCard
                   item={item}
                   index={i}

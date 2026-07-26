@@ -25,6 +25,11 @@ interface MediaCardProps {
   compactActions?: boolean;
 }
 
+// Single source of truth for card sizing and grid layout.
+// Change card presentation here only; parent sections merely place cards.
+export const MEDIA_CARD_ROW_WIDTH_CLASS = "w-[130px] sm:w-[160px]";
+export const MEDIA_CARD_GRID_CLASS = "grid grid-cols-2 gap-3 min-[480px]:grid-cols-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7";
+
 export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, enableNativeLink = true, priority = false, compactActions = true }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
@@ -95,7 +100,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3) }}
-      className="tvtime-standard-media-card cursor-pointer group min-w-0"
+      className="group min-w-0 cursor-pointer"
       onClick={(event) => {
         if (enableNativeLink && (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
         event.preventDefault();
@@ -106,7 +111,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       tabIndex={0}
       aria-label={`${title}${year ? ` (${year})` : ""}`}
     >
-      <Card className="tvtime-standard-media-card__surface h-full overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card">
+      <Card className="h-full overflow-hidden border-border/50 bg-card p-0 transition-[border-color,box-shadow,background-color] duration-200 hover:border-primary/55 hover:shadow-lg hover:shadow-primary/10">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           <SafeImage
             src={imgOrPlaceholder(item.poster_path, "w342")}
@@ -194,7 +199,7 @@ export function MediaCardSkeleton() {
   return (
     <Card className="feedback-skeleton overflow-hidden p-0 border-border/50 bg-card" aria-hidden="true">
       <div className="aspect-[2/3] shimmer" />
-      <div className="h-28 border-t border-border/50 bg-card" />
+      <div className="h-[86px] border-t border-border/50 bg-card" />
     </Card>
   );
 }
@@ -218,7 +223,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
 
   if (loading) {
     return (
-      <div className="tvtime-media-grid feedback-grid feedback-grid--loading grid gap-3 sm:gap-4" role="status" aria-busy="true" aria-label="Loading media">
+      <div className={MEDIA_CARD_GRID_CLASS} role="status" aria-busy="true" aria-label="Loading media">
         {Array.from({ length: 12 }).map((_, i) => (
           <MediaCardSkeleton key={i} />
         ))}
@@ -226,7 +231,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
     );
   }
   return (
-    <div className="tvtime-media-grid grid gap-3 sm:gap-4">
+    <div className={MEDIA_CARD_GRID_CLASS}>
       {items.map((item, i) => (
         <MediaCard
           key={`${item.id}-${item.media_type || ""}`}
