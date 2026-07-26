@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { enforceAdminSecret } from "@/lib/admin-guard";
+import { requireAdminCommand } from "@/lib/admin-guard";
+
+const OPERATION = "backfill-watchlist-status";
 
 // One-time data backfill: aligns HISTORICAL watchlist data with the
 // `status=planned` convention that the current app uses.
@@ -26,15 +28,16 @@ import { enforceAdminSecret } from "@/lib/admin-guard";
 //
 // TVM-40: Always enforces ADMIN_REPAIR_SECRET.
 
-export async function GET(req: NextRequest) {
-  const guard = enforceAdminSecret(req);
-  if (guard) return guard;
+export async function POST(req: NextRequest) {
+  const command = await requireAdminCommand(req, OPERATION);
+  if (!command.ok) return command.response;
 
   try {
     // Find all unwatched media with NULL/empty status. These are the
     // "disappeared" watchlist items.
     const candidates = await db.media.findMany({
       where: {
+        userId: command.userId,
         watched: false,
         OR: [
           { status: null },
@@ -56,10 +59,12 @@ export async function GET(req: NextRequest) {
     const sample: { title: string; type: string; tmdbId: number | null }[] = [];
 
     for (const item of candidates) {
-      await db.media.update({
-        where: { id: item.id },
-        data: { status: "planned" },
-      });
+      if (command.apply) {
+        await db.media.update({
+          where: { id: item.id },
+          data: { status: "planned" },
+        });
+      }
       updated++;
       if (sample.length < 5) {
         sample.push({
@@ -72,11 +77,14 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      dryRun: !command.apply,
       updated,
       totalCandidates: candidates.length,
       sample,
       message: updated > 0
-        ? `${updated} items backfilled with status=planned (were NULL/empty, unwatched). Now visible in Watchlist tabs.`
+        ? command.apply
+          ? `${updated} items backfilled with status=planned (were NULL/empty, unwatched). Now visible in Watchlist tabs.`
+          : `DRY RUN: ${updated} items qualify. Re-submit with apply=true and confirm=${command.confirmation}.`
         : "No items needed backfill — all unwatched items already have a status.",
     });
   } catch (error: any) {

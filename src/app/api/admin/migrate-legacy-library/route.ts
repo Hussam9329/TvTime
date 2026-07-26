@@ -1,27 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser } from "@/lib/user";
-import { resolveUserId } from "@/lib/auth";
 import { ensureLegacyLibraryMigrated } from "@/lib/legacy-library-migration";
+import { requireAdminCommand } from "@/lib/admin-guard";
 
-function authorized(req: NextRequest) {
-  const expected = String(process.env.ADMIN_REPAIR_SECRET || "").trim();
-  if (!expected) return process.env.NODE_ENV !== "production";
-  const supplied = req.headers.get("x-admin-repair-secret") || req.nextUrl.searchParams.get("secret") || "";
-  return supplied === expected;
-}
+const OPERATION = "migrate-legacy-library";
 
 // Explicit verification/repair endpoint. Normal users do not need to call it:
 // getOrCreateUser performs the same idempotent migration before library reads.
 export async function POST(req: NextRequest) {
-  if (!authorized(req)) {
-    return NextResponse.json(
-      { error: "unauthorized", hint: "Configure ADMIN_REPAIR_SECRET and send it as x-admin-repair-secret." },
-      { status: 401 },
-    );
+  const command = await requireAdminCommand(req, OPERATION);
+  if (!command.ok) return command.response;
+  if (!command.apply) {
+    return NextResponse.json({
+      ok: true,
+      dryRun: true,
+      message: `Migration was not run. Re-submit with apply=true and confirm=${command.confirmation}.`,
+    });
   }
 
   try {
-    const user = await getOrCreateUser(await resolveUserId(req));
+    const user = await getOrCreateUser(command.userId);
     const report = await ensureLegacyLibraryMigrated(user.id);
     return NextResponse.json({ ok: true, report, atomic: true, sourceAfterMigration: "Media" });
   } catch (error) {

@@ -34,7 +34,11 @@ for (const file of routeFiles) {
   }
 
   const isPublicApi = normalized.startsWith("src/app/api/public/");
-  if (!publicRouteSuffixes.has(normalized) && !isPublicApi && !/resolveUserId\(req\)/.test(source)) {
+  if (
+    !publicRouteSuffixes.has(normalized)
+    && !isPublicApi
+    && !/resolveUserId\(req\)|requireAdminCommand\(req,\s*OPERATION\)/.test(source)
+  ) {
     failures.push(`${normalized}: user-owned route does not resolve ownership from the authenticated request`);
   }
 }
@@ -67,7 +71,9 @@ for (const file of adminRoutes) {
   if (/export async function GET/.test(source)) failures.push(`${normalized}: mutating admin endpoint still exports GET`);
   if (!/export async function POST/.test(source)) failures.push(`${normalized}: admin endpoint must export POST`);
   if (!/requireAdminCommand\(req,\s*OPERATION\)/.test(source)) failures.push(`${normalized}: shared admin command guard missing`);
-  if (!/resolveUserId\(req\)/.test(source)) failures.push(`${normalized}: admin operation is not scoped to the authenticated owner`);
+  if (!/requireAdminCommand\(req,\s*OPERATION\)/.test(source) || !/command\.userId/.test(source)) {
+    failures.push(`${normalized}: admin operation is not scoped to the authenticated owner`);
+  }
   if (/req\.nextUrl\.searchParams/.test(source)) failures.push(`${normalized}: admin operation options must come from JSON, not URL parameters`);
 }
 

@@ -64,7 +64,11 @@ check(/view === "arabic-movies"[\s\S]*<ArabicMoviesView/.test(shell), "App shell
 check(/view === "arabic-tv"[\s\S]*<ArabicTvView/.test(shell), "App shell renders Arabic TV independently");
 check(/view: "arabic-movies"/.test(read("src/app/arabic/movies/page.tsx")), "Arabic Movies direct route initializes the correct view");
 check(/view: "arabic-tv"/.test(read("src/app/arabic/tv/page.tsx")), "Arabic TV direct route initializes the correct view");
-check(/Arabic Movies/.test(header) && /Arabic TV/.test(header), "Header exposes both Arabic worlds");
+check(
+  /const arabicNavItems[\s\S]*view: "arabic-movies"[\s\S]*view: "arabic-tv"/.test(header)
+    && (header.match(/arabicNavItems\.map/g) || []).length >= 2,
+  "Header exposes both Arabic worlds",
+);
 check(/Go to Arabic Movies/.test(shortcuts) && /Go to Arabic TV/.test(shortcuts), "Keyboard navigation reaches both Arabic worlds");
 
 check(/value="library"/.test(arabicMovies) && /value="discover"/.test(arabicMovies) && /value="releases"/.test(arabicMovies) && /CollectionWorldView/.test(arabicMovies) && /DiscoverView/.test(arabicMovies) && /ReleaseSchedule/.test(arabicMovies), "Arabic Movies has its own library, discovery and release schedule");
@@ -78,14 +82,17 @@ check(/ReleaseSchedule/.test(arabicTv) && /originalLanguage="ar"/.test(arabicTv)
 check(/"arabic-movies"[\s\S]{0,500}isArabic:\s*"true"/.test(collection), "Arabic Movies queries only Arabic records");
 check(/movies:\s*\{[\s\S]*?isArabic:\s*"false"/.test(collection), "Standard Movies excludes Arabic records");
 check(/anime:\s*\{[\s\S]*?isArabic:\s*"false"/.test(collection), "Anime excludes Arabic records");
-check(/Move to Arabic Movies|To Arabic Movies/.test(collection), "Collection UI can correct a title into Arabic Movies without duplication");
-check(/isArabic:\s*true,\s*isAnime:\s*false/.test(collection), "Moving to Arabic Movies enforces world exclusivity");
+check(!/Move to Arabic Movies|To Arabic Movies/.test(collection), "Obsolete manual Arabic classification controls stay removed");
+check(
+  /"arabic-movies":\s*\{[\s\S]*?isAnime:\s*"false"[\s\S]*?isArabic:\s*"true"/.test(collection),
+  "Arabic Movies collection enforces world exclusivity",
+);
 
 check(/world === "arabic"/.test(trackingApi) && /isArabic:\s*world === "arabic"/.test(trackingApi), "TV Tracking API separates standard and Arabic shows at the source");
 check(/worldParam !== "standard" && worldParam !== "arabic"/.test(trackingApi), "TV Tracking rejects unsupported world values");
 check(/world:\s*"standard"\s*\|\s*"arabic"/.test(hooks), "Client TV Tracking contract carries its world explicitly");
-check(/To Arabic TV/.test(trackingView) && /Moved to Arabic TV/.test(trackingView), "Standard TV can be corrected into Arabic TV");
-check(/Moved to TV Shows/.test(trackingView), "Arabic TV can be corrected back into standard TV");
+check(!/To Arabic TV|Moved to Arabic TV/.test(trackingView), "Standard TV has no obsolete manual Arabic reclassification control");
+check(!/Moved to TV Shows/.test(trackingView), "Arabic TV has no obsolete manual standard-TV reclassification control");
 
 check(/original_language/.test(tvReleaseApi) && /first_air_date/.test(tvReleaseApi), "TV release API supports language-filtered premiere dates");
 check(/mediaType="tv"/.test(arabicTv) && /language="ar"/.test(arabicTv), "Arabic TV releases use TV details and Arabic localization");
@@ -116,7 +123,11 @@ check(/detectIsArabic/.test(findOrCreate), "Find-or-create classifies Arabic med
 check(/isArabic:\s*detectedArabic/.test(findOrCreate), "New Media records persist Arabic membership");
 check(/detectedArabic \? false/.test(findOrCreate) || /detectedArabic[\s\S]{0,120}isAnime/.test(findOrCreate), "New Media records keep Arabic and Anime mutually exclusive");
 check(/isArabic/.test(mediaApi) && /where\.isArabic/.test(mediaApi), "Media API can filter Arabic membership server-side");
-check(/if \(data\.isArabic\) data\.isAnime = false/.test(mediaPatch), "Media updates enforce Arabic/Anime exclusivity");
+check(
+  /MEDIA_CLASSIFICATION_IMMUTABLE/.test(mediaPatch)
+    && /body\.isAnime !== undefined \|\| body\.isArabic !== undefined/.test(mediaPatch),
+  "Media updates cannot bypass automatic Arabic/Anime exclusivity",
+);
 check(/isArabic:\s*true/.test(mediaStates) && /isArabic:\s*row\.isArabic/.test(mediaStates), "Batched card states return persisted Arabic membership");
 check(/classificationFromMetadata/.test(watchedEpisodesRoute) && /isArabic: classification\.isArabic/.test(watchedEpisodesRoute), "Direct episode tracking classifies newly created Arabic or Anime series");
 check(/canonicalMediaPoster\(metadata\.posterPath\)/.test(watchedEpisodesRoute), "Direct episode tracking stores a canonical show poster");

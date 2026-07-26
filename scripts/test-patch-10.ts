@@ -97,6 +97,7 @@ assert.deepEqual(summary.counts, {
   watching: 2,
   uptodate: 1,
   finished: 1,
+  stopped: 0,
   upcoming: 2,
   haventWatched: 2,
 });

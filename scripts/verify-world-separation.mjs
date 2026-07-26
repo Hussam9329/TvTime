@@ -43,14 +43,14 @@ check(/url\s*=\s*env\("DATABASE_URL"\)/.test(schema), "DATABASE_URL remains the 
 check(!/sqlite/i.test(schema), "No SQLite source was introduced");
 
 const navOrder = [
-  'view: "movies", label: "Movies"',
-  'view: "tv-shows", label: "TV Shows"',
-  'view: "anime", label: "Anime"',
+  { source: 'view: "movies", icon: Film', label: "Movies" },
+  { source: 'view: "tv-shows", icon: Clapperboard', label: "TV Shows" },
+  { source: 'view: "anime", icon: Sparkles', label: "Anime" },
 ];
 let navAt = -1;
 for (const entry of navOrder) {
-  const at = header.indexOf(entry);
-  check(at > navAt, `Top navigation contains ${entry.split('label: ')[1]} in the requested order`);
+  const at = header.indexOf(entry.source);
+  check(at > navAt, `Top navigation contains ${entry.label} in the requested order`);
   navAt = at;
 }
 check(!/label:\s*"TV Track"/.test(header), "TV Track label was fully replaced by TV Shows");
@@ -74,8 +74,8 @@ check(/<TabsTrigger value="not-started"/.test(collection) && /<TabsTrigger value
 check(!/Watchlist TV|Watched TV|My Library/.test(collection), "Movies and Anime contain no legacy mixed Library tabs");
 check(/status:\s*"planned"/.test(collection) && /watched:\s*"true"/.test(collection), "Watchlist and Watched use explicit canonical states");
 check(/status:\s*"planned",\s*watched:\s*"false"/.test(collection), "Watchlist tabs explicitly exclude watched titles");
-check(/To Anime/.test(tvShows) && /isAnime:\s*true,\s*isArabic:\s*false/.test(tvShows), "TV Shows can move a misclassified title into Anime without duplicating it");
-check(/To TV Shows/.test(collection) && /To Movies/.test(collection), "Anime titles can be moved back to the correct world");
+check(!/To Anime/.test(tvShows), "TV Shows keeps obsolete manual Anime classification removed");
+check(!/To TV Shows|To Movies/.test(collection), "Anime keeps obsolete manual cross-world classification removed");
 
 check(/type:\s*"series",\s*\n\s*isAnime:\s*false/.test(tvApi), "TV Shows API excludes Anime at the source");
 check(!/label="Finished Anime"/.test(tvShows) && !/label:\s*"Finished Anime"/.test(tvShows), "TV Shows no longer exposes an Anime filter");

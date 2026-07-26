@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { enforceAdminSecret } from "@/lib/admin-guard";
+import { requireAdminCommand } from "@/lib/admin-guard";
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim();
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const OPERATION = "backfill-tmdb-ids";
 
 /**
  * Backfill tmdbId for Media rows that have NULL/0 tmdbId.
@@ -11,10 +12,8 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3";
  *
  * TVM-40: Always enforces admin secret.
  *
- * Query params:
- *   ?apply=true  — actually update (default: dry-run)
- *   ?limit=N     — max items to process (default: 500)
- *   ?type=movie  — filter by type (movie/series, default: movie)
+ * JSON body:
+ *   { apply, confirm, limit, type }
  */
 
 async function searchTmdb(title: string, year: string | null): Promise<{ tmdbId: number; poster: string | null; overview: string | null; voteAverage: number | null } | null> {
@@ -69,18 +68,19 @@ async function searchTmdb(title: string, year: string | null): Promise<{ tmdbId:
   }
 }
 
-export async function GET(req: NextRequest) {
-  const guard = enforceAdminSecret(req);
-  if (guard) return guard;
+export async function POST(req: NextRequest) {
+  const command = await requireAdminCommand(req, OPERATION);
+  if (!command.ok) return command.response;
 
   try {
-    const dryRun = req.nextUrl.searchParams.get("apply") !== "true";
-    const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get("limit")) || 500, 1), 3000);
-    const type = req.nextUrl.searchParams.get("type") || "movie";
+    const dryRun = !command.apply;
+    const limit = Math.min(Math.max(Number(command.input.limit) || 500, 1), 3000);
+    const type = command.input.type === "series" ? "series" : "movie";
 
     // Find all media items of the specified type without a valid tmdbId
     const items = await db.media.findMany({
       where: {
+        userId: command.userId,
         type,
         OR: [{ tmdbId: null }, { tmdbId: 0 }],
       },
@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
       failed,
       sample,
       message: dryRun
-        ? `DRY RUN: Found TMDB IDs for ${updated}/${items.length} movies. Add ?apply=true to execute.`
+        ? `DRY RUN: Found TMDB IDs for ${updated}/${items.length} items. Re-submit with apply=true and confirm=${command.confirmation}.`
         : `Updated ${updated}/${items.length} movies with TMDB IDs. ${notFound} not found on TMDB.`,
     });
   } catch (error: any) {

@@ -16,18 +16,20 @@ import { db } from "@/lib/db";
  *
  * TVM-40: Always enforces admin secret.
  */
-import { enforceAdminSecret } from "@/lib/admin-guard";
+import { requireAdminCommand } from "@/lib/admin-guard";
 
-export async function GET(req: NextRequest) {
-  const guard = enforceAdminSecret(req);
-  if (guard) return guard;
+const OPERATION = "dedup-media";
+
+export async function POST(req: NextRequest) {
+  const command = await requireAdminCommand(req, OPERATION);
+  if (!command.ok) return command.response;
 
   try {
     // Step 1: Find all groups with duplicates
     // We can't use groupBy on tmdbId easily with Prisma for NULL tmdbId handling,
     // so fetch all media with non-null tmdbId and group in JS.
     const allMedia = await db.media.findMany({
-      where: { tmdbId: { not: null } },
+      where: { userId: command.userId, tmdbId: { not: null } },
       select: {
         id: true,
         userId: true,
@@ -90,7 +92,7 @@ export async function GET(req: NextRequest) {
     // Step 2: For each group, pick the best row and delete the rest
     let merged = 0;
     let deleted = 0;
-    const dryRun = req.nextUrl.searchParams.get("apply") !== "true";
+    const dryRun = !command.apply;
 
     for (const group of duplicateGroups) {
       const items = group.items;
@@ -160,7 +162,7 @@ export async function GET(req: NextRequest) {
       merged,
       deleted,
       message: dryRun
-        ? `DRY RUN: Found ${duplicateGroups.length} duplicate groups (${deleted} rows would be deleted). Add ?apply=true to execute.`
+        ? `DRY RUN: Found ${duplicateGroups.length} duplicate groups (${deleted} rows would be deleted). Re-submit with apply=true and confirm=${command.confirmation}.`
         : `Merged ${merged} duplicate groups, deleted ${deleted} redundant rows.`,
     });
   } catch (error: any) {

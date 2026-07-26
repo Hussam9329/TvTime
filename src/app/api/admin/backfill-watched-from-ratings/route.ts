@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { enforceAdminSecret } from "@/lib/admin-guard";
+import { requireAdminCommand } from "@/lib/admin-guard";
+
+const OPERATION = "backfill-watched-from-ratings";
 
 // One-time data backfill: aligns HISTORICAL movie data with the user's actual
 // intent. Before TVM-03, the app treated "has a rating" as "watched", so users
@@ -18,9 +20,9 @@ import { enforceAdminSecret } from "@/lib/admin-guard";
 //
 // TVM-40: Always enforces ADMIN_REPAIR_SECRET.
 
-export async function GET(req: NextRequest) {
-  const guard = enforceAdminSecret(req);
-  if (guard) return guard;
+export async function POST(req: NextRequest) {
+  const command = await requireAdminCommand(req, OPERATION);
+  if (!command.ok) return command.response;
 
   try {
     // Find all movies that have a rating but are NOT marked watched.
@@ -28,6 +30,7 @@ export async function GET(req: NextRequest) {
     // watched them) but the watched flag was never set.
     const candidates = await db.media.findMany({
       where: {
+        userId: command.userId,
         type: "movie",
         watched: false,
         userRating: { not: null },
@@ -49,16 +52,16 @@ export async function GET(req: NextRequest) {
     for (const movie of candidates) {
       // Best-effort watchedAt: use existing watchedAt, else updatedAt, else addedAt
       const watchedAt = movie.watchedAt ?? movie.updatedAt ?? movie.addedAt;
-      await db.media.update({
-        where: { id: movie.id },
-        data: {
-          watched: true,
-          watchedAt,
-          // Set status to "watched" for legacy compat (pre-TVM-03 apps that
-          // still read status). The TVM-03+ runtime reads `watched` directly.
-          status: "watched",
-        },
-      });
+      if (command.apply) {
+        await db.media.update({
+          where: { id: movie.id },
+          data: {
+            watched: true,
+            watchedAt,
+            status: "watched",
+          },
+        });
+      }
       updated++;
       if (sampleUpdates.length < 5) {
         sampleUpdates.push({
@@ -71,11 +74,14 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      dryRun: !command.apply,
       updated,
       totalCandidates: candidates.length,
       sample: sampleUpdates,
       message: updated > 0
-        ? `${updated} movies backfilled as watched (based on existing ratings). Ratings preserved.`
+        ? command.apply
+          ? `${updated} movies backfilled as watched (based on existing ratings). Ratings preserved.`
+          : `DRY RUN: ${updated} movies qualify. Re-submit with apply=true and confirm=${command.confirmation}.`
         : "No movies needed backfill — all rated movies are already marked watched.",
     });
   } catch (error: any) {

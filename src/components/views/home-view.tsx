@@ -1,6 +1,6 @@
 "use client";
 
-import { useFollowing, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackingCounts } from "@/hooks/use-tmdb";
+import { useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackingCounts } from "@/hooks/use-tmdb";
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
@@ -373,32 +373,5 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
         {item.subtitle ? `${item.subtitle} • ` : ""}{item.watchedAt ? new Date(item.watchedAt).toLocaleDateString() : "—"}
       </p>
     </div>
-  );
-}
-
-function WatchNextCTA() {
-  const following = useFollowing();
-  const setView = useNav((s) => s.setView);
-  const firstShow = following.data?.items[0];
-
-  if (!firstShow) return null;
-
-  return (
-    <motion.button
-      type="button"
-      data-ui-action="primary"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      onClick={() => setView("watch-next")}
-      className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-[box-shadow,background-color,transform] duration-200 active:translate-y-px"
-    >
-      <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
-        <Play className="h-4 w-4 fill-current" aria-hidden="true" />
-      </div>
-      <div className="text-left">
-        <p className="text-[10px] uppercase tracking-wide font-bold opacity-80">Watch Next</p>
-        <p className="text-sm font-bold line-clamp-1 max-w-[180px]">{firstShow.title}</p>
-      </div>
-    </motion.button>
   );
 }

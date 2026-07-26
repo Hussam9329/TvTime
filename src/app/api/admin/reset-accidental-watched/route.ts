@@ -1,24 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { enforceAdminSecret } from "@/lib/admin-guard";
+import { requireAdminCommand } from "@/lib/admin-guard";
+
+const OPERATION = "reset-accidental-watched";
 
 // Read-only by default. This legacy repair may use rating=75 only as a search
 // signature, but it never changes the rating. TVM-03 forbids a watch-state
 // repair from adding or removing a rating.
-export async function GET(req: NextRequest) {
-  // TVM-40: Always enforce admin secret
-  const guard = enforceAdminSecret(req);
-  if (guard) return guard;
+export async function POST(req: NextRequest) {
+  const command = await requireAdminCommand(req, OPERATION);
+  if (!command.ok) return command.response;
 
   try {
-    const apply = req.nextUrl.searchParams.get("apply") === "true";
     const candidates = await db.media.findMany({
-      where: { type: "movie", watched: true, userRating: 75, status: "watched" },
+      where: {
+        userId: command.userId,
+        type: "movie",
+        watched: true,
+        userRating: 75,
+        status: "watched",
+      },
       select: { id: true, tmdbId: true, title: true, userRating: true, status: true, watchedAt: true },
     });
 
     let resetWatchState = 0;
-    if (apply) {
+    if (command.apply) {
       for (const candidate of candidates) {
         await db.media.update({
           where: { id: candidate.id },
@@ -36,10 +42,11 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      dryRun: !apply,
+      dryRun: !command.apply,
       resetWatchState,
       ratingChanges: 0,
       candidates,
+      confirmation: command.apply ? undefined : command.confirmation,
     });
   } catch (error: any) {
     console.error("[admin:reset-accidental-watched]", error);

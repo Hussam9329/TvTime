@@ -1,47 +1,118 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { resolveUserId } from "@/lib/auth";
+import {
+  MIN_ADMIN_REPAIR_SECRET_LENGTH,
+  isAdminOriginAllowed,
+  parseAdminCommandBody,
+  parseBearerSecret,
+  type AdminCommandInput,
+} from "@/lib/admin-command";
+
+export type AdminCommandAuthorization =
+  | {
+      ok: true;
+      userId: string;
+      apply: boolean;
+      input: AdminCommandInput;
+      confirmation: string;
+    }
+  | { ok: false; response: NextResponse };
+
+function sameSecret(provided: string, expected: string): boolean {
+  const providedBuffer = Buffer.from(provided);
+  const expectedBuffer = Buffer.from(expected);
+  return providedBuffer.length === expectedBuffer.length
+    && timingSafeEqual(providedBuffer, expectedBuffer);
+}
 
 /**
- * TVM-40: Admin guard — always enforces ADMIN_REPAIR_SECRET.
+ * Authorize a destructive maintenance command.
  *
- * If ADMIN_REPAIR_SECRET is not set in the environment, the request is
- * rejected with 503 Service Unavailable (the admin endpoint is disabled
- * until the operator configures the secret).
- *
- * If the secret IS set, the request must provide it via:
- *   - query param ?secret=...  OR
- *   - header x-admin-repair-secret: ...
- *
- * Returns null if authorized, or a NextResponse (401/403/503) if rejected.
+ * Requirements:
+ * - authenticated owner session (resolved by resolveUserId)
+ * - same-origin browser request, or an origin-less CLI request
+ * - ADMIN_REPAIR_SECRET supplied only as Authorization: Bearer
+ * - POST JSON body with an explicit apply flag and confirmation token
  */
-export function enforceAdminSecret(req: NextRequest): NextResponse | null {
-  const expected = process.env.ADMIN_REPAIR_SECRET;
-
-  if (!expected) {
-    // Secret not configured — admin endpoints are disabled for safety.
-    return NextResponse.json(
-      {
-        error: "Admin endpoints are disabled. Set ADMIN_REPAIR_SECRET environment variable to enable.",
-        code: "ADMIN_SECRET_NOT_CONFIGURED",
-      },
-      { status: 503 },
-    );
+export async function requireAdminCommand(
+  req: NextRequest,
+  operation: string,
+): Promise<AdminCommandAuthorization> {
+  const expected = String(process.env.ADMIN_REPAIR_SECRET ?? "").trim();
+  if (expected.length < MIN_ADMIN_REPAIR_SECRET_LENGTH) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error: `Admin endpoints require ADMIN_REPAIR_SECRET with at least ${MIN_ADMIN_REPAIR_SECRET_LENGTH} characters.`,
+          code: "ADMIN_SECRET_NOT_CONFIGURED",
+        },
+        { status: 503 },
+      ),
+    };
   }
 
-  const provided = req.nextUrl.searchParams.get("secret") || req.headers.get("x-admin-repair-secret");
-
-  if (!provided) {
-    return NextResponse.json(
-      { error: "Unauthorized. Provide ?secret=... or x-admin-repair-secret header.", code: "ADMIN_SECRET_MISSING" },
-      { status: 401 },
-    );
+  if (!isAdminOriginAllowed(req.headers.get("origin"), req.nextUrl.origin, req.headers.get("sec-fetch-site"))) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Cross-origin admin requests are forbidden.", code: "ADMIN_ORIGIN_FORBIDDEN" },
+        { status: 403 },
+      ),
+    };
   }
 
-  if (provided !== expected) {
-    return NextResponse.json(
-      { error: "Forbidden. Invalid admin secret.", code: "ADMIN_SECRET_INVALID" },
-      { status: 403 },
-    );
+  const provided = parseBearerSecret(req.headers.get("authorization"));
+  if (!provided || !sameSecret(provided, expected)) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "A valid admin Bearer token is required.", code: "ADMIN_SECRET_INVALID" },
+        { status: 401 },
+      ),
+    };
   }
 
-  return null; // authorized
+  let userId: string;
+  try {
+    userId = await resolveUserId(req);
+  } catch {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "An authenticated owner session is required.", code: "UNAUTHORIZED" },
+        { status: 401 },
+      ),
+    };
+  }
+
+  let rawBody: unknown;
+  try {
+    rawBody = await req.json();
+  } catch {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Admin request body must be valid JSON.", code: "INVALID_ADMIN_JSON" },
+        { status: 400 },
+      ),
+    };
+  }
+
+  const command = parseAdminCommandBody(rawBody, operation);
+  if (!command.ok) {
+    return {
+      ok: false,
+      response: NextResponse.json(command, { status: command.status }),
+    };
+  }
+
+  return {
+    ok: true,
+    userId,
+    apply: command.apply,
+    input: command.input,
+    confirmation: command.confirmation,
+  };
 }

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { enforceAdminSecret } from "@/lib/admin-guard";
+import { requireAdminCommand } from "@/lib/admin-guard";
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim();
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const OPERATION = "repair-posters";
 
 async function tmdbMovie(tmdbId: number) {
   if (!TMDB_API_KEY) throw new Error("TMDB_API_KEY is not configured");
@@ -15,16 +16,15 @@ async function tmdbMovie(tmdbId: number) {
   return res.json();
 }
 
-export async function GET(req: NextRequest) {
-  // TVM-40: Always enforce admin secret
-  const guard = enforceAdminSecret(req);
-  if (guard) return guard;
+export async function POST(req: NextRequest) {
+  const command = await requireAdminCommand(req, OPERATION);
+  if (!command.ok) return command.response;
 
   try {
     let fixed = 0;
     let tmdbFailures = 0;
     const mediaMovies = await db.media.findMany({
-      where: { type: "movie", tmdbId: { not: null } },
+      where: { userId: command.userId, type: "movie", tmdbId: { not: null } },
       select: { id: true, tmdbId: true, title: true, poster: true },
     });
     const tmdbIds: number[] = Array.from(
@@ -47,6 +47,10 @@ export async function GET(req: NextRequest) {
       const posterPath = posterByTmdbId.get(item.tmdbId);
       const poster = posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : null;
       if (poster && item.poster !== poster) {
+        if (!command.apply) {
+          fixed++;
+          continue;
+        }
         await db.media.update({ where: { id: item.id }, data: { poster } });
         fixed++;
       }
@@ -54,10 +58,12 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      dryRun: !command.apply,
       fixed,
       scannedMediaMovies: mediaMovies.length,
       tmdbFetchFailures: tmdbFailures,
       source: "Media",
+      confirmation: command.apply ? undefined : command.confirmation,
     });
   } catch (error: any) {
     console.error("[admin:repair-posters]", error);

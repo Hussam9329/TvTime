@@ -66,7 +66,7 @@ check(
   "TMDB failure blocks episode mutations before their transaction",
 );
 check(
-  /const effectiveState = derived\.verified[\s\S]*watched\.count > 0[\s\S]*\? "watching"/.test(tracking),
+  /const effectiveState = persisted === "stopped"[\s\S]*derived\.verified[\s\S]*watched\.count > 0[\s\S]*\? "watching"/.test(tracking),
   "TV tracking display preserves real episode progress when cache verification is incomplete",
 );
 
