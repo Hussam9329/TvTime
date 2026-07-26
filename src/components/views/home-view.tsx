@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
 import { SafeImage } from "@/components/media/safe-image";
+import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { motion } from "framer-motion";
 import { useState, useEffect, type ComponentProps } from "react";
 import { toast } from "sonner";
@@ -363,10 +364,13 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           fetchPriority={index === 0 ? "high" : "auto"}
           className="transition-opacity duration-200 group-hover:opacity-95"
         />
-        <div className="absolute top-1.5 right-1.5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center gap-1 px-1.5 h-5 text-white pointer-events-none">
-          <Check className="h-3 w-3" aria-hidden="true" />
-          <span className="text-[9px] font-bold uppercase">{isMovie ? "Movie" : "TV"}</span>
-        </div>
+        {isMovie && <WatchedIndicator />}
+        {!isMovie && (
+          <div className="absolute top-1.5 right-1.5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center gap-1 px-1.5 h-5 text-white pointer-events-none">
+            <Check className="h-3 w-3" aria-hidden="true" />
+            <span className="text-[9px] font-bold uppercase">TV</span>
+          </div>
+        )}
       </div>
       <p className="mt-1.5 text-xs font-medium line-clamp-1">{title}</p>
       <p className="text-[10px] text-muted-foreground line-clamp-1">

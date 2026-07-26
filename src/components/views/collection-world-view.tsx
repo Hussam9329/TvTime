@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { SafeImage } from "@/components/media/safe-image";
+import { WatchedIndicator } from "@/components/media/watched-indicator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -400,6 +401,7 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
                 {item.type === "movie" ? <Film className="w-12 h-12" /> : <Tv className="w-12 h-12" />}
               </div>
             )}
+            {item.type === "movie" && item.watched && <WatchedIndicator />}
             {/* Fix #8: Rating labels — user rating shows /100, TMDB shows /10 */}
             {userRating != null ? (
               <div className="absolute top-2 right-2">

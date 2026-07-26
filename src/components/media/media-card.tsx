@@ -12,6 +12,7 @@ import { isArabicMediaItem } from "@/lib/arabic-media";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { WatchedIndicator } from "@/components/media/watched-indicator";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -108,6 +109,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             fetchPriority={priority ? "high" : "auto"}
             className="relative w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-95"
           />
+          {watched && <WatchedIndicator />}
           {/* top badges */}
           <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
             {showMediaType && !compactActions && (
