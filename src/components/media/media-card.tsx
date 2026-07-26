@@ -121,8 +121,8 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           </div>
 
         </div>
-        <div className="flex min-h-[8.75rem] min-w-0 flex-col border-t border-border/60 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.96))] px-2.5 py-2.5 sm:px-3">
-          <h3 className="line-clamp-2 flex min-h-10 items-center justify-center text-center text-[13px] font-semibold leading-[1.25] text-foreground sm:text-sm">
+        <div className="flex min-w-0 flex-col border-t border-border/60 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.96))] px-2.5 py-2.5 sm:px-3">
+          <h3 className="line-clamp-2 text-center text-[13px] font-semibold leading-[1.25] text-foreground sm:text-sm">
             {title}
           </h3>
 
@@ -187,7 +187,7 @@ export function MediaCardSkeleton() {
   return (
     <Card className="feedback-skeleton overflow-hidden p-0 border-border/50 bg-card" aria-hidden="true">
       <div className="aspect-[2/3] shimmer" />
-      <div className="h-[8.75rem] border-t border-border/50 bg-card" />
+      <div className="h-28 border-t border-border/50 bg-card" />
     </Card>
   );
 }
