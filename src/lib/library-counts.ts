@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { INFERRED_ANIME_WHERE, INFERRED_NON_ANIME_WHERE } from "@/lib/media-classification-server";
 
 
 export function eligibleTitleRatingWhere(userId: string): Prisma.MediaWhereInput {
@@ -23,14 +24,16 @@ export async function getCanonicalLibraryCounts(userId: string) {
   const eligibleRating = eligibleTitleRatingWhere(userId);
   const eligibleAnimeRating: Prisma.MediaWhereInput = {
     userId,
-    isAnime: true,
     isArabic: false,
+    AND: [INFERRED_ANIME_WHERE],
     userRating: { not: null },
     OR: [
       { type: { not: "series" } },
       { type: "series", status: "finished" },
     ],
   };
+  const standardWorld = { isArabic: false, AND: [INFERRED_NON_ANIME_WHERE] } satisfies Prisma.MediaWhereInput;
+  const animeWorld = { isArabic: false, AND: [INFERRED_ANIME_WHERE] } satisfies Prisma.MediaWhereInput;
 
   const [
     total,
@@ -61,26 +64,25 @@ export async function getCanonicalLibraryCounts(userId: string) {
     watchedEpisodes,
   ] = await Promise.all([
     db.media.count({ where: base }),
-    db.media.count({ where: { ...base, type: "movie", isAnime: false, isArabic: false } }),
-    db.media.count({ where: { ...base, type: "series", isAnime: false, isArabic: false } }),
+    db.media.count({ where: { ...base, ...standardWorld, type: "movie" } }),
+    db.media.count({ where: { ...base, ...standardWorld, type: "series" } }),
     db.media.count({ where: eligibleRating }),
-    db.media.count({ where: { ...base, type: "movie", isAnime: false, isArabic: false, userRating: { not: null } } }),
-    db.media.count({ where: { ...base, type: "series", status: "finished", isAnime: false, isArabic: false, userRating: { not: null } } }),
+    db.media.count({ where: { ...base, ...standardWorld, type: "movie", userRating: { not: null } } }),
+    db.media.count({ where: { ...base, ...standardWorld, type: "series", status: "finished", userRating: { not: null } } }),
     db.media.count({ where: eligibleAnimeRating }),
     db.media.count({ where: { ...base, watched: true } }),
     db.media.count({ where: { ...base, status: "planned", watched: false } }),
-    db.media.count({ where: { ...base, type: "movie", status: "planned", watched: false, isAnime: false, isArabic: false } }),
-    db.media.count({ where: { ...base, type: "series", status: "planned", watched: false, isAnime: false, isArabic: false } }),
-    db.media.count({ where: { ...base, status: "planned", watched: false, isAnime: true, isArabic: false } }),
-    db.media.count({ where: { ...base, type: "movie", watched: true, isAnime: false, isArabic: false } }),
-    db.media.count({ where: { ...base, type: "series", watched: true, isAnime: false, isArabic: false } }),
-    db.media.count({ where: { ...base, watched: true, isAnime: true, isArabic: false } }),
+    db.media.count({ where: { ...base, ...standardWorld, type: "movie", status: "planned", watched: false } }),
+    db.media.count({ where: { ...base, ...standardWorld, type: "series", status: "planned", watched: false } }),
+    db.media.count({ where: { ...base, ...animeWorld, status: "planned", watched: false } }),
+    db.media.count({ where: { ...base, ...standardWorld, type: "movie", watched: true } }),
+    db.media.count({ where: { ...base, ...standardWorld, type: "series", watched: true } }),
+    db.media.count({ where: { ...base, ...animeWorld, watched: true } }),
     db.media.count({
       where: {
         ...base,
         type: "series",
-        isAnime: true,
-        isArabic: false,
+        ...animeWorld,
         isFollowing: true,
         watched: false,
         status: "not_started",
@@ -90,8 +92,7 @@ export async function getCanonicalLibraryCounts(userId: string) {
       where: {
         ...base,
         type: "series",
-        isAnime: true,
-        isArabic: false,
+        ...animeWorld,
         watched: false,
         status: { in: ["watching", "uptodate"] },
       },
@@ -103,7 +104,7 @@ export async function getCanonicalLibraryCounts(userId: string) {
     db.media.count({ where: { ...base, type: "series", isArabic: true, watched: false, status: { in: ["watching", "uptodate"] } } }),
     db.media.count({ where: { ...base, type: "series", isArabic: true, status: "finished" } }),
     db.media.count({ where: { ...base, type: "series", isArabic: true, isFollowing: true } }),
-    db.media.count({ where: { ...base, type: "series", isAnime: false, isArabic: false, isFollowing: true } }),
+    db.media.count({ where: { ...base, ...standardWorld, type: "series", isFollowing: true } }),
     db.watchedEpisode.count({ where: base }),
   ]);
 

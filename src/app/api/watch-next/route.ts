@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { classifyStoredMediaAsAnime } from "@/lib/media-classification-server";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
 
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
     const user = await getOrCreateUser(await resolveUserId(req));
     const shows = await db.media.findMany({
       where: { userId: user.id, type: "series", isFollowing: true, tmdbId: { not: null } },
-      select: { tmdbId: true, title: true, poster: true, watchedAt: true, updatedAt: true, watched: true, status: true, userRating: true, isAnime: true, isArabic: true },
+      select: { tmdbId: true, title: true, poster: true, watchedAt: true, updatedAt: true, watched: true, status: true, userRating: true, isAnime: true, isArabic: true, originalLanguage: true, originCountries: true, genres: true },
     });
     const ids = shows.map((show) => show.tmdbId!).filter(Boolean);
     if (ids.length === 0) return NextResponse.json({ items: [] });
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
         .sort((a, b) => a.season - b.season || a.episode - b.episode)
         .find((episode) => !seen.has(`${episode.season}-${episode.episode}`));
       const poster = posterUrl(show.poster) || posterUrl(meta?.posterPath);
-      return next ? [{ tmdbId: show.tmdbId!, title: show.title, poster, seasonNumber: next.season, episodeNumber: next.episode, watchedEpisodes: seen.size, releasedEpisodes: meta?.airedEpisodeKeys.length ?? 0, lastActivity: show.watchedAt || show.updatedAt, isAnime: show.isAnime, isArabic: show.isArabic }] : [];
+      return next ? [{ tmdbId: show.tmdbId!, title: show.title, poster, seasonNumber: next.season, episodeNumber: next.episode, watchedEpisodes: seen.size, releasedEpisodes: meta?.airedEpisodeKeys.length ?? 0, lastActivity: show.watchedAt || show.updatedAt, isAnime: classifyStoredMediaAsAnime(show), isArabic: show.isArabic }] : [];
     }).sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
     const today = new Date().toISOString().slice(0, 10);
     const upcoming = shows.flatMap((show) => {
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
         episodeNumber: meta.nextEpisodeEpisodeNumber,
         episodeName: meta.nextEpisodeName,
         airDate: meta.nextEpisodeAirDate,
-        isAnime: show.isAnime,
+        isAnime: classifyStoredMediaAsAnime(show),
         isArabic: show.isArabic,
       }];
     }).sort((a, b) => a.airDate.localeCompare(b.airDate));

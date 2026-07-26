@@ -15,7 +15,7 @@ import { getTvStatusMetadata, batchReadDbMetadata, type TvStatusMetadata } from 
 import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
 import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
-import { detectIsAnime } from "@/lib/anime-detect";
+import { classifyStoredMediaAsAnime } from "@/lib/media-classification-server";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -162,21 +162,6 @@ type FastTrackingDatabaseRow = {
   metadataFresh: boolean;
 };
 
-function storedRecordIsAnime(show: {
-  title?: string | null;
-  isAnime?: boolean | null;
-  originalLanguage?: string | null;
-  originCountries?: string[] | null;
-  genres?: string[] | null;
-}) {
-  return Boolean(show.isAnime) || detectIsAnime({
-    title: show.title || undefined,
-    originalLanguage: show.originalLanguage,
-    originCountry: show.originCountries,
-    genres: show.genres,
-  });
-}
-
 /**
  * A single read-only SQL statement powers the header counters. It never reads
  * episode-key arrays, calls TMDB, materializes legacy snapshots or writes cache
@@ -217,7 +202,7 @@ async function buildTrackingCounts(userId: string, world: "standard" | "arabic",
       AND (media."status" IS NOT NULL OR media."watched" = TRUE OR COALESCE(progress."episodeCount", 0) > 0)
   `;
 
-  return buildFastTvTrackingSummary(rows.filter((row) => !storedRecordIsAnime(row)).map((row): FastTvTrackingRow => ({
+  return buildFastTvTrackingSummary(rows.filter((row) => !classifyStoredMediaAsAnime(row)).map((row): FastTvTrackingRow => ({
     ...row,
     episodeCount: Number(row.episodeCount),
   })), now);
@@ -272,7 +257,7 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
       ],
     },
   });
-  const series = seriesCandidates.filter((show) => !storedRecordIsAnime(show));
+  const series = seriesCandidates.filter((show) => !classifyStoredMediaAsAnime(show));
 
   // ── BATCH METADATA READ ───────────────────────────────────────────────
   // Pre-fetch ALL TV metadata for ALL tracked shows in a single DB round-trip.

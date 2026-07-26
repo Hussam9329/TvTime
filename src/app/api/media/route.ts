@@ -5,6 +5,7 @@ import { resolveUserId } from "@/lib/auth";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
 import type { Prisma } from "@prisma/client";
+import { INFERRED_ANIME_WHERE, INFERRED_NON_ANIME_WHERE } from "@/lib/media-classification-server";
 
 const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
@@ -46,8 +47,8 @@ export async function GET(req: NextRequest) {
     if (tracked === "false") where.isFollowing = false;
 
     const isAnime = url.searchParams.get("isAnime");
-    if (isAnime === "true") where.isAnime = true;
-    if (isAnime === "false") where.isAnime = false;
+    if (isAnime === "true") where.AND = [INFERRED_ANIME_WHERE];
+    if (isAnime === "false") where.AND = [INFERRED_NON_ANIME_WHERE];
     const isArabic = url.searchParams.get("isArabic");
     if (isArabic === "true") where.isArabic = true;
     if (isArabic === "false") where.isArabic = false;
