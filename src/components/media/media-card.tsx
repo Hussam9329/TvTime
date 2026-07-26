@@ -121,29 +121,50 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           </div>
 
         </div>
-        <div className={`${compactActions ? "flex min-h-[4.5rem] items-center gap-2" : "min-h-[5.5rem]"} border-t border-border/50 bg-card px-3 py-2.5`}>
-          <div className="min-w-0 flex-1">
-            <h3 className={`${compactActions ? "line-clamp-1" : "line-clamp-2 min-h-10"} text-sm font-semibold leading-tight text-foreground`}>{title}</h3>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              {year && <span>{year}</span>}
-              {showMediaType && (
-                <span
-                  className={`inline-flex h-5 max-w-full items-center gap-1 rounded-md border px-1.5 text-[9px] font-semibold ${
-                    mediaType === "movie"
-                      ? "border-fuchsia-400/30 bg-fuchsia-500/15 text-fuchsia-300"
-                      : "border-cyan-400/30 bg-cyan-500/15 text-cyan-300"
-                  }`}
-                >
-                  {mediaType === "movie" ? <Film className="h-2.5 w-2.5 shrink-0" /> : <Tv className="h-2.5 w-2.5 shrink-0" />}
-                  <span className="truncate">{typeLabel}</span>
-                </span>
-              )}
-            </div>
+        <div className="flex min-h-[8.75rem] min-w-0 flex-col border-t border-border/60 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.96))] px-2.5 py-2.5 sm:px-3">
+          <h3 className="line-clamp-2 flex min-h-10 items-center justify-center text-center text-[13px] font-semibold leading-[1.25] text-foreground sm:text-sm">
+            {title}
+          </h3>
+
+          <div className="my-2 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
+
+          <div className="flex min-h-6 min-w-0 items-center justify-center gap-2 text-[11px] text-muted-foreground">
+            {year && <span className="shrink-0">{year}</span>}
+            {showMediaType && (
+              <span
+                className={`inline-flex h-5 min-w-0 max-w-[70%] items-center gap-1 rounded-full border px-2 text-[9px] font-semibold shadow-sm ${
+                  mediaType === "movie"
+                    ? "border-fuchsia-400/45 bg-fuchsia-500/10 text-fuchsia-300 shadow-fuchsia-500/10"
+                    : "border-cyan-400/45 bg-cyan-500/10 text-cyan-300 shadow-cyan-500/10"
+                }`}
+              >
+                {mediaType === "movie" ? <Film className="h-2.5 w-2.5 shrink-0" /> : <Tv className="h-2.5 w-2.5 shrink-0" />}
+                <span className="truncate">{typeLabel}</span>
+              </span>
+            )}
           </div>
-          {compactActions ? (
+
+          <div className="mt-auto flex min-w-0 items-center gap-1.5 pt-2">
+            {watched ? (
+              <span data-status="watched" className="inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-2 text-[11px] font-semibold text-emerald-400 shadow-[inset_0_0_14px_rgba(16,185,129,0.06)]">
+                <Check className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Watched</span>
+              </span>
+            ) : inWatchlist ? (
+              <span className="inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-pink-500/35 bg-pink-500/10 px-2 text-[11px] font-semibold text-pink-400 shadow-[inset_0_0_14px_rgba(236,72,153,0.06)]">
+                <ListPlus className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Watchlist</span>
+              </span>
+            ) : isFollowing ? (
+              <span data-status="following" className="inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/10 px-2 text-[11px] font-semibold text-amber-400 shadow-[inset_0_0_14px_rgba(245,158,11,0.06)]">
+                <Bell className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Following</span>
+              </span>
+            ) : (
+              <span className="h-8 min-w-0 flex-1" aria-hidden="true" />
+            )}
+
+            {compactActions && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 w-8 shrink-0 p-0" aria-label={`More actions for ${title}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
+                <Button variant="outline" size="sm" className="h-8 w-8 shrink-0 rounded-lg p-0" aria-label={`More actions for ${title}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -154,14 +175,8 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
                 {mediaType === "movie" && <DropdownMenuItem onSelect={() => void toggleWatched()} disabled={watchedToggle.isPending}><Check /> {watched ? "Remove from watched" : "Mark as watched"}</DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <div className="ml-auto flex items-center gap-1">
-              {inWatchlist && <span className="inline-flex items-center gap-0.5 rounded bg-primary/20 px-1 py-0.5 text-[9px] text-primary"><ListPlus className="h-2.5 w-2.5" /> Watchlist</span>}
-              {watched && <span data-status="watched" className="inline-flex items-center gap-0.5 rounded bg-emerald-500/20 px-1 py-0.5 text-[9px] text-emerald-400"><Check className="h-2.5 w-2.5" /> Watched</span>}
-              {isFollowing && <span data-status="following" className="inline-flex items-center gap-0.5 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] text-amber-400"><Bell className="h-2.5 w-2.5" /> Following</span>}
-              {userRating != null && !(mediaType === "movie" && watched) && <span data-status="rated" className="inline-flex items-center gap-0.5 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] text-amber-300"><Star className="h-2.5 w-2.5 fill-current" /> {userRating}/100</span>}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </Card>
     </motion.a>
@@ -172,7 +187,7 @@ export function MediaCardSkeleton() {
   return (
     <Card className="feedback-skeleton overflow-hidden p-0 border-border/50 bg-card" aria-hidden="true">
       <div className="aspect-[2/3] shimmer" />
-      <div className="h-[5.5rem] border-t border-border/50 bg-card" />
+      <div className="h-[8.75rem] border-t border-border/50 bg-card" />
     </Card>
   );
 }
