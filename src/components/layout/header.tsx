@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   Clapperboard,
+  Globe2,
   Film,
   Home,
   Keyboard,
@@ -59,6 +60,7 @@ const coreNavItems: NavItem[] = [
   { view: "watch-next", icon: Play },
   { view: "movies", icon: Film },
   { view: "tv-shows", icon: Clapperboard },
+  { view: "asian-tv", icon: Globe2 },
   { view: "anime", icon: Sparkles },
   { view: "stats", icon: BarChart3 },
 ];

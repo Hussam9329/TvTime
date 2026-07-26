@@ -93,6 +93,12 @@ export const VIEW_METADATA: Record<ViewName, ViewMetadata> = {
     announcement: "TV Shows loaded",
     ...ENGLISH_VIEW,
   },
+  "asian-tv": {
+    label: "Asian TV",
+    accessibleLabel: "Asian TV Shows",
+    announcement: "Asian TV Shows loaded",
+    ...ENGLISH_VIEW,
+  },
   "arabic-movies": {
     label: "Arabic Movies",
     accessibleLabel: "الأفلام العربية",

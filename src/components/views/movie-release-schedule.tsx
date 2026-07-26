@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MediaCard, MediaGrid } from "@/components/media/media-card";
 import { getTitle } from "@/lib/tmdb";
+import { isArabicMediaItem } from "@/lib/arabic-media";
+import { isAnimeMediaItem } from "@/lib/anime-detect";
+import { asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 
 function rangeFromOffset(offset: number) {
   const now = new Date();
@@ -37,6 +40,7 @@ interface ReleaseScheduleProps {
   title?: string;
   /** Header subtitle override. */
   subtitle?: string;
+  collectionWorld?: "standard-tv" | "asian-tv";
 }
 
 /**
@@ -52,6 +56,7 @@ export function ReleaseSchedule({
   excludedOriginalLanguage,
   title,
   subtitle,
+  collectionWorld,
 }: ReleaseScheduleProps) {
   const [offset, setOffset] = useState(0);
   const [search, setSearch] = useState("");
@@ -70,8 +75,11 @@ export function ReleaseSchedule({
   });
   const items = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return (schedule.data?.items ?? []).filter((item) => !query || getTitle(item).toLowerCase().includes(query));
-  }, [schedule.data?.items, search]);
+    let filtered = (schedule.data?.items ?? []).filter((item) => !query || getTitle(item).toLowerCase().includes(query));
+    if (collectionWorld === "standard-tv") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
+    if (collectionWorld === "asian-tv") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
+    return filtered;
+  }, [collectionWorld, schedule.data?.items, search]);
   const groups = useMemo(() => {
     const map = new Map<string, typeof items>();
     for (const item of items) {

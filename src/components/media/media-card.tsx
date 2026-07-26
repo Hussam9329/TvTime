@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { toast } from "sonner";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
+import { isAsianMediaItem } from "@/lib/asian-media";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -74,8 +75,11 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   const year = getYear(item);
   const isArabic = isArabicMediaItem(item);
   const isAnime = mediaType === "tv" && isAnimeMediaItem(item);
+  const isAsian = mediaType === "tv" && !isAnime && !isArabic && isAsianMediaItem(item);
   const typeLabel = isAnime
     ? "Anime"
+    : isAsian
+      ? "Asian TV"
     : isArabic
       ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV")
       : (mediaType === "movie" ? "Movie" : "TV");
@@ -146,6 +150,8 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
                 className={`inline-flex h-5 min-w-0 max-w-[72%] items-center gap-1 rounded-md border px-1.5 text-[9px] font-semibold ${
                   isAnime
                     ? "border-violet-400/45 bg-violet-500/10 text-violet-300"
+                    : isAsian
+                    ? "border-teal-400/45 bg-teal-500/10 text-teal-300"
                     : mediaType === "movie"
                     ? "border-fuchsia-400/45 bg-fuchsia-500/10 text-fuchsia-300 shadow-fuchsia-500/10"
                     : "border-cyan-400/45 bg-cyan-500/10 text-cyan-300 shadow-cyan-500/10"

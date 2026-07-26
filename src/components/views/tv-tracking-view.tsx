@@ -49,7 +49,7 @@ function TrackingStatusBadge({ status }: { status: TrackingStatus }) {
   return <Badge data-status="not_started" className="h-10 rounded-full border border-slate-400/20 bg-slate-500/15 px-4 text-sm font-bold text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Clock className="mr-2 h-4 w-4" /> Not Started</Badge>;
 }
 
-export function TvShowsView({ world = "standard", embedded = false }: { world?: "standard" | "arabic"; embedded?: boolean }) {
+export function TvShowsView({ world = "standard", embedded = false }: { world?: "standard" | "arabic" | "asian"; embedded?: boolean }) {
   const stats = useStats();
   const trackingCounts = useTvTrackingCounts(world);
   const counts = trackingCounts.data?.counts;
@@ -63,11 +63,13 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
             <Clapperboard className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">{world === "arabic" ? "Arabic TV Shows" : "TV Shows"}</h1>
+            <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">{world === "arabic" ? "Arabic TV Shows" : world === "asian" ? "Asian TV Shows" : "TV Shows"}</h1>
             <p className="view-page-description text-sm text-muted-foreground mt-0.5">
               {world === "arabic"
                 ? "Arabic-language series tracking, fully separated from TV Shows and Anime"
-                : "Your complete non-anime, non-Arabic TV tracking world, with global counts across every show"}
+                : world === "asian"
+                  ? "Asian series tracking, separated from standard TV, Arabic TV and Anime"
+                  : "Your complete non-anime, non-Arabic, non-Asian TV tracking world"}
             </p>
           </div>
         </div>
@@ -101,7 +103,7 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
 // "All" tab — shows every tracked series, each badged with its current tracking
 // status (Finished / Up To Date / Watching / Not Started / Planned). Includes quick filter chips so the
 // user can drill into a specific status without leaving the tab.
-function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void; globalCounts?: any; world: "standard" | "arabic" }) {
+function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void; globalCounts?: any; world: "standard" | "arabic" | "asian" }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<TvTrackingCategory>("all");
   const [layout, setLayout] = useState<"list" | "grid">("list");
@@ -160,14 +162,16 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       <FilterPanel
         title={(
           <span className="flex flex-wrap items-center gap-2">
-            <span>{world === "arabic" ? "All Arabic TV Shows" : "All TV Shows"}</span>
+            <span>{world === "arabic" ? "All Arabic TV Shows" : world === "asian" ? "All Asian TV Shows" : "All TV Shows"}</span>
             <span className="text-xs font-normal text-muted-foreground">({total})</span>
             <Badge variant="secondary" className="h-5 text-[10px]">Global counters</Badge>
           </span>
         )}
         description={world === "arabic"
           ? "Use these filters from inside All. Every number is calculated across your complete Arabic TV collection only, never from standard TV Shows, Anime or the visible page."
-          : "Use these filters from inside All. Every number is calculated across your complete TV Shows collection, never from Arabic TV, Anime or only the visible page."}
+          : world === "asian"
+            ? "Every number is calculated across your Asian TV collection only, separate from standard TV, Arabic TV and Anime."
+            : "Use these filters from inside All. Every number is calculated across your complete TV Shows collection, never from Arabic TV, Asian TV, Anime or only the visible page."}
         activeCount={filter === "all" ? 0 : 1}
       >
         <FilterSection title="Tracking status">
@@ -225,8 +229,8 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       ) : items.length === 0 ? (
         <EmptyTab
           icon={<Layers className="w-10 h-10" />}
-          title={filter === "all" ? (world === "arabic" ? "No tracked Arabic shows yet" : "No tracked shows yet") : `No ${activeFilterLabel} shows`}
-          subtitle={filter === "all" ? (world === "arabic" ? "Follow an Arabic TV show to start tracking" : "Follow TV shows to start tracking") : `This filter is empty across your full ${world === "arabic" ? "Arabic TV" : "TV Shows"} collection`}
+          title={filter === "all" ? (world === "arabic" ? "No tracked Arabic shows yet" : world === "asian" ? "No tracked Asian shows yet" : "No tracked shows yet") : `No ${activeFilterLabel} shows`}
+          subtitle={filter === "all" ? (world === "arabic" ? "Follow an Arabic TV show to start tracking" : world === "asian" ? "Follow an Asian TV show to start tracking" : "Follow TV shows to start tracking") : `This filter is empty across your full ${world === "arabic" ? "Arabic TV" : world === "asian" ? "Asian TV" : "TV Shows"} collection`}
         />
       ) : (
         <>

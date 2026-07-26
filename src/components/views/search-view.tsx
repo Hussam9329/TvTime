@@ -12,11 +12,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { img } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
+import { isAsianMediaItem } from "@/lib/asian-media";
 
 export function SearchView() {
   const { searchQuery, setSearchQuery, goPerson } = useNav();
   const [local, setLocal] = useState(searchQuery);
-  const [filter, setFilter] = useState<"all" | "movie" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "people">("all");
+  const [filter, setFilter] = useState<"all" | "movie" | "tv" | "anime" | "asian-tv" | "arabic-movies" | "arabic-tv" | "people">("all");
 
   const search = useSearchAccumulated(searchQuery);
 
@@ -36,14 +37,17 @@ export function SearchView() {
         ? allResults.filter((result) => result.media_type === "tv" && isArabicMediaItem(result))
         : filter === "anime"
           ? allResults.filter((result) => result.media_type === "tv" && isAnimeMediaItem(result))
+        : filter === "asian-tv"
+          ? allResults.filter((result) => result.media_type === "tv" && !isAnimeMediaItem(result) && !isArabicMediaItem(result) && isAsianMediaItem(result))
         : filter === "movie"
           ? allResults.filter((result) => result.media_type === "movie" && !isArabicMediaItem(result) && !isAnimeMediaItem(result))
           : filter === "tv"
-            ? allResults.filter((result) => result.media_type === "tv" && !isArabicMediaItem(result) && !isAnimeMediaItem(result))
+            ? allResults.filter((result) => result.media_type === "tv" && !isArabicMediaItem(result) && !isAnimeMediaItem(result) && !isAsianMediaItem(result))
             : [];
   const arabicMovieCount = allResults.filter((result) => result.media_type === "movie" && isArabicMediaItem(result)).length;
   const arabicTvCount = allResults.filter((result) => result.media_type === "tv" && isArabicMediaItem(result)).length;
   const animeCount = allResults.filter((result) => result.media_type === "tv" && isAnimeMediaItem(result)).length;
+  const asianTvCount = allResults.filter((result) => result.media_type === "tv" && !isAnimeMediaItem(result) && !isArabicMediaItem(result) && isAsianMediaItem(result)).length;
   const people = search.people;
 
   return (
@@ -95,6 +99,7 @@ export function SearchView() {
                   <TabsTrigger value="movie">Movies</TabsTrigger>
                   <TabsTrigger value="tv">TV</TabsTrigger>
                   {animeCount > 0 && <TabsTrigger value="anime">Anime ({animeCount})</TabsTrigger>}
+                  {asianTvCount > 0 && <TabsTrigger value="asian-tv">Asian TV ({asianTvCount})</TabsTrigger>}
                   {arabicMovieCount > 0 && (
                     <TabsTrigger value="arabic-movies" className="gap-1.5">
                       <Languages className="h-3.5 w-3.5" /> Arabic Movies ({arabicMovieCount})

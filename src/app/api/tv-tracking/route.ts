@@ -16,6 +16,7 @@ import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
 import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
 import { classifyStoredMediaAsAnime } from "@/lib/media-classification-server";
+import { isAsianMediaItem } from "@/lib/asian-media";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -152,6 +153,7 @@ type FastTrackingDatabaseRow = {
   originalLanguage: string | null;
   originCountries: string[];
   genres: string[];
+  isArabic: boolean;
   status: string | null;
   watched: boolean;
   episodeCount: bigint | number;
@@ -162,13 +164,22 @@ type FastTrackingDatabaseRow = {
   metadataFresh: boolean;
 };
 
+type TvWorld = "standard" | "arabic" | "asian";
+
+function recordMatchesWorld(show: FastTrackingDatabaseRow | any, world: TvWorld) {
+  if (classifyStoredMediaAsAnime(show)) return false;
+  if (world === "arabic") return Boolean(show.isArabic);
+  const asian = !show.isArabic && isAsianMediaItem(show);
+  return world === "asian" ? asian : !show.isArabic && !asian;
+}
+
 /**
  * A single read-only SQL statement powers the header counters. It never reads
  * episode-key arrays, calls TMDB, materializes legacy snapshots or writes cache
  * rows. The full snapshot remains available for list pages that need exact
  * per-episode decoration.
  */
-async function buildTrackingCounts(userId: string, world: "standard" | "arabic", now = new Date()) {
+async function buildTrackingCounts(userId: string, world: TvWorld, now = new Date()) {
   const rows = await db.$queryRaw<FastTrackingDatabaseRow[]>`
     SELECT
       media."tmdbId" AS "tmdbId",
@@ -177,6 +188,7 @@ async function buildTrackingCounts(userId: string, world: "standard" | "arabic",
       media."originalLanguage" AS "originalLanguage",
       media."originCountries" AS "originCountries",
       media."genres" AS "genres",
+      media."isArabic" AS "isArabic",
       media."status" AS "status",
       media."watched" AS "watched",
       COALESCE(progress."episodeCount", 0)::bigint AS "episodeCount",
@@ -198,17 +210,16 @@ async function buildTrackingCounts(userId: string, world: "standard" | "arabic",
     LEFT JOIN "TvMetadataCache" AS metadata ON metadata."tmdbId" = media."tmdbId"
     WHERE media."userId" = ${userId}
       AND media."type" = 'series'
-      AND media."isArabic" = ${world === "arabic"}
       AND (media."status" IS NOT NULL OR media."watched" = TRUE OR COALESCE(progress."episodeCount", 0) > 0)
   `;
 
-  return buildFastTvTrackingSummary(rows.filter((row) => !classifyStoredMediaAsAnime(row)).map((row): FastTvTrackingRow => ({
+  return buildFastTvTrackingSummary(rows.filter((row) => recordMatchesWorld(row, world)).map((row): FastTvTrackingRow => ({
     ...row,
     episodeCount: Number(row.episodeCount),
   })), now);
 }
 
-async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic") {
+async function buildTrackingSnapshot(userId: string, world: TvWorld) {
   const now = new Date();
 
   // ── GROUP WATCHED EPISODES AT THE DB LEVEL ───────────────────────────
@@ -247,7 +258,6 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
     where: {
       userId,
       type: "series",
-      isArabic: world === "arabic",
       OR: [
         { status: { not: null } },
         { watched: true },
@@ -257,7 +267,7 @@ async function buildTrackingSnapshot(userId: string, world: "standard" | "arabic
       ],
     },
   });
-  const series = seriesCandidates.filter((show) => !classifyStoredMediaAsAnime(show));
+  const series = seriesCandidates.filter((show) => recordMatchesWorld(show, world));
 
   // ── BATCH METADATA READ ───────────────────────────────────────────────
   // Pre-fetch ALL TV metadata for ALL tracked shows in a single DB round-trip.
@@ -444,10 +454,10 @@ export async function GET(req: NextRequest) {
     const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
     const countsOnly = url.searchParams.get("countsOnly") === "true";
     const worldParam = url.searchParams.get("world") || "standard";
-    if (worldParam !== "standard" && worldParam !== "arabic") {
+    if (worldParam !== "standard" && worldParam !== "arabic" && worldParam !== "asian") {
       return NextResponse.json({ error: "Unsupported TV tracking world", code: "INVALID_TV_TRACKING_WORLD" }, { status: 400 });
     }
-    const world = worldParam as "standard" | "arabic";
+    const world = worldParam as TvWorld;
 
     if (countsOnly) {
       const summary = await buildTrackingCounts(requestUserId, world);

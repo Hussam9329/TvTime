@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
-import { INFERRED_NON_ANIME_WHERE } from "@/lib/media-classification-server";
+import { INFERRED_NON_ANIME_WHERE, INFERRED_NON_ASIAN_TV_WHERE } from "@/lib/media-classification-server";
 import { canonicalMediaPoster } from "@/lib/media-poster";
 
 function toCompat(item: any) {
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(await resolveUserId(req));
     const items = await db.media.findMany({
-      where: { userId: user.id, type: "series", isArabic: false, isFollowing: true, AND: [INFERRED_NON_ANIME_WHERE] },
+      where: { userId: user.id, type: "series", isArabic: false, isFollowing: true, AND: [INFERRED_NON_ANIME_WHERE, INFERRED_NON_ASIAN_TV_WHERE] },
       orderBy: { addedAt: "desc" },
     });
     return NextResponse.json({ items: items.map(toCompat), source: "Media" });

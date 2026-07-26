@@ -50,6 +50,7 @@ export function TVShowsPageView() {
             mediaType="tv"
             withoutGenres={ANIMATION_GENRES}
             excludedOriginalLanguage="ar"
+            collectionWorld="standard-tv"
             title="TV Release Schedule"
             subtitle="A six-month agenda for new TV show premieres, kept separate from Anime and Arabic TV."
           />

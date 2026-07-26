@@ -29,8 +29,9 @@ import {
 import { toast } from "sonner";
 import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
+import { asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 
-export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv";
+export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "asian-tv";
 
 // Sort options
 const SORT_OPTIONS_MOVIES = [
@@ -95,9 +96,10 @@ interface DiscoverViewProps {
 }
 
 export function DiscoverView({ world = "movies", embedded = false, title, subtitle, mediaType }: DiscoverViewProps) {
-  const isTV = world === "tv" || world === "arabic-tv" || (world === "anime" && mediaType !== "movie");
+  const isTV = world === "tv" || world === "arabic-tv" || world === "asian-tv" || (world === "anime" && mediaType !== "movie");
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";
+  const isAsian = world === "asian-tv";
   const forcedLang = isAnime ? "ja" : isArabic ? "ar" : undefined;
   const forcedLanguageLabel = forcedLang === "ar" ? "Arabic" : forcedLang === "ja" ? "Japanese" : null;
   const tmdbLanguage = isArabic ? "ar" as const : isAnime ? "ja" as const : undefined;
@@ -198,6 +200,13 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (effectiveIsTV && !isAnime && !isArabic) {
       filtered = filtered.filter((media) => !isAnimeMediaItem(media));
     }
+    if (effectiveIsTV && world === "tv") {
+      filtered = filtered.filter((media) => !isAsianMediaItem(media));
+    }
+    if (isAsian) {
+      filtered = filtered.filter((media) => isAsianMediaItem(media) && !isAnimeMediaItem(media) && !isArabicMediaItem(media));
+      filtered.sort((left, right) => asianMediaCountryPriority(left) - asianMediaCountryPriority(right));
+    }
     if (forcedLang === "ar") {
       filtered = filtered.filter(isArabicMediaItem);
     }
@@ -212,7 +221,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       filtered.sort((left, right) => arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right));
     }
     return filtered;
-  }, [allResults, effectiveIsTV, forcedLang, isAnime, isArabic, maxRating, world]);
+  }, [allResults, effectiveIsTV, forcedLang, isAnime, isArabic, isAsian, maxRating, world]);
 
   const resetPagination = useCallback(() => {
     setPage(1);
@@ -293,10 +302,10 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe, seenLabel, unseenLabel, resetPagination]);
 
   const headerTitle = title || (embedded
-    ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
+    ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : world === "asian-tv" ? "Asian TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
     : "Discover");
   const headerSubtitle = subtitle || (embedded
-    ? `Find new ${world === "anime" ? "anime" : world === "arabic-movies" || world === "arabic-tv" ? "Arabic" : effectiveIsTV ? "shows" : "movies"} to add to your library`
+    ? `Find new ${world === "anime" ? "anime" : world === "arabic-movies" || world === "arabic-tv" ? "Arabic" : world === "asian-tv" ? "Asian shows" : effectiveIsTV ? "shows" : "movies"} to add to your library`
     : `Find your next favorite ${effectiveIsTV ? "show" : "movie"}`);
 
   const sortOptions = effectiveIsTV ? SORT_OPTIONS_TV : SORT_OPTIONS_MOVIES;

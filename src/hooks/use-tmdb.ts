@@ -983,6 +983,7 @@ export function useFollowing(opts?: { enabled?: boolean }) {
       url.searchParams.set("tracked", "true");
       url.searchParams.set("isAnime", "false");
       url.searchParams.set("isArabic", "false");
+      url.searchParams.set("isAsian", "false");
       url.searchParams.set("limit", "500");
       const res = await fetch(url, { headers: userHeaders() });
       if (!res.ok) throw new Error("Failed to load");
@@ -1331,14 +1332,14 @@ export interface TvTrackingResponse {
   counts: TvTrackingCounts;
   countsAreGlobal: boolean;
   repairedOnRead?: boolean;
-  world?: "standard" | "arabic";
+  world?: "standard" | "arabic" | "asian";
 }
 
 export interface TvTrackingCountsResponse {
   counts: TvTrackingCounts;
   countsAreGlobal: boolean;
   repairedOnRead?: boolean;
-  world?: "standard" | "arabic";
+  world?: "standard" | "arabic" | "asian";
 }
 
 async function tvTrackingGet<T>(params?: Record<string, string | number | boolean | undefined>): Promise<T> {
@@ -1355,7 +1356,7 @@ async function tvTrackingGet<T>(params?: Record<string, string | number | boolea
   return res.json();
 }
 
-export function useTvTrackingCounts(world: "standard" | "arabic" = "standard") {
+export function useTvTrackingCounts(world: "standard" | "arabic" | "asian" = "standard") {
   const userId = useNav((s) => s.userId);
   return useQuery({
     queryKey: ["tv-tracking-counts", userId || getClientUserId(), world],
@@ -1373,7 +1374,7 @@ export function useTvTracking(params: {
   order?: string;
   limit?: number;
   offset?: number;
-  world?: "standard" | "arabic";
+  world?: "standard" | "arabic" | "asian";
 } = {}) {
   const userId = useNav((s) => s.userId);
   return useQuery({

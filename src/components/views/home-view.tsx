@@ -14,6 +14,8 @@ import { motion } from "framer-motion";
 import { useState, useEffect, type ComponentProps } from "react";
 import { toast } from "sonner";
 import { isArabicMediaItem } from "@/lib/arabic-media";
+import { isAnimeMediaItem } from "@/lib/anime-detect";
+import { isAsianMediaItem } from "@/lib/asian-media";
 
 const MediaRow = (props: ComponentProps<typeof BaseMediaRow>) => <BaseMediaRow {...props} compactCards={false} />;
 
@@ -28,8 +30,8 @@ export function HomeView() {
 
   const standardTrending = (homeFeed.data?.trending.results ?? []).filter((media) => !isArabicMediaItem(media));
   const popularMovieItems = (homeFeed.data?.popularMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
-  const onAirTvItems = (homeFeed.data?.onTheAirTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
-  const popularTvItems = (homeFeed.data?.popularTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
+  const onAirTvItems = (homeFeed.data?.onTheAirTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media) && !isAnimeMediaItem(media) && !isAsianMediaItem(media));
+  const popularTvItems = (homeFeed.data?.popularTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media) && !isAnimeMediaItem(media) && !isAsianMediaItem(media));
   const topMovieItems = (homeFeed.data?.topRatedMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
   const topTvItems = (homeFeed.data?.topRatedTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
   const upcomingMovieItems = (homeFeed.data?.upcomingMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));

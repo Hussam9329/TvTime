@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { INFERRED_ANIME_WHERE, INFERRED_NON_ANIME_WHERE } from "@/lib/media-classification-server";
+import { INFERRED_ANIME_WHERE, INFERRED_ASIAN_TV_WHERE, INFERRED_NON_ANIME_WHERE, INFERRED_NON_ASIAN_TV_WHERE } from "@/lib/media-classification-server";
 
 
 export function eligibleTitleRatingWhere(userId: string): Prisma.MediaWhereInput {
@@ -32,8 +32,9 @@ export async function getCanonicalLibraryCounts(userId: string) {
       { type: "series", status: "finished" },
     ],
   };
-  const standardWorld = { isArabic: false, AND: [INFERRED_NON_ANIME_WHERE] } satisfies Prisma.MediaWhereInput;
+  const standardWorld = { isArabic: false, AND: [INFERRED_NON_ANIME_WHERE, INFERRED_NON_ASIAN_TV_WHERE] } satisfies Prisma.MediaWhereInput;
   const animeWorld = { isArabic: false, AND: [INFERRED_ANIME_WHERE] } satisfies Prisma.MediaWhereInput;
+  const asianTvWorld = { isArabic: false, AND: [INFERRED_ASIAN_TV_WHERE] } satisfies Prisma.MediaWhereInput;
 
   const [
     total,
@@ -48,9 +49,11 @@ export async function getCanonicalLibraryCounts(userId: string) {
     watchlistMovies,
     watchlistShows,
     watchlistAnime,
+    watchlistAsianShows,
     watchedMovies,
     watchedShows,
     watchedAnime,
+    watchedAsianShows,
     notStartedAnime,
     watchingAnime,
     watchlistArabicMovies,
@@ -75,9 +78,11 @@ export async function getCanonicalLibraryCounts(userId: string) {
     db.media.count({ where: { ...base, ...standardWorld, type: "movie", status: "planned", watched: false } }),
     db.media.count({ where: { ...base, ...standardWorld, type: "series", status: "planned", watched: false } }),
     db.media.count({ where: { ...base, ...animeWorld, status: "planned", watched: false } }),
+    db.media.count({ where: { ...base, ...asianTvWorld, status: "planned", watched: false } }),
     db.media.count({ where: { ...base, ...standardWorld, type: "movie", watched: true } }),
     db.media.count({ where: { ...base, ...standardWorld, type: "series", watched: true } }),
     db.media.count({ where: { ...base, ...animeWorld, watched: true } }),
+    db.media.count({ where: { ...base, ...asianTvWorld, watched: true } }),
     db.media.count({
       where: {
         ...base,
@@ -119,15 +124,17 @@ export async function getCanonicalLibraryCounts(userId: string) {
     ratedAnime,
     watched,
     planned,
-    watchlist: watchlistMovies + watchlistShows + watchlistAnime + watchlistArabicMovies + watchlistArabicShows,
+    watchlist: watchlistMovies + watchlistShows + watchlistAnime + watchlistAsianShows + watchlistArabicMovies + watchlistArabicShows,
     watchlistMovies,
     watchlistShows,
     watchlistAnime,
+    watchlistAsianShows,
     watchlistArabicMovies,
     watchlistArabicShows,
     watchedMovies,
     watchedShows,
     watchedAnime,
+    watchedAsianShows,
     notStartedAnime,
     watchingAnime,
     watchedArabicMovies,
