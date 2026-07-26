@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
+import type { Prisma } from "@prisma/client";
 
 // GET /api/notifications — list user notifications
 export async function GET(req: NextRequest) {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const where: any = { userId: user.id };
+    const where: Prisma.NotificationWhereInput = { userId: user.id };
     if (filter === "unread") where.read = false;
     if (filter === "read") where.read = true;
     const [notifications, unreadCount] = await Promise.all([

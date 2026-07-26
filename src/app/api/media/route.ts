@@ -4,6 +4,7 @@ import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
+import type { Prisma } from "@prisma/client";
 
 const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 100, 1), 500);
     const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
 
-    const where: any = { userId: user.id };
+    const where: Prisma.MediaWhereInput = { userId: user.id };
     if (type && type !== "undefined" && type !== "all") where.type = type;
     if (status && status !== "all" && status !== "undefined") {
       // Support comma-separated statuses when callers intentionally request multiple states.
