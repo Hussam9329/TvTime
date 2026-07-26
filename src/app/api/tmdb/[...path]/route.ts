@@ -74,6 +74,7 @@ const handler = async (
           page,
           vote_average_gte: queryParams.rating ? Number(queryParams.rating) : undefined,
           original_language: queryParams.original_language || undefined,
+          originCountries: queryParams.origin_country || undefined,
           vote_count_gte: queryParams.vote_count != null ? Number(queryParams.vote_count) : undefined,
           release_date_gte: queryParams.release_date_gte || undefined,
           release_date_lte: queryParams.release_date_lte || undefined,

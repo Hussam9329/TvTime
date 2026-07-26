@@ -71,6 +71,7 @@ export async function GET(req: NextRequest) {
       sort_by: search.get("sort_by") || undefined,
       vote_average_gte: optionalNumber(search.get("rating")),
       original_language: search.get("original_language") || undefined,
+      originCountries: search.get("origin_country") || undefined,
       vote_count_gte: optionalNumber(search.get("vote_count")),
       release_date_gte: search.get("release_date_gte") || undefined,
       release_date_lte: search.get("release_date_lte") || undefined,

@@ -148,7 +148,7 @@ export function useDiscoverMovies(params: { genres?: number[]; year?: number; so
   });
 }
 
-export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
+export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; originCountries?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "tv", "discover", params],
     queryFn: () =>
@@ -159,6 +159,7 @@ export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_b
         page: params.page || 1,
         ...(params.rating ? { rating: params.rating } : {}),
         ...(params.originalLanguage ? { original_language: params.originalLanguage } : {}),
+        ...(params.originCountries ? { origin_country: params.originCountries } : {}),
         ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
         // Bug fix: previously TV discover silently dropped year-range filters.
         ...(params.releaseDateFrom ? { release_date_gte: params.releaseDateFrom } : {}),
@@ -193,6 +194,7 @@ export function useFilteredDiscover(params: {
   rating?: number;
   maxRating?: number;
   originalLanguage?: string;
+  originCountries?: string;
   voteCount?: number;
   releaseDateFrom?: string;
   releaseDateTo?: string;
@@ -217,6 +219,7 @@ export function useFilteredDiscover(params: {
       if (params.rating != null) url.searchParams.set("rating", String(params.rating));
       if (params.maxRating != null) url.searchParams.set("max_rating", String(params.maxRating));
       if (params.originalLanguage) url.searchParams.set("original_language", params.originalLanguage);
+      if (params.originCountries) url.searchParams.set("origin_country", params.originCountries);
       if (params.voteCount != null) url.searchParams.set("vote_count", String(params.voteCount));
       if (params.releaseDateFrom) url.searchParams.set("release_date_gte", params.releaseDateFrom);
       if (params.releaseDateTo) url.searchParams.set("release_date_lte", params.releaseDateTo);

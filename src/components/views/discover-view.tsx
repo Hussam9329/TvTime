@@ -29,7 +29,7 @@ import {
 import { toast } from "sonner";
 import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
+import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 
 export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "asian-tv";
 
@@ -161,6 +161,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     sort_by: sortBy,
     rating: minRating,
     originalLanguage: language || undefined,
+    originCountries: isAsian ? ASIAN_ORIGIN_COUNTRY_QUERY : undefined,
     voteCount: effectiveVoteCount,
     releaseDateFrom,
     releaseDateTo,

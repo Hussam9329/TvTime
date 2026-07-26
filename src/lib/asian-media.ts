@@ -8,6 +8,8 @@ const ASIAN_LANGUAGES = new Set([
   "ms", "tl", "vi", "km", "my", "mn", "kk", "uz",
 ]);
 
+export const ASIAN_ORIGIN_COUNTRY_QUERY = [...ASIAN_COUNTRIES].join("|");
+
 export function isAsianMediaItem(item: {
   original_language?: string | null;
   originalLanguage?: string | null;
