@@ -112,7 +112,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           {watched && <WatchedIndicator rating={userRating} />}
           {/* top badges */}
           <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
-            {showMediaType && !compactActions && (
+            {showMediaType && !compactActions && !(mediaType === "movie" && watched) && (
               <Badge
                 variant="secondary"
                 className="bg-black/60 backdrop-blur text-white border-0 text-[10px] h-6 px-2"
