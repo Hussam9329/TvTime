@@ -1,4 +1,4 @@
-const CACHE = "tvtime-shell-v1";
+const CACHE = "tvtime-shell-v2";
 const SHELL = ["/", "/manifest.webmanifest", "/logo.svg", "/placeholder-poster.svg"];
 
 self.addEventListener("install", (event) => {
@@ -12,10 +12,23 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" || new URL(event.request.url).origin !== location.origin) return;
   if (event.request.url.includes("/api/") || event.request.url.includes("/_next/image")) return;
-  event.respondWith(fetch(event.request).then((response) => {
-    if (response.ok) caches.open(CACHE).then((cache) => cache.put(event.request, response.clone()));
-    return response;
-  }).catch(() => caches.match(event.request).then((cached) => cached || caches.match("/"))));
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (response.ok && response.type === "basic") {
+          // Clone immediately, before returning the original response to the
+          // browser. Waiting for caches.open() first lets the browser consume
+          // the body and makes response.clone() throw.
+          const cacheCopy = response.clone();
+          void caches
+            .open(CACHE)
+            .then((cache) => cache.put(event.request, cacheCopy))
+            .catch(() => undefined);
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request).then((cached) => cached || caches.match("/"))),
+  );
 });
 
 self.addEventListener("message", (event) => {
