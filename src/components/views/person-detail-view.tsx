@@ -1,13 +1,14 @@
 "use client";
 
 import { useNav } from "@/lib/store";
-import { usePersonDetail } from "@/hooks/use-tmdb";
+import { mediaStateKey, useMediaStates, usePersonDetail } from "@/hooks/use-tmdb";
 import { img } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SafeImage } from "@/components/media/safe-image";
+import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { ArrowLeft, Film, Tv, Cake, MapPin, Briefcase, Star, Users } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -126,28 +127,7 @@ export function PersonDetailView() {
           <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
             <Star className="w-5 h-5 text-primary fill-primary" /> Known For
           </h3>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-            {knownFor.map((c: any, i: number) => (
-              <motion.button
-                key={`${c.id}-${i}`}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: Math.min(i * 0.03, 0.3) }}
-                onClick={() => c.title ? goMovie(c.id) : goTv(c.id)}
-                className="flex-shrink-0 w-[120px] sm:w-[140px] group text-left"
-              >
-                <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-md">
-                  <div className="relative aspect-[2/3] overflow-hidden bg-muted">
-                    <SafeImage src={img(c.poster_path, "w342")} alt={c.title || c.name} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
-                  </div>
-                  <div className="p-2">
-                    <p className="text-xs font-semibold line-clamp-1">{c.title || c.name}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{c.character || c.job}</p>
-                  </div>
-                </Card>
-              </motion.button>
-            ))}
-          </div>
+          <KnownForCards items={knownFor} onGoMovie={goMovie} onGoTv={goTv} />
         </section>
       )}
 
@@ -170,13 +150,53 @@ export function PersonDetailView() {
   );
 }
 
+function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: (id: number) => void; onGoTv: (id: number) => void }) {
+  const movieItems = items.filter((item) => Boolean(item.title));
+  const states = useMediaStates(movieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })));
+
+  return (
+    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+      {items.map((c: any, i: number) => {
+        const isMovie = Boolean(c.title);
+        const movieState = isMovie ? states.data?.[mediaStateKey("movie", Number(c.id))] : undefined;
+        return (
+              <motion.button
+                key={`${c.id}-${i}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: Math.min(i * 0.03, 0.3) }}
+                onClick={() => isMovie ? onGoMovie(c.id) : onGoTv(c.id)}
+                className="flex-shrink-0 w-[120px] sm:w-[140px] group text-left"
+              >
+                <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-md">
+                  <div className="relative aspect-[2/3] overflow-hidden bg-muted">
+                    <SafeImage src={img(c.poster_path, "w342")} alt={c.title || c.name} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
+                    {isMovie && movieState?.watched && <WatchedIndicator rating={movieState.userRating} />}
+                  </div>
+                  <div className="p-2">
+                    <p className="text-xs font-semibold line-clamp-1">{c.title || c.name}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{c.character || c.job}</p>
+                  </div>
+                </Card>
+              </motion.button>
+        );
+      })}
+    </div>
+  );
+}
+
 function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | "tv"; onGo: (id: number) => void }) {
+  const visibleItems = items.slice(0, 50);
+  const states = useMediaStates(
+    type === "movie" ? visibleItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })) : [],
+  );
+
   if (items.length === 0) {
     return <p className="text-muted-foreground text-center py-8">No credits available.</p>;
   }
   return (
     <div className="space-y-2">
-      {items.slice(0, 50).map((c, i) => {
+      {visibleItems.map((c, i) => {
         const year = (c.release_date || c.first_air_date || "").slice(0, 4);
         const title = c.title || c.name;
         return (
@@ -196,6 +216,9 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                     {type === "movie" ? <Film className="w-4 h-4" /> : <Tv className="w-4 h-4" />}
                   </div>
+                )}
+                {type === "movie" && states.data?.[mediaStateKey("movie", Number(c.id))]?.watched && (
+                  <WatchedIndicator rating={states.data[mediaStateKey("movie", Number(c.id))]?.userRating} />
                 )}
               </div>
               <div className="flex-1 min-w-0">

@@ -109,7 +109,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             fetchPriority={priority ? "high" : "auto"}
             className="relative w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-95"
           />
-          {watched && <WatchedIndicator />}
+          {watched && <WatchedIndicator rating={userRating} />}
           {/* top badges */}
           <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
             {showMediaType && !compactActions && (
@@ -121,16 +121,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
                 {typeLabel}
               </Badge>
             )}
-            {watched && userRating != null ? (
-              <Badge
-                data-status="rated"
-                className="bg-emerald-500/90 backdrop-blur text-white border-0 text-[10px] h-6 px-2 font-bold"
-                title="Your Rating"
-              >
-                <Star className="w-3 h-3 mr-1 fill-white" />
-                {userRating}/100
-              </Badge>
-            ) : !watched && rating > 0 ? (
+            {!watched && rating > 0 ? (
               <Badge className="bg-black/60 backdrop-blur text-amber-300 border-0 text-[10px] h-6 px-2" title="TMDB Score">
                 <Star className="w-3 h-3 mr-1 fill-amber-300" />
                 {rating.toFixed(1)}/10
@@ -167,7 +158,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
               {inWatchlist && <span className="inline-flex items-center gap-0.5 rounded bg-primary/20 px-1 py-0.5 text-[9px] text-primary"><ListPlus className="h-2.5 w-2.5" /> Watchlist</span>}
               {watched && <span data-status="watched" className="inline-flex items-center gap-0.5 rounded bg-emerald-500/20 px-1 py-0.5 text-[9px] text-emerald-400"><Check className="h-2.5 w-2.5" /> Watched</span>}
               {isFollowing && <span data-status="following" className="inline-flex items-center gap-0.5 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] text-amber-400"><Bell className="h-2.5 w-2.5" /> Following</span>}
-              {userRating != null && <span data-status="rated" className="inline-flex items-center gap-0.5 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] text-amber-300"><Star className="h-2.5 w-2.5 fill-current" /> {userRating}/100</span>}
+              {userRating != null && !(mediaType === "movie" && watched) && <span data-status="rated" className="inline-flex items-center gap-0.5 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] text-amber-300"><Star className="h-2.5 w-2.5 fill-current" /> {userRating}/100</span>}
             </div>
           )}
         </div>

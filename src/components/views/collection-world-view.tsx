@@ -401,9 +401,9 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
                 {item.type === "movie" ? <Film className="w-12 h-12" /> : <Tv className="w-12 h-12" />}
               </div>
             )}
-            {item.type === "movie" && item.watched && <WatchedIndicator />}
+            {item.type === "movie" && item.watched && <WatchedIndicator rating={userRating} />}
             {/* Fix #8: Rating labels — user rating shows /100, TMDB shows /10 */}
-            {userRating != null ? (
+            {userRating != null && !(item.type === "movie" && item.watched) ? (
               <div className="absolute top-2 right-2">
                 <Badge data-status="rated" className="bg-amber-500/90 text-black border-0 text-[10px] h-6 px-2 font-bold" title="Your Rating">
                   <Star className="w-3 h-3 mr-1 fill-black" />
