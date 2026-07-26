@@ -116,8 +116,7 @@ export async function GET(req: NextRequest) {
       const isSeen = seenIds.has(Number(item.id));
       return showMe === "seen" ? isSeen : !isSeen;
     };
-    const matchesCatalogue = (item: MediaItem) => Boolean(item.poster_path)
-      && (!excludeArabic || !isArabicMediaItem(item))
+    const matchesCatalogue = (item: MediaItem) => (!excludeArabic || !isArabicMediaItem(item))
       && (!onlyArabic || isArabicMediaItem(item))
       && (maxRating === undefined || (item.vote_average || 0) <= maxRating);
 

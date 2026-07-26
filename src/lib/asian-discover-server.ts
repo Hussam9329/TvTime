@@ -12,7 +12,7 @@ export async function discoverAsianTvByPriority(
 ): Promise<PaginatedResponse<MediaItem>> {
   const withoutGenres = [...new Set([...(params.without_genres ?? []), 16])];
   const sourcePage = Math.max(1, (page - 1) * 2 + 1);
-  const base = { ...params, originCountries: undefined, without_genres: withoutGenres, vote_count_gte: params.vote_count_gte ?? 0 };
+  const base = { ...params, originCountries: undefined, without_genres: withoutGenres };
   const fetchPool = async (originCountries?: string) => {
     const [first, second] = await Promise.all([
       tmdb.discoverTv({ ...base, page: sourcePage, originCountries }),
@@ -31,8 +31,7 @@ export async function discoverAsianTvByPriority(
     fetchPool(),
   ]);
 
-  const eligible = (item: MediaItem) => Boolean(item.poster_path)
-    && isAsianMediaItem(item)
+  const eligible = (item: MediaItem) => isAsianMediaItem(item)
     && !isAnimeMediaItem(item)
     && !isArabicMediaItem(item);
   korean.results = korean.results.filter(eligible);

@@ -146,9 +146,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const runtimeTo = runtimeMax ? Number(runtimeMax) : undefined;
   const keywordsParam = keywords.trim() || undefined;
 
-  // For Arabic world, set voteCount=0 default (Arabic films have few TMDB votes).
-  // For other worlds, leave undefined → lib default of 100.
-  const effectiveVoteCount = isArabic || isAsian ? (voteCount ?? 0) : voteCount;
+  // Apply a vote threshold only when the user explicitly selects one.
+  const effectiveVoteCount = voteCount;
 
   const certificationParam = !effectiveIsTV ? (certification || undefined) : undefined;
 
@@ -197,7 +196,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const isError = query.isError;
 
   const items = useMemo(() => {
-    let filtered = allResults.filter((media) => media.poster_path && (isArabic || !isArabicMediaItem(media)));
+    let filtered = allResults.filter((media) => isArabic || !isArabicMediaItem(media));
     if (effectiveIsTV && !isAnime && !isArabic) {
       filtered = filtered.filter((media) => !isAnimeMediaItem(media));
     }

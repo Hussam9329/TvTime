@@ -256,9 +256,6 @@ export const tmdb = {
     tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`),
   discoverMovies: async (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
-    // For Arabic media, the default vote_count.gte=100 excludes most Arabic films
-    // (which have very few votes on TMDB). Only apply the floor when the caller
-    // didn't explicitly set one AND we're not filtering for Arabic.
     if (params.vote_count_gte != null) p["vote_count.gte"] = params.vote_count_gte;
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.year) p.primary_release_year = params.year;
