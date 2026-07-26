@@ -6,9 +6,12 @@ export function WatchedIndicator() {
       data-status="watched"
       title="Watched"
       aria-label="Watched"
-      className="pointer-events-none absolute left-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-white/40 bg-emerald-500 text-white shadow-md shadow-black/30"
+      className="pointer-events-none absolute -left-5 -top-5 z-20 h-12 w-12 rounded-full border border-emerald-200/70 bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-[0_5px_16px_rgba(16,185,129,0.45)]"
     >
-      <Check className="h-3.5 w-3.5 stroke-[3]" aria-hidden="true" />
+      <Check
+        className="absolute bottom-1 right-1 h-[18px] w-[18px] rounded-full bg-white/15 p-0.5 stroke-[3.5] drop-shadow"
+        aria-hidden="true"
+      />
     </span>
   );
 }
