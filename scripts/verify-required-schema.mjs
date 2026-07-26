@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+const MAX_CONNECTION_ATTEMPTS = 3;
+const RETRYABLE_DATABASE_CODES = new Set(["P1001", "P1002", "P1017"]);
 
 const requiredTables = [
   "User",
@@ -91,8 +92,16 @@ function assertAll(label, required, present) {
   if (missing.length > 0) throw new Error(`${label} missing: ${missing.join(", ")}`);
 }
 
-try {
-  await prisma.$transaction(async (tx) => {
+function isRetryableConnectionError(error) {
+  if (error && typeof error === "object" && RETRYABLE_DATABASE_CODES.has(error.code)) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /can't reach database server|connection (?:closed|reset|refused)|timed? out/i.test(message);
+}
+
+async function verifySchemaOnce() {
+  const prisma = new PrismaClient();
+  try {
+    await prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe("SET TRANSACTION READ ONLY");
     await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '20s'");
 
@@ -175,14 +184,30 @@ try {
     if (failed.length > 0) {
       throw new Error(`Unresolved failed migrations: ${failed.map((row) => row.name).join(", ")}`);
     }
-  }, { timeout: 30_000 });
+    }, { timeout: 30_000 });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
 
+try {
+  for (let attempt = 1; attempt <= MAX_CONNECTION_ATTEMPTS; attempt += 1) {
+    try {
+      await verifySchemaOnce();
+      break;
+    } catch (error) {
+      if (!isRetryableConnectionError(error) || attempt === MAX_CONNECTION_ATTEMPTS) throw error;
+      const delayMs = attempt * 2_000;
+      console.warn(
+        `[database-schema] Database connection attempt ${attempt}/${MAX_CONNECTION_ATTEMPTS} failed; retrying in ${delayMs}ms.`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
   console.log("[database-schema] The deployed schema, migration history, indexes and RLS contract are ready.");
 } catch (error) {
   console.error("[database-schema] Read-only deployment schema verification failed.");
   console.error(error instanceof Error ? error.message : error);
   console.error("Apply reviewed migrations on a verified clone first; never use db push or reset on production.");
   process.exitCode = 1;
-} finally {
-  await prisma.$disconnect();
 }
