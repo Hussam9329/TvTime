@@ -122,7 +122,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
 
         </div>
         <div className="flex min-w-0 flex-col border-t border-border/60 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.96))] px-2.5 py-2.5 sm:px-3">
-          <h3 className="line-clamp-2 text-center text-[13px] font-semibold leading-[1.25] text-foreground sm:text-sm">
+          <h3 className="truncate text-center text-[13px] font-semibold leading-[1.25] text-foreground sm:text-sm" title={title}>
             {title}
           </h3>
 
