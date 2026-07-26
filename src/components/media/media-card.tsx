@@ -121,13 +121,21 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
                 {typeLabel}
               </Badge>
             )}
-            {/* Fix #8: TMDB score labeled explicitly as /10 */}
-            {rating > 0 && (
+            {watched && userRating != null ? (
+              <Badge
+                data-status="rated"
+                className="bg-emerald-500/90 backdrop-blur text-white border-0 text-[10px] h-6 px-2 font-bold"
+                title="Your Rating"
+              >
+                <Star className="w-3 h-3 mr-1 fill-white" />
+                {userRating}/100
+              </Badge>
+            ) : !watched && rating > 0 ? (
               <Badge className="bg-black/60 backdrop-blur text-amber-300 border-0 text-[10px] h-6 px-2" title="TMDB Score">
                 <Star className="w-3 h-3 mr-1 fill-amber-300" />
                 {rating.toFixed(1)}/10
               </Badge>
-            )}
+            ) : null}
           </div>
 
         </div>

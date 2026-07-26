@@ -410,7 +410,7 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
                   {userRating}/100
                 </Badge>
               </div>
-            ) : publicRating != null ? (
+            ) : publicRating != null && !(item.type === "movie" && item.watched) ? (
               <div className="absolute top-2 right-2">
                 <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0 text-[10px] h-6 px-2" title="TMDB Score">
                   <Star className="w-3 h-3 mr-1 fill-amber-300" />
