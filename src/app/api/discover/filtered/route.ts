@@ -7,6 +7,8 @@ import { buildSeenIdSet } from "@/lib/discover-seen";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
+import { enrichMovieOriginCountries } from "@/lib/movie-origin-server";
+import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
 import {
   DISCOVER_PAGE_SIZE,
   DISCOVER_TMDB_MAX_PAGE,
@@ -177,8 +179,12 @@ export async function GET(req: NextRequest) {
       nextCursor = `${parsed.page}:${Math.min(parsed.index, pageSizeObserved)}`;
     }
 
+    const prioritizedResults = mediaType === "movie" && !onlyArabic
+      ? sortByStandardMediaPriority(await enrichMovieOriginCountries(results, language))
+      : results;
+
     const response = NextResponse.json({
-      results,
+      results: prioritizedResults,
       has_more: hasMore,
       next_cursor: hasMore ? nextCursor : null,
       partial: budgetExhausted,

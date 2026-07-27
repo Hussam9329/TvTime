@@ -4,6 +4,8 @@ import { isArabicMediaItem } from "@/lib/arabic-media";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
+import { enrichMovieOriginCountries } from "@/lib/movie-origin-server";
+import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
 
 const handler = async (
   req: NextRequest,
@@ -86,9 +88,13 @@ const handler = async (
           keyword_ids: keywordIds,
           language,
         };
-        data = queryParams.original_language === "ar"
-          ? await discoverArabicByCountryPriority("movie", discoverParams, page)
-          : await tmdb.discoverMovies(discoverParams);
+        if (queryParams.original_language === "ar") {
+          data = await discoverArabicByCountryPriority("movie", discoverParams, page);
+        } else {
+          const discovered = await tmdb.discoverMovies(discoverParams);
+          const enriched = await enrichMovieOriginCountries(discovered.results, language);
+          data = { ...discovered, results: sortByStandardMediaPriority(enriched) };
+        }
         break;
       }
       case "tv/popular":
