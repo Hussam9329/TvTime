@@ -205,7 +205,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       filtered = filtered.filter((media) => !isAsianMediaItem(media));
       filtered.sort((left, right) => standardMediaCountryPriority(left) - standardMediaCountryPriority(right));
     }
-    if (!effectiveIsTV && !isArabic) {
+    if (world === "movies") {
       filtered.sort((left, right) => standardMediaCountryPriority(left) - standardMediaCountryPriority(right));
     }
     if (isAsian) {
