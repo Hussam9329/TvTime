@@ -3,11 +3,10 @@
 import { useNav } from "@/lib/store";
 import { useSearchAccumulated } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search as SearchIcon, X, Loader2, AlertCircle, Users, ChevronDown, Languages } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Search as SearchIcon, Loader2, AlertCircle, Users, ChevronDown, Languages } from "lucide-react";
+import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { img } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
@@ -15,18 +14,12 @@ import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { isAsianMediaItem } from "@/lib/asian-media";
 
 export function SearchView() {
-  const { searchQuery, setSearchQuery, goPerson } = useNav();
-  const [local, setLocal] = useState(searchQuery);
-  const [filter, setFilter] = useState<"all" | "movie" | "tv" | "anime" | "asian-tv" | "arabic-movies" | "arabic-tv" | "people">("all");
+  const { searchQuery, goPerson } = useNav();
+  const [selectedFilter, setSelectedFilter] = useState<"all" | "movie" | "tv" | "anime" | "asian-tv" | "arabic-movies" | "arabic-tv" | "people">("all");
+  const [filterQuery, setFilterQuery] = useState(searchQuery);
+  const filter = filterQuery === searchQuery ? selectedFilter : "all";
 
   const search = useSearchAccumulated(searchQuery);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (local !== searchQuery) setSearchQuery(local);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [local, searchQuery, setSearchQuery]);
 
   const allResults = search.accumulated;
   const filtered = filter === "all"
@@ -71,31 +64,11 @@ export function SearchView() {
         </div>
       </div>
 
-      <div className="relative max-w-4xl">
-        <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={local}
-          onChange={(e) => setLocal(e.target.value)}
-          placeholder="Type a title or person's name..."
-          className="h-12 rounded-xl pl-10 pr-10 text-base"
-          autoFocus
-        />
-        {local && (
-          <button
-            onClick={() => { setLocal(""); setSearchQuery(""); }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            aria-label="Clear search"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
       {!searchQuery && (
         <EmptyState
           icon={<SearchIcon className="h-9 w-9" />}
           title="What do you want to watch?"
-          description="Search by title or person, then narrow the results by media world."
+          description="Use the search field in the header, then narrow the results by media world."
         />
       )}
 
@@ -108,7 +81,14 @@ export function SearchView() {
                 : `${search.totalResults} results for "${searchQuery}"`}
             </p>
             {(allResults.length > 0 || people.length > 0) && (
-              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="max-w-full">
+              <Tabs
+                value={filter}
+                onValueChange={(value) => {
+                  setFilterQuery(searchQuery);
+                  setSelectedFilter(value as typeof selectedFilter);
+                }}
+                className="max-w-full"
+              >
                 <TabsList className="h-auto max-w-[calc(100vw-1.5rem)] justify-start overflow-x-auto sm:max-w-none">
                   <TabsTrigger value="all">All ({allResults.length})</TabsTrigger>
                   <TabsTrigger value="movie">Movies</TabsTrigger>
@@ -141,7 +121,7 @@ export function SearchView() {
               </div>
               <h2 className="feedback-state__title text-lg font-bold">Search is temporarily unavailable</h2>
               <p className="feedback-state__description mt-1 max-w-md text-sm text-muted-foreground">TMDB did not respond. Your library is safe; check your connection and try again.</p>
-              <Button variant="outline" className="mt-4" onClick={() => setSearchQuery(searchQuery)}>
+              <Button variant="outline" className="mt-4" onClick={() => void search.refetch()}>
                 Retry
               </Button>
             </div>

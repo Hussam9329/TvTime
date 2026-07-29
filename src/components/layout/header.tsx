@@ -92,6 +92,7 @@ const NOTIFICATION_QUERY_KEY = ["notifications", "unread-count", getClientUserId
 export function Header() {
   const view = useNav((state) => state.view);
   const setView = useNav((state) => state.setView);
+  const searchQuery = useNav((state) => state.searchQuery);
   const setSearchQuery = useNav((state) => state.setSearchQuery);
   const back = useNav((state) => state.back);
   const historyLength = useNav((state) => state.history.length);
@@ -128,6 +129,10 @@ export function Header() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (view === "search") setSearchVal(searchQuery);
+  }, [searchQuery, view]);
 
   useEffect(() => {
     const focusSearch = () => {
@@ -170,6 +175,11 @@ export function Header() {
     setMobileSearchOpen(false);
     desktopSearchInputRef.current?.blur();
     mobileSearchInputRef.current?.blur();
+  };
+
+  const clearSearch = () => {
+    setSearchVal("");
+    if (view === "search") setSearchQuery("");
   };
 
   const goTo = useCallback((nextView: ViewName) => {
@@ -363,7 +373,7 @@ export function Header() {
                 <button
                   data-ui-action="icon"
                   type="button"
-                  onClick={() => setSearchVal("")}
+                  onClick={clearSearch}
                   className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
                   aria-label="Clear search"
                 >
@@ -494,7 +504,7 @@ export function Header() {
                 data-ui-action="icon"
                 type="button"
                 onClick={() => {
-                  setSearchVal("");
+                  clearSearch();
                   setMobileSearchOpen(false);
                 }}
                 className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"

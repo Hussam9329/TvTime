@@ -32,6 +32,8 @@ const counts = read("src/lib/library-counts.ts");
 const hooks = read("src/hooks/use-tmdb.ts");
 const shortcuts = read("src/components/layout/keyboard-shortcuts.tsx");
 const shell = read("src/components/app-shell.tsx");
+const header = read("src/components/layout/header.tsx");
+const searchView = read("src/components/views/search-view.tsx");
 const pkg = JSON.parse(read("package.json"));
 const schemaVerifier = read("scripts/verify-required-schema.mjs");
 
@@ -86,6 +88,17 @@ const sequenceAt = shortcuts.indexOf('lastKeyRef.current === "g"');
 const standaloneAt = shortcuts.indexOf('e.key.toLowerCase() === "s"');
 check(sequenceAt >= 0 && standaloneAt > sequenceAt, "g+s navigation is resolved before the standalone search shortcut");
 check(!/view === "media" && <MediaView/.test(shell), "The removed My Media route is still rendered");
+check(
+  /const searchQuery = useNav/.test(header)
+    && /view === "search"\) setSearchVal\(searchQuery\)/.test(header),
+  "Header search stays synchronized with the active results query",
+);
+check(
+  !/<Input/.test(searchView)
+    && !/const \[local,\s*setLocal\] = useState\(searchQuery\)/.test(searchView)
+    && !/setTimeout\([\s\S]*setSearchQuery/.test(searchView),
+  "Search results render no competing input that can restore a stale query",
+);
 
 check(/verify-required-schema\.mjs/.test(pkg.scripts?.build || ""), "Production build verifies the required database contract before Next.js build");
 check(pkg.scripts?.["db:migrate:status"]?.includes("prisma migrate status"), "A read-only migration status command is available");

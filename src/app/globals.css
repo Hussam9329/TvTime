@@ -573,7 +573,6 @@
   .tvtime-home-view > * { min-width: 0; }
   .tvtime-home-view section, .tvtime-home-view [data-section] { scroll-margin-top: 6rem; }
   .tvtime-home-view .view-all-link, .tvtime-home-view a[href]:has(svg) { white-space: nowrap; }
-  .tvtime-search-view > .relative:first-of-type { max-width: 56rem; }
   .tvtime-search-view button.group { min-width: 0; }
   .tvtime-search-view button.group > div:first-child { box-shadow: 0 10px 30px rgb(0 0 0 / 0.08); }
   .tvtime-search-view button.group:focus-visible > div:first-child { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.18); }

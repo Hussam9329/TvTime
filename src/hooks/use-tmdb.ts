@@ -248,6 +248,7 @@ export function useSearchAccumulated(query: string) {
     isError: search.isError,
     hasMore,
     loadMore,
+    refetch: search.refetch,
     totalResults,
     currentPage: page,
     totalPages,
