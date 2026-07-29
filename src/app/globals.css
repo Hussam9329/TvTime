@@ -3077,11 +3077,17 @@ body {
   }
 
   .tvtime-home-hero__actions {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
   }
 
   .tvtime-home-hero__actions [data-slot="button"] {
     width: 100%;
+    min-width: 0;
+    height: 2.875rem;
+    flex: none;
+    padding-inline: 0.75rem;
   }
 
   .tvtime-library-overview__header > div:first-child p:last-child {
@@ -3104,6 +3110,12 @@ body {
   .tvtime-footer-stats {
     width: 100%;
     justify-content: space-between;
+  }
+}
+
+@media (max-width: 359px) {
+  .tvtime-home-hero__actions {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
