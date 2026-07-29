@@ -91,8 +91,18 @@ const endedComplete = deriveTvTrackingState({
   airedEpisodeCount: 4,
   airedEpisodeKeys: ["1-1", "1-2", "1-3", "1-4"],
   watchedEpisodeKeys: ["1-1", "1-2", "1-3", "1-4"],
+  completionRatingPresent: true,
 });
 assert.equal(endedComplete.state, "finished");
+const endedCompletePendingRating = deriveTvTrackingState({
+  persistedStatus: "watching",
+  officiallyEnded: true,
+  airedEpisodeCount: 4,
+  airedEpisodeKeys: ["1-1", "1-2", "1-3", "1-4"],
+  watchedEpisodeKeys: ["1-1", "1-2", "1-3", "1-4"],
+  completionRatingPresent: false,
+});
+assert.equal(endedCompletePendingRating.state, "uptodate");
 assert.equal(tvStateToMediaPatch("finished").watched, true);
 assert.equal(tvStateToMediaPatch("uptodate").watched, false);
 
@@ -114,4 +124,4 @@ assert.equal(clampRatingOutOf100(101), 100);
 assert.equal(clampRatingOutOf100(-1), 0);
 assert.equal(clampRatingOutOf100(74.6), 75);
 
-console.log("TVM-06/07/08/09 engine and episode-rating tests passed (28 assertion groups).");
+console.log("TVM-06/07/08/09 engine and episode-rating tests passed (29 assertion groups).");

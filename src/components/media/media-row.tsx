@@ -26,6 +26,9 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
   }));
   const states = useMediaStates(stateRequests, { enabled: !libraryStateSource });
   const stateMap = libraryStateSource ? libraryStateSource.data : states.data;
+  const libraryStateReady = libraryStateSource
+    ? libraryStateSource.data !== undefined
+    : states.isSuccess;
 
   const scroll = (dir: "left" | "right") => {
     if (!scrollRef.current) return;
@@ -97,6 +100,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
                       forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
                       Number(item.id),
                     )] ?? null}
+                    libraryStateReady={libraryStateReady}
                     priority={i < 2}
                     compactActions={compactCards}
                   />

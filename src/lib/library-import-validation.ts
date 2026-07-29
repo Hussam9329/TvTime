@@ -231,15 +231,20 @@ export function normalizeImportRecord(record: LibraryTransferRecord): Normalized
     const isArabic = parsed.isArabic || shouldPromoteArabic;
     const isAnime = !isArabic && parsed.isAnime;
     const requestedSeriesRating = parsed.type === "series" && parsed.userRating !== null;
+    const validWatchedMovie = parsed.type === "movie" && parsed.watched && parsed.userRating !== null;
     return {
       collection: record.collection,
       ordinal: record.ordinal,
       payload: {
         ...parsed,
         importId: randomUUID(),
-        status: parsed.type === "series" ? (parsed.status === "planned" ? "planned" : "not_started") : parsed.status,
-        watched: parsed.type === "series" ? false : parsed.watched,
-        watchedAt: parsed.type === "series" ? null : parsed.watchedAt,
+        status: parsed.type === "series"
+          ? (parsed.status === "planned" ? "planned" : "not_started")
+          : parsed.status === "watched" && !validWatchedMovie
+            ? null
+            : parsed.status,
+        watched: validWatchedMovie,
+        watchedAt: validWatchedMovie ? parsed.watchedAt : null,
         userRating: parsed.type === "series" ? null : parsed.userRating,
         requestedSeriesRating,
         isArabic,

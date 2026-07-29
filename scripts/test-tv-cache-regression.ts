@@ -47,8 +47,18 @@ const endedNumericFallback = deriveTvTrackingState({
   airedEpisodeCount: 3,
   airedEpisodeKeys: [],
   watchedEpisodeKeys: ["1-1", "1-2", "1-3"],
+  completionRatingPresent: true,
 });
 assert.equal(endedNumericFallback.state, "finished");
 assert.equal(endedNumericFallback.verified, true);
+
+assert.equal(deriveTvTrackingState({
+  persistedStatus: "finished",
+  officiallyEnded: true,
+  airedEpisodeCount: 3,
+  airedEpisodeKeys: [],
+  watchedEpisodeKeys: ["1-1", "1-2", "1-3"],
+  completionRatingPresent: false,
+}).state, "uptodate");
 
 console.log("TV cache regression tests passed.");

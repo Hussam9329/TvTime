@@ -10,7 +10,8 @@ function toCompat(item: any) {
   };
 }
 
-// Compatibility endpoint backed only by Media. Rating remains independent.
+// Compatibility endpoint backed only by Media. Completed movies always carry
+// their required personal rating on the canonical row.
 export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(await resolveUserId(req));
@@ -33,9 +34,28 @@ export async function POST(req: NextRequest) {
     if (!Number.isInteger(tmdbId) || tmdbId <= 0 || !body.title) {
       return NextResponse.json({ error: "tmdbId, title required" }, { status: 400 });
     }
+    const suppliedRating = body.userRating;
+    if (suppliedRating !== undefined
+      && (typeof suppliedRating !== "number" || !Number.isInteger(suppliedRating) || suppliedRating < 0 || suppliedRating > 100)) {
+      return NextResponse.json(
+        { error: "User rating must be a whole number from 0 to 100.", code: "INVALID_USER_RATING" },
+        { status: 400 },
+      );
+    }
 
     const identity = { userId: user.id, type: "movie", tmdbId };
     const existing = await db.media.findUnique({ where: { userId_type_tmdbId: identity } });
+    const userRating = suppliedRating === undefined ? existing?.userRating : suppliedRating;
+    if (typeof userRating !== "number" || !Number.isInteger(userRating) || userRating < 0 || userRating > 100) {
+      return NextResponse.json(
+        {
+          error: "Marking a movie watched requires your rating from 0 to 100.",
+          code: "MOVIE_WATCHED_REQUIRES_RATING",
+        },
+        { status: 400 },
+      );
+    }
+
     const data = {
       title: String(body.title),
       poster: body.posterPath || existing?.poster || null,
@@ -43,6 +63,7 @@ export async function POST(req: NextRequest) {
       watched: true,
       watchedAt: new Date(),
       status: "watched",
+      userRating,
     };
     const item = await db.media.upsert({
       where: { userId_type_tmdbId: identity },

@@ -30,21 +30,40 @@ export async function POST(req: NextRequest) {
     if (!media) return NextResponse.json({ error: "Tracked show not found" }, { status: 404 });
     const now = new Date();
     const result = await db.$transaction(async (tx) => {
+      await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "Media"
+        WHERE "id" = ${media.id}
+        FOR UPDATE
+      `;
+      const lockedMedia = await tx.media.findUnique({ where: { id: media.id } });
+      if (!lockedMedia) throw new Error("Tracked show disappeared while replacing rewatch history");
+
       await tx.watchedEpisode.createMany({ data: episodes.map((episode) => ({ userId: user.id, showId, ...episode, watchedAt: now })), skipDuplicates: true });
       await tx.watchSession.deleteMany({ where: { userId: user.id, tmdbId: showId, rewatch: true, season: { not: null }, episode: { not: null } } });
       const sessions = episodes.flatMap((episode) => Array.from({ length: count }, () => ({
         userId: user.id,
-        mediaId: media.id,
-        mediaType: media.isArabic ? "arabic_tv" : media.isAnime ? "anime" : "tv",
+        mediaId: lockedMedia.id,
+        mediaType: lockedMedia.isArabic ? "arabic_tv" : lockedMedia.isAnime ? "anime" : "tv",
         tmdbId: showId,
-        title: media.title,
+        title: lockedMedia.title,
         season: episode.seasonNumber,
         episode: episode.episodeNumber,
         watchedAt: now,
         rewatch: true,
       })));
       for (let offset = 0; offset < sessions.length; offset += 750) await tx.watchSession.createMany({ data: sessions.slice(offset, offset + 750) });
-      await tx.media.update({ where: { id: media.id }, data: { watched: metadata.officiallyEnded, status: metadata.officiallyEnded ? "finished" : "uptodate", watchedAt: now, rewatch: count > 0, rewatchCount: count } });
+      const canRemainFinished = metadata.officiallyEnded && lockedMedia.userRating != null;
+      await tx.media.update({
+        where: { id: lockedMedia.id },
+        data: {
+          watched: canRemainFinished,
+          status: canRemainFinished ? "finished" : "uptodate",
+          watchedAt: now,
+          rewatch: count > 0,
+          rewatchCount: count,
+        },
+      });
       return { episodes: episodes.length, sessions: sessions.length };
     }, { timeout: 60_000 });
     return NextResponse.json({ ok: true, showId, rewatchCount: count, ...result });

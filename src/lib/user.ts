@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { sanitizeUserId } from "@/lib/user-id";
 import { ensureLegacyLibraryMigrated } from "@/lib/legacy-library-migration";
+import { ensureCompletionRatingInvariant } from "@/lib/completion-rating-invariant";
 
 export async function getOrCreateUser(userId?: string | null, name?: string) {
   const id = sanitizeUserId(userId);
@@ -26,6 +27,19 @@ export async function getOrCreateUser(userId?: string | null, name?: string) {
   } catch (error) {
     console.error("[legacy-library-migration]", error);
     throw new Error("Legacy library migration could not be verified; no legacy rows were deleted.");
+  }
+
+  try {
+    const repaired = await ensureCompletionRatingInvariant(user.id);
+    if (repaired.movies > 0 || repaired.series > 0) {
+      console.info("[completion-rating-invariant] removed unrated completion state", {
+        userId: user.id,
+        ...repaired,
+      });
+    }
+  } catch (error) {
+    console.error("[completion-rating-invariant]", error);
+    throw new Error("Completion and rating consistency could not be verified.");
   }
 
   return user;

@@ -161,6 +161,7 @@ type FastTrackingDatabaseRow = {
   isArabic: boolean;
   status: string | null;
   watched: boolean;
+  userRating: number | null;
   episodeCount: bigint | number;
   lastWatchedAt: Date | null;
   officiallyEnded: boolean | null;
@@ -198,6 +199,7 @@ async function buildTrackingCounts(userId: string, world: TvWorld, now = new Dat
       media."isArabic" AS "isArabic",
       media."status" AS "status",
       media."watched" AS "watched",
+      media."userRating" AS "userRating",
       COALESCE(progress."episodeCount", 0)::bigint AS "episodeCount",
       progress."lastWatchedAt" AS "lastWatchedAt",
       metadata."officiallyEnded" AS "officiallyEnded",
@@ -375,6 +377,7 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
       airedEpisodeKeys: metadata?.airedEpisodeKeys,
       watchedEpisodeKeys: watched.keys,
       legacyCompleted,
+      completionRatingPresent: show.userRating != null,
     });
 
     const effectiveState = persisted === "stopped"

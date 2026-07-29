@@ -13,8 +13,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { toast } from "sonner";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
+import { RatingDialog } from "@/components/media/rating-dialog";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { isAsianMediaItem } from "@/lib/asian-media";
+import { useState } from "react";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -22,6 +24,7 @@ interface MediaCardProps {
   showMediaType?: boolean;
   forcedMediaType?: "movie" | "tv";
   libraryState?: MediaBatchState | null;
+  libraryStateReady?: boolean;
   enableNativeLink?: boolean;
   priority?: boolean;
   compactActions?: boolean;
@@ -32,11 +35,12 @@ interface MediaCardProps {
 export const MEDIA_CARD_ROW_WIDTH_CLASS = "w-[130px] sm:w-[160px]";
 const MEDIA_CARD_GRID_CLASS = "grid grid-cols-2 gap-3 min-[480px]:grid-cols-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7";
 
-export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, enableNativeLink = true, priority = false, compactActions = true }: MediaCardProps) {
+export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, libraryStateReady = false, enableNativeLink = true, priority = false, compactActions = true }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
   const watchlistToggle = useWatchlistToggle();
   const watchedToggle = useWatchedMovieToggle();
+  const [ratingOpen, setRatingOpen] = useState(false);
 
   // Fix #1: Use forcedMediaType if provided (e.g., TV rows in Home/Discover).
   // Otherwise fall back to item.media_type. Default to "movie" only when
@@ -79,26 +83,53 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       : (mediaType === "movie" ? "Movie" : "TV");
   const actionPayload = { tmdbId: id, title, posterPath: item.poster_path, releaseDate: item.release_date || item.first_air_date, voteAverage: item.vote_average, overview: item.overview, originalLanguage: item.original_language, originCountry: item.origin_country };
   const toggleWatchlist = async () => {
+    if (!libraryStateReady) return;
     try {
       await watchlistToggle.mutateAsync({ ...actionPayload, mediaType, action: inWatchlist ? "remove" : "add" });
       toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
     } catch { toast.error("Failed to update watchlist"); }
   };
   const toggleWatched = async () => {
+    if (!libraryStateReady) return;
+    if (!watched) {
+      if (userRating != null) {
+        try {
+          await watchedToggle.mutateAsync({
+            ...actionPayload,
+            action: "add",
+            userRating,
+          });
+          toast.success(`Marked as watched · Your rating ${userRating}/100`);
+        } catch {
+          toast.error("Failed to update watched status");
+        }
+        return;
+      }
+      setRatingOpen(true);
+      return;
+    }
     try {
-      await watchedToggle.mutateAsync({ ...actionPayload, action: watched ? "remove" : "add" });
-      toast.success(watched ? "Removed from watched" : "Marked as watched");
+      await watchedToggle.mutateAsync({ ...actionPayload, action: "remove" });
+      toast.success("Removed from watched");
     } catch { toast.error("Failed to update watched status"); }
+  };
+  const completeWatchedWithRating = async (rating: number) => {
+    await watchedToggle.mutateAsync({
+      ...actionPayload,
+      action: "add",
+      userRating: rating,
+    });
   };
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3) }}
-      className="tvtime-media-card group relative min-w-0"
-    >
-      <Card>
+    <>
+      <motion.article
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3) }}
+        className="tvtime-media-card group relative min-w-0"
+      >
+        <Card>
         <a
           href={enableNativeLink ? detailHref : undefined}
           className="tvtime-media-card-link"
@@ -177,10 +208,10 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             </div>
           </div>
         </a>
-      </Card>
+        </Card>
 
-      {compactActions && (
-        <DropdownMenu>
+        {compactActions && (
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
@@ -194,18 +225,32 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{title}</DropdownMenuLabel>
             <DropdownMenuItem onSelect={handleClick}><Play /> Open details</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => void toggleWatchlist()} disabled={watchlistToggle.isPending}>
+            <DropdownMenuItem onSelect={() => void toggleWatchlist()} disabled={!libraryStateReady || watchlistToggle.isPending}>
               <ListPlus /> {inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
             </DropdownMenuItem>
             {mediaType === "movie" && (
-              <DropdownMenuItem onSelect={() => void toggleWatched()} disabled={watchedToggle.isPending}>
+              <DropdownMenuItem onSelect={() => void toggleWatched()} disabled={!libraryStateReady || watchedToggle.isPending}>
                 <Check /> {watched ? "Remove from watched" : "Mark as watched"}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenu>
+        )}
+      </motion.article>
+      {mediaType === "movie" && (
+        <RatingDialog
+          open={ratingOpen}
+          onOpenChange={setRatingOpen}
+          title={title}
+          poster={imgOrPlaceholder(item.poster_path, "w185")}
+          onRate={completeWatchedWithRating}
+          initialRating={userRating}
+          description="Choose your rating out of 100 to mark this movie watched. Closing or cancelling keeps it unwatched."
+          submitLabel="Save rating & mark watched"
+          successMessage={(rating) => `Marked as watched · Your rating ${rating}/100`}
+        />
       )}
-    </motion.article>
+    </>
   );
 }
 
@@ -237,6 +282,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
   }));
   const states = useMediaStates(stateRequests, { enabled: libraryStates === undefined });
   const resolvedStates = libraryStates ?? states.data;
+  const libraryStateReady = libraryStates !== undefined || states.isSuccess;
 
   if (loading) {
     return (
@@ -260,6 +306,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
             forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
             Number(item.id),
           )] ?? null}
+          libraryStateReady={libraryStateReady}
           enableNativeLink={enableNativeLinks}
           priority={i < 4}
         />

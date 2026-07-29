@@ -39,6 +39,12 @@ const watchedIndicator = read("src/components/media/watched-indicator.tsx");
 const tmdbIndicator = read("src/components/media/tmdb-score-indicator.tsx");
 const globalStyles = read("src/app/globals.css");
 const tvTrackingView = read("src/components/views/tv-tracking-view.tsx");
+const movieDetailView = read("src/components/views/movie-detail-view.tsx");
+const tvDetailView = read("src/components/views/tv-detail-view.tsx");
+const movieMediaRoute = read("src/app/api/media/[id]/route.ts");
+const watchedMoviesRoute = read("src/app/api/library/watched-movies/route.ts");
+const completionInvariant = read("src/lib/completion-rating-invariant.ts");
+const importValidation = read("src/lib/library-import-validation.ts");
 const pkg = JSON.parse(read("package.json"));
 const schemaVerifier = read("scripts/verify-required-schema.mjs");
 
@@ -132,6 +138,56 @@ check(
   /trackingStatus === "finished"[\s\S]*<WatchedIndicator rating=\{userRating\} status="finished"/.test(tvTrackingView)
     && /trackingStatus !== "finished"[\s\S]*<TmdbScoreIndicator rating=\{tmdbRating\}/.test(tvTrackingView),
   "TV tracking posters separate finished user scores from unfinished TMDB scores",
+);
+check(
+  /if \(!isWatched\) \{\s*if \(myRating == null\)[\s\S]*setRatingIntent\("complete"\)/.test(movieDetailView)
+    && /ratingIntent === "complete"[\s\S]*action: "add"[\s\S]*userRating: v/.test(movieDetailView)
+    && /Closing or cancelling keeps it unwatched/.test(movieDetailView),
+  "Movie details defer Watched until the required rating is submitted",
+);
+check(
+  /if \(!watched\) \{\s*if \(userRating != null\)[\s\S]*setRatingOpen\(true\)/.test(mediaCard)
+    && /action: "add",\s*userRating: rating/.test(mediaCard)
+    && /Closing or cancelling keeps it unwatched/.test(mediaCard),
+  "Poster-card Watched actions require the same rating-first flow",
+);
+check(
+  /if \(isMovie && !item\.watched\)[\s\S]*userRating: rating[\s\S]*watched: true/.test(collection)
+    && /Remove rating & watched/.test(collection),
+  "Collection cards save movie completion atomically and cannot remove its rating alone",
+);
+check(
+  /existing\.type === "series" && hasRatingMutation && hasWatchMutation/.test(movieMediaRoute)
+    && /MOVIE_WATCHED_REQUIRES_RATING/.test(movieMediaRoute)
+    && /finalWatched \|\| finalStatus === "watched"/.test(movieMediaRoute),
+  "Media API permits atomic movie completion while rejecting watched movies without a rating",
+);
+check(
+  /userRating < 0 \|\| userRating > 100/.test(watchedMoviesRoute)
+    && /MOVIE_WATCHED_REQUIRES_RATING/.test(watchedMoviesRoute),
+  "Compatibility Watched API also requires a valid personal movie rating",
+);
+check(
+  /type: "movie",\s*status: "watched",\s*userRating: null/.test(completionInvariant)
+    && /status: null,\s*watched: false,\s*watchedAt: null/.test(completionInvariant),
+  "Historical watched movies without ratings are normalized back to unwatched",
+);
+check(
+  /type: "series",\s*status: \{ in: \["finished", "completed", "watched"\] \},\s*userRating: null/.test(completionInvariant)
+    && /status: "uptodate",\s*watched: false/.test(completionInvariant)
+    && /TV_FINISHED_REQUIRES_RATING/.test(movieMediaRoute),
+  "Finished TV series cannot persist without a personal rating",
+);
+check(
+  /if \(c\.needsRating\)[\s\S]*setPendingCompletionRating\(true\)[\s\S]*setRatingOpen\(true\)/.test(tvDetailView)
+    && /Closing or cancelling keeps it Up To Date/.test(tvDetailView)
+    && /Save rating & mark Finished/.test(tvDetailView),
+  "TV completion stays non-Finished until its rating dialog is submitted",
+);
+check(
+  /validWatchedMovie = parsed\.type === "movie" && parsed\.watched && parsed\.userRating !== null/.test(importValidation)
+    && /watched: validWatchedMovie/.test(importValidation),
+  "Library imports cannot reintroduce an unrated watched movie",
 );
 
 check(/verify-required-schema\.mjs/.test(pkg.scripts?.build || ""), "Production build verifies the required database contract before Next.js build");

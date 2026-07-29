@@ -18,6 +18,7 @@ interface RatingDialogProps {
   initialRating?: number | null;
   description?: string;
   submitLabel?: string;
+  successMessage?: (rating: number) => string;
 }
 
 export function RatingDialog({
@@ -29,6 +30,7 @@ export function RatingDialog({
   initialRating = null,
   description = "This saves only your rating out of 100. It does not change Watchlist or Watched status.",
   submitLabel = "Save Rating",
+  successMessage = (rating) => `Rated ${rating}/100`,
 }: RatingDialogProps) {
   // Default to 50 (neutral) instead of 75 — the old default of 75 made it too
   // easy to accidentally save a high rating by just clicking "Save Rating"
@@ -56,7 +58,7 @@ export function RatingDialog({
     setSubmitting(true);
     try {
       await onRate(rating);
-      toast.success(`Rated ${rating}/100`);
+      toast.success(successMessage(rating));
       onOpenChange(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save rating");

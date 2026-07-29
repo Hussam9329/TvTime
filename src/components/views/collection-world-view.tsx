@@ -340,22 +340,47 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
       else toast.info("Open the show and track released episodes individually.");
       return;
     }
-    await update.mutateAsync({
-      id: item.id,
-      watched: true,
-      watchedAt: new Date().toISOString(),
-      status: "watched",
-    });
-    toast.success("Marked as watched. Rating was not changed.");
+    if (item.userRating != null) {
+      await update.mutateAsync({
+        id: item.id,
+        userRating: item.userRating,
+        watched: true,
+        watchedAt: new Date().toISOString(),
+        status: "watched",
+      });
+      toast.success(`Marked as watched · Your rating ${item.userRating}/100`);
+      return;
+    }
+    setRatingOpen(true);
   };
 
   const handleRate = async (rating: number) => {
+    if (isMovie && !item.watched) {
+      await update.mutateAsync({
+        id: item.id,
+        userRating: rating,
+        watched: true,
+        watchedAt: new Date().toISOString(),
+        status: "watched",
+      });
+      return;
+    }
     await update.mutateAsync({ id: item.id, userRating: rating });
   };
 
   const handleRemoveRating = async () => {
-    await update.mutateAsync({ id: item.id, userRating: null });
-    toast.success("Rating removed. Watch status was not changed.");
+    await update.mutateAsync(isMovie
+      ? {
+          id: item.id,
+          userRating: null,
+          watched: false,
+          watchedAt: null,
+          status: null,
+        }
+      : { id: item.id, userRating: null });
+    toast.success(isMovie
+      ? "Rating removed and movie marked as not watched"
+      : "Rating removed and Finished status cleared");
   };
 
   const handleUnwatch = async () => {
@@ -451,7 +476,7 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
                 )}
                 {isWatchedTab && userRating != null && (
                   <DropdownMenuItem onSelect={() => void handleRemoveRating()} disabled={update.isPending}>
-                    Remove rating
+                    {isMovie ? "Remove rating & watched" : "Remove rating & Finished"}
                   </DropdownMenuItem>
                 )}
                 {tab === "watchlist" && (
@@ -478,6 +503,13 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
         poster={item.poster}
         onRate={handleRate}
         initialRating={item.userRating ?? null}
+        description={isMovie && !item.watched
+          ? "Choose your rating out of 100 to mark this movie watched. Closing or cancelling keeps it unwatched."
+          : "Update your personal rating out of 100."}
+        submitLabel={isMovie && !item.watched ? "Save rating & mark watched" : "Save rating"}
+        successMessage={isMovie && !item.watched
+          ? (rating) => `Marked as watched · Your rating ${rating}/100`
+          : (rating) => `Rated ${rating}/100`}
       />
     </>
   );

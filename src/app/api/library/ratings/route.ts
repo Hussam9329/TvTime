@@ -9,7 +9,8 @@ import {
   parseEpisodeRatingMediaType,
 } from "@/lib/episode-rating";
 import { validateReleasedEpisodeBatch } from "@/lib/tv-status-server";
-import { getTvRatingEligibility, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
+import { saveTvCompletionRating, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
+import { normalizeTvTrackingState } from "@/lib/tv-status-engine";
 
 function positiveInteger(value: unknown): number | null {
   const parsed = Number(value);
@@ -21,9 +22,10 @@ function canonicalType(mediaType: string) {
 }
 
 function titleRatingValueOutOf100(value: unknown) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return null;
-  return Math.max(0, Math.min(100, numeric <= 10 ? numeric * 10 : numeric));
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const numeric = value;
+  if (numeric < 0 || numeric > 100) return null;
+  return Math.round(numeric <= 10 ? numeric * 10 : numeric);
 }
 
 function titleRatingCompat(item: any) {
@@ -186,24 +188,48 @@ export async function POST(req: NextRequest) {
     }
     const type = canonicalType(mediaType);
 
+    const existingTitle = await db.media.findUnique({
+      where: { userId_type_tmdbId: { userId: user.id, type, tmdbId } },
+      select: { poster: true },
+    });
     if (type === "series") {
-      const eligibility = await getTvRatingEligibility(user.id, tmdbId);
-      if (!eligibility.allowed) {
-        const failure = tvRatingEligibilityError(eligibility);
+      const base = await db.media.upsert({
+        where: { userId_type_tmdbId: { userId: user.id, type, tmdbId } },
+        create: {
+          userId: user.id,
+          type,
+          tmdbId,
+          title: body.title || "Unknown",
+          poster: body.posterPath || null,
+          watched: false,
+          status: null,
+        },
+        update: {
+          ...(body.title ? { title: body.title } : {}),
+          ...(!existingTitle?.poster && body.posterPath !== undefined ? { poster: body.posterPath || null } : {}),
+        },
+      });
+      const completion = await saveTvCompletionRating({
+        userId: user.id,
+        mediaId: base.id,
+        rating: value,
+      });
+      if (!completion.item) {
+        const failure = tvRatingEligibilityError(completion.eligibility);
         return NextResponse.json(
           {
             error: failure.message,
             code: failure.code,
-            totalEpisodes: eligibility.totalEpisodes,
-            watchedEpisodes: eligibility.watchedEpisodes,
-            tmdbStatus: eligibility.tmdbStatus,
+            totalEpisodes: completion.eligibility.totalEpisodes,
+            watchedEpisodes: completion.eligibility.watchedEpisodes,
+            tmdbStatus: completion.eligibility.tmdbStatus,
           },
           { status: 409 },
         );
       }
+      return NextResponse.json({ item: titleRatingCompat(completion.item), source: "Media" });
     }
 
-    const existingTitle = await db.media.findUnique({ where: { userId_type_tmdbId: { userId: user.id, type, tmdbId } }, select: { poster: true } });
     const item = await db.media.upsert({
       where: {
         userId_type_tmdbId: { userId: user.id, type, tmdbId },
@@ -255,11 +281,28 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "mediaType, tmdbId required" }, { status: 400 });
     }
     const type = canonicalType(mediaType);
-    const result = await db.media.updateMany({
-      where: { userId: user.id, type, tmdbId },
-      data: { userRating: null, ratingStatus: null },
+    const existing = await db.media.findUnique({
+      where: { userId_type_tmdbId: { userId: user.id, type, tmdbId } },
     });
-    return NextResponse.json({ ok: true, updated: result.count, source: "Media" });
+    if (!existing) return NextResponse.json({ ok: true, updated: 0, source: "Media" });
+
+    const isSeriesCompletion = type === "series"
+      && (normalizeTvTrackingState(existing.status) === "finished" || existing.watched);
+    const isMovieCompletion = type === "movie"
+      && (existing.watched || existing.status === "watched");
+    await db.media.update({
+      where: { id: existing.id },
+      data: {
+        userRating: null,
+        ratingStatus: null,
+        ...(isSeriesCompletion
+          ? { status: "uptodate", watched: false }
+          : isMovieCompletion
+            ? { status: null, watched: false, watchedAt: null }
+            : {}),
+      },
+    });
+    return NextResponse.json({ ok: true, updated: 1, source: "Media" });
   } catch (error) {
     console.error("[ratings:DELETE]", error);
     return NextResponse.json({ error: "Failed to remove rating" }, { status: 500 });

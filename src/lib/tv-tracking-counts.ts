@@ -19,6 +19,7 @@ export type FastTvTrackingRow = {
   tmdbId: number | null;
   status: string | null;
   watched: boolean;
+  userRating: number | null;
   episodeCount: number;
   lastWatchedAt: Date | null;
   officiallyEnded: boolean | null;
@@ -64,7 +65,7 @@ export function deriveFastTvTrackingState(row: FastTvTrackingRow): {
     if (airedEpisodeCount != null && airedEpisodeCount > 0) {
       if (episodeCount >= airedEpisodeCount) {
         return {
-          state: row.officiallyEnded === true ? "finished" : "uptodate",
+          state: row.officiallyEnded === true && row.userRating != null ? "finished" : "uptodate",
           hasUnwatchedReleasedEpisode: false,
           verified: true,
         };
@@ -72,8 +73,9 @@ export function deriveFastTvTrackingState(row: FastTvTrackingRow): {
       return { state: "watching", hasUnwatchedReleasedEpisode: true, verified: true };
     }
 
-    const fallbackState = persisted === "finished" || persisted === "uptodate"
-      ? persisted
+    const safePersisted = persisted === "finished" && row.userRating == null ? "uptodate" : persisted;
+    const fallbackState = safePersisted === "finished" || safePersisted === "uptodate"
+      ? safePersisted
       : "watching";
     return {
       state: fallbackState,
@@ -86,10 +88,15 @@ export function deriveFastTvTrackingState(row: FastTvTrackingRow): {
     return { state: "planned", hasUnwatchedReleasedEpisode: false, verified: true };
   }
   if (persisted === "finished" || persisted === "uptodate") {
-    return { state: persisted, hasUnwatchedReleasedEpisode: false, verified: false };
+    const safeState = persisted === "finished" && row.userRating == null ? "uptodate" : persisted;
+    return { state: safeState, hasUnwatchedReleasedEpisode: false, verified: false };
   }
   if (row.watched) {
-    return { state: "finished", hasUnwatchedReleasedEpisode: false, verified: false };
+    return {
+      state: row.userRating != null ? "finished" : "uptodate",
+      hasUnwatchedReleasedEpisode: false,
+      verified: false,
+    };
   }
   return { state: "not_started", hasUnwatchedReleasedEpisode: false, verified: true };
 }

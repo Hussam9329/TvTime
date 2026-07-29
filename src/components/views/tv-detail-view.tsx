@@ -43,6 +43,7 @@ export function TvDetailView() {
   const [activeTab, setActiveTab] = useState("seasons");
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [ratingOpen, setRatingOpen] = useState(false);
+  const [pendingCompletionRating, setPendingCompletionRating] = useState(false);
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
   const [showStopDialog, setShowStopDialog] = useState(false);
   const [lastAutoPromptedShowId, setLastAutoPromptedShowId] = useState<string | null>(null);
@@ -55,15 +56,19 @@ export function TvDetailView() {
   const showTrackingStatus = (progress.trackingState || trackedShow?.status || null) as TvTrackingState | null;
   const tmdbStatus = tData?.status || "";
   const isEnded = /ended|canceled|cancelled/i.test(tmdbStatus);
+  const ratingPromptIdentity = tData?.id ? String(tData.id) : null;
 
-  const canRateShow = isEnded && showTrackingStatus === "finished" && progress.stateVerified;
-  const displayedShowRating = canRateShow ? myRating : null;
+  const hasWatchedEveryFinalEpisode = progress.stateVerified
+    && progress.totalEpisodes > 0
+    && progress.watchedCount >= progress.totalEpisodes;
+  const canRateShow = isEnded && (hasWatchedEveryFinalEpisode || pendingCompletionRating);
+  const displayedShowRating = showTrackingStatus === "finished" ? myRating : null;
   const showRatingLockMessage = !isEnded
     ? "Full-series rating unlocks only after TMDB marks the show Ended or Canceled. Episode ratings stay available separately."
-    : showTrackingStatus !== "finished"
-      ? "Watch every final episode to unlock the full-series rating."
-      : !progress.stateVerified
-        ? "The final episode boundary must be verified before rating the whole show."
+    : !progress.stateVerified
+      ? "The final episode boundary must be verified before rating the whole show."
+      : !hasWatchedEveryFinalEpisode
+        ? "Watch every final episode to unlock the full-series rating."
         : null;
 
   // Auto-prompt rating only when the entire TV show has officially ended and
@@ -71,9 +76,9 @@ export function TvDetailView() {
   // open the rating dialog just because the user is up to date.
   // Uses the "adjust state during render" pattern (no setState-in-effect lint
   // violation) — fires once per show when the auto-prompt condition becomes true.
-  const shouldAutoPrompt = canRateShow && myRating == null && !!trackedShow?.id;
-  if (shouldAutoPrompt && trackedShow?.id !== lastAutoPromptedShowId) {
-    setLastAutoPromptedShowId(trackedShow?.id ?? null);
+  const shouldAutoPrompt = canRateShow && myRating == null && !!ratingPromptIdentity;
+  if (shouldAutoPrompt && ratingPromptIdentity !== lastAutoPromptedShowId) {
+    setLastAutoPromptedShowId(ratingPromptIdentity);
     setRatingOpen(true);
   }
 
@@ -284,12 +289,16 @@ export function TvDetailView() {
       seasons: t.number_of_seasons,
       episodes: t.number_of_episodes,
     });
+    setLastAutoPromptedShowId(String(t.id));
+    setPendingCompletionRating(false);
   };
 
   const onRemoveRating = async () => {
     try {
       await ratingMutate.mutateAsync({ action: "remove", mediaType: "tv", tmdbId: t.id });
-      toast.success("Rating removed");
+      setLastAutoPromptedShowId(String(t.id));
+      setRatingOpen(false);
+      toast.success("Rating removed and Finished status cleared");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to remove rating");
     }
@@ -466,7 +475,11 @@ export function TvDetailView() {
                     <div className="flex items-center gap-2">
                       <div className="text-2xl font-bold text-muted-foreground">—</div>
                       <span className="text-xs text-muted-foreground">
-                        {effectiveLabel === "finished" ? "Rate this finished show" : effectiveLabel === "uptodate" ? "Rate later when show ends" : "Not rated yet"}
+                        {hasWatchedEveryFinalEpisode && isEnded
+                          ? "Rate to mark this show Finished"
+                          : effectiveLabel === "uptodate"
+                            ? "Rate later when show ends"
+                            : "Not rated yet"}
                       </span>
                     </div>
                   )}
@@ -491,7 +504,7 @@ export function TvDetailView() {
                   title={!canRateShow ? (isEnded ? "Finish all episodes first" : "Rating unlocks after the show ends") : undefined}
                 >
                   <Star className="w-4 h-4 mr-1 fill-current" />
-                  {displayedShowRating != null ? "Re-rate" : canRateShow ? "Rate out of 100" : "Rating locked"}
+                  {displayedShowRating != null ? "Re-rate" : canRateShow ? "Rate & finish" : "Rating locked"}
                 </Button>
               </div>
               <div className="md:col-span-2 md:justify-self-end xl:col-span-1 xl:text-right">
@@ -546,9 +559,11 @@ export function TvDetailView() {
             watchPlanReady={!progress.isLoading && !progress.isError}
             onCompletion={(c) => {
               if (!c) return;
-              if (c.newStatus === "finished" && c.needsRating) {
+              if (c.needsRating) {
+                setLastAutoPromptedShowId(String(t.id));
+                setPendingCompletionRating(true);
                 setRatingOpen(true);
-                toast.success("Show finished! Please rate it out of 100.");
+                toast.info("All episodes watched. Add your rating to mark this show Finished.");
               } else if (c.newStatus === "uptodate") {
                 toast.info("You're all caught up! More episodes coming soon.");
               }
@@ -636,11 +651,24 @@ export function TvDetailView() {
       {/* Rating dialog — out of 100. Auto-opens when an Ended show is fully watched and unrated. */}
       <RatingDialog
         open={ratingOpen}
-        onOpenChange={setRatingOpen}
+        onOpenChange={(open) => {
+          setRatingOpen(open);
+          if (!open) {
+            setLastAutoPromptedShowId(String(t.id));
+            setPendingCompletionRating(false);
+          }
+        }}
         title={displayTitle}
         poster={t.poster_path ? img(t.poster_path, "w185") : null}
         onRate={onRateSubmit}
         initialRating={myRating ?? null}
+        description={myRating == null
+          ? "Choose your rating out of 100 to mark this completed series Finished. Closing or cancelling keeps it Up To Date."
+          : "Update your personal rating out of 100. The series remains Finished after saving."}
+        submitLabel={myRating == null ? "Save rating & mark Finished" : "Update rating"}
+        successMessage={(rating) => myRating == null
+          ? `Marked as Finished · Your rating ${rating}/100`
+          : `Updated your rating to ${rating}/100`}
       />
 
       {showStopDialog && (

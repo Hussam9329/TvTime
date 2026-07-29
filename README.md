@@ -13,7 +13,9 @@ A complete movie & TV show tracking application built with Next.js 16, TypeScrip
 
 ### TV Show States
 
-States are derived ONLY from episode records via the central engine (`src/lib/tv-status-engine.ts`). Ratings never affect state.
+Episode records and verified TMDB status establish TV progress through the
+central engine (`src/lib/tv-status-engine.ts`). A personal title rating is the
+required final commit for the `finished` state.
 
 | State | Meaning |
 |-------|---------|
@@ -21,14 +23,16 @@ States are derived ONLY from episode records via the central engine (`src/lib/tv
 | `not_started` | Followed but no episodes watched |
 | `watching` | Some aired episodes watched, more aired remain |
 | `uptodate` | Ongoing show + all aired episodes watched |
-| `finished` | Officially ended (Ended/Canceled) + all final aired episodes watched |
+| `finished` | Officially ended (Ended/Canceled) + all final episodes watched + personally rated |
 
 **Key rules:**
-- `finished` requires TMDB status = Ended/Canceled + all final aired episodes watched
+- `finished` requires TMDB status = Ended/Canceled + all final episodes watched + a personal 0–100 rating
 - Ongoing shows can never be `finished` (only `uptodate`)
 - Future episodes are excluded from progress
 - Episode rating is independent and does not affect show state
 - Whole-series rating is locked until the show is officially ended + fully watched
+- Closing the final rating dialog keeps the series `uptodate`; the final episode remains watched
+- Removing a whole-series rating clears `finished` but preserves episode history
 
 ### Three Worlds
 
@@ -40,13 +44,16 @@ The app is split into three independent sections:
 
 Items can be moved between worlds via the `Move to Anime` / `To Movies` / `To TV Shows` buttons, which toggle `isAnime` on the same Media record without duplicating or losing progress.
 
-### Watch/Rating Separation (TVM-03)
+### Completion and Ratings
 
-- Saving a rating writes ONLY `userRating`
-- Removing a rating clears ONLY `userRating`
-- Adding/removing watched does NOT touch rating
-- API rejects requests that combine rating + watch in one payload
-- Rating-only items don't enter Watchlist or Watched
+- A movie cannot be `watched` without a personal 0–100 rating.
+- A series cannot be `finished` without a personal 0–100 whole-series rating.
+- Marking an unrated movie watched opens the rating flow; cancelling leaves it unwatched.
+- Finishing an eligible series opens the rating flow; cancelling leaves it `uptodate`.
+- Existing personal ratings are reused when an item is completed again.
+- Removing a completion rating also removes the corresponding `watched`/`finished` state.
+- Unwatching a movie or episode preserves its rating unless the rating itself is removed.
+- Episode ratings remain independent from whole-series ratings and progress.
 
 ## Database
 
@@ -191,7 +198,7 @@ For a database that predates the baseline, read `MIGRATION_BASELINE.md` before r
 ### Media
 - `GET /api/media` — list with filters (type, status, watched, rated, isAnime, search)
 - `GET /api/media/[id]` — get single item
-- `PATCH /api/media/[id]` — update (rating OR watch, never both)
+- `PATCH /api/media/[id]` — update canonical media state; movie completion may atomically include rating, while TV completion is finalized by the server eligibility transaction
 - `POST /api/media/find-or-create` — find or create by tmdbId
 - `GET /api/media/recently` — recently watched (movies + episodes)
 - `GET /api/media/stats` — aggregate stats
@@ -345,7 +352,7 @@ Available operation names are `repair-posters`, `reset-accidental-watched`, `mig
 - **Never** change `prisma/schema.prisma` without a reviewed migration plan
 - **Never** run `prisma db push`/`migrate`/`reset` in production
 - **Never** change Prisma provider from PostgreSQL
-- **Never** treat a rating as watched or vice versa
+- **Never** allow a movie to remain Watched, or a series to remain Finished, without its required personal rating
 - **Never** allow future episodes to count as progress
 - **Never** write to the database during GET requests (TVM-27)
 - **Never** bypass staged validation by posting a whole backup directly to an import commit route

@@ -34,7 +34,10 @@ requireCheck(!/getTvStatusMetadata|batchReadDbMetadata|materializeLegacyCompleti
 requireCheck(countsBranch >= 0 && userBootstrap > countsBranch, "countsOnly must return before user bootstrap or legacy migration");
 requireCheck(/dbQueryBudget:\s*1/.test(trackingRoute) && /X-TvTime-DB-Query-Budget/.test(trackingRoute), "TV counts response does not publish its one-query budget");
 requireCheck(/episodeCount > 0[\s\S]*"watching"/.test(trackingCounts), "fast counts do not preserve real progress when metadata is stale");
-requireCheck(/airedEpisodeCount[\s\S]*officiallyEnded === true \? "finished" : "uptodate"/.test(trackingCounts), "fast counts do not distinguish caught-up ongoing and finished shows");
+requireCheck(
+  /officiallyEnded === true && row\.userRating != null \? "finished" : "uptodate"/.test(trackingCounts),
+  "fast counts do not require both terminal metadata and a personal rating for Finished",
+);
 
 requireCheck(/await \(db\.tvMetadataCache as any\)\.upsert/.test(statusServer), "TV metadata cache upsert is still fire-and-forget");
 requireCheck(/await writeDbMetadata\(metadata, refreshAfter\)/.test(statusServer), "TMDB metadata fetch does not wait for the cache write to settle");

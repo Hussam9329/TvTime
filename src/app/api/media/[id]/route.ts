@@ -4,7 +4,7 @@ import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
 import { normalizeMedia } from "@/lib/media-normalize";
 import { normalizeTvTrackingState } from "@/lib/tv-status-engine";
-import { getTvRatingEligibility, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
+import { saveTvCompletionRating, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
 
 export async function PATCH(
   req: NextRequest,
@@ -14,6 +14,8 @@ export async function PATCH(
     const { id } = await params;
     const user = await getOrCreateUser(await resolveUserId(req));
     const body = await req.json();
+    const existing = await db.media.findFirst({ where: { id, userId: user.id } });
+    if (!existing) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
 
     if (body.isAnime !== undefined || body.isArabic !== undefined) {
       return NextResponse.json(
@@ -27,10 +29,10 @@ export async function PATCH(
 
     const hasRatingMutation = body.userRating !== undefined;
     const hasWatchMutation = body.watched !== undefined || body.watchedAt !== undefined || body.status !== undefined;
-    if (hasRatingMutation && hasWatchMutation) {
+    if (existing.type === "series" && hasRatingMutation && hasWatchMutation) {
       return NextResponse.json(
         {
-          error: "Rating and watch state must be updated in separate requests.",
+          error: "TV rating and watch state must be updated in separate requests.",
           code: "RATING_WATCH_STATE_MUST_BE_SEPARATE",
         },
         { status: 400 },
@@ -39,9 +41,14 @@ export async function PATCH(
 
     const data: any = {};
     if (body.userRating !== undefined) {
-      data.userRating = body.userRating === null
-        ? null
-        : Math.max(0, Math.min(100, Number(body.userRating)));
+      const numericRating = body.userRating === null ? null : body.userRating;
+      if (numericRating !== null && (!Number.isInteger(numericRating) || numericRating < 0 || numericRating > 100)) {
+        return NextResponse.json(
+          { error: "User rating must be a whole number from 0 to 100.", code: "INVALID_USER_RATING" },
+          { status: 400 },
+        );
+      }
+      data.userRating = numericRating;
     }
     if (body.tmdbId !== undefined) data.tmdbId = body.tmdbId === null ? null : Number(body.tmdbId);
     if (body.watched !== undefined) data.watched = Boolean(body.watched);
@@ -53,12 +60,18 @@ export async function PATCH(
     if (body.poster !== undefined) data.poster = body.poster || null;
     if (body.overview !== undefined) data.overview = body.overview || null;
 
-    const existing = await db.media.findFirst({ where: { id, userId: user.id } });
-    if (!existing) return NextResponse.json({ error: "Media item not found" }, { status: 404 });
-
     if (body.rewatchIncrement === true) {
       if (existing.type !== "movie" || !existing.watched) {
         return NextResponse.json({ error: "Only an already watched movie can be watched again" }, { status: 409 });
+      }
+      if (existing.userRating == null) {
+        return NextResponse.json(
+          {
+            error: "Rate this movie before recording a rewatch.",
+            code: "MOVIE_WATCHED_REQUIRES_RATING",
+          },
+          { status: 409 },
+        );
       }
       data.rewatch = true;
       data.rewatchCount = { increment: 1 };
@@ -79,6 +92,29 @@ export async function PATCH(
     if (existing.type !== "series" && body.watched === true) {
       data.status = "watched";
       if (body.watchedAt === undefined) data.watchedAt = new Date();
+    }
+    if (existing.type !== "series" && body.watched === false) {
+      if (body.status === undefined && existing.status === "watched") data.status = null;
+      if (body.watchedAt === undefined) data.watchedAt = null;
+    }
+    if (existing.type !== "series" && body.status === "watched") {
+      data.watched = true;
+      if (body.watchedAt === undefined) data.watchedAt = new Date();
+    }
+
+    if (existing.type === "movie") {
+      const finalWatched = data.watched === undefined ? existing.watched : Boolean(data.watched);
+      const finalStatus = data.status === undefined ? existing.status : data.status;
+      const finalRating = data.userRating === undefined ? existing.userRating : data.userRating;
+      if ((finalWatched || finalStatus === "watched") && finalRating == null) {
+        return NextResponse.json(
+          {
+            error: "A watched movie must include your rating out of 100.",
+            code: "MOVIE_WATCHED_REQUIRES_RATING",
+          },
+          { status: 409 },
+        );
+      }
     }
 
     if (existing.type === "series" && hasWatchMutation) {
@@ -137,16 +173,43 @@ export async function PATCH(
     }
 
     if (existing.type === "series" && data.userRating != null) {
-      const eligibility = await getTvRatingEligibility(user.id, existing.tmdbId);
-      if (!eligibility.allowed) {
-        const failure = tvRatingEligibilityError(eligibility);
+      const completion = await saveTvCompletionRating({
+        userId: user.id,
+        mediaId: existing.id,
+        rating: data.userRating,
+      });
+      if (!completion.item) {
+        const failure = tvRatingEligibilityError(completion.eligibility);
         return NextResponse.json(
           {
             error: failure.message,
             code: failure.code,
-            totalEpisodes: eligibility.totalEpisodes,
-            watchedEpisodes: eligibility.watchedEpisodes,
-            tmdbStatus: eligibility.tmdbStatus,
+            totalEpisodes: completion.eligibility.totalEpisodes,
+            watchedEpisodes: completion.eligibility.watchedEpisodes,
+            tmdbStatus: completion.eligibility.tmdbStatus,
+          },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({ item: normalizeMedia(completion.item) });
+    } else if (existing.type === "series" && body.userRating === null) {
+      // A series cannot remain Finished after its required personal rating is
+      // removed. Keep all episode history and its last watched timestamp.
+      if (normalizeTvTrackingState(existing.status) === "finished" || existing.watched) {
+        data.status = "uptodate";
+        data.watched = false;
+      }
+    }
+
+    if (existing.type === "series") {
+      const finalWatched = data.watched === undefined ? existing.watched : Boolean(data.watched);
+      const finalStatus = data.status === undefined ? normalizeTvTrackingState(existing.status) : normalizeTvTrackingState(data.status);
+      const finalRating = data.userRating === undefined ? existing.userRating : data.userRating;
+      if ((finalWatched || finalStatus === "finished") && finalRating == null) {
+        return NextResponse.json(
+          {
+            error: "A finished TV series must include your rating out of 100.",
+            code: "TV_FINISHED_REQUIRES_RATING",
           },
           { status: 409 },
         );

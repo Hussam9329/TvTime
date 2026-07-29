@@ -200,6 +200,51 @@ function mediaFromLegacyRating(item: any) {
   };
 }
 
+export function mergeLegacyMediaRecords(records: any[]): any[] {
+  const merged = new Map<string, any>();
+  const withoutIdentity: any[] = [];
+
+  for (const record of records) {
+    const type = record?.type === "tv" || record?.type === "series" ? "series" : "movie";
+    const tmdbId = Number(record?.tmdbId);
+    const title = String(record?.title || "").trim();
+    const identity = Number.isInteger(tmdbId) && tmdbId > 0
+      ? `${type}:${tmdbId}`
+      : title
+        ? `${type}:title:${title.toLocaleLowerCase()}`
+        : null;
+    if (!identity) {
+      withoutIdentity.push(record);
+      continue;
+    }
+
+    const current = merged.get(identity);
+    if (!current) {
+      merged.set(identity, { ...record, type });
+      continue;
+    }
+
+    const next = { ...current };
+    for (const [key, value] of Object.entries(record)) {
+      const currentValue = next[key];
+      const currentMissing = currentValue === null
+        || currentValue === undefined
+        || currentValue === ""
+        || (Array.isArray(currentValue) && currentValue.length === 0);
+      if (currentMissing && value !== null && value !== undefined && value !== "") next[key] = value;
+    }
+    next.type = type;
+    next.watched = Boolean(current.watched || record?.watched);
+    next.isFollowing = Boolean(current.isFollowing || record?.isFollowing);
+    next.userRating = record?.userRating ?? current.userRating ?? null;
+    next.watchedAt = current.watchedAt ?? record?.watchedAt ?? null;
+    if (type === "movie" && next.watched) next.status = "watched";
+    merged.set(identity, next);
+  }
+
+  return [...merged.values(), ...withoutIdentity];
+}
+
 function buildLegacySource(data: any): {
   manifest: LibraryBackupManifest;
   records: AsyncGenerator<LibraryTransferRecord>;
@@ -214,9 +259,10 @@ function buildLegacySource(data: any): {
     (Array.isArray(library.following) ? library.following : []).map(mediaFromLegacyFollowing),
     (Array.isArray(library.ratings) ? library.ratings : []).map(mediaFromLegacyRating),
   ];
+  const mergedMedia = mergeLegacyMediaRecords(mediaSources.flat());
   const watchedEpisodes = Array.isArray(library.watchedEpisodes) ? library.watchedEpisodes : [];
   const episodeRatings = Array.isArray(library.episodeRatings) ? library.episodeRatings : [];
-  const mediaCount = mediaSources.reduce((sum, items) => sum + items.length, 0);
+  const mediaCount = mergedMedia.length;
   const collections = {
     ...emptyCollectionCounts(),
     media: mediaCount,
@@ -227,9 +273,7 @@ function buildLegacySource(data: any): {
 
   async function* generate() {
     let mediaOrdinal = 0;
-    for (const source of mediaSources) {
-      for (const item of source) yield { collection: "media" as const, ordinal: mediaOrdinal++, data: item };
-    }
+    for (const item of mergedMedia) yield { collection: "media" as const, ordinal: mediaOrdinal++, data: item };
     for (let index = 0; index < watchedEpisodes.length; index++) {
       yield { collection: "watchedEpisodes" as const, ordinal: index, data: watchedEpisodes[index] };
     }

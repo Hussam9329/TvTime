@@ -34,7 +34,7 @@ export function MovieDetailView() {
   const ratingMutate = useRatingMutate();
 
   const [activeTab, setActiveTab] = useState("overview");
-  const [ratingOpen, setRatingOpen] = useState(false);
+  const [ratingIntent, setRatingIntent] = useState<"complete" | "edit" | null>(null);
 
   if (detail.isLoading) {
     return (
@@ -118,9 +118,36 @@ export function MovieDetailView() {
   };
 
   const onWatched = async () => {
+    if (!isWatched) {
+      if (myRating == null) {
+        setRatingIntent("complete");
+        return;
+      }
+      try {
+        await watchedToggle.mutateAsync({
+          action: "add",
+          tmdbId: m.id,
+          title: displayTitle,
+          posterPath: m.poster_path,
+          runtime: m.runtime,
+          releaseDate: m.release_date,
+          voteAverage: m.vote_average,
+          overview: m.overview,
+          genres: genreNames,
+          originCountry: originCountries,
+          originalLanguage: m.original_language,
+          userRating: myRating,
+        });
+        toast.success(`Marked as watched · Your rating ${myRating}/100`);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to update watch status");
+      }
+      return;
+    }
+
     try {
       await watchedToggle.mutateAsync({
-        action: isWatched ? "remove" : "add",
+        action: "remove",
         tmdbId: m.id,
         title: displayTitle,
         posterPath: m.poster_path,
@@ -132,7 +159,7 @@ export function MovieDetailView() {
         originCountry: originCountries,
         originalLanguage: m.original_language,
       });
-      toast.success(isWatched ? "Marked as not watched" : "Marked as watched");
+      toast.success("Marked as not watched");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update watch status");
     }
@@ -148,7 +175,24 @@ export function MovieDetailView() {
   };
 
   const onRateSubmit = async (v: number) => {
-    if (!isWatched) return;
+    if (ratingIntent === "complete") {
+      await watchedToggle.mutateAsync({
+        action: "add",
+        tmdbId: m.id,
+        title: displayTitle,
+        posterPath: m.poster_path,
+        runtime: m.runtime,
+        releaseDate: m.release_date,
+        voteAverage: m.vote_average,
+        overview: m.overview,
+        genres: genreNames,
+        originCountry: originCountries,
+        originalLanguage: m.original_language,
+        userRating: v,
+      });
+      return;
+    }
+    if (!isWatched) throw new Error("Mark this movie watched before rating it.");
     await ratingMutate.mutateAsync({
       action: "set",
       mediaType: "movie",
@@ -169,7 +213,7 @@ export function MovieDetailView() {
   const onRemoveRating = async () => {
     try {
       await ratingMutate.mutateAsync({ action: "remove", mediaType: "movie", tmdbId: m.id });
-      toast.success("Rating removed");
+      toast.success("Rating removed and movie marked as not watched");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to remove rating");
     }
@@ -349,10 +393,10 @@ export function MovieDetailView() {
                   <div className="tvtime-movie-detail-rating__controls">
                     {myRating != null && (
                       <Button variant="outline" size="sm" onClick={onRemoveRating}>
-                        Remove rating
+                        Remove rating &amp; watched
                       </Button>
                     )}
-                    <Button size="sm" onClick={() => setRatingOpen(true)}>
+                    <Button size="sm" onClick={() => setRatingIntent("edit")}>
                       <Star className="fill-current" />
                       {myRating != null ? "Re-rate" : "Rate out of 100"}
                     </Button>
@@ -470,12 +514,21 @@ export function MovieDetailView() {
 
       {/* Rating dialog — out of 100 */}
       <RatingDialog
-        open={isWatched && ratingOpen}
-        onOpenChange={setRatingOpen}
+        open={ratingIntent !== null}
+        onOpenChange={(open) => {
+          if (!open) setRatingIntent(null);
+        }}
         title={displayTitle}
         poster={m.poster_path ? img(m.poster_path, "w185") : null}
         onRate={onRateSubmit}
-        initialRating={myRating ?? null}
+        initialRating={myRating}
+        description={ratingIntent === "complete"
+          ? "Choose your rating out of 100 to mark this movie watched. Closing or cancelling keeps it unwatched."
+          : "Update your personal rating out of 100."}
+        submitLabel={ratingIntent === "complete" ? "Save rating & mark watched" : "Save rating"}
+        successMessage={ratingIntent === "complete"
+          ? (rating) => `Marked as watched · Your rating ${rating}/100`
+          : (rating) => `Rated ${rating}/100`}
       />
     </div>
   );

@@ -37,6 +37,7 @@ type DeriveTvTrackingStateInput = {
   watchedEpisodeKeys?: Iterable<string>;
   airedEpisodeKeys?: Iterable<string>;
   legacyCompleted?: boolean;
+  completionRatingPresent?: boolean;
 };
 
 type DerivedTvTrackingState = {
@@ -213,8 +214,9 @@ function uniqueRegularEpisodeKeys(keys?: Iterable<string>): Set<string> {
 
 /**
  * Single source of truth for TV tracking state.
- * Ratings are intentionally absent from the input: a rating can never affect
- * Planned / Not Started / Watching / Up To Date / Finished.
+ * Episode progress and official TMDB status decide whether completion is
+ * eligible. A saved whole-series rating is the final confirmation that moves
+ * an ended, fully watched show from Up To Date to Finished.
  */
 export function deriveTvTrackingState(input: DeriveTvTrackingStateInput): DerivedTvTrackingState {
   const persisted = normalizeTvTrackingState(input.persistedStatus);
@@ -309,7 +311,9 @@ export function deriveTvTrackingState(input: DeriveTvTrackingStateInput): Derive
 
   if (airedEpisodeCount! > 0 && watchedAiredEpisodeCount >= airedEpisodeCount!) {
     return {
-      state: input.officiallyEnded === true ? "finished" : "uptodate",
+      state: input.officiallyEnded === true && input.completionRatingPresent === true
+        ? "finished"
+        : "uptodate",
       watchedAiredEpisodeCount,
       airedEpisodeCount,
       futureOrUnknownWatchedEpisodeCount,

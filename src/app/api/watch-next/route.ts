@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const user = await getOrCreateUser(await resolveUserId(req));
     const storedShows = await db.media.findMany({
       where: { userId: user.id, type: "series", isFollowing: true, tmdbId: { not: null } },
-      select: { tmdbId: true, type: true, title: true, poster: true, watchedAt: true, updatedAt: true, watched: true, status: true, userRating: true, isAnime: true, isArabic: true, originalLanguage: true, originCountries: true, genres: true },
+      select: { tmdbId: true, type: true, title: true, poster: true, watchedAt: true, updatedAt: true, watched: true, status: true, isAnime: true, isArabic: true, originalLanguage: true, originCountries: true, genres: true },
     });
     const shows = await resolveGeneralMediaClassifications(storedShows);
     const ids = shows.map((show) => show.tmdbId!).filter(Boolean);
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     const metadataById = new Map(metadata.map((row) => [row.tmdbId, row]));
     const items = shows.flatMap((show) => {
       const meta = metadataById.get(show.tmdbId!);
-      if (show.status === "finished" || (meta?.officiallyEnded === true && show.userRating != null) || (show.watched && show.status !== "watching")) return [];
+      if (show.status === "finished" || (show.watched && show.status !== "watching")) return [];
       const seen = watchedByShow.get(show.tmdbId!) ?? new Set<string>();
       const next = (meta?.airedEpisodeKeys ?? []).map(episodeParts).filter((value): value is { season: number; episode: number } => Boolean(value))
         .sort((a, b) => a.season - b.season || a.episode - b.episode)

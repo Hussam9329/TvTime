@@ -52,7 +52,10 @@ check(/provider\s*=\s*"postgresql"/.test(schema), "Prisma provider remains Postg
 check(/url\s*=\s*env\("DATABASE_URL"\)/.test(schema), "Prisma still uses DATABASE_URL");
 check(!/db\s+(push|migrate|reset)/i.test(packageJson.scripts.build || ""), "Build contains no database push/migrate/reset");
 check(!/sqlite/i.test(schema), "Schema contains no SQLite provider");
-check(/officiallyEnded\s*===\s*true\s*\?\s*"finished"\s*:\s*"uptodate"/.test(engine), "Finished requires an explicitly ended work");
+check(
+  /officiallyEnded\s*===\s*true\s*&&\s*input\.completionRatingPresent\s*===\s*true/.test(engine),
+  "Finished requires an explicitly ended, fully watched and personally rated work",
+);
 check(/legacy whole-show flag[\s\S]*must never by itself prove/.test(engine), "Legacy Finished/watched flags cannot prove completion");
 check(/state === "finished"[\s\S]*watched: true/.test(engine), "Only Finished maps the whole show to watched=true");
 check(/state === "uptodate" \|\| state === "watching"[\s\S]*watched: false/.test(engine), "Up To Date and Watching are not whole-show watched");
@@ -80,12 +83,19 @@ check(
     && !/addEventListener\("focus"/.test(providers),
   "Reconciliation is debounced, visible-only and avoids focus-trigger storms",
 );
-check(/getTvRatingEligibility/.test(mediaUpdateRoute), "Direct whole-series rating writes use server eligibility");
+check(
+  /saveTvCompletionRating/.test(mediaUpdateRoute)
+    && /FOR UPDATE/.test(eligibility)
+    && /tx\.watchedEpisode\.findMany/.test(eligibility)
+    && /evaluateTvRatingEligibility\(metadata,\s*watchedRows\)/.test(eligibility)
+    && /tx\.media\.update/.test(eligibility),
+  "Direct whole-series rating writes lock and recheck server eligibility before Finished",
+);
 check(/TV_RATING_LOCKED_UNTIL_ENDED/.test(eligibility), "Ongoing whole-series rating returns a dedicated lock code");
 check(/isWholeSeriesRatingEligible/.test(eligibility)
   && /officiallyEnded\s*===\s*true/.test(ratingRules)
   && /watchedEpisodes\s*>=\s*args\.totalEpisodes/.test(ratingRules), "Full-series rating requires ended + every final episode watched");
-check(/mediaType === "tv"[\s\S]*getTvRatingEligibility/.test(ratingRoute), "Legacy title-rating API cannot bypass the TV lock");
+check(/type === "series"[\s\S]*saveTvCompletionRating/.test(ratingRoute), "Legacy title-rating API cannot bypass the TV lock");
 const stagedImportSkipsSeriesRatings = importValidation && importFinalize
   ? /requestedSeriesRating/.test(importValidation)
     && /userRating:\s*parsed\.type === "series" \? null/.test(importValidation)
@@ -104,7 +114,12 @@ check(/mediaType:\s*"episode"/.test(hooks), "Client saves episode ratings throug
 check(/does not rate the whole series or change episode progress/.test(detailView), "Episode rating dialog explains independence");
 check(/disabled=\{!released \|\| !isWatched/.test(detailView), "Episode rating unlocks only after release and watch");
 check(/disabled=\{!canRateShow\}/.test(detailView) && /Rating locked/.test(detailView), "Ongoing whole-series rating button is visibly locked");
-check(/displayedShowRating = canRateShow \? myRating : null/.test(detailView), "Invalid legacy whole-series ratings are hidden while locked");
+check(/displayedShowRating = showTrackingStatus === "finished" \? myRating : null/.test(detailView), "Only Finished series display a whole-series rating");
+check(
+  /if \(c\.needsRating\)[\s\S]*setRatingOpen\(true\)/.test(detailView)
+    && /Closing or cancelling keeps it Up To Date/.test(detailView),
+  "Completing the final episode prompts for the required rating without prematurely showing Finished",
+);
 check(/trackingStatus === "finished" && show\._isEndedByTmdb === true/.test(trackingView), "TV Tracking exposes a full-show rating only for verified Finished rows");
 const libraryCounts = read("src/lib/library-counts.ts");
 check(/eligibleTitleRatingWhere/.test(libraryStats) && /eligibleTitleRatingWhere/.test(mediaStats) && /type: "series", status: "finished"/.test(libraryCounts), "Stats exclude ongoing full-series ratings through the canonical count service");

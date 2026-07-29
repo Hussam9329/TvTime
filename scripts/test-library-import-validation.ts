@@ -7,6 +7,7 @@ import {
   LIBRARY_BACKUP_KIND,
   LIBRARY_BACKUP_VERSION,
 } from "../src/lib/library-transfer-types.ts";
+import { mergeLegacyMediaRecords } from "../src/lib/library-backup-client.ts";
 
 const normalizedMedia = normalizeImportRecord({
   collection: "media",
@@ -52,6 +53,63 @@ assert.equal(promotedLegacyArabic.payload.isArabic, true, "Arabic-language legac
 assert.equal(promotedLegacyArabic.payload.isAnime, false, "Arabic promotion must preserve world exclusivity");
 assert.equal(promotedLegacyArabic.payload.originalLanguage, "ar");
 assert.deepEqual(promotedLegacyArabic.payload.originCountries, ["IQ"]);
+
+const incompleteWatchedMovie = normalizeImportRecord({
+  collection: "media",
+  ordinal: 4,
+  data: {
+    tmdbId: 44,
+    title: "Unrated watched movie",
+    type: "movie",
+    status: "watched",
+    watched: true,
+    watchedAt: "2026-07-20T10:00:00.000Z",
+    userRating: null,
+  },
+});
+assert.equal(incompleteWatchedMovie.payload.watched, false, "an imported movie cannot stay watched without a user rating");
+assert.equal(incompleteWatchedMovie.payload.watchedAt, null);
+assert.equal(incompleteWatchedMovie.payload.status, null);
+
+const completedRatedMovie = normalizeImportRecord({
+  collection: "media",
+  ordinal: 5,
+  data: {
+    tmdbId: 45,
+    title: "Rated watched movie",
+    type: "movie",
+    status: "watched",
+    watched: true,
+    watchedAt: "2026-07-20T10:00:00.000Z",
+    userRating: 0,
+  },
+});
+assert.equal(completedRatedMovie.payload.watched, true, "zero is a valid explicit user rating");
+assert.equal(completedRatedMovie.payload.userRating, 0);
+
+const [mergedLegacyMovie] = mergeLegacyMediaRecords([
+  {
+    tmdbId: 46,
+    title: "Legacy watched and rated movie",
+    type: "movie",
+    status: "watched",
+    watched: true,
+    watchedAt: "2026-07-20T10:00:00.000Z",
+  },
+  {
+    tmdbId: 46,
+    title: "Legacy watched and rated movie",
+    type: "movie",
+    userRating: 0,
+  },
+]);
+const normalizedMergedLegacyMovie = normalizeImportRecord({
+  collection: "media",
+  ordinal: 6,
+  data: mergedLegacyMovie,
+});
+assert.equal(normalizedMergedLegacyMovie.payload.watched, true, "legacy watched and rating rows must merge before validation");
+assert.equal(normalizedMergedLegacyMovie.payload.userRating, 0);
 
 const special = normalizeImportRecord({
   collection: "watchedEpisodes",

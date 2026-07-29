@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Film, Search, Tv } from "lucide-react";
-import { useReleaseSchedule } from "@/hooks/use-tmdb";
+import { mediaStateKey, useMediaStates, useReleaseSchedule } from "@/hooks/use-tmdb";
 import { dateOnlyFromLocalDate, formatDateOnly } from "@/lib/date-only";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -80,6 +80,12 @@ export function ReleaseSchedule({
     if (collectionWorld === "asian-tv") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
     return filtered;
   }, [collectionWorld, schedule.data?.items, search]);
+  const releaseLibraryStates = useMediaStates(items.map((item) => ({
+    tmdbId: Number(item.id),
+    mediaType,
+  })), {
+    enabled: !schedule.isLoading && !schedule.isError && items.length > 0,
+  });
   const groups = useMemo(() => {
     const map = new Map<string, typeof items>();
     for (const item of items) {
@@ -162,6 +168,8 @@ export function ReleaseSchedule({
                     index={index}
                     showMediaType={false}
                     forcedMediaType={mediaType}
+                    libraryState={releaseLibraryStates.data?.[mediaStateKey(mediaType, Number(release.id))] ?? null}
+                    libraryStateReady={releaseLibraryStates.isSuccess}
                   />
                 ))}
               </div>

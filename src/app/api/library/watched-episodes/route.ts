@@ -138,6 +138,7 @@ async function updateShowStatusInTransaction(
     airedEpisodeKeys: metadata.airedEpisodeKeys,
     watchedEpisodeKeys: watchedKeys,
     legacyCompleted: isLegacyCompleted(media, watchedEpisodes.length),
+    completionRatingPresent: media.userRating != null,
   });
 
   const persistedState = normalizeTvTrackingState(media.status);
@@ -176,7 +177,11 @@ async function updateShowStatusInTransaction(
     isEnded: metadata.officiallyEnded,
     showTmdbId,
     mediaId: updated.id,
-    needsRating: derived.verified && effectiveState === "finished" && updated.userRating == null,
+    needsRating: derived.verified
+      && metadata.officiallyEnded === true
+      && (derived.airedEpisodeCount ?? 0) > 0
+      && derived.watchedAiredEpisodeCount >= (derived.airedEpisodeCount ?? 0)
+      && updated.userRating == null,
     airedEpisodeCount: derived.airedEpisodeCount,
     watchedAiredEpisodeCount: derived.watchedAiredEpisodeCount,
     ignoredFutureEpisodeCount: derived.futureOrUnknownWatchedEpisodeCount,

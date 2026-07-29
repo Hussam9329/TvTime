@@ -46,16 +46,31 @@ const importValidation = existsSync(importValidationPath) ? read("src/lib/librar
 check(/provider\s*=\s*"postgresql"/.test(schema), "Prisma remains PostgreSQL");
 check(/url\s*=\s*env\("DATABASE_URL"\)/.test(schema), "Prisma still reads DATABASE_URL");
 check(!/db\s+(push|migrate|reset)/i.test(packageJson.scripts.build || ""), "Build performs no database migration/push/reset");
-check(!/userRating/.test(engine), "TV state engine has no rating input or dependency");
-check(/officiallyEnded\s*===\s*true\s*\?\s*"finished"\s*:\s*"uptodate"/.test(engine), "Only officially ended shows can become Finished");
+check(
+  /completionRatingPresent/.test(engine)
+    && /officiallyEnded\s*===\s*true\s*&&\s*input\.completionRatingPresent\s*===\s*true/.test(engine),
+  "Finished requires both an officially ended show and its personal completion rating",
+);
 check(/inferAiredEpisodesFromTvDetail/.test(engine) && /isEpisodeReleased/.test(engine), "Released episode inference is centralized");
 check(/EPISODE_NOT_RELEASED/.test(watchedRoute), "API rejects future or unaired watched episodes");
 check(/validateReleasedEpisodeBatch/.test(watchedRoute), "Single and bulk episode writes use release validation");
 check(/TV_STATE_REQUIRES_EPISODE_ENGINE/.test(mediaRoute), "Direct TV progress writes are blocked");
 check(/TV_PROGRESS_MUST_BE_CHANGED_BY_EPISODES/.test(mediaRoute), "Existing TV episode progress cannot be overwritten by generic media updates");
-check(/RATING_WATCH_STATE_MUST_BE_SEPARATE/.test(mediaRoute), "Rating and watch changes cannot be sent in one request");
+check(
+  /existing\.type === "series" && hasRatingMutation && hasWatchMutation/.test(mediaRoute)
+    && /RATING_WATCH_STATE_MUST_BE_SEPARATE/.test(mediaRoute),
+  "TV rating and watch changes cannot be sent in one request",
+);
+check(
+  /MOVIE_WATCHED_REQUIRES_RATING/.test(mediaRoute)
+    && /userRating,\s*\}\)/.test(hooks),
+  "Movie completion atomically requires the user's rating",
+);
 check(/body:\s*JSON\.stringify\(\{\s*userRating:\s*args\.value[\s\S]*?\}\)/.test(hooks), "Rating save payload writes only userRating");
-check(/body:\s*JSON\.stringify\(\{\s*userRating:\s*null\s*\}\)/.test(hooks), "Rating removal payload clears only userRating");
+check(
+  /args\.mediaType === "movie"[\s\S]*userRating: null[\s\S]*watched: false[\s\S]*: \{ userRating: null \}/.test(hooks),
+  "Movie rating removal sends an explicit Watched clear while TV completion cleanup is server-owned",
+);
 check(/allEpisodes\s*=\s*allEpisodesIncludingFuture\.filter/.test(hooks), "Client progress separates released and future episodes");
 check(/nextEp\s*=\s*allEpisodes\.find/.test(hooks), "Next-to-watch is selected only from released episodes");
 check(/deriveTvTrackingState/.test(trackingRoute), "TV tracking API uses the central state engine");
@@ -66,7 +81,8 @@ check(
   "Following statistics use canonical standard-world classification and explicit following membership",
 );
 const seriesImportResetsWholeShowCompletion = importValidation
-  ? /watched:\s*parsed\.type\s*===\s*"series"\s*\?\s*false/.test(importValidation)
+  ? /validWatchedMovie = parsed\.type === "movie" && parsed\.watched && parsed\.userRating !== null/.test(importValidation)
+    && /watched:\s*validWatchedMovie/.test(importValidation)
   : /watched:\s*itemType\s*===\s*"series"\s*\?\s*false/.test(importRoute);
 check(seriesImportResetsWholeShowCompletion, "Legacy rating import does not mark media watched");
 check(

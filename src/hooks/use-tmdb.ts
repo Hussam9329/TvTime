@@ -604,9 +604,16 @@ export function useWatchedMovieToggle() {
       originalLanguage?: string | null;
       seasons?: number | null;
       episodes?: number | null;
+      userRating?: number;
     }) => {
       if (args.action === "add" || args.action === "rewatch") {
-        // Find-or-create, then mark as watched (without rating - will be rated via rating dialog)
+        const userRating = args.userRating;
+        if (args.action === "add" && (typeof userRating !== "number" || !Number.isInteger(userRating) || userRating < 0 || userRating > 100)) {
+          throw new Error("Choose your rating out of 100 before marking this movie watched.");
+        }
+
+        // Find-or-create, then save first-watch completion and its required
+        // personal rating atomically. Closing the rating dialog performs no write.
         const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title,
@@ -625,7 +632,14 @@ export function useWatchedMovieToggle() {
         const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
-          body: JSON.stringify(args.action === "rewatch" ? { rewatchIncrement: true } : { watched: true, watchedAt: new Date().toISOString(), status: "watched" }),
+          body: JSON.stringify(args.action === "rewatch"
+            ? { rewatchIncrement: true }
+            : {
+                watched: true,
+                watchedAt: new Date().toISOString(),
+                status: "watched",
+                userRating,
+              }),
         });
         await ensureApiOk(patchRes, "Failed to mark movie watched");
       } else {
@@ -999,7 +1013,8 @@ export function useRatingMutate() {
   return useMutation({
     mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null; genres?: string[]; originCountry?: string[] | null; originalLanguage?: string | null; seasons?: number | null; episodes?: number | null }) => {
       if (args.action === "set") {
-        // Find-or-create, then save only the independent rating
+        // Find-or-create, then save the personal rating. For an eligible TV
+        // series, the server atomically couples this with Finished status.
         const id = await findOrCreateMedia({
           tmdbId: args.tmdbId,
           title: args.title || "Unknown",
@@ -1027,13 +1042,21 @@ export function useRatingMutate() {
           throw new Error(errorBody?.error || "Failed to save rating");
         }
       } else {
-        // Remove rating: find by tmdbId DIRECTLY (not via paginated list .find())
+        // Remove rating by direct identity. The server also clears completion
+        // state for movies and Finished TV series.
         const id = await getMediaIdByTmdbId(args.tmdbId, args.mediaType);
         if (id) {
           const patchRes = await fetch(withUserId(new URL(`/api/media/${id}`, window.location.origin)), {
             method: "PATCH",
             headers: { "Content-Type": "application/json", ...userHeaders() },
-            body: JSON.stringify({ userRating: null }),
+            body: JSON.stringify(args.mediaType === "movie"
+              ? {
+                  userRating: null,
+                  watched: false,
+                  watchedAt: null,
+                  status: null,
+                }
+              : { userRating: null }),
           });
           await ensureApiOk(patchRes, "Failed to remove rating");
         }
@@ -1196,7 +1219,7 @@ export function useShowProgress(showId: number | null | undefined) {
   const isFollowing = Boolean(trackedShow?.isFollowing);
 
   const seasonsQuery = useQuery({
-    queryKey: ["tmdb", "show-progress-seasons", showId, detail.data?.number_of_seasons ?? 0, watchedSignature, trackedShow?.status, trackedShow?.watched],
+    queryKey: ["tmdb", "show-progress-seasons", showId, detail.data?.number_of_seasons ?? 0, watchedSignature, trackedShow?.status, trackedShow?.watched, trackedShow?.userRating],
     enabled: showId != null && !!detail.data,
     queryFn: async () => {
       const show = detail.data!;
@@ -1231,6 +1254,7 @@ export function useShowProgress(showId: number | null | undefined) {
         airedEpisodeKeys: airedKeys,
         watchedEpisodeKeys: actualWatchedSet,
         legacyCompleted,
+        completionRatingPresent: trackedShow?.userRating != null,
       });
       const watchedSet = new Set(actualWatchedSet);
 

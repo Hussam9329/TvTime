@@ -19,6 +19,7 @@ const baseRow: FastTvTrackingRow = {
   tmdbId: 1,
   status: null,
   watched: false,
+  userRating: null,
   episodeCount: 0,
   lastWatchedAt: null,
   officiallyEnded: null,
@@ -48,7 +49,7 @@ assert.deepEqual(
   "an ongoing show caught up to released episodes is up to date",
 );
 assert.deepEqual(
-  deriveFastTvTrackingState({ ...baseRow, episodeCount: 12, airedEpisodeCount: 12, metadataFresh: true, officiallyEnded: true }),
+  deriveFastTvTrackingState({ ...baseRow, episodeCount: 12, airedEpisodeCount: 12, metadataFresh: true, officiallyEnded: true, userRating: 0 }),
   { state: "finished", hasUnwatchedReleasedEpisode: false, verified: true },
   "an ended show with all released episodes is finished",
 );
@@ -56,6 +57,11 @@ assert.deepEqual(
   deriveFastTvTrackingState({ ...baseRow, status: "not_started", episodeCount: 2 }),
   { state: "watching", hasUnwatchedReleasedEpisode: true, verified: false },
   "stale metadata never erases real episode progress",
+);
+assert.deepEqual(
+  deriveFastTvTrackingState({ ...baseRow, status: "finished", episodeCount: 12 }),
+  { state: "uptodate", hasUnwatchedReleasedEpisode: false, verified: false },
+  "stale metadata cannot expose an unrated series as Finished",
 );
 
 const summary = buildFastTvTrackingSummary([
@@ -85,6 +91,7 @@ const summary = buildFastTvTrackingSummary([
     airedEpisodeCount: 12,
     metadataFresh: true,
     officiallyEnded: true,
+    userRating: 0,
   },
   { ...baseRow, tmdbId: 6, status: "not_started", episodeCount: 2 },
 ], now);

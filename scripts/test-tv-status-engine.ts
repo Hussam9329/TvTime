@@ -61,6 +61,7 @@ const finished = deriveTvTrackingState({
   airedEpisodeCount: 3,
   airedEpisodeKeys: ["1-1", "1-2", "1-3"],
   watchedEpisodeKeys: ["1-1", "1-2", "1-3"],
+  completionRatingPresent: true,
 });
 assert.equal(finished.state, "finished", "only an officially ended fully watched show is Finished");
 
@@ -123,6 +124,7 @@ const finishedExcluded = deriveTvTrackingState({
   airedEpisodeCount: 3,
   airedEpisodeKeys: ["1-1", "1-2", "1-3"],
   watchedEpisodeKeys: ["1-1", "1-2", "1-3"],
+  completionRatingPresent: true,
 });
 assert.equal(finishedExcluded.state, "finished", "Haven't Watched: finished show must NOT be watching");
 
@@ -175,8 +177,19 @@ const endedFullyWatched = deriveTvTrackingState({
   airedEpisodeCount: 10,
   airedEpisodeKeys: Array.from({ length: 10 }, (_, i) => `1-${i + 1}`),
   watchedEpisodeKeys: Array.from({ length: 10 }, (_, i) => `1-${i + 1}`),
+  completionRatingPresent: true,
 });
 assert.equal(endedFullyWatched.state, "finished", "Ended + fully watched → finished");
+
+const endedFullyWatchedUnrated = deriveTvTrackingState({
+  persistedStatus: "finished",
+  officiallyEnded: true,
+  airedEpisodeCount: 10,
+  airedEpisodeKeys: Array.from({ length: 10 }, (_, i) => `1-${i + 1}`),
+  watchedEpisodeKeys: Array.from({ length: 10 }, (_, i) => `1-${i + 1}`),
+  completionRatingPresent: false,
+});
+assert.equal(endedFullyWatchedUnrated.state, "uptodate", "Ended + fully watched stays Up To Date until rated");
 
 // TVM-17: Ended show with missing episodes → watching (not finished)
 const endedIncomplete = deriveTvTrackingState({
@@ -195,7 +208,8 @@ const canceledFullyWatched = deriveTvTrackingState({
   airedEpisodeCount: 5,
   airedEpisodeKeys: ["1-1", "1-2", "1-3", "1-4", "1-5"],
   watchedEpisodeKeys: ["1-1", "1-2", "1-3", "1-4", "1-5"],
+  completionRatingPresent: true,
 });
 assert.equal(canceledFullyWatched.state, "finished", "Canceled + fully watched → finished");
 
-console.log("TVM-03/04/05 engine tests passed (11 assertion groups + TVM-14/15/16/17 extensions).");
+console.log("TVM-03/04/05 engine tests passed (12 assertion groups + TVM-14/15/16/17 extensions).");
