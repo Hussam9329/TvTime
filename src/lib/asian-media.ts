@@ -27,12 +27,12 @@ export function isAsianMediaItem(item: {
     .toLowerCase()
     .split("-")[0];
 
-  // TMDB origin-country metadata is authoritative. Language is only a
+  // TMDB origin-country metadata is authoritative. Asian TV is intentionally
+  // strict: every declared origin country must be Asian. A mixed production
+  // such as SG + US belongs to standard TV, not Asian TV. Language is only a
   // fallback for incomplete search/discover items that omit origin_country.
-  // This prevents US/European/Middle-Eastern productions from leaking into
-  // Asian TV merely because their stored language is stale or multilingual.
   if (countries.length > 0) {
-    return countries.some((country) => ASIAN_COUNTRIES.has(country));
+    return countries.every((country) => ASIAN_COUNTRIES.has(country));
   }
   return ASIAN_LANGUAGES.has(language);
 }

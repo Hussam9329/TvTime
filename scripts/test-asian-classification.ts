@@ -9,11 +9,15 @@ import {
 const hostages = {
   title: "Hostages",
   originalLanguage: "en",
-  originCountries: ["US"],
+  originCountries: ["SG", "US"],
   classificationComplete: true,
 };
 
-assert.equal(isAsianMediaItem(hostages), false, "TMDB 55083 Hostages is a US production, not Asian TV");
+assert.equal(
+  isAsianMediaItem(hostages),
+  false,
+  "TMDB 55083 Hostages is a mixed SG + US production and must remain in standard TV",
+);
 assert.equal(
   isAsianMediaItem({ originalLanguage: "hi", originCountries: ["US"] }),
   false,
@@ -28,6 +32,16 @@ assert.equal(
   isAsianMediaItem({ originalLanguage: "en", originCountries: ["kr"] }),
   true,
   "origin-country matching must normalize lower-case TMDB data",
+);
+assert.equal(
+  isAsianMediaItem({ originalLanguage: "ko", originCountries: ["KR", "US"] }),
+  false,
+  "one non-Asian origin country must keep a mixed production out of Asian TV",
+);
+assert.equal(
+  isAsianMediaItem({ originalLanguage: "ja", originCountries: ["JP", "KR"] }),
+  true,
+  "multi-country productions remain Asian when every declared country is Asian",
 );
 assert.equal(
   isAsianMediaItem({ originalLanguage: "ko", originCountries: [] }),
@@ -61,7 +75,7 @@ const staleHostagesMedia = {
 const authoritativeHostagesMedia = {
   ...staleHostagesMedia,
   originalLanguage: "en",
-  originCountries: ["US"],
+  originCountries: ["SG", "US"],
   genres: ["Drama"],
   classificationComplete: true,
 };
