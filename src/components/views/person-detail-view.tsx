@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
+import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { ArrowLeft, Film, Tv, Cake, MapPin, Briefcase, Star, Users } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -151,14 +152,18 @@ export function PersonDetailView() {
 }
 
 function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: (id: number) => void; onGoTv: (id: number) => void }) {
-  const movieItems = items.filter((item) => Boolean(item.title));
-  const states = useMediaStates(movieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })));
+  const states = useMediaStates(items.map((item) => ({
+    tmdbId: Number(item.id),
+    mediaType: Boolean(item.title) ? "movie" as const : "tv" as const,
+  })));
 
   return (
     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
       {items.map((c: any, i: number) => {
         const isMovie = Boolean(c.title);
-        const movieState = isMovie ? states.data?.[mediaStateKey("movie", Number(c.id))] : undefined;
+        const mediaType = isMovie ? "movie" as const : "tv" as const;
+        const libraryState = states.data?.[mediaStateKey(mediaType, Number(c.id))];
+        const completed = isMovie ? Boolean(libraryState?.watched) : libraryState?.status === "finished";
         return (
               <motion.button
                 key={`${c.id}-${i}`}
@@ -171,7 +176,13 @@ function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: 
                 <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-md">
                   <div className="relative aspect-[2/3] overflow-hidden bg-muted">
                     <SafeImage src={img(c.poster_path, "w342")} alt={c.title || c.name} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
-                    {isMovie && movieState?.watched && <WatchedIndicator rating={movieState.userRating} />}
+                    {completed && (
+                      <WatchedIndicator
+                        rating={libraryState?.userRating}
+                        status={isMovie ? "watched" : "finished"}
+                      />
+                    )}
+                    {!completed && <TmdbScoreIndicator rating={c.vote_average} />}
                   </div>
                   <div className="p-2">
                     <p className="text-xs font-semibold line-clamp-1">{c.title || c.name}</p>
@@ -188,7 +199,7 @@ function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: 
 function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | "tv"; onGo: (id: number) => void }) {
   const visibleItems = items.slice(0, 50);
   const states = useMediaStates(
-    type === "movie" ? visibleItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })) : [],
+    visibleItems.map((item) => ({ tmdbId: Number(item.id), mediaType: type })),
   );
 
   if (items.length === 0) {
@@ -199,6 +210,8 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
       {visibleItems.map((c, i) => {
         const year = (c.release_date || c.first_air_date || "").slice(0, 4);
         const title = c.title || c.name;
+        const libraryState = states.data?.[mediaStateKey(type, Number(c.id))];
+        const completed = type === "movie" ? Boolean(libraryState?.watched) : libraryState?.status === "finished";
         return (
           <motion.button
             key={`${c.id}-${i}`}
@@ -217,8 +230,11 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
                     {type === "movie" ? <Film className="w-4 h-4" /> : <Tv className="w-4 h-4" />}
                   </div>
                 )}
-                {type === "movie" && states.data?.[mediaStateKey("movie", Number(c.id))]?.watched && (
-                  <WatchedIndicator rating={states.data[mediaStateKey("movie", Number(c.id))]?.userRating} />
+                {completed && (
+                  <WatchedIndicator
+                    rating={libraryState?.userRating}
+                    status={type === "movie" ? "watched" : "finished"}
+                  />
                 )}
               </div>
               <div className="flex-1 min-w-0">

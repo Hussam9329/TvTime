@@ -563,6 +563,9 @@ type RecentlyWatchedItem = {
   episodeName?: string | null;
   hasProfile: boolean;
   source: "media" | "watched-episode";
+  status?: string | null;
+  userRating?: number | null;
+  publicRating?: number | null;
 };
 
 export function useRecentlyWatched(limit = 12) {

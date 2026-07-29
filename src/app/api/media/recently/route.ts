@@ -18,6 +18,9 @@ type RecentlyItem = {
   episodeName?: string | null;
   hasProfile: boolean;
   source: "media" | "watched-episode";
+  status?: string | null;
+  userRating?: number | null;
+  publicRating?: number | null;
 };
 
 function toIso(value: Date | string | null | undefined) {
@@ -72,10 +75,24 @@ export async function GET(req: NextRequest) {
           take: 200,
         })
       : [];
-    const showMeta = new Map<number, { title: string; posterPath: string | null }>();
+    const showMeta = new Map<number, {
+      title: string;
+      posterPath: string | null;
+      status: string | null;
+      userRating: number | null;
+      publicRating: number | null;
+    }>();
     for (const show of nonArabicShows) {
       const id = validTmdbId(show.tmdbId);
-      if (id) showMeta.set(id, { title: show.title, posterPath: show.poster ?? null });
+      if (id) {
+        showMeta.set(id, {
+          title: show.title,
+          posterPath: show.poster ?? null,
+          status: show.status,
+          userRating: show.userRating,
+          publicRating: show.rating ? Number.parseFloat(show.rating) : null,
+        });
+      }
     }
 
     const items = new Map<string, RecentlyItem>();
@@ -90,6 +107,9 @@ export async function GET(req: NextRequest) {
         watchedAt: toIso(movie.watchedAt ?? movie.updatedAt),
         hasProfile: tmdbId != null,
         source: "media",
+        status: movie.status,
+        userRating: movie.userRating,
+        publicRating: movie.rating ? Number.parseFloat(movie.rating) : null,
       });
     }
 
@@ -109,6 +129,9 @@ export async function GET(req: NextRequest) {
         episodeName: episode.episodeName,
         hasProfile: tmdbId != null,
         source: "watched-episode",
+        status: meta?.status ?? null,
+        userRating: meta?.userRating ?? null,
+        publicRating: meta?.publicRating ?? null,
       });
     }
 

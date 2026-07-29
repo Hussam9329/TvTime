@@ -2417,23 +2417,6 @@ body {
   transition: opacity 220ms ease;
 }
 
-.tvtime-media-score {
-  height: 1.55rem;
-  padding-inline: 0.48rem;
-  border: 1px solid rgb(255 255 255 / 0.12) !important;
-  background: rgb(6 10 18 / 0.72) !important;
-  color: #fde047 !important;
-  font-size: 0.65rem;
-  font-weight: 850;
-  box-shadow: 0 6px 16px rgb(0 0 0 / 0.2);
-  backdrop-filter: blur(10px);
-}
-
-.tvtime-media-score svg {
-  width: 0.72rem;
-  height: 0.72rem;
-}
-
 .tvtime-media-menu {
   border: 1px solid rgb(255 255 255 / 0.13) !important;
   background: rgb(6 10 18 / 0.72) !important;
@@ -3617,7 +3600,7 @@ body {
   .tvtime-mobile-dock__surface,
   .tvtime-home-hero__poster,
   .tvtime-home-hero__greeting,
-  .tvtime-media-score,
+  .tvtime-tmdb-score,
   .tvtime-media-menu,
   .tvtime-media-state-rail > span {
     background-color: var(--app-surface-strong);
@@ -3646,22 +3629,31 @@ body {
   backdrop-filter: none;
 }
 
-/* Direction-safe poster controls for Arabic catalogue pages. */
-.tvtime-media-score,
-.tvtime-media-state-rail {
+/* Personal scores stay physically top-left; TMDB stays in the mirrored corner. */
+.tvtime-tmdb-score {
+  inset-inline: auto !important;
+  right: -1px !important;
   left: auto !important;
-  inset-inline-start: 0.625rem !important;
+}
+
+.tvtime-media-state-rail {
+  inset-inline: auto !important;
+  right: auto !important;
+  left: 0.625rem !important;
 }
 
 .tvtime-media-menu {
-  right: auto !important;
-  inset-inline-end: 0.625rem !important;
+  inset-inline: auto !important;
+  top: auto !important;
+  right: 0.625rem !important;
+  bottom: 0.625rem !important;
+  left: auto !important;
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .tvtime-home-hero__poster,
   .tvtime-home-hero__greeting,
-  .tvtime-media-score,
+  .tvtime-tmdb-score,
   .tvtime-media-menu,
   .tvtime-media-state-rail > span {
     background-color: rgb(6 10 18 / 0.96) !important;

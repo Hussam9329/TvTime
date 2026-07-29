@@ -34,6 +34,11 @@ const shortcuts = read("src/components/layout/keyboard-shortcuts.tsx");
 const shell = read("src/components/app-shell.tsx");
 const header = read("src/components/layout/header.tsx");
 const searchView = read("src/components/views/search-view.tsx");
+const mediaCard = read("src/components/media/media-card.tsx");
+const watchedIndicator = read("src/components/media/watched-indicator.tsx");
+const tmdbIndicator = read("src/components/media/tmdb-score-indicator.tsx");
+const globalStyles = read("src/app/globals.css");
+const tvTrackingView = read("src/components/views/tv-tracking-view.tsx");
 const pkg = JSON.parse(read("package.json"));
 const schemaVerifier = read("scripts/verify-required-schema.mjs");
 
@@ -98,6 +103,35 @@ check(
     && !/const \[local,\s*setLocal\] = useState\(searchQuery\)/.test(searchView)
     && !/setTimeout\([\s\S]*setSearchQuery/.test(searchView),
   "Search results render no competing input that can restore a stale query",
+);
+check(
+  /const finished = mediaType === "tv" && libraryState\?\.status === "finished"/.test(mediaCard)
+    && /const completed = watched \|\| finished/.test(mediaCard)
+    && /status=\{finished \? "finished" : "watched"\}/.test(mediaCard),
+  "Finished TV cards use the same completed-media indicator as watched movies",
+);
+check(
+  /data-score-source="user"/.test(watchedIndicator)
+    && /rating\}.*\/100/s.test(watchedIndicator)
+    && /status\?: "watched" \| "finished"/.test(watchedIndicator),
+  "Green completed-media indicator identifies the user's score out of 100",
+);
+check(
+  /data-score-source="tmdb"/.test(tmdbIndicator)
+    && /out of 10/.test(tmdbIndicator)
+    && /\/10/.test(tmdbIndicator),
+  "Yellow catalogue indicator identifies the TMDB score out of 10",
+);
+check(
+  /!completed && <TmdbScoreIndicator rating=\{item\.vote_average\}/.test(mediaCard)
+    && /className="tvtime-tmdb-score[\s\S]*-right-px -top-px/.test(tmdbIndicator)
+    && /\.tvtime-tmdb-score[\s\S]*right: -1px !important/.test(globalStyles),
+  "Uncompleted media keeps the TMDB score in the opposite top corner",
+);
+check(
+  /trackingStatus === "finished"[\s\S]*<WatchedIndicator rating=\{userRating\} status="finished"/.test(tvTrackingView)
+    && /trackingStatus !== "finished"[\s\S]*<TmdbScoreIndicator rating=\{tmdbRating\}/.test(tvTrackingView),
+  "TV tracking posters separate finished user scores from unfinished TMDB scores",
 );
 
 check(/verify-required-schema\.mjs/.test(pkg.scripts?.build || ""), "Production build verifies the required database contract before Next.js build");

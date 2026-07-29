@@ -6,7 +6,6 @@ import { useMedia, useMediaUpdate, useLibraryCounts, type MediaItemDB } from "@/
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +15,7 @@ import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
+import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -313,6 +313,8 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
 
   // Determine media type explicitly from the item's type field — never guess
   const isMovie = item.type === "movie";
+  const isFinishedShow = item.type === "series" && item.status === "finished";
+  const isCompleted = (isMovie && item.watched) || isFinishedShow;
 
   // Navigate to the correct detail page based on type
   const handleOpenDetails = () => {
@@ -401,23 +403,13 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
                 {item.type === "movie" ? <Film className="w-12 h-12" /> : <Tv className="w-12 h-12" />}
               </div>
             )}
-            {item.type === "movie" && item.watched && <WatchedIndicator rating={userRating} />}
-            {/* Fix #8: Rating labels — user rating shows /100, TMDB shows /10 */}
-            {userRating != null && !(item.type === "movie" && item.watched) ? (
-              <div className="absolute top-2 right-2">
-                <Badge data-status="rated" className="bg-amber-500/90 text-black border-0 text-[10px] h-6 px-2 font-bold" title="Your Rating">
-                  <Star className="w-3 h-3 mr-1 fill-black" />
-                  {userRating}/100
-                </Badge>
-              </div>
-            ) : publicRating != null && !(item.type === "movie" && item.watched) ? (
-              <div className="absolute top-2 right-2">
-                <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0 text-[10px] h-6 px-2" title="TMDB Score">
-                  <Star className="w-3 h-3 mr-1 fill-amber-300" />
-                  {publicRating.toFixed(1)}/10
-                </Badge>
-              </div>
-            ) : null}
+            {isCompleted && (
+              <WatchedIndicator
+                rating={userRating}
+                status={isFinishedShow ? "finished" : "watched"}
+              />
+            )}
+            {!isCompleted && <TmdbScoreIndicator rating={publicRating} />}
 
           </div>
 

@@ -10,6 +10,7 @@ import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
+import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { motion } from "framer-motion";
 import { useState, useEffect, type ComponentProps } from "react";
 import { toast } from "sonner";
@@ -385,6 +386,7 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
   const title = item.title || "Untitled";
   const posterSrc = imgOrPlaceholder(item.posterPath || null, "w342");
   const isMovie = item.kind === "movie";
+  const isFinishedShow = !isMovie && item.status === "finished";
   const tmdbId = Number(item.tmdbId);
   const detailHref = item.hasProfile && Number.isFinite(tmdbId) && tmdbId > 0
     ? `/${isMovie ? "movie" : "tv"}/${tmdbId}`
@@ -419,13 +421,13 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           fetchPriority={index === 0 ? "high" : "auto"}
           className="transition-opacity duration-200 group-hover:opacity-95"
         />
-        {isMovie && <WatchedIndicator />}
-        {!isMovie && (
-          <div className="absolute top-1.5 right-1.5 rounded-full bg-emerald-500/90 backdrop-blur flex items-center gap-1 px-1.5 h-5 text-white pointer-events-none">
-            <Check className="h-3 w-3" aria-hidden="true" />
-            <span className="text-[9px] font-bold uppercase">TV</span>
-          </div>
+        {(isMovie || isFinishedShow) && (
+          <WatchedIndicator
+            rating={item.userRating}
+            status={isFinishedShow ? "finished" : "watched"}
+          />
         )}
+        {!isMovie && !isFinishedShow && <TmdbScoreIndicator rating={item.publicRating} />}
       </div>
       <p className="mt-2 line-clamp-1 text-xs font-bold">{title}</p>
       <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">

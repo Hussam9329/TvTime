@@ -2,7 +2,6 @@
 
 import { imgOrPlaceholder, getYear, getTitle, type MediaItem } from "@/lib/tmdb";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Star, Film, Tv, Check, ListPlus, Bell, MoreHorizontal, Play } from "lucide-react";
 import { useNav } from "@/lib/store";
 import { mediaStateKey, useMediaStates, useWatchlistToggle, useWatchedMovieToggle, type MediaBatchState } from "@/hooks/use-tmdb";
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
+import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { isAsianMediaItem } from "@/lib/asian-media";
 
@@ -50,6 +50,8 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   // Card badges come from the batched state endpoint for only the visible IDs.
   const inWatchlist = Boolean(libraryState?.inWatchlist);
   const watched = mediaType === "movie" ? Boolean(libraryState?.watched) : false;
+  const finished = mediaType === "tv" && libraryState?.status === "finished";
+  const completed = watched || finished;
   const isFollowing = mediaType === "tv" ? Boolean(libraryState?.isFollowing) : false;
   const userRating = libraryState?.userRating ?? null;
 
@@ -63,7 +65,6 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
     else goTv(id);
   };
 
-  const rating = item.vote_average ? Math.round(item.vote_average * 10) / 10 : 0;
   const title = getTitle(item);
   const year = getYear(item);
   const isArabic = isArabicMediaItem(item);
@@ -126,16 +127,16 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             />
             <div className="tvtime-media-poster__veil pointer-events-none absolute inset-0" aria-hidden="true" />
 
-            {watched && <WatchedIndicator rating={userRating} />}
-
-            {!watched && rating > 0 && (
-              <Badge className="tvtime-media-score absolute top-2 z-10 gap-1 rounded-full" title="TMDB Score">
-                <Star className="fill-current" aria-hidden="true" />
-                {rating.toFixed(1)}
-              </Badge>
+            {completed && (
+              <WatchedIndicator
+                rating={userRating}
+                status={finished ? "finished" : "watched"}
+              />
             )}
 
-            {(inWatchlist || isFollowing || userRating != null) && (
+            {!completed && <TmdbScoreIndicator rating={item.vote_average} />}
+
+            {(inWatchlist || isFollowing || (userRating != null && !completed)) && (
               <span className="tvtime-media-state-rail absolute bottom-2 z-10" aria-label="Library status">
                 {inWatchlist && (
                   <span data-state="watchlist" title="In watchlist">
@@ -147,7 +148,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
                     <Bell aria-hidden="true" />
                   </span>
                 )}
-                {userRating != null && (
+                {userRating != null && !completed && (
                   <span data-state="rated" title={`Your rating: ${userRating}/100`}>
                     <Star className="fill-current" aria-hidden="true" />
                   </span>

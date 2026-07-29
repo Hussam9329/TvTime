@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { SafeImage } from "@/components/media/safe-image";
+import { WatchedIndicator } from "@/components/media/watched-indicator";
+import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronRight, Grid2X2, List, CircleStop } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
@@ -287,6 +289,7 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
   const userRating = trackingStatus === "finished" && show._isEndedByTmdb === true
     ? show.userRating
     : null;
+  const tmdbRating = show.rating ? Number.parseFloat(show.rating) : null;
   const totalEps = show._airedEpisodeCount ?? show.episodes;
   const seasons = show.seasons;
   const compact = layout === "grid";
@@ -340,6 +343,12 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
           ) : (
             <div className="flex h-full w-full items-center justify-center"><Tv className="h-8 w-8 text-muted-foreground" /></div>
           )}
+          {trackingStatus === "finished" && (
+            <WatchedIndicator rating={userRating} status="finished" />
+          )}
+          {trackingStatus !== "finished" && (
+            <TmdbScoreIndicator rating={tmdbRating} />
+          )}
           </div>
 
           <div className="flex min-w-0 flex-col">
@@ -368,11 +377,11 @@ function AllShowCard({ show, onGo, layout }: { show: any; onGo: () => void; layo
             </div>
 
             {userRating != null && (
-              <div className="mt-5 flex items-center gap-3 rounded-xl border border-amber-400/10 bg-amber-400/[0.04] px-4 py-2.5">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                <span className="text-sm font-bold text-amber-300">Your rating: {userRating}/100</span>
+              <div className="mt-5 flex items-center gap-3 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] px-4 py-2.5">
+                <Star className="h-4 w-4 fill-emerald-400 text-emerald-400" />
+                <span className="text-sm font-bold text-emerald-300">Your rating: {userRating}/100</span>
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
-                  <div className="h-full rounded-full bg-amber-400" style={{ width: `${userRating}%` }} />
+                  <div className="h-full rounded-full bg-emerald-400" style={{ width: `${userRating}%` }} />
                 </div>
               </div>
             )}
