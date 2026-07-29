@@ -1,5 +1,7 @@
-import type { ReactNode } from "react";
-import { RotateCcw, SlidersHorizontal } from "lucide-react";
+"use client";
+
+import { useId, useState, type ReactNode } from "react";
+import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,7 @@ type FilterPanelProps = {
   children: ReactNode;
   className?: string;
   contentClassName?: string;
+  collapsibleOnMobile?: boolean;
 };
 
 export function FilterPanel({
@@ -27,7 +30,11 @@ export function FilterPanel({
   children,
   className,
   contentClassName,
+  collapsibleOnMobile = false,
 }: FilterPanelProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const contentId = useId();
+
   return (
     <section
       data-ui-surface="panel"
@@ -52,21 +59,46 @@ export function FilterPanel({
           )}
         </div>
 
-        {onReset && activeCount > 0 && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 shrink-0 self-start text-xs sm:self-auto"
-            onClick={onReset}
-          >
-            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-            {resetLabel}
-          </Button>
-        )}
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          {onReset && activeCount > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 min-w-0 flex-1 text-xs sm:flex-none"
+              onClick={onReset}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              {resetLabel}
+            </Button>
+          )}
+          {collapsibleOnMobile && (
+            <Button
+              type="button"
+              variant={mobileOpen ? "secondary" : "outline"}
+              size="sm"
+              className="h-9 min-w-0 flex-1 md:hidden"
+              onClick={() => setMobileOpen((open) => !open)}
+              aria-expanded={mobileOpen}
+              aria-controls={contentId}
+            >
+              {mobileOpen ? "Hide filters" : "Edit filters"}
+              <ChevronDown className={cn("h-4 w-4 transition-transform", mobileOpen && "rotate-180")} />
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className={cn("tvtime-filter-panel-content space-y-4 p-3 sm:p-4", contentClassName)}>{children}</div>
+      <div
+        id={contentId}
+        className={cn(
+          "tvtime-filter-panel-content space-y-4 p-3 sm:p-4",
+          collapsibleOnMobile && !mobileOpen && "hidden md:block",
+          contentClassName,
+        )}
+      >
+        {children}
+      </div>
     </section>
   );
 }

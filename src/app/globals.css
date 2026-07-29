@@ -2588,6 +2588,10 @@ body {
   --page-accent: var(--chart-2);
 }
 
+.tvtime-asian-tv-page {
+  --page-accent: var(--chart-3);
+}
+
 .tvtime-arabic-movies-page,
 .tvtime-arabic-tv-page {
   --page-accent: var(--chart-4);
@@ -2600,6 +2604,10 @@ body {
 
 .tvtime-stats-page {
   --page-accent: var(--chart-5);
+}
+
+.tvtime-watch-next-page {
+  --page-accent: var(--primary);
 }
 
 .tvtime-page-hero,

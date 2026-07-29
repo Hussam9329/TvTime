@@ -4,7 +4,7 @@ import { useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackin
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
-import { Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages } from "lucide-react";
+import { ArrowRight, Compass, Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
@@ -60,63 +60,94 @@ export function HomeView() {
   }, []);
 
   return (
-    <div className="tvtime-home-view space-y-6">
+    <div className="tvtime-home-view">
       {/* Hero featured */}
       {heroItem && <Hero item={heroItem} greeting={greeting} userName={userName} />}
 
-      {/* Quick stats */}
+      {/* Library overview */}
       {stats.data && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
-          <QuickStat
-            icon={<BookOpen className="w-4 h-4" />}
-            label="Movie Watchlist"
-            value={stats.data.counts.watchlistMovies ?? 0}
-            onClick={() => setView("movies")}
-          />
-          <QuickStat
-            icon={<Film className="w-4 h-4" />}
-            label="Movies Watched"
-            value={stats.data.counts.watchedMovies ?? 0}
-            onClick={() => setView("movies")}
-          />
-          <QuickStat
-            icon={<Tv className="w-4 h-4" />}
-            label="TV Shows"
-            value={tvTrackingCounts.data?.counts.all ?? "…"}
-            onClick={() => setView("tv-shows")}
-          />
-          <QuickStat
-            icon={<BookOpen className="w-4 h-4" />}
-            label="Anime Watchlist"
-            value={stats.data.counts.watchlistAnime ?? 0}
-            onClick={() => setView("anime")}
-          />
-          <QuickStat
-            icon={<Check className="w-4 h-4" />}
-            label="Anime Watched"
-            value={stats.data.counts.watchedAnime ?? 0}
-            onClick={() => setView("anime")}
-          />
-          <QuickStat
-            icon={<Languages className="w-4 h-4" />}
-            label="Arabic Movies"
-            value={(stats.data.counts.watchlistArabicMovies ?? 0) + (stats.data.counts.watchedArabicMovies ?? 0)}
-            onClick={() => setView("arabic-movies")}
-          />
-          <QuickStat
-            icon={<Languages className="w-4 h-4" />}
-            label="Arabic TV"
-            value={stats.data.counts.followingArabicShows ?? 0}
-            onClick={() => setView("arabic-tv")}
-          />
-          <QuickStat
-            icon={<Clock className="w-4 h-4" />}
-            label="Watch time"
-            value={stats.data.watchTime?.totalHours || 0}
-            suffix="h"
-            onClick={() => setView("stats")}
-          />
-        </div>
+        <section className="tvtime-library-overview" aria-labelledby="library-overview-title">
+          <div className="tvtime-library-overview__header">
+            <div className="min-w-0">
+              <p className="tvtime-eyebrow">Your library</p>
+              <h2 id="library-overview-title" className="text-xl font-extrabold tracking-tight sm:text-2xl">
+                Everything you watch, at a glance
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Jump back into a collection or review your viewing history.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="tvtime-watch-next-cta"
+              onClick={() => setView("watch-next")}
+              aria-label="Open Watch Next"
+            >
+              <span className="tvtime-watch-next-cta__icon" aria-hidden="true">
+                <Play className="fill-current" />
+              </span>
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                  Ready when you are
+                </span>
+                <span className="mt-0.5 block truncate text-sm font-extrabold">Continue watching</span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="tvtime-stat-grid">
+            <QuickStat
+              icon={<BookOpen />}
+              label="Movie Watchlist"
+              value={stats.data.counts.watchlistMovies ?? 0}
+              onClick={() => setView("movies")}
+            />
+            <QuickStat
+              icon={<Film />}
+              label="Movies Watched"
+              value={stats.data.counts.watchedMovies ?? 0}
+              onClick={() => setView("movies")}
+            />
+            <QuickStat
+              icon={<Tv />}
+              label="TV Shows"
+              value={tvTrackingCounts.data?.counts.all ?? "…"}
+              onClick={() => setView("tv-shows")}
+            />
+            <QuickStat
+              icon={<BookOpen />}
+              label="Anime Watchlist"
+              value={stats.data.counts.watchlistAnime ?? 0}
+              onClick={() => setView("anime")}
+            />
+            <QuickStat
+              icon={<Check />}
+              label="Anime Watched"
+              value={stats.data.counts.watchedAnime ?? 0}
+              onClick={() => setView("anime")}
+            />
+            <QuickStat
+              icon={<Languages />}
+              label="Arabic Movies"
+              value={(stats.data.counts.watchlistArabicMovies ?? 0) + (stats.data.counts.watchedArabicMovies ?? 0)}
+              onClick={() => setView("arabic-movies")}
+            />
+            <QuickStat
+              icon={<Languages />}
+              label="Arabic TV"
+              value={stats.data.counts.followingArabicShows ?? 0}
+              onClick={() => setView("arabic-tv")}
+            />
+            <QuickStat
+              icon={<Clock />}
+              label="Watch time"
+              value={stats.data.watchTime?.totalHours || 0}
+              suffix="h"
+              onClick={() => setView("stats")}
+            />
+          </div>
+        </section>
       )}
 
       {/* Recently watched movies and shows */}
@@ -188,18 +219,18 @@ function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactN
   return (
     <button
       type="button"
-      data-ui-action="surface"
       onClick={onClick}
-      className="glass group rounded-xl p-3 text-left transition-[border-color,box-shadow,transform] hover:border-primary/40 sm:p-4"
+      className="tvtime-quick-stat group"
       aria-label={`${label}: ${value}${suffix ?? ""}`}
     >
-      <span className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="text-primary" aria-hidden="true">{icon}</span>
-        {label}
+      <span className="tvtime-quick-stat__icon" aria-hidden="true">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="tvtime-quick-stat__label">{label}</span>
+        <strong className="tvtime-quick-stat__value tabular-nums">
+          {value}{suffix && <span>{suffix}</span>}
+        </strong>
       </span>
-      <span className="inline-block text-2xl font-extrabold text-gradient sm:text-3xl">
-        {value}{suffix && <span className="text-sm font-normal text-muted-foreground">{suffix}</span>}
-      </span>
+      <ArrowRight className="tvtime-quick-stat__arrow" aria-hidden="true" />
     </button>
   );
 }
@@ -209,65 +240,78 @@ function Hero({ item, greeting, userName }: { item: any; greeting: string; userN
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
   const mediaType = item.media_type === "tv" || !item.title ? "tv" : "movie";
+  const title = getTitle(item);
+
   return (
     <motion.section
       data-ui-surface="hero"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="relative mb-2 overflow-hidden rounded-3xl border border-border/70 shadow-[0_18px_60px_rgba(0,0,0,0.3)]"
-      aria-label={`Featured ${mediaType === "movie" ? "movie" : "TV show"}: ${getTitle(item)}`}
+      className="tvtime-home-hero relative overflow-hidden"
+      aria-label={`Featured ${mediaType === "movie" ? "movie" : "TV show"}: ${title}`}
     >
-      <div className="relative aspect-[16/10] w-full sm:aspect-[21/9]">
+      <div className="tvtime-home-hero__backdrop absolute inset-0">
         <SafeImage
           src={img(item.backdrop_path, "w1280")}
-          alt={getTitle(item)}
+          alt=""
           fill
           variant="backdrop"
           priority
-          className="absolute inset-0"
+          className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/25" aria-hidden="true" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/35 to-transparent" aria-hidden="true" />
+      </div>
+      <div className="tvtime-home-hero__scrim absolute inset-0 bg-gradient-to-r from-black/85" aria-hidden="true" />
+      <div className="tvtime-home-hero__glow absolute inset-0" aria-hidden="true" />
 
-        <div className="absolute left-5 top-6 z-10 sm:left-10 sm:top-9 lg:left-12">
-          <p className="text-2xl font-black tracking-tight text-white drop-shadow-lg sm:text-3xl lg:text-4xl">
-            {greeting}, <span className="text-white">{userName}</span> <span aria-hidden="true">👋</span>
+      <div className="tvtime-home-hero__content relative z-10 grid min-h-[clamp(27rem,48vw,35rem)] items-end gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_clamp(10rem,18vw,14rem)] lg:p-12">
+        <div className="min-w-0 self-end">
+          <p className="tvtime-home-hero__greeting">
+            <span className="tvtime-live-dot" aria-hidden="true" />
+            {greeting}, {userName}
           </p>
-          <span className="mt-4 block h-1 w-14 rounded-full bg-gradient-to-r from-primary to-transparent" aria-hidden="true" />
+
+          <div className="tvtime-home-hero__meta">
+            <span className="tvtime-home-hero__featured">
+              <Flame aria-hidden="true" />
+              Featured
+            </span>
+            <span>{mediaType === "movie" ? "Movie" : "TV Show"}</span>
+            {getYear(item) && <span>{getYear(item)}</span>}
+            {item.vote_average > 0 && (
+              <span className="tvtime-home-hero__rating inline-flex items-center gap-1">
+                <Star className="fill-current" aria-hidden="true" />
+                {item.vote_average.toFixed(1)}
+              </span>
+            )}
+          </div>
+
+          <h1 className="tvtime-home-hero__title">{title}</h1>
+          <p className="tvtime-home-hero__overview line-clamp-3 text-white/85">{item.overview}</p>
+
+          <div className="tvtime-home-hero__actions">
+            <Button size="lg" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
+              <Play className="fill-current" aria-hidden="true" />
+              View details
+            </Button>
+            <Button size="lg" variant="secondary" onClick={() => setView("discover")}>
+              <Compass className="h-4 w-4" aria-hidden="true" />
+              Explore more
+            </Button>
+          </div>
         </div>
 
-        <div className="absolute inset-0 flex items-end p-4 pt-28 sm:p-8 sm:pt-32 lg:p-12 lg:pt-36">
-          <div className="max-w-2xl">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/85 px-2 py-1 text-xs font-bold uppercase tracking-wide text-primary-foreground backdrop-blur">
-                <Flame className="h-3 w-3" aria-hidden="true" /> Featured
-              </span>
-              <span className="text-xs uppercase tracking-wider text-white/75">
-                {mediaType === "movie" ? "Movie" : "TV Show"}
-              </span>
-              {getYear(item) && <span className="text-xs text-white/75">{getYear(item)}</span>}
-              {item.vote_average > 0 && (
-                <span className="flex items-center gap-1 text-xs text-amber-400">
-                  <Star className="h-3 w-3 fill-amber-400" aria-hidden="true" /> {item.vote_average.toFixed(1)}
-                </span>
-              )}
-            </div>
-            <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-white drop-shadow-lg sm:mb-4 sm:text-4xl lg:text-5xl">
-              {getTitle(item)}
-            </h1>
-            <p className="mb-4 max-w-xl line-clamp-2 text-sm text-white/85 sm:line-clamp-3 sm:text-base">
-              {item.overview}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
-                <Play className="mr-1.5 h-4 w-4 fill-current" aria-hidden="true" /> View Details
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => setView("discover")}>
-                <Clock className="mr-1.5 h-4 w-4" aria-hidden="true" /> Browse More
-              </Button>
-            </div>
+        <div className="tvtime-home-hero__poster hidden w-full lg:block" aria-hidden="true">
+          <div className="relative aspect-[2/3] overflow-hidden rounded-[1.25rem]">
+            <SafeImage
+              src={imgOrPlaceholder(item.poster_path, "w500")}
+              alt=""
+              fill
+              variant="poster"
+              priority
+            />
           </div>
+          <span>Tonight&apos;s spotlight</span>
         </div>
       </div>
     </motion.section>
@@ -292,16 +336,18 @@ function RecentlyWatched() {
 
   if (recently.isLoading) {
     return (
-      <section className="mb-8" role="status" aria-busy="true" aria-label="Loading recently watched titles">
+      <section className="tvtime-media-row" role="status" aria-busy="true" aria-label="Loading recently watched titles">
         <span className="sr-only">Loading recently watched titles…</span>
-        <div className="mb-3 flex items-center gap-2 px-1" aria-hidden="true">
-          <Clock className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-bold tracking-tight sm:text-xl">Recently Watched</h2>
+        <div className="tvtime-section-heading" aria-hidden="true">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="tvtime-section-heading__icon"><Clock /></span>
+            <h2 className="text-lg font-extrabold tracking-tight sm:text-xl">Recently Watched</h2>
+          </div>
         </div>
-        <div className="no-scrollbar flex gap-3 overflow-x-auto pb-2" aria-hidden="true">
+        <div className="tvtime-recent-scroller no-scrollbar flex overflow-x-auto" aria-hidden="true">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="w-[110px] flex-shrink-0 sm:w-[130px]">
-              <div className="aspect-[2/3] rounded-lg shimmer" />
+            <div key={index} className="tvtime-recent-card flex-shrink-0">
+              <div className="aspect-[2/3] rounded-2xl shimmer" />
               <div className="mt-2 h-3 rounded shimmer" />
             </div>
           ))}
@@ -313,13 +359,20 @@ function RecentlyWatched() {
   if (items.length === 0) return null;
 
   return (
-    <section className="mb-8">
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <Clock className="w-5 h-5 text-primary" />
-        <h2 className="text-lg sm:text-xl font-bold tracking-tight">Recently Watched</h2>
-        <span className="text-xs text-muted-foreground ml-1">({recently.data?.total ?? items.length})</span>
+    <section className="tvtime-media-row">
+      <div className="tvtime-section-heading">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="tvtime-section-heading__icon" aria-hidden="true"><Clock /></span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-lg font-extrabold tracking-tight sm:text-xl">Recently Watched</h2>
+              <span className="tvtime-section-heading__count tabular-nums">{recently.data?.total ?? items.length}</span>
+            </div>
+            <p className="tvtime-section-heading__hint">Your latest viewing activity</p>
+          </div>
+        </div>
       </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+      <div className="tvtime-recent-scroller no-scrollbar flex overflow-x-auto">
         {items.map((item, index) => (
           <RecentlyWatchedCard key={`${item.kind}-${item.tmdbId ?? item.id}-${item.watchedAt}`} item={item} index={index} onGo={() => handleGo(item)} />
         ))}
@@ -340,14 +393,14 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
   return (
     <div
       aria-disabled={!item.hasProfile}
-      className="flex-shrink-0 w-[110px] sm:w-[130px] group cursor-pointer relative text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+      className="tvtime-recent-card group relative flex-shrink-0 cursor-pointer text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
       title={title}
     >
       {detailHref && (
         <a
           href={detailHref}
           aria-label={`Open ${title}`}
-          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           onClick={(event) => {
             if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
             event.preventDefault();
@@ -355,7 +408,7 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           }}
         />
       )}
-      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted border border-border/50 group-hover:border-primary/60 transition-colors">
+      <div className="tvtime-recent-poster relative aspect-[2/3] overflow-hidden bg-muted transition-[border-color,box-shadow,transform]">
         <SafeImage
           src={posterSrc}
           alt={title}
@@ -374,8 +427,8 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           </div>
         )}
       </div>
-      <p className="mt-1.5 text-xs font-medium line-clamp-1">{title}</p>
-      <p className="text-[10px] text-muted-foreground line-clamp-1">
+      <p className="mt-2 line-clamp-1 text-xs font-bold">{title}</p>
+      <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
         {item.subtitle ? `${item.subtitle} • ` : ""}{item.watchedAt ? new Date(item.watchedAt).toLocaleDateString() : "—"}
       </p>
     </div>

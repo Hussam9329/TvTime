@@ -59,16 +59,24 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Sentry wrapper. When no SENTRY_DSN is configured, withSentryConfig is
-// a no-op — it doesn't add any runtime overhead or break the build.
-export default withSentryConfig(nextConfig, {
-  // Only relevant when SENTRY_AUTH_TOKEN is set — enables source map
-  // uploads so stack traces point to the original TypeScript source.
-  // Without the token, this is silently skipped.
-  silent: true,
-  // Tell Sentry which release this is. We use the Vercel commit SHA
-  // when available, falling back to a timestamp.
-  release: {
-    name: process.env.VERCEL_GIT_COMMIT_SHA || `tvtime-${Date.now()}`,
-  },
-});
+const sentryConfigured = Boolean(
+  process.env.SENTRY_AUTH_TOKEN
+  || process.env.SENTRY_DSN
+  || process.env.NEXT_PUBLIC_SENTRY_DSN,
+);
+
+// Do not initialize the build plugin unless Sentry is intentionally
+// configured. This keeps local/CI builds offline and prevents the wrapper's
+// own telemetry from running in projects that use Sentry as an optional add-on.
+export default sentryConfigured
+  ? withSentryConfig(nextConfig, {
+      // Only relevant when SENTRY_AUTH_TOKEN is set — enables source map
+      // uploads so stack traces point to the original TypeScript source.
+      silent: true,
+      // Tell Sentry which release this is. We use the Vercel commit SHA
+      // when available, falling back to a timestamp.
+      release: {
+        name: process.env.VERCEL_GIT_COMMIT_SHA || `tvtime-${Date.now()}`,
+      },
+    })
+  : nextConfig;

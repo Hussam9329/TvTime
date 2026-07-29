@@ -8,12 +8,14 @@ import {
   BarChart3,
   Bell,
   Clapperboard,
+  Compass,
   Globe2,
   Film,
   Home,
   Keyboard,
   Menu,
   Moon,
+  MoreHorizontal,
   Play,
   Search,
   Sparkles,
@@ -29,6 +31,14 @@ import { TVTIME_SEARCH_CLOSE_EVENT, TVTIME_SEARCH_FOCUS_EVENT } from "@/lib/sear
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -55,13 +65,17 @@ const NotificationCenter = dynamic(
 
 type NavItem = { view: ViewName; icon: React.ElementType };
 
-const coreNavItems: NavItem[] = [
+const primaryNavItems: NavItem[] = [
   { view: "home", icon: Home },
   { view: "watch-next", icon: Play },
   { view: "movies", icon: Film },
   { view: "tv-shows", icon: Clapperboard },
-  { view: "asian-tv", icon: Globe2 },
   { view: "anime", icon: Sparkles },
+];
+
+const exploreNavItems: NavItem[] = [
+  { view: "discover", icon: Compass },
+  { view: "asian-tv", icon: Globe2 },
   { view: "stats", icon: BarChart3 },
 ];
 
@@ -69,6 +83,9 @@ const arabicNavItems: NavItem[] = [
   { view: "arabic-movies", icon: Film },
   { view: "arabic-tv", icon: Clapperboard },
 ];
+
+const mobileDockItems = primaryNavItems.slice(0, 4);
+const overflowNavItems = [...exploreNavItems, ...arabicNavItems];
 
 const NOTIFICATION_QUERY_KEY = ["notifications", "unread-count", getClientUserId()] as const;
 
@@ -173,6 +190,7 @@ export function Header() {
     return (
       <button
         data-ui-action="nav"
+        data-active={active ? "true" : "false"}
         key={item.view}
         type="button"
         onClick={() => goTo(item.view)}
@@ -183,197 +201,346 @@ export function Header() {
           "group relative inline-flex items-center rounded-xl font-semibold transition-[color,background-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
           compact ? "w-full gap-3 px-3 py-2.5 text-sm" : "tvtime-primary-nav-item gap-2 px-3 py-2 text-[13px]",
           active
-            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+            ? "text-foreground"
             : "text-foreground/65 hover:bg-accent/80 hover:text-foreground",
         )}
       >
         <item.icon className={cn("shrink-0 transition-colors", compact ? "h-4.5 w-4.5" : "h-4 w-4")} />
         <span>{label}</span>
-        {!compact && active && <span className="absolute -bottom-[9px] left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-primary" />}
+        {!compact && active && <span className="tvtime-nav-active-indicator" aria-hidden="true" />}
       </button>
     );
   };
 
+  const overflowActive = overflowNavItems.some((item) => item.view === view);
+
   return (
-    <header
-      className="tvtime-app-header sticky top-0 z-40 border-b border-border/70 bg-background/90 shadow-[0_8px_32px_rgba(0,0,0,0.16)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/80"
-      data-mobile-search-open={mobileSearchOpen ? "true" : "false"}
-    >
-      <div className="mx-auto flex h-16 max-w-[1920px] items-center gap-2 px-3 sm:h-20 sm:px-5 lg:px-8">
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
+    <>
+      <header
+        className="tvtime-app-header sticky top-0 z-40"
+        data-mobile-search-open={mobileSearchOpen ? "true" : "false"}
+      >
+        <div className="tvtime-header-inner mx-auto flex h-16 max-w-[1920px] items-center gap-1.5 px-2.5 sm:h-[4.5rem] sm:gap-2 sm:px-4 lg:px-5">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="tvtime-header-icon xl:hidden"
+                aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+                aria-expanded={mobileOpen}
+              >
+                {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              className="tvtime-navigation-sheet w-[min(90vw,360px)] border-r-border/70 p-0"
+            >
+              <SheetHeader className="border-b border-border/60 p-5 text-left">
+                <SheetTitle className="flex items-center gap-3">
+                  <BrandMark />
+                  <span className="min-w-0">
+                    <span className="block text-lg font-black tracking-tight">{APP_NAME}</span>
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Your watch universe
+                    </span>
+                  </span>
+                </SheetTitle>
+              </SheetHeader>
+              <nav
+                className="flex max-h-[calc(100dvh-88px)] flex-col gap-5 overflow-y-auto p-4"
+                aria-label="Navigation menu"
+              >
+                <NavGroup label="Library">
+                  {primaryNavItems.map((item) => navButton(item, true))}
+                </NavGroup>
+                <NavGroup label="Explore">
+                  {exploreNavItems.map((item) => navButton(item, true))}
+                </NavGroup>
+                <NavGroup label="Arabic World">
+                  {arabicNavItems.map((item) => navButton(item, true))}
+                </NavGroup>
+              </nav>
+            </SheetContent>
+          </Sheet>
+
+          {isDetailView && historyLength > 0 && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 rounded-xl xl:hidden"
-              aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
-              aria-expanded={mobileOpen}
+              onClick={back}
+              className="tvtime-header-icon"
+              aria-label="Go back"
             >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[min(88vw,340px)] border-r-border/70 p-0">
-            <SheetHeader className="border-b border-border/60 p-5 text-left">
-              <SheetTitle className="flex items-center gap-3">
-                <BrandMark />
-                <span>
-                  <span className="block text-lg font-black tracking-tight">{APP_NAME}</span>
-                  <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Your watch universe</span>
-                </span>
-              </SheetTitle>
-            </SheetHeader>
-            <nav className="flex max-h-[calc(100dvh-88px)] flex-col gap-5 overflow-y-auto p-4" aria-label="Mobile navigation">
-              <NavGroup label="Explore">{coreNavItems.map((item) => navButton(item, true))}</NavGroup>
-              <NavGroup label="Arabic World">{arabicNavItems.map((item) => navButton(item, true))}</NavGroup>
-            </nav>
-          </SheetContent>
-        </Sheet>
+          )}
 
-        {isDetailView && historyLength > 0 && (
-          <Button variant="ghost" size="icon" onClick={back} className="h-10 w-10 rounded-xl" aria-label="Go back">
-            <ArrowLeft className="h-5 w-5" />
+          <button
+            data-ui-action="brand"
+            type="button"
+            onClick={() => goTo("home")}
+            onPointerEnter={() => prefetchViewModule("home")}
+            className="group flex shrink-0 items-center gap-2 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            aria-label={`${APP_NAME} home`}
+          >
+            <BrandMark />
+            <span className="tvtime-brand-copy hidden text-left sm:block">
+              <span className="block text-lg font-black leading-none tracking-[-0.04em]">
+                Tv<span className="text-primary">Time</span>
+              </span>
+              <span className="tvtime-brand-tagline mt-0.5 hidden text-[9px] font-semibold uppercase tracking-[0.17em] text-muted-foreground 2xl:block">
+                Your watch universe
+              </span>
+            </span>
+          </button>
+
+          <nav className="tvtime-primary-nav ml-1 hidden xl:flex items-center gap-1" aria-label="Primary navigation">
+            {primaryNavItems.map((item) => navButton(item))}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-ui-action="nav-more"
+                  data-active={overflowActive ? "true" : "false"}
+                  className={cn(
+                    "tvtime-primary-nav-item relative gap-1.5 px-2.5 text-[13px] text-foreground/65",
+                    overflowActive && "text-foreground",
+                  )}
+                  aria-label="More destinations"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                  More
+                  {overflowActive && <span className="tvtime-nav-active-indicator" aria-hidden="true" />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Explore</DropdownMenuLabel>
+                {exploreNavItems.map((item) => (
+                  <DropdownMenuItem
+                    key={item.view}
+                    onSelect={() => goTo(item.view)}
+                    onFocus={() => prefetchViewModule(item.view)}
+                  >
+                    <item.icon />
+                    {getViewLabel(item.view)}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Arabic World</DropdownMenuLabel>
+                {arabicNavItems.map((item) => (
+                  <DropdownMenuItem
+                    key={item.view}
+                    onSelect={() => goTo(item.view)}
+                    onFocus={() => prefetchViewModule(item.view)}
+                  >
+                    <item.icon />
+                    {getViewLabel(item.view)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </nav>
+
+          <form
+            onSubmit={onSubmitSearch}
+            className="tvtime-header-search ml-auto hidden min-w-0 max-w-[320px] flex-1 md:block 2xl:max-w-sm"
+          >
+            <div className="group relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
+              <Input
+                ref={desktopSearchInputRef}
+                value={searchVal}
+                onChange={(event) => setSearchVal(event.target.value)}
+                onFocus={() => prefetchViewModule("search")}
+                placeholder="Search titles, people..."
+                aria-label="Search movies, shows, anime and people"
+                className="tvtime-command-search h-10 rounded-xl pl-10 pr-10"
+              />
+              {searchVal ? (
+                <button
+                  data-ui-action="icon"
+                  type="button"
+                  onClick={() => setSearchVal("")}
+                  className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              ) : (
+                <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-border/70 bg-background/70 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                  /
+                </kbd>
+              )}
+            </div>
+          </form>
+
+          <span className="hidden max-w-24 truncate text-xs font-semibold text-muted-foreground sm:block md:hidden">
+            {currentLabel}
+          </span>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              const nextOpen = !mobileSearchOpen;
+              setMobileSearchOpen(nextOpen);
+              if (nextOpen) {
+                prefetchViewModule("search");
+                window.requestAnimationFrame(() => mobileSearchInputRef.current?.focus());
+              }
+            }}
+            className="tvtime-header-icon md:hidden"
+            aria-label={mobileSearchOpen ? "Close search" : "Open search"}
+            aria-expanded={mobileSearchOpen}
+            aria-controls="tvtime-mobile-search"
+          >
+            {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
           </Button>
-        )}
 
-        <button
-          data-ui-action="brand"
-          type="button"
-          onClick={() => goTo("home")}
-          onPointerEnter={() => prefetchViewModule("home")}
-          className="group flex shrink-0 items-center gap-2 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-          aria-label={`${APP_NAME} home`}
-        >
-          <BrandMark />
-          <span className="tvtime-brand-copy hidden sm:block">
-            <span className="block text-lg font-black leading-none tracking-[-0.04em]">Tv<span className="text-primary">Time</span></span>
-          </span>
-        </button>
+          <TooltipProvider delayDuration={250}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setNotifOpen(true)}
+                  aria-label={notifUnread > 0 ? `Notifications, ${notifUnread} unread` : "Notifications"}
+                  className="tvtime-header-icon relative"
+                >
+                  <Bell className="h-5 w-5" />
+                  {notifUnread > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-black leading-none text-primary-foreground ring-2 ring-background"
+                    >
+                      {notifUnread > 9 ? "9+" : notifUnread}
+                    </span>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Notifications</TooltipContent>
+            </Tooltip>
 
-        <nav className="tvtime-primary-nav ml-2 hidden xl:flex items-center gap-1" aria-label="Primary navigation">
-          {coreNavItems.map((item) => navButton(item))}
-          {arabicNavItems.map((item) => navButton(item))}
-        </nav>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                  aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                  className="tvtime-header-icon hidden sm:inline-flex"
+                >
+                  {mounted && resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{resolvedTheme === "dark" ? "Light mode" : "Dark mode"}</TooltipContent>
+            </Tooltip>
 
-        <form onSubmit={onSubmitSearch} className="tvtime-header-search ml-auto hidden min-w-0 max-w-[300px] flex-1 md:block 2xl:max-w-sm">
-          <div className="group relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
-            <Input
-              ref={desktopSearchInputRef}
-              value={searchVal}
-              onChange={(event) => setSearchVal(event.target.value)}
-              onFocus={() => prefetchViewModule("search")}
-              placeholder="Search titles, people..."
-              aria-label="Search movies, shows, anime and people"
-              className="h-11 rounded-2xl border-border/70 bg-muted/45 pl-10 pr-10 shadow-inner shadow-black/5 transition-[background-color,border-color,box-shadow] duration-200 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/35"
-            />
-            {searchVal ? (
-              <button data-ui-action="icon" type="button" onClick={() => setSearchVal("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Clear search">
-                <X className="h-3.5 w-3.5" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setHelpOpen(true)}
+                  aria-label="Keyboard shortcuts"
+                  className="tvtime-header-icon hidden 2xl:inline-flex"
+                >
+                  <Keyboard className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Keyboard shortcuts</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <button
+            data-ui-action="profile"
+            type="button"
+            onClick={() => setProfileOpen(true)}
+            className="tvtime-profile-trigger flex shrink-0 items-center gap-2 rounded-xl p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            aria-label={`Open ${userName} profile`}
+          >
+            <Avatar className="h-9 w-9 border border-primary/35 shadow-sm shadow-primary/15">
+              <AvatarFallback className="bg-gradient-to-br from-primary/25 to-secondary text-xs font-black text-primary">
+                {userName.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="hidden max-w-24 pr-1 text-left 2xl:block">
+              <span className="block truncate text-xs font-bold">{userName}</span>
+              <span className="block text-[9px] text-muted-foreground">View profile</span>
+            </span>
+          </button>
+        </div>
+
+        {mobileSearchOpen && (
+          <form
+            id="tvtime-mobile-search"
+            onSubmit={onSubmitSearch}
+            className="tvtime-mobile-search-panel mx-auto max-w-[1920px] px-3 py-2 md:hidden"
+          >
+            <div className="relative mx-auto max-w-xl">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+              <Input
+                ref={mobileSearchInputRef}
+                value={searchVal}
+                onChange={(event) => setSearchVal(event.target.value)}
+                placeholder="Search movies, shows, anime and people..."
+                aria-label="Search movies, shows, anime and people"
+                className="h-11 rounded-xl bg-muted/50 pl-9 pr-10"
+              />
+              <button
+                data-ui-action="icon"
+                type="button"
+                onClick={() => {
+                  setSearchVal("");
+                  setMobileSearchOpen(false);
+                }}
+                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
+                aria-label="Close search"
+              >
+                <X className="h-4 w-4" />
               </button>
-            ) : (
-              <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-border/70 bg-background/70 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">/</kbd>
-            )}
-          </div>
-        </form>
+            </div>
+          </form>
+        )}
+      </header>
 
-        <span className="hidden max-w-28 truncate text-xs font-semibold text-muted-foreground sm:block md:hidden">{currentLabel}</span>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            const nextOpen = !mobileSearchOpen;
-            setMobileSearchOpen(nextOpen);
-            if (nextOpen) {
-              prefetchViewModule("search");
-              window.requestAnimationFrame(() => mobileSearchInputRef.current?.focus());
-            }
-          }}
-          className="h-10 w-10 rounded-xl md:hidden"
-          aria-label={mobileSearchOpen ? "Close search" : "Open search"}
-          aria-expanded={mobileSearchOpen}
-          aria-controls="tvtime-mobile-search"
-        >
-          {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-        </Button>
-
-        <TooltipProvider delayDuration={250}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setNotifOpen(true)}
-                aria-label={notifUnread > 0 ? `Notifications, ${notifUnread} unread` : "Notifications"}
-                className="relative h-10 w-10 rounded-xl"
+      <nav className="tvtime-mobile-dock md:hidden" aria-label="Quick navigation">
+        <div className="tvtime-mobile-dock__surface">
+          {mobileDockItems.map((item) => {
+            const active = item.view === view;
+            return (
+              <button
+                key={item.view}
+                type="button"
+                className={cn("tvtime-mobile-dock__item", active && "is-active")}
+                onClick={() => goTo(item.view)}
+                onPointerEnter={() => prefetchViewModule(item.view)}
+                aria-current={active ? "page" : undefined}
               >
-                <Bell className="h-5 w-5" />
-                {notifUnread > 0 && (
-                  <span aria-hidden="true" className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-black leading-none text-primary-foreground ring-2 ring-background">
-                    {notifUnread > 9 ? "9+" : notifUnread}
-                  </span>
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Notifications</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                className="hidden h-10 w-10 rounded-xl sm:inline-flex"
-              >
-                {mounted && resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">{resolvedTheme === "dark" ? "Light mode" : "Dark mode"}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => setHelpOpen(true)} aria-label="Keyboard shortcuts" className="hidden h-10 w-10 rounded-xl 2xl:inline-flex">
-                <Keyboard className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Keyboard shortcuts</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <button data-ui-action="profile" type="button" onClick={() => setProfileOpen(true)} className="flex shrink-0 items-center gap-2 rounded-xl p-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70" aria-label={`Open ${userName} profile`}>
-          <Avatar className="h-9 w-9 border border-primary/40 shadow-sm shadow-primary/15">
-            <AvatarFallback className="bg-gradient-to-br from-primary/25 to-secondary text-xs font-black text-primary">
-              {userName.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <span className="hidden max-w-24 pr-1 text-left 2xl:block">
-            <span className="block truncate text-xs font-bold">{userName}</span>
-            <span className="block text-[9px] text-muted-foreground">View profile</span>
-          </span>
-        </button>
-      </div>
-
-      {mobileSearchOpen && (
-        <form id="tvtime-mobile-search" onSubmit={onSubmitSearch} className="border-t border-border/50 px-3 py-2 md:hidden">
-          <div className="relative mx-auto max-w-xl">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-            <Input
-              ref={mobileSearchInputRef}
-              value={searchVal}
-              onChange={(event) => setSearchVal(event.target.value)}
-              placeholder="Search movies, shows, anime and people..."
-              aria-label="Search movies, shows, anime and people"
-              className="h-11 rounded-xl bg-muted/50 pl-9 pr-10"
-            />
-            <button data-ui-action="icon" type="button" onClick={() => { setSearchVal(""); setMobileSearchOpen(false); }} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent" aria-label="Close search">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </form>
-      )}
+                <span className="tvtime-mobile-dock__icon" aria-hidden="true">
+                  <item.icon />
+                </span>
+                <span className="tvtime-mobile-dock__label">{getViewLabel(item.view)}</span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            className={cn("tvtime-mobile-dock__item", overflowActive && "is-active")}
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open all navigation"
+            aria-expanded={mobileOpen}
+          >
+            <span className="tvtime-mobile-dock__icon" aria-hidden="true">
+              <Menu />
+            </span>
+            <span className="tvtime-mobile-dock__label">More</span>
+          </button>
+        </div>
+      </nav>
 
       {profileOpen && <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />}
       {helpOpen && <ShortcutsHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />}
@@ -383,13 +550,13 @@ export function Header() {
           onUnreadCountChange={syncUnreadCount}
         />
       )}
-    </header>
+    </>
   );
 }
 
 function BrandMark() {
   return (
-    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary via-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/25 transition-[box-shadow,filter] duration-200 group-hover:brightness-105 sm:h-11 sm:w-11">
+    <span className="tvtime-brand-mark relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-primary-foreground transition-[box-shadow,filter] duration-200 group-hover:brightness-105 sm:h-10 sm:w-10">
       <Play className="h-4 w-4 translate-x-px fill-current" />
       <span className="absolute inset-x-1.5 top-1 h-px bg-white/45" />
     </span>

@@ -5,6 +5,7 @@ import { Play, Clock3, Flame, CheckCircle2, Tv, Sparkles, Languages, CalendarDay
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { SafeImage } from "@/components/media/safe-image";
 import { useNav } from "@/lib/store";
 import { userHeaders, withUserId } from "@/lib/client-user";
@@ -31,8 +32,8 @@ export function WatchNextView() {
   const active = items.filter((item) => daysSince(item.lastActivity) < 30);
   const paused = items.filter((item) => daysSince(item.lastActivity) >= 30);
 
-  return <div className="space-y-7">
-    <section className="relative overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/20 via-background to-fuchsia-500/10 p-6 sm:p-9">
+  return <div className="tvtime-watch-next-page space-y-7">
+    <section data-ui-surface="hero" className="tvtime-page-hero relative overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/20 via-background to-fuchsia-500/10 p-6 sm:p-9">
       <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
       <div className="relative flex items-end justify-between gap-5 flex-wrap">
         <div><Badge className="mb-3 border-0 bg-primary/20 text-primary"><Flame className="mr-1 h-3.5 w-3.5" /> Personal queue</Badge><h1 className="text-3xl sm:text-5xl font-black tracking-tight">Watch Next</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">The exact next released episode for every show you follow—ordered by your latest activity.</p></div>
@@ -40,7 +41,15 @@ export function WatchNextView() {
       </div>
     </section>
 
-    {query.isLoading ? <WatchNextSkeleton /> : query.isError ? <Card className="p-10 text-center text-muted-foreground">Could not load your queue. Your progress is safe.</Card> :
+    {query.isLoading ? <WatchNextSkeleton /> : query.isError ? (
+      <EmptyState
+        className="feedback-state--error"
+        icon={<Clock3 className="h-9 w-9" />}
+        title="Your queue couldn't be loaded"
+        description="Your progress is safe. Check your connection and try loading Watch Next again."
+        action={<Button variant="outline" size="sm" onClick={() => void query.refetch()}>Try again</Button>}
+      />
+    ) :
       <Tabs defaultValue="ready" className="space-y-5">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="ready"><Play className="mr-2 h-4 w-4" />Ready to Watch ({items.length})</TabsTrigger>
@@ -54,7 +63,13 @@ export function WatchNextView() {
         </TabsContent>
         <TabsContent value="upcoming">
           {upcoming.length === 0
-            ? <Card className="p-12 text-center"><CalendarDays className="mx-auto mb-3 h-12 w-12 text-muted-foreground" /><h2 className="text-xl font-bold">No announced episodes</h2><p className="mt-1 text-sm text-muted-foreground">Upcoming dates for followed shows will appear here.</p></Card>
+            ? (
+              <EmptyState
+                icon={<CalendarDays className="h-9 w-9" />}
+                title="No announced episodes"
+                description="Upcoming dates for followed shows will appear here as soon as they are announced."
+              />
+            )
             : <UpcomingSection items={upcoming} onOpen={goTv} />}
         </TabsContent>
       </Tabs>}
@@ -62,7 +77,13 @@ export function WatchNextView() {
 }
 
 function EmptyReady() {
-  return <Card className="p-12 text-center"><CheckCircle2 className="mx-auto mb-3 h-12 w-12 text-emerald-400" /><h2 className="text-xl font-bold">You’re all caught up</h2><p className="mt-1 text-sm text-muted-foreground">New released episodes will appear here automatically.</p></Card>;
+  return (
+    <EmptyState
+      icon={<CheckCircle2 className="h-9 w-9 text-emerald-400" />}
+      title="You’re all caught up"
+      description="New released episodes will appear here automatically."
+    />
+  );
 }
 
 function UpcomingSection({ items, onOpen }: { items: UpcomingItem[]; onOpen: (id: number) => void }) {

@@ -49,21 +49,35 @@ export function SearchView() {
   const animeCount = allResults.filter((result) => result.media_type === "tv" && isAnimeMediaItem(result)).length;
   const asianTvCount = allResults.filter((result) => result.media_type === "tv" && !isAnimeMediaItem(result) && !isArabicMediaItem(result) && isAsianMediaItem(result)).length;
   const people = search.people;
+  const filterLabel = {
+    all: "all results",
+    movie: "movies",
+    tv: "TV shows",
+    anime: "anime",
+    "asian-tv": "Asian TV",
+    "arabic-movies": "Arabic movies",
+    "arabic-tv": "Arabic TV",
+    people: "people",
+  }[filter];
 
   return (
     <div className="tvtime-search-view space-y-5">
-      <div className="view-page-header">
-        <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Search</h1>
-        <p className="view-page-description text-sm text-muted-foreground">Find movies, TV shows, anime, Arabic titles and people from the TMDB database</p>
+      <div className="view-page-header flex items-start gap-3">
+        <SearchIcon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+        <div className="min-w-0">
+          <p className="tvtime-eyebrow">Universal search</p>
+          <h1 className="view-page-title mb-1 text-2xl font-extrabold tracking-tight sm:text-3xl">Search</h1>
+          <p className="view-page-description text-sm text-muted-foreground">Find movies, TV shows, anime, Arabic titles and people from the TMDB database.</p>
+        </div>
       </div>
 
-      <div className="relative">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      <div className="relative max-w-4xl">
+        <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={local}
           onChange={(e) => setLocal(e.target.value)}
           placeholder="Type a title or person's name..."
-          className="pl-9 pr-10 h-11 text-base"
+          className="h-12 rounded-xl pl-10 pr-10 text-base"
           autoFocus
         />
         {local && (
@@ -78,10 +92,11 @@ export function SearchView() {
       </div>
 
       {!searchQuery && (
-        <div className="text-center py-16 text-muted-foreground">
-          <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>Start typing to search across millions of titles and people</p>
-        </div>
+        <EmptyState
+          icon={<SearchIcon className="h-9 w-9" />}
+          title="What do you want to watch?"
+          description="Search by title or person, then narrow the results by media world."
+        />
       )}
 
       {searchQuery && (
@@ -120,10 +135,12 @@ export function SearchView() {
 
           {/* TVM-30: Error state */}
           {search.isError && (
-            <div className="text-center py-16">
-              <AlertCircle className="w-12 h-12 mx-auto mb-3 text-rose-400" />
-              <p className="font-medium text-foreground text-lg">Search failed</p>
-              <p className="text-sm text-muted-foreground mt-1">Could not reach TMDB. Please try again.</p>
+            <div className="feedback-state feedback-state--error flex flex-col items-center justify-center px-4 py-14 text-center" role="alert">
+              <div className="feedback-state__icon mb-4 flex size-20 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+                <AlertCircle className="h-9 w-9" aria-hidden="true" />
+              </div>
+              <h2 className="feedback-state__title text-lg font-bold">Search is temporarily unavailable</h2>
+              <p className="feedback-state__description mt-1 max-w-md text-sm text-muted-foreground">TMDB did not respond. Your library is safe; check your connection and try again.</p>
               <Button variant="outline" className="mt-4" onClick={() => setSearchQuery(searchQuery)}>
                 Retry
               </Button>
@@ -149,9 +166,9 @@ export function SearchView() {
                 <MediaGrid items={filtered} />
               ) : !search.isLoading && !search.isError ? (
                 <EmptyState
-                  icon={<SearchIcon className="w-12 h-12" />}
-                  title="لا توجد نتائج"
-                  description={`لم نجد نتائج لـ "${searchQuery}"${filter !== "all" ? ` في فلتر "${filter}"` : ""}. جرب كلمات مختلفة أو غيّر الفلتر.`}
+                  icon={<SearchIcon className="h-9 w-9" />}
+                  title="No matching results"
+                  description={`We couldn't find “${searchQuery}” in ${filterLabel}. Try a shorter title, a different spelling, or another filter.`}
                 />
               ) : null}
             </>

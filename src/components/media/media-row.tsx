@@ -34,66 +34,75 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
   };
 
   return (
-    <section className="mb-8">
-      <div className="flex items-center justify-between mb-3 px-1">
-        <div className="flex items-center gap-2">
-          {icon && <span className="text-primary">{icon}</span>}
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight">{title}</h2>
-          {!loading && (
-            <span className="text-xs text-muted-foreground ml-1">({items.length})</span>
-          )}
+    <section className="tvtime-media-row">
+      <div className="tvtime-section-heading">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {icon && <span className="tvtime-section-heading__icon" aria-hidden="true">{icon}</span>}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-lg font-extrabold tracking-tight sm:text-xl">{title}</h2>
+              {!loading && (
+                <span className="tvtime-section-heading__count tabular-nums">{items.length}</span>
+              )}
+            </div>
+            <p className="tvtime-section-heading__hint">Curated for your watch universe</p>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="tvtime-section-heading__actions">
           {onSeeAll && (
-            <Button variant="ghost" size="sm" className="text-xs" onClick={onSeeAll}>
+            <Button variant="ghost" size="sm" className="tvtime-see-all" onClick={onSeeAll}>
               See all
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hidden sm:flex"
-            onClick={() => scroll("left")}
-            aria-label="Scroll left"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hidden sm:flex"
-            onClick={() => scroll("right")}
-            aria-label="Scroll right"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <div className="tvtime-row-controls hidden items-center sm:flex">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => scroll("left")}
+              aria-label={`Scroll ${title} left`}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => scroll("right")}
+              aria-label={`Scroll ${title} right`}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
-      <div
-        ref={scrollRef}
-        className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1 scroll-smooth"
-      >
-        {loading
-          ? Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className={`flex-shrink-0 ${MEDIA_CARD_ROW_WIDTH_CLASS}`}>
-                <MediaCardSkeleton />
-              </div>
-            ))
-          : items.map((item, i) => (
-              <div key={`${item.id}-${item.media_type || ""}`} className={`flex-shrink-0 ${MEDIA_CARD_ROW_WIDTH_CLASS}`}>
-                <MediaCard
-                  item={item}
-                  index={i}
-                  forcedMediaType={forcedMediaType}
-                  libraryState={stateMap?.[mediaStateKey(
-                    forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
-                    Number(item.id),
-                  )] ?? null}
-                  priority={i < 2}
-                  compactActions={compactCards}
-                />
-              </div>
-            ))}
+      <div className="tvtime-media-row-viewport">
+        <div
+          ref={scrollRef}
+          className="tvtime-media-row-scroller no-scrollbar flex overflow-x-auto scroll-smooth"
+        >
+          {loading
+            ? Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className={`tvtime-media-row-item flex-shrink-0 ${MEDIA_CARD_ROW_WIDTH_CLASS}`}>
+                  <MediaCardSkeleton />
+                </div>
+              ))
+            : items.map((item, i) => (
+                <div key={`${item.id}-${item.media_type || ""}`} className={`tvtime-media-row-item flex-shrink-0 ${MEDIA_CARD_ROW_WIDTH_CLASS}`}>
+                  <MediaCard
+                    item={item}
+                    index={i}
+                    forcedMediaType={forcedMediaType}
+                    libraryState={stateMap?.[mediaStateKey(
+                      forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
+                      Number(item.id),
+                    )] ?? null}
+                    priority={i < 2}
+                    compactActions={compactCards}
+                  />
+                </div>
+              ))}
+        </div>
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Clapperboard, Film, Heart, Sparkles } from "lucide-react";
+import { Clapperboard, Film, Heart } from "lucide-react";
 import { useStats } from "@/hooks/use-tmdb";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 
@@ -21,12 +21,12 @@ export function Footer() {
         className="pointer-events-none absolute -top-12 right-1/4 h-24 w-48 rounded-full bg-secondary/45 blur-3xl"
       />
 
-      <div className="relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
+      <div className="tvtime-footer-inner relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
         <div className="flex flex-col items-center justify-between gap-4 text-sm sm:flex-row">
           <div className="flex items-center gap-2.5">
             <span className="relative" aria-hidden="true">
               <span className="absolute inset-0 rounded-md bg-primary/35 blur-md" />
-              <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-primary">
+              <span className="tvtime-footer-mark relative flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <Clapperboard className="h-4 w-4 text-primary-foreground" />
               </span>
             </span>
@@ -41,26 +41,30 @@ export function Footer() {
 
           {stats.data && (
             <dl
-              className="flex items-center gap-4 text-xs"
+              className="tvtime-footer-stats flex items-center text-xs"
               aria-label="Viewing summary"
             >
-              <div className="flex items-center gap-1.5">
-                <Film className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+              <div className="tvtime-footer-stat">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-fuchsia-500/10 text-fuchsia-400" aria-hidden="true">
+                  <Film className="h-3.5 w-3.5" />
+                </span>
                 <dt className="sr-only">Watched movies</dt>
-                <dd className="font-bold text-foreground tabular-nums">
+                <dd className="tabular-nums">
                   {stats.data.counts.watchedMovies}
                 </dd>
-                <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
+                <span className="text-muted-foreground" aria-hidden="true">
                   movies
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 border-l border-border/60 pl-4">
-                <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+              <div className="tvtime-footer-stat">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400" aria-hidden="true">
+                  <Clapperboard className="h-3.5 w-3.5" />
+                </span>
                 <dt className="sr-only">Watched episodes</dt>
-                <dd className="font-bold text-foreground tabular-nums">
+                <dd className="tabular-nums">
                   {stats.data.counts.watchedEpisodes}
                 </dd>
-                <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
+                <span className="text-muted-foreground" aria-hidden="true">
                   episodes
                 </span>
               </div>

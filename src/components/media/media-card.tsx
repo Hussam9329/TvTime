@@ -63,13 +63,6 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
     else goTv(id);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handleClick();
-    }
-  };
-
   const rating = item.vote_average ? Math.round(item.vote_average * 10) / 10 : 0;
   const title = getTitle(item);
   const year = getYear(item);
@@ -98,113 +91,131 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   };
 
   return (
-    <motion.a
-      href={enableNativeLink ? detailHref : undefined}
+    <motion.article
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3) }}
-      className="group min-w-0 cursor-pointer"
-      onClick={(event) => {
-        if (enableNativeLink && (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
-        event.preventDefault();
-        handleClick();
-      }}
-      onKeyDown={handleKeyDown}
-      role="button"
-      tabIndex={0}
-      aria-label={`${title}${year ? ` (${year})` : ""}`}
+      className="tvtime-media-card group relative min-w-0"
     >
-      <Card className="h-full gap-0 overflow-hidden rounded-[clamp(0.9rem,1.4vw,1.25rem)] border-border/50 bg-card p-0 transition-[border-color,box-shadow,background-color] duration-200 hover:border-primary/55 hover:shadow-lg hover:shadow-primary/10">
-        <div className="relative aspect-[2/3] overflow-hidden bg-muted">
-          <SafeImage
-            src={imgOrPlaceholder(item.poster_path, "w342")}
-            alt={title}
-            loading={priority ? "eager" : "lazy"}
-            decoding="async"
-            fetchPriority={priority ? "high" : "auto"}
-            className="relative w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-95"
-          />
-          {watched && <WatchedIndicator rating={userRating} />}
-          {/* top badges */}
-          <div className="absolute left-1 right-1 top-1 flex min-w-0 items-start justify-between gap-1 sm:left-2 sm:right-2 sm:top-2 sm:gap-2">
-            {!watched && rating > 0 ? (
-              <Badge className="ml-auto h-5 shrink-0 border-0 bg-black/65 px-1.5 text-[9px] text-amber-300 backdrop-blur sm:h-6 sm:px-2 sm:text-[10px]" title="TMDB Score">
-                <Star className="mr-1 h-2.5 w-2.5 shrink-0 fill-amber-300 sm:h-3 sm:w-3" />
-                {rating.toFixed(1)}/10
+      <Card>
+        <a
+          href={enableNativeLink ? detailHref : undefined}
+          className="tvtime-media-card-link"
+          onClick={(event) => {
+            if (enableNativeLink && (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
+            event.preventDefault();
+            handleClick();
+          }}
+          role={!detailHref ? "button" : undefined}
+          tabIndex={!detailHref ? 0 : undefined}
+          onKeyDown={(event) => {
+            if (detailHref || (event.key !== "Enter" && event.key !== " ")) return;
+            event.preventDefault();
+            handleClick();
+          }}
+          aria-label={`${title}${year ? ` (${year})` : ""}`}
+        >
+          <div className="tvtime-media-poster relative aspect-[2/3] overflow-hidden bg-muted">
+            <SafeImage
+              src={imgOrPlaceholder(item.poster_path, "w342")}
+              alt={title}
+              loading={priority ? "eager" : "lazy"}
+              decoding="async"
+              fetchPriority={priority ? "high" : "auto"}
+              className="tvtime-media-poster__image relative h-full w-full object-cover"
+            />
+            <div className="tvtime-media-poster__veil pointer-events-none absolute inset-0" aria-hidden="true" />
+
+            {watched && <WatchedIndicator rating={userRating} />}
+
+            {!watched && rating > 0 && (
+              <Badge className="tvtime-media-score absolute top-2 z-10 gap-1 rounded-full" title="TMDB Score">
+                <Star className="fill-current" aria-hidden="true" />
+                {rating.toFixed(1)}
               </Badge>
-            ) : null}
-          </div>
+            )}
 
-        </div>
-        <div className="flex min-w-0 flex-col border-t border-border/60 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.96))] px-2 py-2 sm:px-2.5 sm:py-2.5">
-          <h3 className="truncate text-left text-[12px] font-semibold leading-5 text-foreground sm:text-[13px]" title={title}>
-            {title}
-          </h3>
-
-          <div className="my-1.5 h-px w-full bg-border/45" />
-
-          <div className="flex min-h-5 min-w-0 items-center justify-between gap-1.5 text-[10px] text-muted-foreground sm:text-[11px]">
-            {year && <span className="shrink-0">{year}</span>}
-            {showMediaType && (
-              <span
-                className={`inline-flex h-5 min-w-0 max-w-[72%] items-center gap-1 rounded-md border px-1.5 text-[9px] font-semibold ${
-                  isAnime
-                    ? "border-violet-400/45 bg-violet-500/10 text-violet-300"
-                    : isAsian
-                    ? "border-teal-400/45 bg-teal-500/10 text-teal-300"
-                    : mediaType === "movie"
-                    ? "border-fuchsia-400/45 bg-fuchsia-500/10 text-fuchsia-300 shadow-fuchsia-500/10"
-                    : "border-cyan-400/45 bg-cyan-500/10 text-cyan-300 shadow-cyan-500/10"
-                }`}
-              >
-                {mediaType === "movie" ? <Film className="h-2.5 w-2.5 shrink-0" /> : <Tv className="h-2.5 w-2.5 shrink-0" />}
-                <span className="truncate">{typeLabel}</span>
+            {(inWatchlist || isFollowing || userRating != null) && (
+              <span className="tvtime-media-state-rail absolute bottom-2 z-10" aria-label="Library status">
+                {inWatchlist && (
+                  <span data-state="watchlist" title="In watchlist">
+                    <ListPlus aria-hidden="true" />
+                  </span>
+                )}
+                {isFollowing && (
+                  <span data-state="following" title="Following">
+                    <Bell aria-hidden="true" />
+                  </span>
+                )}
+                {userRating != null && (
+                  <span data-state="rated" title={`Your rating: ${userRating}/100`}>
+                    <Star className="fill-current" aria-hidden="true" />
+                  </span>
+                )}
               </span>
             )}
+
+            <span className="tvtime-media-open-cue pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2" aria-hidden="true">
+              <Play className="fill-current" />
+            </span>
           </div>
 
-          {(watched || inWatchlist || isFollowing || compactActions) && <div className="flex min-w-0 items-center gap-1 pt-1.5">
-            {watched ? (
-              <span data-status="watched" className="inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md border border-emerald-400/35 bg-emerald-500/10 px-1.5 text-[10px] font-semibold text-emerald-400">
-                <Check className="h-3 w-3 shrink-0" /> <span className="truncate">Watched</span>
-              </span>
-            ) : inWatchlist ? (
-              <span className="inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md border border-pink-500/30 bg-pink-500/10 px-1.5 text-[10px] font-semibold text-pink-400">
-                <ListPlus className="h-3 w-3 shrink-0" /> <span className="truncate">Watchlist</span>
-              </span>
-            ) : isFollowing ? (
-              <span data-status="following" className="inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md border border-amber-400/35 bg-amber-500/10 px-1.5 text-[10px] font-semibold text-amber-400">
-                <Bell className="h-3 w-3 shrink-0" /> <span className="truncate">Following</span>
-              </span>
-            ) : null}
-
-            {compactActions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="ml-auto h-7 w-7 shrink-0 rounded-md p-0" aria-label={`More actions for ${title}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{title}</DropdownMenuLabel>
-                <DropdownMenuItem onSelect={handleClick}><Play /> Open details</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => void toggleWatchlist()} disabled={watchlistToggle.isPending}><ListPlus /> {inWatchlist ? "Remove from watchlist" : "Add to watchlist"}</DropdownMenuItem>
-                {mediaType === "movie" && <DropdownMenuItem onSelect={() => void toggleWatched()} disabled={watchedToggle.isPending}><Check /> {watched ? "Remove from watched" : "Mark as watched"}</DropdownMenuItem>}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            )}
-          </div>}
-        </div>
+          <div className="tvtime-media-copy">
+            <h3 className="tvtime-media-title line-clamp-2 text-left" title={title}>
+              {title}
+            </h3>
+            <div className="tvtime-media-meta">
+              {year && <span className="shrink-0 tabular-nums">{year}</span>}
+              {year && showMediaType && <span aria-hidden="true">•</span>}
+              {showMediaType && (
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  {mediaType === "movie" ? <Film aria-hidden="true" /> : <Tv aria-hidden="true" />}
+                  <span className="truncate">{typeLabel}</span>
+                </span>
+              )}
+            </div>
+          </div>
+        </a>
       </Card>
-    </motion.a>
+
+      {compactActions && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="tvtime-media-menu absolute top-2 z-20 h-8 w-8 p-0"
+              aria-label={`More actions for ${title}`}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{title}</DropdownMenuLabel>
+            <DropdownMenuItem onSelect={handleClick}><Play /> Open details</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void toggleWatchlist()} disabled={watchlistToggle.isPending}>
+              <ListPlus /> {inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+            </DropdownMenuItem>
+            {mediaType === "movie" && (
+              <DropdownMenuItem onSelect={() => void toggleWatched()} disabled={watchedToggle.isPending}>
+                <Check /> {watched ? "Remove from watched" : "Mark as watched"}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </motion.article>
   );
 }
 
 export function MediaCardSkeleton() {
   return (
-    <Card className="feedback-skeleton gap-0 overflow-hidden rounded-[clamp(0.9rem,1.4vw,1.25rem)] border-border/50 bg-card p-0" aria-hidden="true">
+    <Card className="tvtime-media-card-skeleton feedback-skeleton" aria-hidden="true">
       <div className="aspect-[2/3] shimmer" />
-      <div className="h-[86px] border-t border-border/50 bg-card" />
+      <div className="space-y-2 px-1 py-3">
+        <div className="h-3.5 w-4/5 rounded shimmer" />
+        <div className="h-2.5 w-2/5 rounded shimmer" />
+      </div>
     </Card>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -81,11 +82,11 @@ const LANGUAGES = [
 
 // Quick preset combos for one-click filtering
 const PRESETS = [
-  { id: "trending", label: "🔥 Trending", sort: "popularity.desc", year: "" },
-  { id: "top2024", label: "🏆 Top 2024", sort: "vote_average.desc", year: "2024" },
-  { id: "hidden", label: "💎 Hidden gems", sort: "vote_average.desc", year: "" },
-  { id: "newest", label: "🆕 Newest", sort: "primary_release_date.desc", year: "" },
-  { id: "classic", label: "🎭 Classic", sort: "popularity.desc", year: String(CURRENT_YEAR - 30) },
+  { id: "trending", label: "Trending", sort: "popularity.desc", year: "" },
+  { id: "top2024", label: "Top 2024", sort: "vote_average.desc", year: "2024" },
+  { id: "hidden", label: "Hidden gems", sort: "vote_average.desc", year: "" },
+  { id: "newest", label: "Newest", sort: "primary_release_date.desc", year: "" },
+  { id: "classic", label: "Classics", sort: "popularity.desc", year: String(CURRENT_YEAR - 30) },
 ];
 
 interface DiscoverViewProps {
@@ -319,10 +320,16 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     <div className="tvtime-discover-view space-y-5">
       {/* Header */}
       {!embedded ? (
-        <div className="view-page-header flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">{headerTitle}</h1>
-            <p className="view-page-description text-sm text-muted-foreground mt-1">{headerSubtitle}</p>
+        <div className="view-page-header flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary" aria-hidden="true">
+              <Compass className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="tvtime-eyebrow">Curated catalogue</p>
+              <h1 className="view-page-title text-2xl font-extrabold tracking-tight sm:text-3xl">{headerTitle}</h1>
+              <p className="view-page-description mt-1 text-sm text-muted-foreground">{headerSubtitle}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); resetAll(); }}>
@@ -348,16 +355,17 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       )}
 
       {/* Quick Presets */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mr-1">Quick:</span>
+      <div className="tvtime-discover-presets no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
+        <span className="mr-1 shrink-0 text-xs font-bold uppercase tracking-wider text-muted-foreground">Quick picks</span>
         {PRESETS.map((p) => (
           <Button
             key={p.id}
             variant="outline"
             size="sm"
-            className="h-7 text-xs hover:border-primary/40 hover:bg-primary/5"
+            className="h-9 shrink-0 text-xs hover:border-primary/40 hover:bg-primary/5"
             onClick={() => applyPreset(p.id)}
           >
+            <Sparkles className="h-3.5 w-3.5" />
             {p.label}
           </Button>
         ))}
@@ -369,6 +377,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
         description="Choose what to show first, then narrow the catalogue with the core and advanced controls."
         activeCount={activeFilters}
         onReset={resetAll}
+        collapsibleOnMobile
       >
         {/* Active filter chips trail */}
         {activeFilterChips.length > 0 && (
@@ -664,28 +673,43 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       </FilterPanel>
 
       {/* Result count — clearer wording */}
-      <p className="text-sm text-muted-foreground">
-        {isLoading ? "Loading..." : (
-          showMe === "all" ? (
-            <>
-              Showing <span className="font-bold text-foreground">{items.length}</span>
-              {" "}of <span className="font-bold text-foreground">{totalAvailable.toLocaleString()}</span> total results
-            </>
-          ) : (
-            <>
-              Showing <span className="font-bold text-foreground">{items.length}</span>
-              {showMe === "seen" ? ` ${seenLabel.toLowerCase()}` : ` ${unseenLabel.toLowerCase()}`} titles
-            </>
-          )
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {isLoading ? "Loading results…" : (
+            showMe === "all" ? (
+              <>
+                Showing <span className="font-bold text-foreground tabular-nums">{items.length}</span>
+                {" "}of <span className="font-bold text-foreground tabular-nums">{totalAvailable.toLocaleString()}</span> titles
+              </>
+            ) : (
+              <>
+                <span className="font-bold text-foreground tabular-nums">{items.length}</span>
+                {showMe === "seen" ? ` ${seenLabel.toLowerCase()}` : ` ${unseenLabel.toLowerCase()}`} titles on this page
+              </>
+            )
+          )}
+        </p>
+        {!isLoading && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {activeFilters > 0 && <Badge variant="secondary">{activeFilters} active filters</Badge>}
+            <span className="tabular-nums">Page {page}</span>
+          </div>
         )}
-      </p>
+      </div>
 
       {/* Error */}
       {isError && (
-        <div className="text-center py-16">
-          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-rose-400" />
-          <p className="font-medium text-foreground text-lg">Failed to load results</p>
-          <p className="text-sm text-muted-foreground mt-1">{showMe === "all" ? "Could not reach TMDB. Please try again." : "Could not load the filtered catalogue. Please try again."}</p>
+        <div className="feedback-state feedback-state--error flex flex-col items-center justify-center px-4 py-14 text-center" role="alert">
+          <div className="feedback-state__icon mb-4 flex size-20 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+            <AlertCircle className="h-9 w-9" aria-hidden="true" />
+          </div>
+          <h2 className="feedback-state__title text-lg font-bold">We couldn&apos;t load these results</h2>
+          <p className="feedback-state__description mt-1 max-w-md text-sm text-muted-foreground">
+            {showMe === "all" ? "TMDB did not respond. Check your connection and try again." : "Your filtered catalogue could not be loaded. Try again without changing your filters."}
+          </p>
+          <Button variant="outline" size="sm" className="mt-5" onClick={() => void query.refetch()}>
+            Try again
+          </Button>
         </div>
       )}
 
@@ -694,16 +718,16 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
       {/* Empty */}
       {!isLoading && !isError && items.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground">
-          <SlidersHorizontal className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">{showMe === "all" ? "No results match your filters" : `No ${showMe === "seen" ? seenLabel.toLowerCase() : unseenLabel.toLowerCase()} titles match your filters`}</p>
-          <p className="text-sm mt-1">Try removing some filters to see more results.</p>
-          {activeFilters > 0 && (
+        <EmptyState
+          icon={<SlidersHorizontal className="h-9 w-9" />}
+          title={showMe === "all" ? "No titles match these filters" : `No ${showMe === "seen" ? seenLabel.toLowerCase() : unseenLabel.toLowerCase()} titles match`}
+          description="Broaden the year range, remove a genre, or reset the filters to discover more titles."
+          action={activeFilters > 0 ? (
             <Button variant="outline" size="sm" className="mt-4" onClick={resetAll}>
               Reset all filters
             </Button>
-          )}
-        </div>
+          ) : undefined}
+        />
       )}
 
       {/* Grid */}

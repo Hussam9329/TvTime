@@ -13,8 +13,8 @@ export function AsianTvView() {
   const [tab, setTab] = useState<"library" | "discover" | "releases">("library");
 
   return (
-    <div className="tvtime-asian-tv-page space-y-5">
-      <section data-ui-surface="hero" className="rounded-2xl border border-teal-400/20 bg-gradient-to-br from-teal-500/15 via-card to-card p-4 sm:p-6">
+    <div className="tvtime-world-view tvtime-asian-tv-page space-y-5">
+      <section data-ui-surface="hero" className="tvtime-page-hero rounded-2xl border border-teal-400/20 bg-gradient-to-br from-teal-500/15 via-card to-card p-4 sm:p-6">
         <div className="view-page-header flex items-start gap-3">
           <Globe2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-300" />
           <div className="min-w-0">
@@ -25,7 +25,7 @@ export function AsianTvView() {
       </section>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
-        <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
+        <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
           <TabsTrigger value="library" className="gap-2 py-2.5"><Library className="h-4 w-4" /> My Library</TabsTrigger>
           <TabsTrigger value="discover" className="gap-2 py-2.5"><Sparkles className="h-4 w-4" /> Discover</TabsTrigger>
           <TabsTrigger value="releases" className="gap-2 py-2.5"><CalendarDays className="h-4 w-4" /> Releases</TabsTrigger>
