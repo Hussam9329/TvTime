@@ -7,6 +7,10 @@ import {
   isFutureEpisode,
   tvStateToMediaPatch,
 } from "../src/lib/tv-status-engine.ts";
+import {
+  clearExplicitLegacyFinishedTag,
+  shouldExcludeFromWatchNext,
+} from "../src/lib/watch-next-state.ts";
 
 const now = new Date("2026-07-10T12:00:00.000Z");
 
@@ -211,5 +215,32 @@ const canceledFullyWatched = deriveTvTrackingState({
   completionRatingPresent: true,
 });
 assert.equal(canceledFullyWatched.state, "finished", "Canceled + fully watched → finished");
+
+assert.equal(shouldExcludeFromWatchNext({
+  status: "watching",
+  watched: false,
+  userRating: 75,
+  tags: ["finished"],
+  officiallyEnded: true,
+}), true, "an explicitly finished, ended and rated legacy show stays out of Watch Next");
+assert.equal(shouldExcludeFromWatchNext({
+  status: "watching",
+  watched: false,
+  userRating: 75,
+  tags: [],
+  officiallyEnded: true,
+}), false, "a merely rated incomplete show remains eligible for Watch Next");
+assert.equal(shouldExcludeFromWatchNext({
+  status: "watching",
+  watched: false,
+  userRating: 75,
+  tags: ["finished"],
+  officiallyEnded: false,
+}), false, "an ongoing show cannot use a legacy Finished tag to bypass progress");
+assert.deepEqual(
+  clearExplicitLegacyFinishedTag(["favorite", "finished", "drama"]),
+  ["favorite", "drama"],
+  "unwatching an episode removes only the legacy Finished marker",
+);
 
 console.log("TVM-03/04/05 engine tests passed (12 assertion groups + TVM-14/15/16/17 extensions).");

@@ -44,6 +44,8 @@ const tvDetailView = read("src/components/views/tv-detail-view.tsx");
 const movieMediaRoute = read("src/app/api/media/[id]/route.ts");
 const watchedMoviesRoute = read("src/app/api/library/watched-movies/route.ts");
 const completionInvariant = read("src/lib/completion-rating-invariant.ts");
+const watchNextRoute = read("src/app/api/watch-next/route.ts");
+const watchNextState = read("src/lib/watch-next-state.ts");
 const importValidation = read("src/lib/library-import-validation.ts");
 const pkg = JSON.parse(read("package.json"));
 const schemaVerifier = read("scripts/verify-required-schema.mjs");
@@ -177,6 +179,12 @@ check(
     && /status: "uptodate",\s*watched: false/.test(completionInvariant)
     && /TV_FINISHED_REQUIRES_RATING/.test(movieMediaRoute),
   "Finished TV series cannot persist without a personal rating",
+);
+check(
+  /shouldExcludeFromWatchNext/.test(watchNextRoute)
+    && /input\.officiallyEnded === true[\s\S]*input\.userRating != null[\s\S]*hasExplicitLegacyFinishedTag/.test(watchNextState)
+    && /clearExplicitLegacyFinishedTag/.test(watchedEpisodes),
+  "Watch Next preserves explicit rated legacy completions but releases them after an episode is unwatched",
 );
 check(
   /if \(c\.needsRating\)[\s\S]*setPendingCompletionRating\(true\)[\s\S]*setRatingOpen\(true\)/.test(tvDetailView)

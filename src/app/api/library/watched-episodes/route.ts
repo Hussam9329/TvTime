@@ -20,6 +20,7 @@ import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 import { detectIsAnime } from "@/lib/anime-detect";
 import { detectIsArabic, normalizeCountryCodes } from "@/lib/arabic-media";
 import { canonicalMediaPoster } from "@/lib/media-poster";
+import { clearExplicitLegacyFinishedTag } from "@/lib/watch-next-state";
 
 type CompletionInfo = {
   newStatus: TvTrackingState;
@@ -164,6 +165,10 @@ async function updateShowStatusInTransaction(
     isArabic: classification.isArabic,
     isAnime: classification.isAnime,
   };
+  if (effectiveState !== "finished") {
+    const tags = clearExplicitLegacyFinishedTag(media.tags);
+    if (tags.length !== media.tags.length) update.tags = tags;
+  }
 
   if (!media.poster && metadata.posterPath) {
     update.poster = canonicalMediaPoster(metadata.posterPath);
