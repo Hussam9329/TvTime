@@ -72,6 +72,11 @@ export async function POST(req: NextRequest) {
     // Movies/TV worlds even when Animation is one of their genres.
     if (detectedArabic) detectedAnime = false;
     else if (detectedAnime) detectedArabic = false;
+    const classificationFlags = isArabic !== undefined
+      || isAnime !== undefined
+      || hasClassificationMetadata
+      ? { isArabic: detectedArabic, isAnime: detectedAnime }
+      : {};
 
     const normalizedPoster = canonicalMediaPoster(poster);
 
@@ -126,14 +131,9 @@ export async function POST(req: NextRequest) {
           ...(normalizedGenres.length > 0 ? { genres: normalizedGenres } : {}),
           ...(normalizedOriginalLanguage ? { originalLanguage: normalizedOriginalLanguage } : {}),
           ...(normalizedOriginCountries.length > 0 ? { originCountries: normalizedOriginCountries } : {}),
-          // Explicit moves can set either world. Authoritative TMDB metadata
-          // promotes records while keeping Arabic/Anime mutually exclusive.
-          ...(isArabic !== undefined
-            ? { isArabic: Boolean(isArabic), ...(Boolean(isArabic) ? { isAnime: false } : {}) }
-            : hasClassificationMetadata && detectedArabic ? { isArabic: true, isAnime: false } : {}),
-          ...(isAnime !== undefined
-            ? { isAnime: Boolean(isAnime), ...(Boolean(isAnime) ? { isArabic: false } : {}) }
-            : hasClassificationMetadata && detectedAnime ? { isAnime: true, isArabic: false } : {}),
+          // Authoritative metadata may both promote and demote stale world
+          // flags; merely preserving old true values causes cross-world leaks.
+          ...classificationFlags,
         },
       });
     } else {
@@ -157,12 +157,7 @@ export async function POST(req: NextRequest) {
             ...(normalizedGenres.length > 0 ? { genres: normalizedGenres } : {}),
             ...(normalizedOriginalLanguage ? { originalLanguage: normalizedOriginalLanguage } : {}),
             ...(normalizedOriginCountries.length > 0 ? { originCountries: normalizedOriginCountries } : {}),
-            ...(isArabic !== undefined
-              ? { isArabic: Boolean(isArabic), ...(Boolean(isArabic) ? { isAnime: false } : {}) }
-              : hasClassificationMetadata && detectedArabic ? { isArabic: true, isAnime: false } : {}),
-            ...(isAnime !== undefined
-              ? { isAnime: Boolean(isAnime), ...(Boolean(isAnime) ? { isArabic: false } : {}) }
-              : hasClassificationMetadata && detectedAnime ? { isAnime: true, isArabic: false } : {}),
+            ...classificationFlags,
           },
         });
       }

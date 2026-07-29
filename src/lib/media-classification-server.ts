@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { detectIsAnime } from "@/lib/anime-detect";
+import { ASIAN_COUNTRY_CODES, ASIAN_LANGUAGE_CODES } from "@/lib/asian-media";
 
 const animationGenres = ["Animation", "Anime", "animation", "anime"];
 
@@ -20,9 +21,6 @@ export const INFERRED_NON_ANIME_WHERE: Prisma.MediaWhereInput = {
   NOT: INFERRED_ANIME_WHERE,
 };
 
-const asianCountries = ["KR", "JP", "CN", "TW", "HK", "MO", "TH", "IN", "PK", "BD", "LK", "NP", "ID", "MY", "SG", "PH", "VN", "KH", "MM", "MN", "KZ", "UZ", "KG", "TJ"];
-const asianLanguages = ["ko", "ja", "zh", "th", "hi", "ur", "bn", "ta", "te", "ml", "kn", "id", "ms", "tl", "vi", "km", "my", "mn", "kk", "uz"];
-
 export const INFERRED_ASIAN_TV_WHERE: Prisma.MediaWhereInput = {
   type: "series",
   isArabic: false,
@@ -30,8 +28,13 @@ export const INFERRED_ASIAN_TV_WHERE: Prisma.MediaWhereInput = {
     INFERRED_NON_ANIME_WHERE,
     {
       OR: [
-        ...asianCountries.map((country) => ({ originCountries: { has: country } })),
-        { originalLanguage: { in: asianLanguages } },
+        ...ASIAN_COUNTRY_CODES.map((country) => ({ originCountries: { has: country } })),
+        {
+          AND: [
+            { originCountries: { isEmpty: true } },
+            { originalLanguage: { in: [...ASIAN_LANGUAGE_CODES] } },
+          ],
+        },
       ],
     },
   ],

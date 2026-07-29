@@ -1380,13 +1380,19 @@ export function useTvTracking(params: {
   world?: "standard" | "arabic" | "asian";
 } = {}) {
   const userId = useNav((s) => s.userId);
+  const currentWorld = params.world ?? "standard";
   return useQuery({
     queryKey: ["tv-tracking", userId || getClientUserId(), params],
     queryFn: () => tvTrackingGet<TvTrackingResponse>(params),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    placeholderData: (previousData) => previousData,
+    // Reusing a previous page is safe only inside the same collection world.
+    // Never flash standard/Arabic rows inside Asian TV while its query loads.
+    placeholderData: (previousData, previousQuery) => {
+      const previousParams = previousQuery?.queryKey?.[2] as typeof params | undefined;
+      return (previousParams?.world ?? "standard") === currentWorld ? previousData : undefined;
+    },
   });
 }
 

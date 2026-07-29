@@ -24,6 +24,7 @@ const checks = [
   ["User-facing integrity", ["scripts/verify-user-facing-integrity.mjs"]],
   ["Episode watch flow and posters", ["scripts/verify-episode-watch-poster.mjs"]],
   ["Arabic media worlds", ["scripts/verify-arabic-worlds.mjs"]],
+  ["Asian TV classification", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-asian-classification.ts"]],
   ["World separation", ["scripts/verify-world-separation.mjs"]],
   ["TVM-03/04/05", ["scripts/verify-tvm-03-04-05.mjs"]],
   ["TVM-06/07/08/09", ["scripts/verify-tvm-06-09.mjs"]],

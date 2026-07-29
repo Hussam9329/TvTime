@@ -85,7 +85,16 @@ async function ensureSeriesMedia(
       status: "not_started",
       watched: false,
     },
-    update: {},
+    // TMDB metadata is authoritative for collection-world classification.
+    // Repair legacy/stale rows whenever an episode mutation already requires
+    // a verified metadata read; user tracking and ratings remain untouched.
+    update: {
+      genres: classification.genres,
+      isArabic: classification.isArabic,
+      isAnime: classification.isAnime,
+      originalLanguage: classification.originalLanguage,
+      originCountries: classification.originCountries,
+    },
   });
 }
 

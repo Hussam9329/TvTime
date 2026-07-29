@@ -367,6 +367,55 @@ export async function batchReadDbMetadata(
   return result;
 }
 
+export type TvClassificationMetadata = {
+  originalLanguage: string | null;
+  originCountries: string[];
+  genres: string[];
+  classificationComplete: true;
+};
+
+/**
+ * Read authoritative TMDB classification independently from episode/status
+ * freshness. Origin country, original language and genres do not become
+ * invalid merely because a show's episode cache reached its refresh boundary.
+ */
+export async function batchReadDbClassifications(
+  tmdbIds: number[],
+): Promise<Map<number, TvClassificationMetadata>> {
+  const result = new Map<number, TvClassificationMetadata>();
+  const ids = [...new Set(tmdbIds.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+  if (ids.length === 0) return result;
+
+  try {
+    const rows = await db.$queryRaw<Array<{
+      tmdbId: number;
+      originalLanguage: string | null;
+      originCountries: string[];
+      genreNames: string[];
+      classificationComplete: boolean;
+    }>>`
+      SELECT
+        "tmdbId", "originalLanguage", "originCountries", "genreNames", "classificationComplete"
+      FROM "TvMetadataCache"
+      WHERE "tmdbId" IN (${Prisma.join(ids)})
+        AND "classificationComplete" = TRUE
+    `;
+    for (const row of rows) {
+      result.set(Number(row.tmdbId), {
+        originalLanguage: row.originalLanguage?.trim().toLowerCase() || null,
+        originCountries: [...new Set((row.originCountries ?? [])
+          .map((country) => String(country).trim().toUpperCase())
+          .filter(Boolean))],
+        genres: (row.genreNames ?? []).map(String).map((genre) => genre.trim()).filter(Boolean),
+        classificationComplete: true,
+      });
+    }
+  } catch (error) {
+    console.warn("[tv-metadata-cache] batchReadDbClassifications failed", error);
+  }
+  return result;
+}
+
 /**
  * Upsert metadata before the request finishes. Cache failure remains non-fatal,
  * but a successful return now means the L2 write was allowed to settle instead

@@ -11,12 +11,16 @@ import {
   tvStateToMediaPatch,
   type TvTrackingState,
 } from "@/lib/tv-status-engine";
-import { getTvStatusMetadata, batchReadDbMetadata, type TvStatusMetadata } from "@/lib/tv-status-server";
+import {
+  getTvStatusMetadata,
+  batchReadDbClassifications,
+  batchReadDbMetadata,
+  type TvStatusMetadata,
+} from "@/lib/tv-status-server";
 import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
 import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
-import { classifyStoredMediaAsAnime } from "@/lib/media-classification-server";
-import { isAsianMediaItem } from "@/lib/asian-media";
+import { recordMatchesTvWorld, type TvWorld } from "@/lib/tv-world-classification";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -162,16 +166,8 @@ type FastTrackingDatabaseRow = {
   airedEpisodeCount: number | null;
   nextEpisodeAirDate: string | null;
   metadataFresh: boolean;
+  classificationComplete: boolean;
 };
-
-type TvWorld = "standard" | "arabic" | "asian";
-
-function recordMatchesWorld(show: FastTrackingDatabaseRow | any, world: TvWorld) {
-  if (classifyStoredMediaAsAnime(show)) return false;
-  if (world === "arabic") return Boolean(show.isArabic);
-  const asian = !show.isArabic && isAsianMediaItem(show);
-  return world === "asian" ? asian : !show.isArabic && !asian;
-}
 
 /**
  * A single read-only SQL statement powers the header counters. It never reads
@@ -185,9 +181,18 @@ async function buildTrackingCounts(userId: string, world: TvWorld, now = new Dat
       media."tmdbId" AS "tmdbId",
       media."title" AS "title",
       media."isAnime" AS "isAnime",
-      media."originalLanguage" AS "originalLanguage",
-      media."originCountries" AS "originCountries",
-      media."genres" AS "genres",
+      CASE
+        WHEN metadata."classificationComplete" = TRUE THEN metadata."originalLanguage"
+        ELSE media."originalLanguage"
+      END AS "originalLanguage",
+      CASE
+        WHEN metadata."classificationComplete" = TRUE THEN metadata."originCountries"
+        ELSE media."originCountries"
+      END AS "originCountries",
+      CASE
+        WHEN metadata."classificationComplete" = TRUE THEN metadata."genreNames"
+        ELSE media."genres"
+      END AS "genres",
       media."isArabic" AS "isArabic",
       media."status" AS "status",
       media."watched" AS "watched",
@@ -196,6 +201,7 @@ async function buildTrackingCounts(userId: string, world: TvWorld, now = new Dat
       metadata."officiallyEnded" AS "officiallyEnded",
       metadata."airedEpisodeCount" AS "airedEpisodeCount",
       metadata."nextEpisodeAirDate" AS "nextEpisodeAirDate",
+      COALESCE(metadata."classificationComplete", FALSE) AS "classificationComplete",
       COALESCE(metadata."refreshAfter" > ${now}, FALSE) AS "metadataFresh"
     FROM "Media" AS media
     LEFT JOIN (
@@ -213,7 +219,7 @@ async function buildTrackingCounts(userId: string, world: TvWorld, now = new Dat
       AND (media."status" IS NOT NULL OR media."watched" = TRUE OR COALESCE(progress."episodeCount", 0) > 0)
   `;
 
-  return buildFastTvTrackingSummary(rows.filter((row) => recordMatchesWorld(row, world)).map((row): FastTvTrackingRow => ({
+  return buildFastTvTrackingSummary(rows.filter((row) => recordMatchesTvWorld(row, world)).map((row): FastTvTrackingRow => ({
     ...row,
     episodeCount: Number(row.episodeCount),
   })), now);
@@ -267,7 +273,17 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
       ],
     },
   });
-  const series = seriesCandidates.filter((show) => recordMatchesWorld(show, world));
+  const candidateTmdbIds = seriesCandidates
+    .map((show) => Number(show.tmdbId))
+    .filter((id) => Number.isInteger(id) && id > 0);
+  const classificationsByTmdbId = await batchReadDbClassifications(candidateTmdbIds);
+  const classifiedCandidates = seriesCandidates.map((show) => {
+    const classification = show.tmdbId == null
+      ? null
+      : classificationsByTmdbId.get(Number(show.tmdbId)) ?? null;
+    return classification ? { ...show, ...classification } : show;
+  });
+  const series = classifiedCandidates.filter((show) => recordMatchesTvWorld(show, world));
 
   // ── BATCH METADATA READ ───────────────────────────────────────────────
   // Pre-fetch ALL TV metadata for ALL tracked shows in a single DB round-trip.
