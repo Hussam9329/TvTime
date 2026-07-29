@@ -181,189 +181,189 @@ export function MovieDetailView() {
     : myRating >= 60 ? "text-amber-400"
     : myRating >= 40 ? "text-orange-400"
     : "text-rose-400";
+  const stateLoading = mediaState.isLoading && !stateItem;
 
   return (
     <div className="tvtime-movie-detail-page space-y-5">
-      <Button variant="ghost" size="sm" onClick={back} className="text-muted-foreground">
+      <Button variant="ghost" size="sm" onClick={back} className="tvtime-detail-back-button text-muted-foreground">
         <ArrowLeft className="w-4 h-4 mr-1" /> Back
       </Button>
 
-      <section className="relative isolate overflow-hidden rounded-[28px] border border-white/15 bg-[#07101f] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
-      {/* Hero backdrop */}
-      <div data-ui-surface="hero" className="absolute inset-0 -z-20 overflow-hidden">
-        <div className="absolute inset-0">
-          <SafeImage src={img(m.backdrop_path, "w1280")} alt={displayTitle} fill variant="backdrop" priority className="absolute inset-0" />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,9,19,0.82)_0%,rgba(4,12,25,0.68)_45%,rgba(3,8,18,0.52)_100%)]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/95 via-[#07101f]/35 to-[#07101f]/35" />
+      <section className="tvtime-movie-detail-hero relative isolate overflow-hidden border border-white/15 bg-[#07101f]">
+        {/* Hero backdrop */}
+        <div data-ui-surface="hero" className="absolute inset-0 -z-20 overflow-hidden">
+          <div className="absolute inset-0">
+            <SafeImage src={img(m.backdrop_path, "w1280")} alt={displayTitle} fill variant="backdrop" priority className="absolute inset-0" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,9,19,0.82)_0%,rgba(4,12,25,0.68)_45%,rgba(3,8,18,0.52)_100%)]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/95 via-[#07101f]/35 to-[#07101f]/35" />
+          </div>
         </div>
-      </div>
 
-      {/* Poster + title + actions */}
-      <div className="relative z-10 grid grid-cols-1 gap-6 p-5 sm:p-7 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8 lg:grid-cols-[270px_minmax(0,1fr)] lg:p-10">
-        <div className="w-36 flex-shrink-0 mx-auto sm:w-52 md:w-full md:mx-0">
-          <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
-            <div className="relative aspect-[2/3]">
-              <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={displayTitle} fill variant="poster" />
-              {isWatched && <WatchedIndicator rating={myRating} />}
+        {/* Poster + title + actions */}
+        <div className="tvtime-movie-detail-hero__layout relative z-10">
+          <aside className="tvtime-movie-detail-hero__poster">
+            <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
+              <div className="relative aspect-[2/3]">
+                <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={displayTitle} fill variant="poster" />
+                {isWatched && <WatchedIndicator rating={myRating} />}
+              </div>
+            </Card>
+            <div className="tvtime-movie-detail-hero__poster-action">
+              <OfficialPosterPicker tmdbId={m.id} mediaType="movie" title={displayTitle} posters={(m as any).images?.posters ?? []} />
             </div>
-          </Card>
-        </div>
+          </aside>
 
-        <div className="min-w-0 space-y-5 md:pt-1">
-          {/* Title and badges */}
-          <div>
-            <div className="mb-5 flex flex-wrap items-center gap-2.5 [&>*]:inline-flex [&>*]:h-10 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-4 [&>*]:text-sm [&>*]:font-semibold">
-              <Badge variant="secondary" className="bg-primary/20 text-primary border-0">
-                <Film className="w-3 h-3 mr-1" /> Movie
-              </Badge>
-              {isArabicMovie && (
-                <Badge className="border-0 bg-emerald-500/20 text-emerald-300">
-                  Arabic Movie
-                </Badge>
-              )}
+          <div className="tvtime-movie-detail-hero__content">
+            <header className="tvtime-movie-detail-hero__identity">
+              <div className="tvtime-movie-detail-hero__eyebrow">
+                <span className="tvtime-movie-detail-hero__kind">
+                  <Film aria-hidden="true" /> Movie
+                </span>
+                {releaseDate?.year && <span>{releaseDate.year}</span>}
+                {isArabicMovie && (
+                  <span className="tvtime-movie-detail-hero__arabic">
+                    Arabic Movie
+                  </span>
+                )}
+              </div>
+              <h1 className="tvtime-movie-detail-hero__title view-page-title">
+                {displayTitle}
+              </h1>
+              {m.tagline && <p className="tvtime-movie-detail-hero__tagline">{m.tagline}</p>}
+            </header>
+
+            <div className="tvtime-movie-detail-hero__facts" aria-label="Movie facts">
               {releaseDate && (
-                <>
-                  <Badge variant="secondary" className="border-0">
-                    <Calendar className="w-3 h-3 mr-1" /> {releaseDate.dayMonth}
-                  </Badge>
-                  <Badge className="border-0 bg-primary text-primary-foreground font-extrabold tracking-wide">
-                    {releaseDate.year}
-                  </Badge>
-                </>
+                <span>
+                  <Calendar aria-hidden="true" /> {releaseDate.dayMonth}
+                </span>
               )}
-              {runtime && <Badge variant="secondary" className="border-0"><Clock className="w-3 h-3 mr-1" />{runtime}</Badge>}
+              {runtime && (
+                <span>
+                  <Clock aria-hidden="true" /> {runtime}
+                </span>
+              )}
               {m.vote_average > 0 && (
-                <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0">
-                  <Star className="w-3 h-3 mr-1 fill-amber-300" /> {m.vote_average.toFixed(1)}
-                </Badge>
+                <span className="is-score">
+                  <Star className="fill-current" aria-hidden="true" /> {m.vote_average.toFixed(1)}
+                </span>
               )}
-              {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
-              {m.status && <Badge variant="secondary" className="border-0">{m.status}</Badge>}
+              {contentRating && <span className="is-rating">{contentRating}</span>}
+              {m.status && <span>{m.status}</span>}
             </div>
-            <h1 className="view-page-title text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.04em] leading-[0.95]">
-              {displayTitle}
-            </h1>
-            {m.tagline && <p className="text-base sm:text-lg italic text-foreground/70 mt-5">{m.tagline}</p>}
-          </div>
-          {/* Action buttons */}
-          {/* Fix #15: Disable action buttons while library state is loading
-              to prevent false initial state (all false/null) from flashing */}
-          {(() => {
-            const stateLoading = mediaState.isLoading && !stateItem;
-            return (
-          <div className="flex flex-wrap items-center gap-3 [&>*]:h-12 [&>*]:rounded-xl [&_button]:h-12 [&_button]:min-w-[150px] [&_button]:justify-center [&_button]:rounded-xl [&_button]:px-5 [&_button]:text-sm [&_button]:font-semibold">
-            <OfficialPosterPicker tmdbId={m.id} mediaType="movie" title={displayTitle} posters={(m as any).images?.posters ?? []} />
-            <Button
-              variant={isWatched ? "default" : "secondary"}
-              onClick={onWatched}
-              className="h-10"
-              disabled={stateLoading || watchedToggle.isPending}
-            >
-              {stateLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : isWatched ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Circle className="w-4 h-4 mr-2" />}
-              {isWatched ? "Watched" : "Mark watched"}
-            </Button>
-            {isWatched && <Button variant="outline" onClick={() => void onRewatch()} className="h-10" disabled={watchedToggle.isPending}>Rewatch ({stateItem?.rewatchCount ?? 0})</Button>}
-            {!isWatched && (
-              <Button
-                variant={inWatchlist ? "default" : "secondary"}
-                onClick={onWatchlist}
-                className="h-10"
-                disabled={stateLoading || watchlistToggle.isPending}
-              >
-                {inWatchlist ? <Check className="w-4 h-4 mr-2" /> : <ListPlus className="w-4 h-4 mr-2" />}
-                {inWatchlist ? "In watchlist" : "Add to watchlist"}
-              </Button>
-            )}
-            {trailer && (
-              <Button
-                variant="outline"
-                className="h-10"
-                onClick={() => window.open(`https://www.youtube.com/watch?v=${trailer.key}`, "_blank")}
-              >
-                <Play className="w-4 h-4 mr-2 fill-current" /> Trailer
-              </Button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-10">
-                  <ExternalLink className="w-4 h-4 mr-2" /> Watch
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem onSelect={() => window.open(`https://filmween.net/search?q=${encodeURIComponent(filmweenSearchTitle)}&mode=title`, "_blank", "noopener,noreferrer")}>
-                  <ExternalLink /> Filmween
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => window.open(`https://movie.vodu.me/index.php?do=list&title=${encodeURIComponent(voduSearchTitle)}`, "_blank", "noopener,noreferrer")}>
-                  <ExternalLink /> Vodu
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => window.open(`https://cinemana.shabakaty.com/search?videoTitle=${encodeURIComponent(cinemanaSearchTitle)}&staffTitle=${encodeURIComponent(cinemanaSearchTitle)}&year=1900,${new Date().getFullYear()}&type=movies`, "_blank", "noopener,noreferrer")}>
-                  <ExternalLink /> Cinemana
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => window.open(`https://cinemana.cc/?s=${encodeURIComponent(displayTitle)}`, "_blank", "noopener,noreferrer")}>
-                  <ExternalLink /> Cinemana Mod
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => window.open(`https://cee.buzz/search?videoTitle=${encodeURIComponent(displayTitle)}&staffTitle=${encodeURIComponent(displayTitle)}&year=1900,${new Date().getFullYear()}&type=movies`, "_blank", "noopener,noreferrer")}>
-                  <ExternalLink /> CeeBuzz
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-            );
-          })()}
 
-          {/* Rating */}
-          <Card className="rounded-2xl border-white/15 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Your rating</p>
-                {myRating != null ? (
-                  <div className="flex items-center gap-2">
-                    <div className={`text-4xl font-extrabold ${ratingColor}`}>
-                      {myRating}
-                      <span className="text-lg text-muted-foreground">/100</span>
-                    </div>
-                    <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-amber-400" style={{ width: `${myRating}%` }} />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="text-2xl font-bold text-muted-foreground">—</div>
-                    <span className="text-xs text-muted-foreground">Not rated yet</span>
-                  </div>
-                )}
-              </div>
-              {isWatched && <div className="flex items-center gap-2">
-                {myRating != null && (
-                  <Button variant="outline" size="sm" onClick={onRemoveRating}>
-                    Remove rating
+            {/* Library actions remain disabled until their canonical state is known. */}
+            <div className="tvtime-movie-detail-hero__actions">
+              <Button
+                variant={isWatched ? "default" : "secondary"}
+                onClick={onWatched}
+                disabled={stateLoading || watchedToggle.isPending}
+              >
+                {stateLoading ? <Loader2 className="animate-spin" /> : isWatched ? <CheckCircle2 /> : <Circle />}
+                {isWatched ? "Watched" : "Mark watched"}
+              </Button>
+              {isWatched ? (
+                <Button variant="outline" onClick={() => void onRewatch()} disabled={watchedToggle.isPending}>
+                  <CheckCircle2 /> Rewatch ({stateItem?.rewatchCount ?? 0})
+                </Button>
+              ) : (
+                <Button
+                  variant={inWatchlist ? "default" : "secondary"}
+                  onClick={onWatchlist}
+                  disabled={stateLoading || watchlistToggle.isPending}
+                >
+                  {inWatchlist ? <Check /> : <ListPlus />}
+                  {inWatchlist ? "In watchlist" : "Add to watchlist"}
+                </Button>
+              )}
+              {trailer && (
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(`https://www.youtube.com/watch?v=${trailer.key}`, "_blank")}
+                >
+                  <Play className="fill-current" /> Trailer
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <ExternalLink /> Watch
+                    <ChevronDown />
                   </Button>
-                )}
-                <Button size="sm" onClick={() => setRatingOpen(true)}>
-                  <Star className="w-4 h-4 mr-1 fill-current" />
-                  {myRating != null ? "Re-rate" : "Rate out of 100"}
-                </Button>
-              </div>}
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground mb-1">TMDB score</p>
-                <div className="flex items-center gap-1 text-amber-400 font-bold text-lg">
-                  <Star className="w-5 h-5 fill-amber-400" />
-                  {m.vote_average.toFixed(1)}
-                  <span className="text-xs text-muted-foreground font-normal">/10 ({m.vote_count.toLocaleString()})</span>
-                </div>
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem onSelect={() => window.open(`https://filmween.net/search?q=${encodeURIComponent(filmweenSearchTitle)}&mode=title`, "_blank", "noopener,noreferrer")}>
+                    <ExternalLink /> Filmween
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => window.open(`https://movie.vodu.me/index.php?do=list&title=${encodeURIComponent(voduSearchTitle)}`, "_blank", "noopener,noreferrer")}>
+                    <ExternalLink /> Vodu
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => window.open(`https://cinemana.shabakaty.com/search?videoTitle=${encodeURIComponent(cinemanaSearchTitle)}&staffTitle=${encodeURIComponent(cinemanaSearchTitle)}&year=1900,${new Date().getFullYear()}&type=movies`, "_blank", "noopener,noreferrer")}>
+                    <ExternalLink /> Cinemana
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => window.open(`https://cinemana.cc/?s=${encodeURIComponent(displayTitle)}`, "_blank", "noopener,noreferrer")}>
+                    <ExternalLink /> Cinemana Mod
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => window.open(`https://cee.buzz/search?videoTitle=${encodeURIComponent(displayTitle)}&staffTitle=${encodeURIComponent(displayTitle)}&year=1900,${new Date().getFullYear()}&type=movies`, "_blank", "noopener,noreferrer")}>
+                    <ExternalLink /> CeeBuzz
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          </Card>
 
-          {/* Genres */}
-          <div className="flex flex-wrap gap-2.5 [&>*]:rounded-xl [&>*]:px-4 [&>*]:py-2">
-            {m.genres?.map((g) => (
-              <Badge key={g.id} variant="outline" className="border-primary/30 text-primary/90">{g.name}</Badge>
-            ))}
+            {/* Rating */}
+            <Card className="tvtime-movie-detail-rating">
+              <div className="tvtime-movie-detail-rating__grid">
+                <div className="tvtime-movie-detail-rating__user">
+                  <p>Your rating</p>
+                  {myRating != null ? (
+                    <div className="tvtime-movie-detail-rating__value">
+                      <strong className={ratingColor}>
+                        {myRating}<span>/100</span>
+                      </strong>
+                      <span className="tvtime-movie-detail-rating__track" aria-hidden="true">
+                        <span style={{ width: `${myRating}%` }} />
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="tvtime-movie-detail-rating__empty">
+                      <strong>—</strong>
+                      <span>Not rated yet</span>
+                    </div>
+                  )}
+                </div>
+                <div className="tvtime-movie-detail-rating__tmdb">
+                  <p>TMDB score</p>
+                  <div>
+                    <Star className="fill-current" />
+                    <strong>{m.vote_average.toFixed(1)}</strong>
+                    <span>/10 ({m.vote_count.toLocaleString()})</span>
+                  </div>
+                </div>
+                {isWatched && (
+                  <div className="tvtime-movie-detail-rating__controls">
+                    {myRating != null && (
+                      <Button variant="outline" size="sm" onClick={onRemoveRating}>
+                        Remove rating
+                      </Button>
+                    )}
+                    <Button size="sm" onClick={() => setRatingOpen(true)}>
+                      <Star className="fill-current" />
+                      {myRating != null ? "Re-rate" : "Rate out of 100"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Genres */}
+            <div className="tvtime-movie-detail-genres">
+              {m.genres?.map((g) => (
+                <Badge key={g.id} variant="outline">{g.name}</Badge>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
       </section>
 
       {/* Tabs */}

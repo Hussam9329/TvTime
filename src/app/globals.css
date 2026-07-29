@@ -2762,6 +2762,296 @@ body {
   background: var(--app-surface-subtle);
 }
 
+/* Movie detail: one stable hierarchy instead of independently wrapping
+   poster, metadata, actions and scores. */
+.tvtime-movie-detail-hero {
+  border-radius: 2rem;
+  box-shadow: var(--app-shadow-lg), inset 0 1px rgb(255 255 255 / 0.08);
+}
+
+.tvtime-movie-detail-hero__layout {
+  display: grid;
+  grid-template-columns: clamp(12rem, 18vw, 16.875rem) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.tvtime-movie-detail-hero__poster {
+  width: 100%;
+  min-width: 0;
+}
+
+.tvtime-movie-detail-hero__poster > [data-slot="card"] {
+  overflow: hidden;
+  border-color: rgb(255 255 255 / 0.2);
+  background: rgb(3 8 18 / 0.5);
+  box-shadow: 0 24px 55px rgb(0 0 0 / 0.46);
+}
+
+.tvtime-movie-detail-hero__poster-action {
+  margin-top: 0.75rem;
+}
+
+.tvtime-movie-detail-hero__poster-action [data-slot="button"] {
+  width: 100%;
+  border-color: rgb(255 255 255 / 0.16);
+  background: rgb(5 10 20 / 0.6);
+  color: rgb(255 255 255 / 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.tvtime-movie-detail-hero__content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tvtime-movie-detail-hero__identity {
+  min-width: 0;
+}
+
+.tvtime-movie-detail-hero__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.tvtime-movie-detail-hero__eyebrow > span {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.7rem;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  background: rgb(7 12 23 / 0.56);
+  color: rgb(255 255 255 / 0.74);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+}
+
+.tvtime-movie-detail-hero__eyebrow .tvtime-movie-detail-hero__kind {
+  border-color: color-mix(in oklab, var(--primary) 30%, transparent);
+  background: color-mix(in oklab, var(--primary) 18%, rgb(7 12 23 / 0.6));
+  color: color-mix(in oklab, var(--primary) 76%, white);
+}
+
+.tvtime-movie-detail-hero__eyebrow .tvtime-movie-detail-hero__arabic {
+  border-color: rgb(52 211 153 / 0.22);
+  background: rgb(16 185 129 / 0.12);
+  color: rgb(110 231 183);
+}
+
+.tvtime-movie-detail-hero__eyebrow svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.tvtime-movie-detail-hero__title {
+  max-width: 18ch;
+  margin: 0;
+  color: white !important;
+  font-size: clamp(2.75rem, 5.2vw, 5.2rem);
+  font-weight: 900 !important;
+  letter-spacing: -0.055em !important;
+  line-height: 0.94;
+  text-shadow: 0 8px 34px rgb(0 0 0 / 0.42);
+}
+
+.tvtime-movie-detail-hero__tagline {
+  max-width: 46rem;
+  margin-top: 1rem;
+  color: rgb(255 255 255 / 0.66);
+  font-size: clamp(0.92rem, 1.5vw, 1.08rem);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.tvtime-movie-detail-hero__facts {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.tvtime-movie-detail-hero__facts > span {
+  display: inline-flex;
+  min-height: 2.35rem;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.5rem 0.72rem;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 0.8rem;
+  background: rgb(7 12 23 / 0.52);
+  color: rgb(255 255 255 / 0.76);
+  font-size: 0.78rem;
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+}
+
+.tvtime-movie-detail-hero__facts > span.is-score {
+  border-color: rgb(245 158 11 / 0.18);
+  background: rgb(245 158 11 / 0.12);
+  color: rgb(253 224 71);
+}
+
+.tvtime-movie-detail-hero__facts > span.is-rating {
+  border-color: color-mix(in oklab, var(--primary) 24%, transparent);
+  background: color-mix(in oklab, var(--primary) 14%, rgb(7 12 23 / 0.5));
+  color: color-mix(in oklab, var(--primary) 74%, white);
+}
+
+.tvtime-movie-detail-hero__facts svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.tvtime-movie-detail-hero__actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.7rem;
+}
+
+.tvtime-movie-detail-hero__actions [data-slot="button"] {
+  width: 100%;
+  min-width: 0;
+  height: 3rem;
+  justify-content: center;
+  padding-inline: 0.9rem;
+}
+
+.tvtime-movie-detail-hero__actions [data-slot="button"] svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.tvtime-movie-detail-rating {
+  padding: 1.1rem !important;
+  border-color: rgb(255 255 255 / 0.13) !important;
+  border-radius: 1.15rem !important;
+  background: rgb(4 9 19 / 0.52) !important;
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.05) !important;
+  backdrop-filter: blur(16px) saturate(115%) !important;
+}
+
+.tvtime-movie-detail-rating__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem 1.5rem;
+}
+
+.tvtime-movie-detail-rating :is(.tvtime-movie-detail-rating__user, .tvtime-movie-detail-rating__tmdb) > p {
+  margin-bottom: 0.35rem;
+  color: rgb(255 255 255 / 0.5);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.tvtime-movie-detail-rating__value,
+.tvtime-movie-detail-rating__empty,
+.tvtime-movie-detail-rating__tmdb > div {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.tvtime-movie-detail-rating__value > strong {
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.tvtime-movie-detail-rating__value > strong span {
+  margin-inline-start: 0.15rem;
+  color: rgb(255 255 255 / 0.46);
+  font-size: 0.85rem;
+}
+
+.tvtime-movie-detail-rating__track {
+  display: block;
+  width: min(6rem, 20vw);
+  height: 0.38rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.1);
+}
+
+.tvtime-movie-detail-rating__track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #fbbf24;
+}
+
+.tvtime-movie-detail-rating__empty > strong {
+  color: rgb(255 255 255 / 0.46);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.tvtime-movie-detail-rating__empty > span {
+  color: rgb(255 255 255 / 0.5);
+  font-size: 0.75rem;
+}
+
+.tvtime-movie-detail-rating__tmdb {
+  text-align: end;
+}
+
+.tvtime-movie-detail-rating__tmdb > div {
+  justify-content: flex-end;
+  color: #facc15;
+}
+
+.tvtime-movie-detail-rating__tmdb svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.tvtime-movie-detail-rating__tmdb strong {
+  font-size: 1.15rem;
+}
+
+.tvtime-movie-detail-rating__tmdb span {
+  color: rgb(255 255 255 / 0.48);
+  font-size: 0.7rem;
+}
+
+.tvtime-movie-detail-rating__controls {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.tvtime-movie-detail-genres {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.tvtime-movie-detail-genres [data-slot="badge"] {
+  min-height: 2rem;
+  padding-inline: 0.75rem;
+  border-color: color-mix(in oklab, var(--primary) 24%, rgb(255 255 255 / 0.12));
+  border-radius: 0.75rem;
+  color: color-mix(in oklab, var(--primary) 68%, white);
+}
+
 /* Login and footer receive the same restrained surface language. */
 .tvtime-login-page {
   position: relative;
@@ -3037,6 +3327,178 @@ body {
 
   .tvtime-recent-card {
     width: clamp(7.8rem, 35vw, 8.8rem);
+  }
+
+  .tvtime-movie-detail-page > .tvtime-detail-back-button {
+    display: none;
+  }
+
+  .tvtime-movie-detail-hero {
+    border-radius: 1.35rem !important;
+  }
+
+  .tvtime-movie-detail-hero__layout {
+    grid-template-columns: 6.75rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .tvtime-movie-detail-hero__poster {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .tvtime-movie-detail-hero__poster > [data-slot="card"] {
+    border-radius: 1rem;
+  }
+
+  .tvtime-movie-detail-hero__poster-action {
+    margin-top: 0.5rem;
+  }
+
+  .tvtime-movie-detail-hero__poster-action [data-slot="button"] {
+    min-width: 0;
+    height: 2.25rem;
+    gap: 0.3rem;
+    padding-inline: 0.4rem;
+    font-size: 0.68rem;
+  }
+
+  .tvtime-movie-detail-hero__poster-action [data-slot="button"] svg {
+    width: 0.82rem;
+    height: 0.82rem;
+  }
+
+  .tvtime-movie-detail-hero__content {
+    display: contents;
+  }
+
+  .tvtime-movie-detail-hero__identity {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .tvtime-movie-detail-hero__eyebrow {
+    gap: 0.35rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .tvtime-movie-detail-hero__eyebrow > span {
+    min-height: 1.7rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tvtime-movie-detail-hero__eyebrow svg {
+    width: 0.72rem;
+    height: 0.72rem;
+  }
+
+  .tvtime-movie-detail-hero__title {
+    max-width: 13ch;
+    font-size: clamp(1.72rem, 8vw, 2.35rem);
+    line-height: 0.98;
+  }
+
+  .tvtime-movie-detail-hero__tagline {
+    display: -webkit-box;
+    margin-top: 0.65rem;
+    overflow: hidden;
+    font-size: 0.78rem;
+    line-height: 1.42;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .tvtime-movie-detail-hero__facts {
+    grid-column: 1 / -1;
+    flex-wrap: nowrap;
+    gap: 0.45rem;
+    margin-top: 0.15rem;
+    padding-bottom: 0.15rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .tvtime-movie-detail-hero__facts::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tvtime-movie-detail-hero__facts > span {
+    min-height: 2rem;
+    flex: 0 0 auto;
+    padding: 0.4rem 0.58rem;
+    border-radius: 0.7rem;
+    font-size: 0.7rem;
+  }
+
+  .tvtime-movie-detail-hero__actions {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .tvtime-movie-detail-hero__actions [data-slot="button"] {
+    height: 2.875rem;
+    padding-inline: 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  .tvtime-movie-detail-hero__actions > [data-slot="button"]:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .tvtime-movie-detail-rating {
+    grid-column: 1 / -1;
+    padding: 0.9rem !important;
+  }
+
+  .tvtime-movie-detail-rating__grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.8rem 1rem;
+  }
+
+  .tvtime-movie-detail-rating__value > strong {
+    font-size: 1.65rem;
+  }
+
+  .tvtime-movie-detail-rating__track {
+    display: none;
+  }
+
+  .tvtime-movie-detail-rating__tmdb > div {
+    gap: 0.35rem;
+  }
+
+  .tvtime-movie-detail-rating__tmdb span {
+    max-width: 5.2rem;
+    line-height: 1.2;
+  }
+
+  .tvtime-movie-detail-rating__controls {
+    justify-content: stretch;
+  }
+
+  .tvtime-movie-detail-rating__controls [data-slot="button"] {
+    min-width: 0;
+    flex: 1 1 8rem;
+  }
+
+  .tvtime-movie-detail-genres {
+    grid-column: 1 / -1;
+    flex-wrap: nowrap;
+    margin-inline: -1rem;
+    padding: 0.05rem 1rem 0.25rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .tvtime-movie-detail-genres::-webkit-scrollbar {
+    display: none;
   }
 
   .tvtime-page-hero,
