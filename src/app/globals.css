@@ -3042,6 +3042,7 @@ body {
   min-width: 0;
   flex-wrap: wrap;
   gap: 0.55rem;
+  margin-top: 1rem;
 }
 
 .tvtime-movie-detail-genres [data-slot="badge"] {
@@ -3488,17 +3489,18 @@ body {
   }
 
   .tvtime-movie-detail-genres {
-    grid-column: 1 / -1;
-    flex-wrap: nowrap;
-    margin-inline: -1rem;
-    padding: 0.05rem 1rem 0.25rem;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: none;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.65rem 0 0;
+    padding: 0;
+    overflow: visible;
   }
 
-  .tvtime-movie-detail-genres::-webkit-scrollbar {
-    display: none;
+  .tvtime-movie-detail-genres [data-slot="badge"] {
+    min-height: 1.6rem;
+    padding-inline: 0.48rem;
+    border-radius: 999px;
+    font-size: 0.62rem;
   }
 
   .tvtime-page-hero,

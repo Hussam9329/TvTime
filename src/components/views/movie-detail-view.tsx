@@ -230,6 +230,11 @@ export function MovieDetailView() {
                 {displayTitle}
               </h1>
               {m.tagline && <p className="tvtime-movie-detail-hero__tagline">{m.tagline}</p>}
+              <div className="tvtime-movie-detail-genres" aria-label="Movie genres">
+                {m.genres?.map((genre) => (
+                  <Badge key={genre.id} variant="outline">{genre.name}</Badge>
+                ))}
+              </div>
             </header>
 
             <div className="tvtime-movie-detail-hero__facts" aria-label="Movie facts">
@@ -356,12 +361,6 @@ export function MovieDetailView() {
               </div>
             </Card>
 
-            {/* Genres */}
-            <div className="tvtime-movie-detail-genres">
-              {m.genres?.map((g) => (
-                <Badge key={g.id} variant="outline">{g.name}</Badge>
-              ))}
-            </div>
           </div>
         </div>
       </section>
