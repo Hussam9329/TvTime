@@ -357,10 +357,6 @@ export async function commitStagedLibraryImport(
       where: { id: userId },
       data: {
         timezone: String(payload.timezone || "Asia/Baghdad"),
-        country: String(payload.country || "IQ"),
-        preferredPlatforms: Array.isArray(payload.preferredPlatforms)
-          ? payload.preferredPlatforms.map(String).slice(0, 100)
-          : [],
       },
     });
     preferencesUpdated = true;

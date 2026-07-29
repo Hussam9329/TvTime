@@ -3,14 +3,14 @@
 ## User-visible result
 
 - Backup format v6 includes the core library, watched episodes, episode ratings,
-  diary sessions, notifications, custom lists and their items, plus timezone,
-  country and preferred-platform preferences.
+  diary sessions, notifications, custom lists and their items, plus the timezone
+  preference.
 - Restore still accepts v5 NDJSON and legacy JSON backups. New collections are
   validated in staging and committed in the same transaction as the library.
 - “Clear all data” now deletes every user-owned content table while explicitly
   preserving the account and its preferences.
-- Preferences synchronize through `/api/user`, affect Where to Watch and diary
-  timestamps, and are portable through backup/restore.
+- The timezone preference synchronizes through `/api/user`, affects diary
+  timestamps, and is portable through backup/restore.
 - Custom Lists are available directly in navigation on desktop and
   mobile; keyboard shortcuts are provided for each.
 - Search shortcuts use one explicit command rather than competing listeners or
@@ -21,9 +21,9 @@
 
 ## Database rollout
 
-Migration `20260718000000_data_lifecycle_preferences` adds account preference
-columns and NOT VALID check constraints. The constraints protect new/updated
-rows immediately without assuming historical production data is already clean.
+Migration `20260718000000_data_lifecycle_preferences` is retained unchanged as
+historical migration state. The country and preferred-platform fields it
+originally added are retired from the application and backup/restore flow.
 Run the migration on a verified clone first, then use the standard guarded
 `db:migrate:deploy` path.
 

@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const fullTitle = year ? `${title} ${year}` : title;
     const description = show.overview
       ? show.overview.slice(0, 160)
-      : `Track episodes, ratings, and where to watch ${title} on TvTime.`;
+      : `Track episodes and ratings for ${title} on TvTime.`;
     const poster = show.poster_path
       ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
       : null;

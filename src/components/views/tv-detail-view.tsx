@@ -12,7 +12,6 @@ import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
 import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
-import { WatchProviders } from "@/components/media/watch-providers";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Star, Clock, Play, ListPlus, CheckCircle2, Circle, ArrowLeft,
@@ -562,7 +561,6 @@ export function TvDetailView() {
             <h3 className="text-lg font-bold mb-2">Synopsis</h3>
             <p className="text-foreground/80 leading-relaxed">{t.overview || "No overview available."}</p>
           </div>
-          <WatchProviders providersData={(t as any)["watch/providers"]} />
           {t.networks?.length > 0 && (
             <div>
               <h4 className="text-sm font-bold mb-2">Networks</h4>

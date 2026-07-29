@@ -12,7 +12,6 @@ import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
-import { WatchProviders } from "@/components/media/watch-providers";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Star, Clock, Calendar, Play, Check, ListPlus, CheckCircle2, Circle, ArrowLeft,
@@ -381,7 +380,6 @@ export function MovieDetailView() {
             <h3 className="text-lg font-bold mb-2">Synopsis</h3>
             <p className="text-foreground/80 leading-relaxed">{m.overview || "No overview available."}</p>
           </div>
-          <WatchProviders providersData={(m as any)["watch/providers"]} />
           {recommendations.length > 0 && (
             <MediaRow title="Recommendations" icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="movie" />
           )}

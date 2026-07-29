@@ -98,7 +98,7 @@ async function loadPage(
   if (cursor) return [];
   const user = await db.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { timezone: true, country: true, preferredPlatforms: true },
+    select: { timezone: true },
   });
   return [{ cursor: "preferences", data: user }];
 }

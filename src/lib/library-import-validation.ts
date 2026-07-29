@@ -170,8 +170,6 @@ const notificationSchema = z.object({
 
 const preferencesSchema = z.object({
   timezone: z.preprocess((value) => String(value ?? "Asia/Baghdad").trim(), z.string().min(1).max(100)),
-  country: z.preprocess((value) => String(value ?? "IQ").trim().toUpperCase(), z.string().regex(/^[A-Z]{2}$/)),
-  preferredPlatforms: stringArray.default([]),
 });
 
 const collectionsSchema = z.preprocess(normalizeCollectionCounts, z.object({

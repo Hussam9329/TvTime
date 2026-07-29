@@ -57,10 +57,9 @@ assert.equal(notification.payload.read, false);
 const preferences = normalizeImportRecord({
   collection: "preferences",
   ordinal: 0,
-  data: { timezone: "Asia/Baghdad", country: "iq", preferredPlatforms: ["Shahid", "Shahid"] },
+  data: { timezone: "Asia/Baghdad" },
 });
-assert.equal(preferences.payload.country, "IQ");
-assert.deepEqual(preferences.payload.preferredPlatforms, ["Shahid"]);
+assert.equal(preferences.payload.timezone, "Asia/Baghdad");
 
 assert.throws(() => normalizeImportRecord({
   collection: "watchSessions",

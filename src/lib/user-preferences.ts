@@ -2,8 +2,6 @@
 
 export type UserPreferences = {
   timezone: string;
-  country: string;
-  preferredPlatforms: string[];
 };
 
 const STORAGE_KEY = "tvtime-preferences";
@@ -11,8 +9,6 @@ export const USER_PREFERENCES_EVENT = "tvtime:user-preferences";
 
 export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   timezone: "Asia/Baghdad",
-  country: "IQ",
-  preferredPlatforms: [],
 };
 
 function validTimezone(value: string): boolean {
@@ -27,14 +23,8 @@ function validTimezone(value: string): boolean {
 export function normalizeUserPreferences(value: unknown): UserPreferences {
   const source = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const timezoneCandidate = String(source.timezone || DEFAULT_USER_PREFERENCES.timezone).trim();
-  const countryCandidate = String(source.country || DEFAULT_USER_PREFERENCES.country).trim().toUpperCase();
-  const platforms = Array.isArray(source.preferredPlatforms)
-    ? source.preferredPlatforms.map(String).map((item) => item.trim()).filter(Boolean)
-    : [];
   return {
     timezone: validTimezone(timezoneCandidate) ? timezoneCandidate : DEFAULT_USER_PREFERENCES.timezone,
-    country: /^[A-Z]{2}$/.test(countryCandidate) ? countryCandidate : DEFAULT_USER_PREFERENCES.country,
-    preferredPlatforms: [...new Set(platforms)].slice(0, 100),
   };
 }
 
@@ -105,23 +95,6 @@ export function formatInUserTimezone(date: Date | string, options?: Intl.DateTim
 export function formatDateTimeInUserTimezone(date: Date | string): string {
   return formatInUserTimezone(date, { hour: "2-digit", minute: "2-digit" });
 }
-
-export const COUNTRY_OPTIONS = [
-  { code: "IQ", name: "Iraq" },
-  { code: "US", name: "United States" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "AE", name: "United Arab Emirates" },
-  { code: "SA", name: "Saudi Arabia" },
-  { code: "EG", name: "Egypt" },
-  { code: "TR", name: "Turkey" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "CA", name: "Canada" },
-  { code: "AU", name: "Australia" },
-  { code: "IN", name: "India" },
-  { code: "JP", name: "Japan" },
-  { code: "KR", name: "South Korea" },
-];
 
 export const TIMEZONE_OPTIONS = [
   { value: "Asia/Baghdad", label: "Iraq (Asia/Baghdad, GMT+3)" },

@@ -41,7 +41,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       deleted,
-      preserved: ["account", "timezone", "country", "preferredPlatforms"],
+      preserved: ["account", "timezone"],
       source: "all user-owned TvTime content tables",
     });
   } catch (error) {

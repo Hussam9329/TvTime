@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStats } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
@@ -16,12 +15,11 @@ import {
   fetchUserPreferences,
   getUserPreferences,
   saveUserPreferences,
-  COUNTRY_OPTIONS,
   TIMEZONE_OPTIONS,
   type UserPreferences,
 } from "@/lib/user-preferences";
 import { downloadLibraryBackup, restoreLibraryBackup } from "@/lib/library-backup-client";
-import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Globe, Clock, Star, LogOut, BellRing, Smartphone } from "lucide-react";
+import { Settings, User, Trash2, AlertTriangle, Loader2, Check, Download, Upload, Clock, LogOut, BellRing, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -339,7 +337,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => void enableNotifications()} disabled={notificationPermission === "granted" || notificationPermission === "unsupported"}><BellRing className="w-4 h-4 mr-1.5" />{notificationPermission === "granted" ? "Notifications enabled" : notificationPermission === "denied" ? "Blocked in browser settings" : "Enable notifications"}</Button>
           </div>
 
-          {/* TVM-35/36/37: Preferences — timezone, country, platform preferences */}
+          {/* Account-synchronized timezone preference */}
           <PreferencesSection />
 
           {/* Sign out (only when auth is enabled on this deployment) */}
@@ -415,7 +413,6 @@ function StatBox({ label, value }: { label: string; value: number }) {
 // Account-synchronized preferences with a local cache for offline rendering.
 function PreferencesSection() {
   const [prefs, setPrefs] = useState<UserPreferences>(() => getUserPreferences());
-  const [platformInput, setPlatformInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingPreference, setSavingPreference] = useState(false);
 
@@ -448,21 +445,6 @@ function PreferencesSection() {
     void persist({ ...prefs, [key]: value });
   };
 
-  const addPlatform = () => {
-    const name = platformInput.trim();
-    if (!name) return;
-    if (prefs.preferredPlatforms.some((platform) => platform.toLowerCase() === name.toLowerCase())) {
-      toast.info("Already in your preferences");
-      return;
-    }
-    setPlatformInput("");
-    void persist({ ...prefs, preferredPlatforms: [...prefs.preferredPlatforms, name] }, `Added "${name}"`);
-  };
-
-  const removePlatform = (name: string) => {
-    void persist({ ...prefs, preferredPlatforms: prefs.preferredPlatforms.filter((platform) => platform !== name) }, `Removed "${name}"`);
-  };
-
   return (
     <div className="rounded-lg border border-border/50 bg-card/50 p-3 space-y-3" aria-busy={loading || savingPreference}>
       <div className="flex items-center justify-between gap-2">
@@ -482,45 +464,6 @@ function PreferencesSection() {
           </SelectContent>
         </Select>
         <p className="text-[10px] text-muted-foreground">Dates and times display in this timezone and sync across devices.</p>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-xs flex items-center gap-1"><Globe className="w-3 h-3" /> Country (Where to Watch)</Label>
-        <Select value={prefs.country} onValueChange={(value) => updatePref("country", value)} disabled={savingPreference}>
-          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {COUNTRY_OPTIONS.map((country) => <SelectItem key={country.code} value={country.code}>{country.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <p className="text-[10px] text-muted-foreground">Provider availability uses this country when TMDB supplies regional data.</p>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-xs flex items-center gap-1"><Star className="w-3 h-3" /> Preferred Platforms</Label>
-        <div className="flex gap-2">
-          <Input
-            value={platformInput}
-            onChange={(event) => setPlatformInput(event.target.value)}
-            onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addPlatform(); } }}
-            placeholder="e.g. Netflix, Shahid, Prime Video"
-            className="h-9 text-sm flex-1"
-            disabled={savingPreference}
-          />
-          <Button size="sm" variant="outline" className="h-9" onClick={addPlatform} disabled={savingPreference}>Add</Button>
-        </div>
-        {prefs.preferredPlatforms.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {prefs.preferredPlatforms.map((platform) => (
-              <Badge key={platform} variant="secondary" className="text-[10px] gap-1">
-                <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                {platform}
-                <button type="button" data-ui-action="danger-link" onClick={() => removePlatform(platform)} className="ml-0.5 hover:text-rose-400" aria-label={`Remove ${platform}`} disabled={savingPreference}>✕</button>
-              </Badge>
-            ))}
-          </div>
-        ) : (
-          <p className="text-[10px] text-muted-foreground">Add platforms to highlight them in Where to Watch.</p>
-        )}
       </div>
     </div>
   );

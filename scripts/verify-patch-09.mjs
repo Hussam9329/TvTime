@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = process.cwd();
@@ -19,7 +19,7 @@ requireText("src/lib/library-transfer-types.ts", [
 requireText("src/app/api/library/clear/route.ts", [
   [/watchSession\.deleteMany/, "clear-all does not delete diary sessions"],
   [/notification\.deleteMany/, "clear-all does not delete notifications"],
-  [/preferredPlatforms/, "clear-all does not declare preserved preferences"],
+  [/"timezone"/, "clear-all does not declare the preserved timezone preference"],
 ]);
 requireText("src/lib/library-import-commit.ts", [
   [/collection = 'watchSessions'/, "diary restore merge is missing"],
@@ -28,8 +28,6 @@ requireText("src/lib/library-import-commit.ts", [
 ]);
 requireText("prisma/schema.prisma", [
   [/timezone\s+String\s+@default\("Asia\/Baghdad"\)/, "user timezone field is missing"],
-  [/country\s+String\s+@default\("IQ"\)/, "user country field is missing"],
-  [/preferredPlatforms\s+String\[\]/, "preferred platforms field is missing"],
 ]);
 requireText("prisma/migrations/20260718000000_data_lifecycle_preferences/migration.sql", [
   [/ADD COLUMN IF NOT EXISTS "timezone"/, "preference migration is missing"],
@@ -50,10 +48,30 @@ requireText("src/app/arabic/tv/page.tsx", [[/canonical: "\/arabic\/tv"/, "TV can
 if (/dir="rtl"/.test(read("src/app/arabic/layout.tsx"))) {
   failures.push("src/app/arabic/layout.tsx: RTL still wraps the entire AppShell");
 }
-requireText("src/components/media/watch-providers.tsx", [
-  [/fetchUserPreferences/, "provider region is not account-synchronized"],
-  [/preferredPlatforms/, "preferred platform highlighting is missing"],
-]);
+
+const retiredProviderComponent = "src/components/media/watch-providers.tsx";
+if (existsSync(resolve(root, retiredProviderComponent))) {
+  failures.push(`${retiredProviderComponent}: retired Where to Watch component still exists`);
+}
+for (const path of [
+  "src/lib/tmdb.ts",
+  "src/components/views/movie-detail-view.tsx",
+  "src/components/views/tv-detail-view.tsx",
+]) {
+  if (/WatchProviders|watch\/providers|Where to Watch|JustWatch/i.test(read(path))) {
+    failures.push(`${path}: retired Where to Watch integration is still present`);
+  }
+}
+for (const path of [
+  "src/components/views/movie-detail-view.tsx",
+  "src/components/views/tv-detail-view.tsx",
+]) {
+  requireText(path, [
+    [/filmween\.net/, "Watch button lost its Filmween destination"],
+    [/movie\.vodu\.me/, "Watch button lost its Vodu destination"],
+    [/cinemana/, "Watch button lost its Cinemana destinations"],
+  ]);
+}
 
 const pkg = JSON.parse(read("package.json"));
 if (!String(pkg.scripts?.["verify:patch-09"] || "").includes("test-patch-09")) failures.push("package.json: Patch 09 tests are not wired");
@@ -64,4 +82,4 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exit(1);
 }
-console.log("[patch-09] Full data lifecycle, synchronized preferences, navigation, RTL and search accessibility guards are present.");
+console.log("[patch-09] Full data lifecycle, synchronized timezone preference, navigation, RTL and search accessibility guards are present.");

@@ -17,8 +17,6 @@ const updateUserSchema = z.object({
   name: z.string().trim().min(1).max(30).optional(),
   avatar: z.string().trim().max(2_000).nullable().optional(),
   timezone: z.string().trim().min(1).max(100).refine(validTimezone, "Invalid IANA timezone").optional(),
-  country: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/).optional(),
-  preferredPlatforms: z.array(z.string().trim().min(1).max(100)).max(100).transform((items) => [...new Set(items)]).optional(),
 }).strict();
 
 export async function GET(req: NextRequest) {
