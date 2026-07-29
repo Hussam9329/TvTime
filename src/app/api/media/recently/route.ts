@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
+import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
+import { classifyMediaWorld } from "@/lib/media-world-classification";
 
 type RecentlyItem = {
   id: string;
@@ -43,17 +45,24 @@ export async function GET(req: NextRequest) {
 
     const [mediaMovies, mediaShows] = await Promise.all([
       db.media.findMany({
-        where: { userId: user.id, type: "movie", watched: true, isArabic: false },
+        where: { userId: user.id, type: "movie", watched: true },
         orderBy: [{ watchedAt: "desc" }, { updatedAt: "desc" }],
         take: 100,
       }),
       db.media.findMany({
-        where: { userId: user.id, type: "series", isArabic: false, tmdbId: { not: null } },
-        select: { tmdbId: true, title: true, poster: true },
+        where: { userId: user.id, type: "series", tmdbId: { not: null } },
       }),
     ]);
+    const [classifiedMovies, classifiedShows] = await Promise.all([
+      resolveGeneralMediaClassifications(mediaMovies),
+      resolveGeneralMediaClassifications(mediaShows),
+    ]);
+    const nonArabicMovies = classifiedMovies.filter((item) =>
+      !classifyMediaWorld(item).isArabic);
+    const nonArabicShows = classifiedShows.filter((item) =>
+      !classifyMediaWorld(item).isArabic);
 
-    const showIds = mediaShows
+    const showIds = nonArabicShows
       .map((show) => validTmdbId(show.tmdbId))
       .filter((id): id is number => id != null);
     const watchedEpisodes = showIds.length
@@ -64,13 +73,13 @@ export async function GET(req: NextRequest) {
         })
       : [];
     const showMeta = new Map<number, { title: string; posterPath: string | null }>();
-    for (const show of mediaShows) {
+    for (const show of nonArabicShows) {
       const id = validTmdbId(show.tmdbId);
       if (id) showMeta.set(id, { title: show.title, posterPath: show.poster ?? null });
     }
 
     const items = new Map<string, RecentlyItem>();
-    for (const movie of mediaMovies) {
+    for (const movie of nonArabicMovies) {
       const tmdbId = validTmdbId(movie.tmdbId);
       addUnique(items, {
         id: movie.id,

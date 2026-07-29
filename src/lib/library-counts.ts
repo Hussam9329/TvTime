@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { INFERRED_ANIME_WHERE, INFERRED_ASIAN_TV_WHERE, INFERRED_NON_ANIME_WHERE, INFERRED_NON_ASIAN_TV_WHERE } from "@/lib/media-classification-server";
+import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
+import { classifyMediaWorld } from "@/lib/media-world-classification";
 
 
 export function eligibleTitleRatingWhere(userId: string): Prisma.MediaWhereInput {
@@ -20,98 +21,62 @@ export function eligibleTitleRatingWhere(userId: string): Prisma.MediaWhereInput
  * filter badge.
  */
 export async function getCanonicalLibraryCounts(userId: string) {
-  const base = { userId };
-  const eligibleRating = eligibleTitleRatingWhere(userId);
-  const eligibleAnimeRating: Prisma.MediaWhereInput = {
-    userId,
-    isArabic: false,
-    AND: [INFERRED_ANIME_WHERE],
-    userRating: { not: null },
-    OR: [
-      { type: { not: "series" } },
-      { type: "series", status: "finished" },
-    ],
-  };
-  const standardWorld = { isArabic: false, AND: [INFERRED_NON_ANIME_WHERE, INFERRED_NON_ASIAN_TV_WHERE] } satisfies Prisma.MediaWhereInput;
-  const animeWorld = { isArabic: false, AND: [INFERRED_ANIME_WHERE] } satisfies Prisma.MediaWhereInput;
-  const asianTvWorld = { isArabic: false, AND: [INFERRED_ASIAN_TV_WHERE] } satisfies Prisma.MediaWhereInput;
-
-  const [
-    total,
-    movies,
-    series,
-    rated,
-    ratedMovies,
-    ratedShows,
-    ratedAnime,
-    watched,
-    planned,
-    watchlistMovies,
-    watchlistShows,
-    watchlistAnime,
-    watchlistAsianShows,
-    watchedMovies,
-    watchedShows,
-    watchedAnime,
-    watchedAsianShows,
-    notStartedAnime,
-    watchingAnime,
-    watchlistArabicMovies,
-    watchedArabicMovies,
-    watchlistArabicShows,
-    notStartedArabicShows,
-    watchingArabicShows,
-    finishedArabicShows,
-    followingArabicShows,
-    following,
-    watchedEpisodes,
-  ] = await Promise.all([
-    db.media.count({ where: base }),
-    db.media.count({ where: { ...base, ...standardWorld, type: "movie" } }),
-    db.media.count({ where: { ...base, ...standardWorld, type: "series" } }),
-    db.media.count({ where: eligibleRating }),
-    db.media.count({ where: { ...base, ...standardWorld, type: "movie", userRating: { not: null } } }),
-    db.media.count({ where: { ...base, ...standardWorld, type: "series", status: "finished", userRating: { not: null } } }),
-    db.media.count({ where: eligibleAnimeRating }),
-    db.media.count({ where: { ...base, watched: true } }),
-    db.media.count({ where: { ...base, status: "planned", watched: false } }),
-    db.media.count({ where: { ...base, ...standardWorld, type: "movie", status: "planned", watched: false } }),
-    db.media.count({ where: { ...base, ...standardWorld, type: "series", status: "planned", watched: false } }),
-    db.media.count({ where: { ...base, ...animeWorld, status: "planned", watched: false } }),
-    db.media.count({ where: { ...base, ...asianTvWorld, status: "planned", watched: false } }),
-    db.media.count({ where: { ...base, ...standardWorld, type: "movie", watched: true } }),
-    db.media.count({ where: { ...base, ...standardWorld, type: "series", watched: true } }),
-    db.media.count({ where: { ...base, ...animeWorld, watched: true } }),
-    db.media.count({ where: { ...base, ...asianTvWorld, watched: true } }),
-    db.media.count({
-      where: {
-        ...base,
-        type: "series",
-        ...animeWorld,
-        isFollowing: true,
-        watched: false,
-        status: "not_started",
-      },
-    }),
-    db.media.count({
-      where: {
-        ...base,
-        type: "series",
-        ...animeWorld,
-        watched: false,
-        status: { in: ["watching", "uptodate"] },
-      },
-    }),
-    db.media.count({ where: { ...base, type: "movie", isArabic: true, status: "planned", watched: false } }),
-    db.media.count({ where: { ...base, type: "movie", isArabic: true, watched: true } }),
-    db.media.count({ where: { ...base, type: "series", isArabic: true, status: "planned", watched: false } }),
-    db.media.count({ where: { ...base, type: "series", isArabic: true, isFollowing: true, watched: false, status: "not_started" } }),
-    db.media.count({ where: { ...base, type: "series", isArabic: true, watched: false, status: { in: ["watching", "uptodate"] } } }),
-    db.media.count({ where: { ...base, type: "series", isArabic: true, status: "finished" } }),
-    db.media.count({ where: { ...base, type: "series", isArabic: true, isFollowing: true } }),
-    db.media.count({ where: { ...base, ...standardWorld, type: "series", isFollowing: true } }),
-    db.watchedEpisode.count({ where: base }),
+  const [storedMedia, watchedEpisodes] = await Promise.all([
+    db.media.findMany({ where: { userId } }),
+    db.watchedEpisode.count({ where: { userId } }),
   ]);
+  const media = await resolveGeneralMediaClassifications(storedMedia);
+  const classified = media.map((item) => ({
+    item,
+    world: classifyMediaWorld(item).collectionWorld,
+  }));
+  const count = (predicate: (entry: (typeof classified)[number]) => boolean) =>
+    classified.filter(predicate).length;
+  const isPlanned = ({ item }: (typeof classified)[number]) =>
+    item.status === "planned" && item.watched === false;
+  const hasEligibleRating = ({ item }: (typeof classified)[number]) =>
+    item.userRating != null && (item.type !== "series" || item.status === "finished");
+  const isWatching = (status: string | null) => status === "watching" || status === "uptodate";
+
+  const total = classified.length;
+  const movies = count(({ world }) => world === "movies");
+  const series = count(({ world }) => world === "standard-tv");
+  const rated = count(hasEligibleRating);
+  const ratedMovies = count((entry) => entry.world === "movies" && entry.item.userRating != null);
+  const ratedShows = count((entry) =>
+    entry.world === "standard-tv" && entry.item.status === "finished" && entry.item.userRating != null);
+  const ratedAnime = count((entry) => entry.world === "anime" && hasEligibleRating(entry));
+  const watched = count(({ item }) => item.watched);
+  const planned = count(isPlanned);
+  const watchlistMovies = count((entry) => entry.world === "movies" && isPlanned(entry));
+  const watchlistShows = count((entry) => entry.world === "standard-tv" && isPlanned(entry));
+  const watchlistAnime = count((entry) => entry.world === "anime" && isPlanned(entry));
+  const watchlistAsianShows = count((entry) => entry.world === "asian-tv" && isPlanned(entry));
+  const watchedMovies = count(({ item, world }) => world === "movies" && item.watched);
+  const watchedShows = count(({ item, world }) => world === "standard-tv" && item.watched);
+  const watchedAnime = count(({ item, world }) => world === "anime" && item.watched);
+  const watchedAsianShows = count(({ item, world }) => world === "asian-tv" && item.watched);
+  const notStartedAnime = count(({ item, world }) =>
+    world === "anime"
+    && item.type === "series"
+    && item.isFollowing
+    && !item.watched
+    && item.status === "not_started");
+  const watchingAnime = count(({ item, world }) =>
+    world === "anime" && item.type === "series" && !item.watched && isWatching(item.status));
+  const watchlistArabicMovies = count((entry) => entry.world === "arabic-movies" && isPlanned(entry));
+  const watchedArabicMovies = count(({ item, world }) => world === "arabic-movies" && item.watched);
+  const watchlistArabicShows = count((entry) => entry.world === "arabic-tv" && isPlanned(entry));
+  const notStartedArabicShows = count(({ item, world }) =>
+    world === "arabic-tv" && item.isFollowing && !item.watched && item.status === "not_started");
+  const watchingArabicShows = count(({ item, world }) =>
+    world === "arabic-tv" && !item.watched && isWatching(item.status));
+  const finishedArabicShows = count(({ item, world }) =>
+    world === "arabic-tv" && item.status === "finished");
+  const followingArabicShows = count(({ item, world }) =>
+    world === "arabic-tv" && item.isFollowing);
+  const following = count(({ item, world }) =>
+    world === "standard-tv" && item.isFollowing);
 
   return {
     total,

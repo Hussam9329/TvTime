@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
+import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
 
 const MAX_ITEMS = 200;
 
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
         isArabic: true,
         originalLanguage: true,
         originCountries: true,
+        genres: true,
         isFollowing: true,
         poster: true,
         overview: true,
@@ -84,8 +86,9 @@ export async function POST(req: NextRequest) {
 
     // The migration makes duplicates impossible. Until it is applied, select the
     // strongest existing row so cards remain deterministic during rollout.
-    const bestByKey = new Map<string, (typeof rows)[number]>();
-    for (const row of rows) {
+    const classifiedRows = await resolveGeneralMediaClassifications(rows);
+    const bestByKey = new Map<string, (typeof classifiedRows)[number]>();
+    for (const row of classifiedRows) {
       if (row.tmdbId == null || (row.type !== "movie" && row.type !== "series")) continue;
       const mediaType = row.type === "series" ? "tv" : "movie";
       const key = keyFor(mediaType, row.tmdbId);

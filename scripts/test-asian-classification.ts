@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { isAsianMediaItem } from "../src/lib/asian-media.ts";
 import { classifyTvWorld, recordMatchesTvWorld } from "../src/lib/tv-world-classification.ts";
+import {
+  classifyMediaWorld,
+  recordMatchesMediaClassification,
+} from "../src/lib/media-world-classification.ts";
 
 const hostages = {
   title: "Hostages",
@@ -45,5 +49,45 @@ assert.equal(recordMatchesTvWorld({
   originCountries: ["KR"],
   classificationComplete: true,
 }, "asian"), true);
+
+const staleHostagesMedia = {
+  type: "series",
+  title: "Hostages",
+  originalLanguage: "ko",
+  originCountries: [],
+  isAnime: false,
+  isArabic: false,
+};
+const authoritativeHostagesMedia = {
+  ...staleHostagesMedia,
+  originalLanguage: "en",
+  originCountries: ["US"],
+  genres: ["Drama"],
+  classificationComplete: true,
+};
+assert.equal(
+  classifyMediaWorld(staleHostagesMedia).collectionWorld,
+  "asian-tv",
+  "the regression fixture must represent the stale Media row that leaked into Asian TV",
+);
+assert.equal(
+  classifyMediaWorld(authoritativeHostagesMedia).collectionWorld,
+  "standard-tv",
+  "the general Media classifier must move an authoritatively US show to standard TV",
+);
+assert.equal(
+  recordMatchesMediaClassification(authoritativeHostagesMedia, { isAsian: true }),
+  false,
+  "every My Media classification filter must reject Hostages from Asian TV",
+);
+assert.equal(
+  recordMatchesMediaClassification(authoritativeHostagesMedia, {
+    isAnime: false,
+    isArabic: false,
+    isAsian: false,
+  }),
+  true,
+  "the same general classifier must include Hostages in standard TV",
+);
 
 console.log("Asian TV classification regression tests passed.");

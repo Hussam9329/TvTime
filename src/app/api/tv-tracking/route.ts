@@ -13,7 +13,6 @@ import {
 } from "@/lib/tv-status-engine";
 import {
   getTvStatusMetadata,
-  batchReadDbClassifications,
   batchReadDbMetadata,
   type TvStatusMetadata,
 } from "@/lib/tv-status-server";
@@ -21,6 +20,7 @@ import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
 import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
 import { recordMatchesTvWorld, type TvWorld } from "@/lib/tv-world-classification";
+import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -152,6 +152,7 @@ async function repairShowIfNeeded(
 
 type FastTrackingDatabaseRow = {
   tmdbId: number | null;
+  type: string;
   title: string;
   isAnime: boolean;
   originalLanguage: string | null;
@@ -179,6 +180,7 @@ async function buildTrackingCounts(userId: string, world: TvWorld, now = new Dat
   const rows = await db.$queryRaw<FastTrackingDatabaseRow[]>`
     SELECT
       media."tmdbId" AS "tmdbId",
+      media."type" AS "type",
       media."title" AS "title",
       media."isAnime" AS "isAnime",
       CASE
@@ -219,7 +221,8 @@ async function buildTrackingCounts(userId: string, world: TvWorld, now = new Dat
       AND (media."status" IS NOT NULL OR media."watched" = TRUE OR COALESCE(progress."episodeCount", 0) > 0)
   `;
 
-  return buildFastTvTrackingSummary(rows.filter((row) => recordMatchesTvWorld(row, world)).map((row): FastTvTrackingRow => ({
+  const classifiedRows = await resolveGeneralMediaClassifications(rows);
+  return buildFastTvTrackingSummary(classifiedRows.filter((row) => recordMatchesTvWorld(row, world)).map((row): FastTvTrackingRow => ({
     ...row,
     episodeCount: Number(row.episodeCount),
   })), now);
@@ -273,16 +276,7 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
       ],
     },
   });
-  const candidateTmdbIds = seriesCandidates
-    .map((show) => Number(show.tmdbId))
-    .filter((id) => Number.isInteger(id) && id > 0);
-  const classificationsByTmdbId = await batchReadDbClassifications(candidateTmdbIds);
-  const classifiedCandidates = seriesCandidates.map((show) => {
-    const classification = show.tmdbId == null
-      ? null
-      : classificationsByTmdbId.get(Number(show.tmdbId)) ?? null;
-    return classification ? { ...show, ...classification } : show;
-  });
+  const classifiedCandidates = await resolveGeneralMediaClassifications(seriesCandidates);
   const series = classifiedCandidates.filter((show) => recordMatchesTvWorld(show, world));
 
   // ── BATCH METADATA READ ───────────────────────────────────────────────
@@ -426,22 +420,38 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
   const isUpcoming = (show: DecoratedShow) =>
     show._serverTrackingStatus !== "stopped" && Boolean(show._serverTvMeta?.nextEpisode);
 
+  // Re-apply the canonical world after status metadata has been resolved.
+  // This prevents a stale Media row from surviving in the wrong My Media
+  // collection merely because it passed an earlier incomplete classification.
+  const canonicalDecorated = decorated.filter((show) => {
+    const metadata = show._serverTvMeta;
+    return recordMatchesTvWorld(metadata
+      ? {
+          ...show,
+          originalLanguage: metadata.originalLanguage,
+          originCountries: metadata.originCountries,
+          genres: metadata.genres.map((genre) => genre.name),
+          classificationComplete: metadata.classificationComplete,
+        }
+      : show, world);
+  });
+
   const counts = {
-    all: decorated.length,
-    planned: decorated.filter((show) => show._serverTrackingStatus === "planned").length,
-    watchlist: decorated.filter((show) => show._serverTrackingStatus === "planned").length,
-    notStarted: decorated.filter((show) => show._serverTrackingStatus === "not_started").length,
-    haventStarted: decorated.filter((show) => show._serverTrackingStatus === "not_started").length,
-    watching: decorated.filter((show) => show._serverTrackingStatus === "watching").length,
-    uptodate: decorated.filter((show) => show._serverTrackingStatus === "uptodate").length,
-    finished: decorated.filter((show) => show._serverTrackingStatus === "finished").length,
-    stopped: decorated.filter((show) => show._serverTrackingStatus === "stopped").length,
-    upcoming: decorated.filter(isUpcoming).length,
-    haventWatched: decorated.filter(hasUnwatchedReleasedEpisode).length,
-    stale: decorated.filter(isStaleWatching).length,
+    all: canonicalDecorated.length,
+    planned: canonicalDecorated.filter((show) => show._serverTrackingStatus === "planned").length,
+    watchlist: canonicalDecorated.filter((show) => show._serverTrackingStatus === "planned").length,
+    notStarted: canonicalDecorated.filter((show) => show._serverTrackingStatus === "not_started").length,
+    haventStarted: canonicalDecorated.filter((show) => show._serverTrackingStatus === "not_started").length,
+    watching: canonicalDecorated.filter((show) => show._serverTrackingStatus === "watching").length,
+    uptodate: canonicalDecorated.filter((show) => show._serverTrackingStatus === "uptodate").length,
+    finished: canonicalDecorated.filter((show) => show._serverTrackingStatus === "finished").length,
+    stopped: canonicalDecorated.filter((show) => show._serverTrackingStatus === "stopped").length,
+    upcoming: canonicalDecorated.filter(isUpcoming).length,
+    haventWatched: canonicalDecorated.filter(hasUnwatchedReleasedEpisode).length,
+    stale: canonicalDecorated.filter(isStaleWatching).length,
   };
 
-  return { decorated, counts, predicates: { hasUnwatchedReleasedEpisode, isStaleWatching, isUpcoming } };
+  return { decorated: canonicalDecorated, counts, predicates: { hasUnwatchedReleasedEpisode, isStaleWatching, isUpcoming } };
 }
 
 export async function GET(req: NextRequest) {

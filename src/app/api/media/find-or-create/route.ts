@@ -3,9 +3,9 @@ import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
 import { normalizeMedia } from "@/lib/media-normalize";
-import { detectIsAnime } from "@/lib/anime-detect";
 import { canonicalMediaPoster } from "@/lib/media-poster";
-import { detectIsArabic, normalizeCountryCodes } from "@/lib/arabic-media";
+import { normalizeCountryCodes } from "@/lib/arabic-media";
+import { classifyMediaWorld } from "@/lib/media-world-classification";
 
 export async function POST(req: NextRequest) {
   try {
@@ -53,25 +53,20 @@ export async function POST(req: NextRequest) {
     const hasClassificationMetadata = normalizedOriginCountries.length > 0
       || normalizedOriginalLanguage != null
       || normalizedGenres.length > 0;
-    let detectedArabic = isArabic !== undefined
-      ? Boolean(isArabic)
-      : detectIsArabic({
-          originCountry: normalizedOriginCountries,
-          originalLanguage: normalizedOriginalLanguage,
-        });
-    let detectedAnime = isAnime !== undefined
-      ? Boolean(isAnime)
-      : detectIsAnime({
-          originCountry: normalizedOriginCountries,
-          originalLanguage: normalizedOriginalLanguage,
-          genres: normalizedGenres,
-          title: safeTitle,
-        });
-
-    // Collection worlds are exclusive. Arabic originals belong to the Arabic
-    // Movies/TV worlds even when Animation is one of their genres.
-    if (detectedArabic) detectedAnime = false;
-    else if (detectedAnime) detectedArabic = false;
+    const canonicalClassification = classifyMediaWorld({
+      type: mediaType,
+      title: safeTitle,
+      originalLanguage: normalizedOriginalLanguage,
+      originCountries: normalizedOriginCountries,
+      genres: normalizedGenres,
+      isAnime: isAnime === undefined ? false : Boolean(isAnime),
+      isArabic: isArabic === undefined ? false : Boolean(isArabic),
+      // Metadata wins over caller-supplied flags. Explicit flags remain only
+      // as a legacy fallback when the request contains no classification data.
+      classificationComplete: hasClassificationMetadata,
+    });
+    const detectedArabic = canonicalClassification.isArabic;
+    const detectedAnime = canonicalClassification.isAnime;
     const classificationFlags = isArabic !== undefined
       || isAnime !== undefined
       || hasClassificationMetadata

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { classifyStoredMediaAsAnime } from "@/lib/media-classification-server";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
+import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
+import { classifyMediaWorld } from "@/lib/media-world-classification";
 
 function episodeParts(key: string) {
   const [season, episode] = key.split("-").map(Number);
@@ -18,10 +19,11 @@ function posterUrl(value: string | null | undefined) {
 export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(await resolveUserId(req));
-    const shows = await db.media.findMany({
+    const storedShows = await db.media.findMany({
       where: { userId: user.id, type: "series", isFollowing: true, tmdbId: { not: null } },
-      select: { tmdbId: true, title: true, poster: true, watchedAt: true, updatedAt: true, watched: true, status: true, userRating: true, isAnime: true, isArabic: true, originalLanguage: true, originCountries: true, genres: true },
+      select: { tmdbId: true, type: true, title: true, poster: true, watchedAt: true, updatedAt: true, watched: true, status: true, userRating: true, isAnime: true, isArabic: true, originalLanguage: true, originCountries: true, genres: true },
     });
+    const shows = await resolveGeneralMediaClassifications(storedShows);
     const ids = shows.map((show) => show.tmdbId!).filter(Boolean);
     if (ids.length === 0) return NextResponse.json({ items: [] });
     const [metadata, watched] = await Promise.all([
@@ -55,7 +57,8 @@ export async function GET(req: NextRequest) {
         .sort((a, b) => a.season - b.season || a.episode - b.episode)
         .find((episode) => !seen.has(`${episode.season}-${episode.episode}`));
       const poster = posterUrl(show.poster) || posterUrl(meta?.posterPath);
-      return next ? [{ tmdbId: show.tmdbId!, title: show.title, poster, seasonNumber: next.season, episodeNumber: next.episode, watchedEpisodes: seen.size, releasedEpisodes: meta?.airedEpisodeKeys.length ?? 0, lastActivity: show.watchedAt || show.updatedAt, isAnime: classifyStoredMediaAsAnime(show), isArabic: show.isArabic }] : [];
+      const classification = classifyMediaWorld(show);
+      return next ? [{ tmdbId: show.tmdbId!, title: show.title, poster, seasonNumber: next.season, episodeNumber: next.episode, watchedEpisodes: seen.size, releasedEpisodes: meta?.airedEpisodeKeys.length ?? 0, lastActivity: show.watchedAt || show.updatedAt, isAnime: classification.isAnime, isArabic: classification.isArabic }] : [];
     }).sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
     const today = new Date().toISOString().slice(0, 10);
     const upcoming = shows.flatMap((show) => {
@@ -67,6 +70,7 @@ export async function GET(req: NextRequest) {
         || meta.nextEpisodeSeasonNumber == null
         || meta.nextEpisodeEpisodeNumber == null
       ) return [];
+      const classification = classifyMediaWorld(show);
       return [{
         tmdbId: show.tmdbId!,
         title: show.title,
@@ -75,8 +79,8 @@ export async function GET(req: NextRequest) {
         episodeNumber: meta.nextEpisodeEpisodeNumber,
         episodeName: meta.nextEpisodeName,
         airDate: meta.nextEpisodeAirDate,
-        isAnime: classifyStoredMediaAsAnime(show),
-        isArabic: show.isArabic,
+        isAnime: classification.isAnime,
+        isArabic: classification.isArabic,
       }];
     }).sort((a, b) => a.airDate.localeCompare(b.airDate));
     return NextResponse.json({ items: items.slice(0, 20), upcoming });

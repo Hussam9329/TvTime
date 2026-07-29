@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
 import { normalizeMedia } from "@/lib/media-normalize";
+import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
 
 /**
  * Direct canonical state lookup by user + media type + TMDB identity.
@@ -34,7 +35,13 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ item: item ? normalizeMedia(item) : null, duplicateCount: 0 });
+    const [classifiedItem] = item
+      ? await resolveGeneralMediaClassifications([item])
+      : [];
+    return NextResponse.json({
+      item: classifiedItem ? normalizeMedia(classifiedItem) : null,
+      duplicateCount: 0,
+    });
   } catch (error) {
     console.error("[media:state]", error);
     return NextResponse.json({ error: "Failed to load media state" }, { status: 500 });

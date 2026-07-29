@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
-import { INFERRED_NON_ANIME_WHERE, INFERRED_NON_ASIAN_TV_WHERE } from "@/lib/media-classification-server";
 import { canonicalMediaPoster } from "@/lib/media-poster";
+import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
+import { classifyMediaWorld } from "@/lib/media-world-classification";
 
 function toCompat(item: any) {
   return { ...item, posterPath: item.poster, followedAt: item.addedAt };
@@ -13,10 +14,13 @@ function toCompat(item: any) {
 export async function GET(req: NextRequest) {
   try {
     const user = await getOrCreateUser(await resolveUserId(req));
-    const items = await db.media.findMany({
-      where: { userId: user.id, type: "series", isArabic: false, isFollowing: true, AND: [INFERRED_NON_ANIME_WHERE, INFERRED_NON_ASIAN_TV_WHERE] },
+    const candidates = await db.media.findMany({
+      where: { userId: user.id, type: "series", isFollowing: true },
       orderBy: { addedAt: "desc" },
     });
+    const classified = await resolveGeneralMediaClassifications(candidates);
+    const items = classified.filter((item) =>
+      classifyMediaWorld(item).collectionWorld === "standard-tv");
     return NextResponse.json({ items: items.map(toCompat), source: "Media" });
   } catch (error) {
     console.error("[following:GET]", error);

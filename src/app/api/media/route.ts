@@ -5,7 +5,11 @@ import { resolveUserId } from "@/lib/auth";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
 import type { Prisma } from "@prisma/client";
-import { INFERRED_ANIME_WHERE, INFERRED_ASIAN_TV_WHERE, INFERRED_NON_ANIME_WHERE, INFERRED_NON_ASIAN_TV_WHERE } from "@/lib/media-classification-server";
+import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
+import {
+  recordMatchesMediaClassification,
+  type MediaClassificationFilters,
+} from "@/lib/media-world-classification";
 
 const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
@@ -46,26 +50,31 @@ export async function GET(req: NextRequest) {
     if (tracked === "true") where.isFollowing = true;
     if (tracked === "false") where.isFollowing = false;
 
+    const booleanFilter = (value: string | null): boolean | undefined =>
+      value === "true" ? true : value === "false" ? false : undefined;
     const isAnime = url.searchParams.get("isAnime");
-    const classificationFilters: Prisma.MediaWhereInput[] = [];
-    if (isAnime === "true") classificationFilters.push(INFERRED_ANIME_WHERE);
-    if (isAnime === "false") classificationFilters.push(INFERRED_NON_ANIME_WHERE);
     const isAsian = url.searchParams.get("isAsian");
-    if (isAsian === "true") classificationFilters.push(INFERRED_ASIAN_TV_WHERE);
-    if (isAsian === "false") classificationFilters.push(INFERRED_NON_ASIAN_TV_WHERE);
-    if (classificationFilters.length) where.AND = classificationFilters;
     const isArabic = url.searchParams.get("isArabic");
-    if (isArabic === "true") where.isArabic = true;
-    if (isArabic === "false") where.isArabic = false;
+    const classificationFilters: MediaClassificationFilters = {
+      isAnime: booleanFilter(isAnime),
+      isArabic: booleanFilter(isArabic),
+      isAsian: booleanFilter(isAsian),
+    };
     if (search) where.title = { contains: search };
 
     const sortBy = SORTABLE_FIELDS.has(sortByParam) ? sortByParam : "addedAt";
     const order = ORDERS.has(orderParam) ? orderParam : "desc";
 
-    const [items, total] = await Promise.all([
-      db.media.findMany({ where, orderBy: { [sortBy]: order }, take: limit, skip: offset }),
-      db.media.count({ where }),
-    ]);
+    // Classification happens after the ordinary database predicates so every
+    // My Media surface uses the same canonical classifier. We deliberately
+    // paginate after classification; filtering a single DB page first can
+    // produce wrong totals and let stale rows leak between collection worlds.
+    const candidates = await db.media.findMany({ where, orderBy: { [sortBy]: order } });
+    const classifiedCandidates = await resolveGeneralMediaClassifications(candidates);
+    const matchingItems = classifiedCandidates.filter((item) =>
+      recordMatchesMediaClassification(item, classificationFilters));
+    const total = matchingItems.length;
+    const items = matchingItems.slice(offset, offset + limit);
 
     const displayItems = isArabic === "true"
       ? await Promise.all(items.map(async (item) => {
