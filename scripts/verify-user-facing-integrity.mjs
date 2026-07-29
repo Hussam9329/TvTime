@@ -76,8 +76,8 @@ check(/status:\s*"not_started",\s*watched:\s*"false",\s*tracked:\s*"true"/.test(
 check(/value="watching"/.test(collection) && /In Progress/.test(collection), "Anime in-progress is visible and selectable");
 check(/status:\s*"watching,uptodate"/.test(collection), "Anime In Progress includes only actual episode-progress states");
 check(!/status:\s*"not_started,watching,uptodate"/.test(collection), "Anime In Progress no longer mislabels Not Started titles");
-check(/notStartedAnime/.test(counts) && /isFollowing:\s*true/.test(counts) && /status:\s*"not_started"/.test(counts), "Anime Not Started badge is counted from explicit following membership");
-check(/watchingAnime/.test(counts) && /status:\s*\{\s*in:\s*\["watching",\s*"uptodate"\]/.test(counts), "Anime In Progress badge counts only Watching and Up To Date");
+check(/notStartedAnime/.test(counts) && /item\.isFollowing/.test(counts) && /item\.status === "not_started"/.test(counts), "Anime Not Started badge is counted from explicit following membership");
+check(/watchingAnime/.test(counts) && /isWatching\(item\.status\)/.test(counts) && /status === "watching" \|\| status === "uptodate"/.test(counts), "Anime In Progress badge counts only Watching and Up To Date");
 check(/notStartedAnime\?:\s*number/.test(hooks) && /watchingAnime\?:\s*number/.test(hooks), "Client stats contract exposes both Anime state counters");
 check(!/finished-anime/.test(tracking) && !/finishedAnime/.test(hooks), "TV Tracking no longer exposes the unreachable Finished Anime category");
 check(/INVALID_TV_TRACKING_CATEGORY/.test(tracking) && /status:\s*400/.test(tracking), "Unknown TV Tracking categories fail explicitly instead of silently returning All");

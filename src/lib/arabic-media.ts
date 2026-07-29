@@ -1,18 +1,18 @@
 import type { MediaItem } from "@/lib/tmdb";
 
-export const ARABIC_LANGUAGE_CODE = "ar";
+const ARABIC_LANGUAGE_CODE = "ar";
 
 // ISO 3166-1 alpha-2 codes for Arab League members. Kept for normalization
 // and metadata storage, but Arabic classification now requires the work's
 // original language to be Arabic. Origin country alone is too noisy a signal:
 // many foreign films are produced or shot in Arab countries (e.g. The
 // Hundred-Foot Journey, Contagion) without being Arabic originals.
-export const ARAB_COUNTRY_CODES = new Set([
+const ARAB_COUNTRY_CODES = new Set([
   "DZ", "BH", "KM", "DJ", "EG", "IQ", "JO", "KW", "LB", "LY", "MR",
   "MA", "OM", "PS", "QA", "SA", "SO", "SD", "SY", "TN", "AE", "YE",
 ]);
 
-export type ArabicDetectionInput = {
+type ArabicDetectionInput = {
   originalLanguage?: string | null;
   originCountry?: string[] | null;
 };

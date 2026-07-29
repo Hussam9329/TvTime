@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-export type LibraryImportCommitResult = {
+type LibraryImportCommitResult = {
   mediaRowsAffected: number;
   watchedEpisodeRowsAffected: number;
   episodeRatingRowsAffected: number;

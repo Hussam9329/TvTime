@@ -1,6 +1,6 @@
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-export type DateOnlyParts = {
+type DateOnlyParts = {
   year: number;
   month: number;
   day: number;
@@ -75,10 +75,4 @@ export function formatReleaseDateParts(value?: string | null, locale = "en-GB") 
       timeZone: "UTC",
     }).format(date),
   };
-}
-
-export function compareDateOnly(left?: string | null, right?: string | null): number {
-  const a = parseDateOnly(left) ? String(left) : "";
-  const b = parseDateOnly(right) ? String(right) : "";
-  return a.localeCompare(b);
 }

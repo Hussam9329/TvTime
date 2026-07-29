@@ -1,4 +1,4 @@
-export type EpisodeRatingIdentity = {
+type EpisodeRatingIdentity = {
   showId: number;
   seasonNumber: number;
   episodeNumber: number;
@@ -24,10 +24,6 @@ export function parseEpisodeRatingMediaType(mediaType?: string | null): Pick<Epi
     return null;
   }
   return { seasonNumber, episodeNumber };
-}
-
-export function isEpisodeRatingMediaType(mediaType?: string | null): boolean {
-  return parseEpisodeRatingMediaType(mediaType) !== null;
 }
 
 export function episodeRatingKey(seasonNumber: number, episodeNumber: number): string {

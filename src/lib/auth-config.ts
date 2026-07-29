@@ -1,9 +1,9 @@
 export const MIN_APP_PASSWORD_LENGTH = 12;
 export const MIN_SESSION_SECRET_LENGTH = 32;
 
-export type AuthMode = "authenticated" | "public" | "invalid";
+type AuthMode = "authenticated" | "public" | "invalid";
 
-export type AuthConfigurationCode =
+type AuthConfigurationCode =
   | "AUTH_READY"
   | "PUBLIC_MODE_EXPLICIT"
   | "PRODUCTION_AUTH_REQUIRED"
@@ -12,7 +12,7 @@ export type AuthConfigurationCode =
   | "SESSION_SECRET_REQUIRED"
   | "WEAK_SESSION_SECRET";
 
-export type AuthEnvironment = Record<string, string | undefined>;
+type AuthEnvironment = Record<string, string | undefined>;
 
 export interface AuthConfiguration {
   mode: AuthMode;

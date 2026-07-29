@@ -33,6 +33,8 @@ const anime = read("src/components/views/anime-view.tsx");
 const tvShows = read("src/components/views/tv-tracking-view.tsx");
 const tvApi = read("src/app/api/tv-tracking/route.ts");
 const counts = read("src/lib/library-counts.ts");
+const tvWorldClassification = read("src/lib/tv-world-classification.ts");
+const classificationResolver = read("src/lib/media-classification-resolver-server.ts");
 const shortcuts = read("src/components/layout/keyboard-shortcuts.tsx");
 const home = read("src/components/views/home-view.tsx");
 const profile = read("src/components/profile/profile-dialog.tsx");
@@ -77,16 +79,23 @@ check(/status:\s*"planned",\s*watched:\s*"false"/.test(collection), "Watchlist t
 check(!/To Anime/.test(tvShows), "TV Shows keeps obsolete manual Anime classification removed");
 check(!/To TV Shows|To Movies/.test(collection), "Anime keeps obsolete manual cross-world classification removed");
 
-check(/type:\s*"series",\s*\n\s*isAnime:\s*false/.test(tvApi), "TV Shows API excludes Anime at the source");
+check(
+  /resolveGeneralMediaClassifications/.test(tvApi)
+    && (tvApi.match(/recordMatchesTvWorld/g) || []).length >= 3
+    && /if \(classification\.isAnime\) return false/.test(tvWorldClassification)
+    && /return classification\.world === world/.test(tvWorldClassification)
+    && /batchReadDbClassifications/.test(classificationResolver),
+  "TV Shows API excludes Anime and separates standard, Arabic and Asian TV through canonical metadata",
+);
 check(!/label="Finished Anime"/.test(tvShows) && !/label:\s*"Finished Anime"/.test(tvShows), "TV Shows no longer exposes an Anime filter");
-check(/world === "arabic" \? "Arabic TV Shows" : "TV Shows"/.test(tvShows), "TV Shows page uses the requested name");
+check(/world === "arabic" \? "Arabic TV Shows" : world === "asian" \? "Asian TV Shows" : "TV Shows"/.test(tvShows), "TV Shows page uses the requested world-specific name");
 
-check(/type:\s*"movie",\s*isAnime:\s*false/.test(counts), "Movie counters exclude Anime movies");
-check(/status:\s*"planned",\s*watched:\s*false,\s*isAnime:\s*true/.test(counts), "Anime Watchlist counter covers the dedicated Anime world");
-check(/watched:\s*true,\s*isAnime:\s*true/.test(counts), "Anime Watched counter covers the dedicated Anime world");
-check(/type:\s*"series",\s*isAnime:\s*false,\s*isArabic:\s*false,\s*isFollowing:\s*true/.test(counts), "TV Shows following counter uses explicit membership and excludes Anime and Arabic TV");
-check(/notStartedAnime/.test(counts) && /status:\s*"not_started"/.test(counts) && /isFollowing:\s*true/.test(counts), "Anime Not Started is counted separately from progress");
-check(/watchingAnime/.test(counts) && /\["watching",\s*"uptodate"\]/.test(counts), "Anime In Progress contains only real progress states");
+check(/const movies = count\(\(\{ world \}\) => world === "movies"\)/.test(counts), "Standard movie counters use the shared world predicate");
+check(/const watchlistAnime = count\(\(entry\) => entry\.world === "anime" && isPlanned\(entry\)\)/.test(counts), "Anime Watchlist counter covers the dedicated Anime world");
+check(/const watchedAnime = count\(\(\{ item, world \}\) => world === "anime" && item\.watched\)/.test(counts), "Anime Watched counter covers the dedicated Anime world");
+check(/world === "standard-tv" && item\.isFollowing/.test(counts), "TV Shows following counter uses explicit membership and the shared standard-world predicate");
+check(/notStartedAnime/.test(counts) && /item\.status === "not_started"/.test(counts) && /item\.isFollowing/.test(counts), "Anime Not Started is counted separately from progress");
+check(/watchingAnime/.test(counts) && /isWatching\(item\.status\)/.test(counts), "Anime In Progress contains only real progress states");
 
 check(/Go to Movies/.test(shortcuts) && /Go to TV Shows/.test(shortcuts) && /Go to Anime/.test(shortcuts), "Keyboard shortcuts navigate to all three worlds");
 check(/setView\("movies"\)/.test(home) && /setView\("tv-shows"\)/.test(home) && /setView\("anime"\)/.test(home), "Home quick actions route to the separated worlds");

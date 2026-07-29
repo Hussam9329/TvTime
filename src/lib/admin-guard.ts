@@ -9,7 +9,7 @@ import {
   type AdminCommandInput,
 } from "@/lib/admin-command";
 
-export type AdminCommandAuthorization =
+type AdminCommandAuthorization =
   | {
       ok: true;
       userId: string;

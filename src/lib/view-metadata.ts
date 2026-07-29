@@ -1,9 +1,9 @@
 import type { ViewName } from "./navigation";
 
-export type ViewDirection = "ltr" | "rtl";
-export type ViewLanguage = "en" | "ar";
+type ViewDirection = "ltr" | "rtl";
+type ViewLanguage = "en" | "ar";
 
-export type ViewMetadata = {
+type ViewMetadata = {
   label: string;
   accessibleLabel: string;
   announcement: string;

@@ -2,7 +2,7 @@ export const MIN_ADMIN_REPAIR_SECRET_LENGTH = 32;
 
 export type AdminCommandInput = Record<string, unknown>;
 
-export type ParsedAdminCommand =
+type ParsedAdminCommand =
   | { ok: true; apply: boolean; input: AdminCommandInput; confirmation: string }
   | { ok: false; status: 400 | 409; code: string; error: string; confirmation?: string };
 

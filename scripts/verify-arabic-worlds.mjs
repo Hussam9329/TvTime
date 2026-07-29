@@ -33,6 +33,9 @@ const mediaPatch = read("src/app/api/media/[id]/route.ts");
 const mediaStates = read("src/app/api/media/states/route.ts");
 const watchedEpisodesRoute = read("src/app/api/library/watched-episodes/route.ts");
 const counts = read("src/lib/library-counts.ts");
+const mediaWorldClassification = read("src/lib/media-world-classification.ts");
+const tvWorldClassification = read("src/lib/tv-world-classification.ts");
+const classificationResolver = read("src/lib/media-classification-resolver-server.ts");
 const hooks = read("src/hooks/use-tmdb.ts");
 const importRoute = read("src/app/api/library/import/route.ts");
 const exportRoute = read("src/app/api/library/export/route.ts");
@@ -88,9 +91,16 @@ check(
   "Arabic Movies collection enforces world exclusivity",
 );
 
-check(/world === "arabic"/.test(trackingApi) && /isArabic:\s*world === "arabic"/.test(trackingApi), "TV Tracking API separates standard and Arabic shows at the source");
-check(/worldParam !== "standard" && worldParam !== "arabic"/.test(trackingApi), "TV Tracking rejects unsupported world values");
-check(/world:\s*"standard"\s*\|\s*"arabic"/.test(hooks), "Client TV Tracking contract carries its world explicitly");
+check(
+  /export type TvWorld = "standard" \| "arabic" \| "asian"/.test(tvWorldClassification)
+    && /if \(classification\.isAnime\) return false/.test(tvWorldClassification)
+    && /return classification\.world === world/.test(tvWorldClassification)
+    && /resolveGeneralMediaClassifications/.test(trackingApi)
+    && (trackingApi.match(/recordMatchesTvWorld/g) || []).length >= 3,
+  "TV Tracking API separates standard, Arabic and Asian shows through the canonical classifier",
+);
+check(/worldParam !== "standard" && worldParam !== "arabic" && worldParam !== "asian"/.test(trackingApi), "TV Tracking rejects unsupported world values");
+check(/world\?:\s*"standard"\s*\|\s*"arabic"\s*\|\s*"asian"/.test(hooks), "Client TV Tracking contract carries its world explicitly");
 check(!/To Arabic TV|Moved to Arabic TV/.test(trackingView), "Standard TV has no obsolete manual Arabic reclassification control");
 check(!/Moved to TV Shows/.test(trackingView), "Arabic TV has no obsolete manual standard-TV reclassification control");
 
@@ -102,14 +112,23 @@ check(/primary_release_date/.test(tmdb), "TMDB discovery supports bounded movie 
 check(/Earlier/.test(releaseSchedule) && /Later/.test(releaseSchedule) && /scheduled releases/.test(releaseSchedule), "Shared release schedule gives Arabic Movies an independently navigable window");
 
 check(/const forcedLang = isAnime \? "ja" : isArabic \? "ar"/.test(discover), "Shared Arabic discovery fixes the original language to Arabic");
-check(/const effectiveVoteCount = isArabic \? \(voteCount \?\? 0\)/.test(discover), "Arabic discovery does not discard less-voted regional titles");
+check(/const effectiveVoteCount = voteCount/.test(discover), "Discovery applies no implicit vote floor to Arabic or Asian titles");
 check(/mediaType: resultMediaType/.test(discover) && /world === "arabic-movies"/.test(discover) && /world === "arabic-tv"/.test(discover), "Shared Arabic discovery selects only the active movie or TV media type");
 check(/!isArabicMediaItem\(media\)/.test(discover), "Standard Discover excludes Arabic titles");
 check(/onlyArabic:\s*isArabic/.test(discover), "Arabic Seen/Haven't Seen filtering is enforced at the API boundary");
 check(/disabled=\{Boolean\(forcedLang\)\}/.test(discover), "Arabic and Anime discovery cannot escape their fixed language world");
 check((home.match(/!isArabicMediaItem/g) || []).length >= 3, "Standard Home rows exclude Arabic titles");
-check(/type: "movie", watched: true, isArabic: false/.test(recently), "Home recently watched excludes Arabic Movies at the database query");
-check(/type: "series", isArabic: false/.test(recently) && /showId: \{ in: showIds \}/.test(recently), "Home recently watched includes episodes only from non-Arabic series");
+check(
+  /resolveGeneralMediaClassifications\(mediaMovies\)/.test(recently)
+    && /!classifyMediaWorld\(item\)\.isArabic/.test(recently),
+  "Home recently watched excludes Arabic Movies through canonical classification",
+);
+check(
+  /resolveGeneralMediaClassifications\(mediaShows\)/.test(recently)
+    && /const showIds = nonArabicShows/.test(recently)
+    && /showId: \{ in: showIds \}/.test(recently),
+  "Home recently watched includes episodes only from canonically non-Arabic series",
+);
 
 check(/"arabic-movies"/.test(search) && /"arabic-tv"/.test(search), "Global search offers Arabic Movies and Arabic TV filters");
 check(/filter === "all"\s*\?\s*allResults/.test(search), "Global search All remains inclusive");
@@ -119,10 +138,19 @@ check(/isArabicMediaItem\(result\)/.test(search), "Arabic search filters use sha
 check(/overflow-x-auto/.test(search), "Search filters remain usable on mobile widths");
 check(/Arabic Movie/.test(mediaCard) && /Arabic TV/.test(mediaCard), "Search and discovery cards identify the Arabic world visibly");
 
-check(/detectIsArabic/.test(findOrCreate), "Find-or-create classifies Arabic media from authoritative metadata");
+check(
+  /classifyMediaWorld/.test(findOrCreate)
+    && /canonicalClassification/.test(findOrCreate)
+    && /classificationComplete:\s*hasClassificationMetadata/.test(findOrCreate),
+  "Find-or-create classifies Arabic media through the canonical metadata classifier",
+);
 check(/isArabic:\s*detectedArabic/.test(findOrCreate), "New Media records persist Arabic membership");
 check(/detectedArabic \? false/.test(findOrCreate) || /detectedArabic[\s\S]{0,120}isAnime/.test(findOrCreate), "New Media records keep Arabic and Anime mutually exclusive");
-check(/isArabic/.test(mediaApi) && /where\.isArabic/.test(mediaApi), "Media API can filter Arabic membership server-side");
+check(
+  /resolveGeneralMediaClassifications/.test(mediaApi)
+    && /recordMatchesMediaClassification/.test(mediaApi),
+  "Media API filters Arabic membership through the canonical resolver",
+);
 check(
   /MEDIA_CLASSIFICATION_IMMUTABLE/.test(mediaPatch)
     && /body\.isAnime !== undefined \|\| body\.isArabic !== undefined/.test(mediaPatch),
@@ -135,8 +163,21 @@ check(/canonicalMediaPoster\(metadata\.posterPath\)/.test(watchedEpisodesRoute),
 for (const field of ["watchlistArabicMovies", "watchedArabicMovies", "watchlistArabicShows", "notStartedArabicShows", "watchingArabicShows", "finishedArabicShows", "followingArabicShows"]) {
   check(counts.includes(field), `Central counts expose ${field}`);
 }
-check(/type:\s*"movie",\s*isAnime:\s*false,\s*isArabic:\s*false/.test(counts), "Standard movie counters exclude Arabic and Anime");
-check(/type:\s*"series",\s*isAnime:\s*false,\s*isArabic:\s*false/.test(counts), "Standard TV counters exclude Arabic and Anime");
+check(
+  /resolveGeneralMediaClassifications/.test(counts)
+    && /classifyMediaWorld\(item\)\.collectionWorld/.test(counts)
+    && /world === "movies"/.test(counts),
+  "Standard movie counters use the shared canonical world classifier",
+);
+check(
+  /resolveGeneralMediaClassifications/.test(counts)
+    && /classifyMediaWorld\(item\)\.collectionWorld/.test(counts)
+    && /world === "standard-tv"/.test(counts)
+    && /"asian-tv"/.test(mediaWorldClassification)
+    && /"arabic-tv"/.test(mediaWorldClassification)
+    && /batchReadDbClassifications/.test(classificationResolver),
+  "Standard TV counters exclude Arabic, Anime and Asian titles through authoritative classification",
+);
 
 check(
   /LIBRARY_BACKUP_VERSION\s*=\s*6/.test(transferTypes)

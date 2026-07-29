@@ -505,7 +505,7 @@ export async function getTvStatusMetadata(
   return metadata;
 }
 
-export async function getTvSeasonDetail(tmdbId: number, seasonNumber: number): Promise<SeasonDetail> {
+async function getTvSeasonDetail(tmdbId: number, seasonNumber: number): Promise<SeasonDetail> {
   const key = `${Number(tmdbId)}:${Number(seasonNumber)}`;
   const cached = readFresh(seasonCache.get(key), SEASON_TTL_MS);
   if (cached) return cached;
@@ -523,7 +523,7 @@ function episodeIsReleased(episode: Episode, officiallyEnded: boolean, now: Date
   return officiallyEnded && !episode.air_date;
 }
 
-export async function getReleasedEpisodesForSeason(
+async function getReleasedEpisodesForSeason(
   tmdbId: number,
   seasonNumber: number,
   now: Date = new Date(),

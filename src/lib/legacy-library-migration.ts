@@ -1,7 +1,7 @@
 import type { Media, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
-export type LegacyLibraryMigrationReport = {
+type LegacyLibraryMigrationReport = {
   mode: "applied" | "already-clean" | "unavailable";
   userId: string;
   legacy: {

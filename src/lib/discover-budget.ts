@@ -3,7 +3,7 @@ export const DISCOVER_TMDB_MAX_PAGE = 500;
 export const DISCOVER_TMDB_PAGE_BUDGET = 8;
 export const DISCOVER_FETCH_BATCH_SIZE = 3;
 
-export type DiscoverCursor = {
+type DiscoverCursor = {
   page: number;
   index: number;
 };

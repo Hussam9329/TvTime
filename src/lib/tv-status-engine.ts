@@ -1,30 +1,19 @@
 export type TvTrackingState = "planned" | "not_started" | "watching" | "uptodate" | "finished" | "stopped";
 
-export type TvEpisodeIdentity = {
-  seasonNumber: number;
-  episodeNumber: number;
-};
-
-export type TvEpisodeLike = {
-  season_number: number;
-  episode_number: number;
-  air_date?: string | null;
-};
-
-export type TvSeasonLike = {
+type TvSeasonLike = {
   season_number: number;
   episode_count?: number | null;
   air_date?: string | null;
 };
 
-export type TvEpisodeBoundaryLike = {
+type TvEpisodeBoundaryLike = {
   season_number?: number | null;
   episode_number?: number | null;
   air_date?: string | null;
   name?: string | null;
 };
 
-export type TvDetailStatusLike = {
+type TvDetailStatusLike = {
   status?: string | null;
   in_production?: boolean | null;
   number_of_episodes?: number | null;
@@ -34,14 +23,14 @@ export type TvDetailStatusLike = {
   next_episode_to_air?: TvEpisodeBoundaryLike | null;
 };
 
-export type InferredAiredEpisodes = {
+type InferredAiredEpisodes = {
   airedEpisodeCount: number | null;
   airedEpisodeKeys: Set<string>;
   reliable: boolean;
   source: "last_episode_to_air" | "next_episode_to_air" | "ended_total" | "unavailable";
 };
 
-export type DeriveTvTrackingStateInput = {
+type DeriveTvTrackingStateInput = {
   persistedStatus?: string | null;
   officiallyEnded: boolean | null;
   airedEpisodeCount: number | null;
@@ -50,7 +39,7 @@ export type DeriveTvTrackingStateInput = {
   legacyCompleted?: boolean;
 };
 
-export type DerivedTvTrackingState = {
+type DerivedTvTrackingState = {
   state: TvTrackingState;
   watchedAiredEpisodeCount: number;
   airedEpisodeCount: number | null;
@@ -101,14 +90,6 @@ export function isFutureEpisode(airDate?: string | null, now: Date = new Date())
     : Date.parse(airDate);
   if (Number.isNaN(parsed)) return false;
   return parsed > dateOnlyUtc(now);
-}
-
-export function filterReleasedEpisodes<T extends TvEpisodeLike>(episodes: T[], now: Date = new Date()): T[] {
-  return episodes.filter((episode) => episode.season_number >= 1 && isEpisodeReleased(episode.air_date, now));
-}
-
-export function filterFutureEpisodes<T extends TvEpisodeLike>(episodes: T[], now: Date = new Date()): T[] {
-  return episodes.filter((episode) => episode.season_number >= 1 && isFutureEpisode(episode.air_date, now));
 }
 
 function addEpisodeRange(keys: Set<string>, seasonNumber: number, episodeCount: number) {
@@ -363,11 +344,4 @@ export function tvStateToMediaPatch(
     return { status: state, watched: false, watchedAt: safeDate };
   }
   return { status: state, watched: false, watchedAt: null };
-}
-
-export function tvTrackingStateLabel(state: TvTrackingState): string {
-  if (state === "not_started") return "Not Started";
-  if (state === "uptodate") return "Up To Date";
-  if (state === "stopped") return "Stopped Watching";
-  return state.charAt(0).toUpperCase() + state.slice(1);
 }

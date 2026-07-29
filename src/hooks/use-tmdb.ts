@@ -25,7 +25,7 @@ async function tmdbGet<T>(path: string, params?: Record<string, string | number 
   return res.json();
 }
 
-export type HomeFeedResponse = {
+type HomeFeedResponse = {
   trending: PaginatedResponse<MediaItem>;
   popularMovies: PaginatedResponse<MediaItem>;
   topRatedMovies: PaginatedResponse<MediaItem>;
@@ -44,67 +44,10 @@ export function useHomeFeed() {
   });
 }
 
-// Home / Trending
-export function useTrending(window: "day" | "week" = "week", type: "all" | "movie" | "tv" = "all") {
-  return useQuery({
-    queryKey: ["tmdb", "trending", window, type],
-    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("trending", { window, type }),
-  });
-}
-
-export function usePopularMovies(page = 1) {
-  return useQuery({
-    queryKey: ["tmdb", "movies", "popular", page],
-    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("movies/popular", { page }),
-  });
-}
-
-export function useTopRatedMovies(page = 1) {
-  return useQuery({
-    queryKey: ["tmdb", "movies", "top-rated", page],
-    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("movies/top-rated", { page }),
-  });
-}
-
-export function useNowPlayingMovies(page = 1) {
-  return useQuery({
-    queryKey: ["tmdb", "movies", "now-playing", page],
-    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("movies/now-playing", { page }),
-  });
-}
-
-export function useUpcomingMovies(page = 1) {
-  return useQuery({
-    queryKey: ["tmdb", "movies", "upcoming", page],
-    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("movies/upcoming", { page }),
-  });
-}
-
-export function usePopularTv(page = 1) {
-  return useQuery({
-    queryKey: ["tmdb", "tv", "popular", page],
-    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("tv/popular", { page }),
-  });
-}
-
-export function useTopRatedTv(page = 1) {
-  return useQuery({
-    queryKey: ["tmdb", "tv", "top-rated", page],
-    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("tv/top-rated", { page }),
-  });
-}
-
 export function useOnTheAirTv(page = 1) {
   return useQuery({
     queryKey: ["tmdb", "tv", "on-the-air", page],
     queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("tv/on-the-air", { page }),
-  });
-}
-
-export function useAiringTodayTv(page = 1) {
-  return useQuery({
-    queryKey: ["tmdb", "tv", "airing-today", page],
-    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("tv/airing-today", { page }),
   });
 }
 
@@ -173,7 +116,7 @@ export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_b
   });
 }
 
-export type FilteredDiscoverResponse = {
+type FilteredDiscoverResponse = {
   results: MediaItem[];
   has_more: boolean;
   next_cursor: string | null;
@@ -240,7 +183,7 @@ export function useFilteredDiscover(params: {
   });
 }
 
-export function useSearch(query: string, page = 1) {
+function useSearch(query: string, page = 1) {
   return useQuery({
     queryKey: ["tmdb", "search", query, page],
     queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("search", { q: query, page }),
@@ -342,25 +285,6 @@ export function usePersonDetail(id: number | null) {
     enabled: id != null,
   });
 }
-
-// ---------- Library (Neon PostgreSQL backend) ----------
-// All tracking actions write directly to the Neon database via API routes.
-// This unifies the Home/Discover browsing with the Library view.
-
-// Re-export types for backwards compatibility
-export type WatchlistItemDB = MediaItemDB;
-export type WatchedMovieDB = MediaItemDB;
-export type WatchedEpisodeDB = {
-  id: string;
-  showId: number;
-  seasonNumber: number;
-  episodeNumber: number;
-  episodeName: string | null;
-  runtime: number | null;
-  watchedAt: string;
-};
-export type FollowingShowDB = MediaItemDB;
-export type RatingDB = MediaItemDB;
 
 // Episode tracking is now server-backed via API
 
@@ -521,9 +445,8 @@ export function useMediaStates(
 }
 
 // Compatibility mapper: converts a Media DB item to the shape that the
-// TMDB-style library hooks (useWatchlist, useWatchedMovies, etc.) used to
-// return when backed by localStorage. This keeps existing consumers working
-// without having to rewrite every call site.
+// The current watchlist hook still consumes the older TMDB-shaped response.
+// Keep this mapper local so the active call site can read canonical database rows.
 function mediaToLibraryCompat(m: any) {
   const mediaType = m.type === "series" ? "tv" : m.type;
   return {
@@ -626,7 +549,7 @@ export function useWatchlistToggle() {
 }
 
 
-export type RecentlyWatchedItem = {
+type RecentlyWatchedItem = {
   id: string;
   kind: "movie" | "tv";
   tmdbId: number | null;
@@ -657,28 +580,6 @@ export function useRecentlyWatched(limit = 12) {
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
-  });
-}
-
-// Watched Movies - reads from Neon (watched=true)
-export function useWatchedMovies(opts?: { enabled?: boolean }) {
-  return useQuery({
-    queryKey: ["media", "watched-movies"],
-    queryFn: async () => {
-      const url = withUserId(new URL("/api/media", window.location.origin));
-      url.searchParams.set("type", "movie");
-      url.searchParams.set("watched", "true");
-      // Sort by watchedAt desc so the "Recently Watched" row reflects recency,
-      // matching the section name on the home page.
-      url.searchParams.set("sortBy", "watchedAt");
-      url.searchParams.set("order", "desc");
-      const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) throw new Error("Failed to load");
-      const data = await res.json();
-      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
-    },
-    staleTime: 30_000,
-    enabled: opts?.enabled !== false,
   });
 }
 
@@ -781,34 +682,6 @@ export function useWatchedEpisodes(showId?: number) {
   });
 }
 
-export type EpisodeWatchTimeline = {
-  releasedEpisodes: Array<{
-    seasonNumber: number;
-    episodeNumber: number;
-    episodeName?: string | null;
-  }>;
-  watchedKeys: string[];
-  source: string;
-};
-
-export function useEpisodeWatchTimeline(showId?: number | null) {
-  const userId = useNav((s) => s.userId);
-  const numericShowId = Number(showId || 0);
-  return useQuery({
-    queryKey: ["episode-watch-plan", userId || getClientUserId(), numericShowId],
-    enabled: numericShowId > 0,
-    queryFn: async () => {
-      const url = withUserId(new URL("/api/library/watched-episodes/plan", window.location.origin));
-      url.searchParams.set("showId", String(numericShowId));
-      const res = await fetch(url, { headers: userHeaders() });
-      await ensureApiOk(res, "Failed to verify earlier episode progress");
-      return res.json() as Promise<EpisodeWatchTimeline>;
-    },
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
-  });
-}
-
 export function useEpisodeToggle() {
   const qc = useQueryClient();
   return useMutation({
@@ -895,7 +768,7 @@ export function useBulkEpisodeToggle() {
   });
 }
 
-export type ArabicMovieScheduleResponse = {
+type ArabicMovieScheduleResponse = {
   from: string;
   to: string;
   items: MediaItem[];
@@ -904,28 +777,9 @@ export type ArabicMovieScheduleResponse = {
   truncated: boolean;
 };
 
-export function useArabicMovieSchedule(from: string, to: string) {
-  return useQuery({
-    queryKey: ["arabic-movies", "release-schedule", from, to],
-    queryFn: async (): Promise<ArabicMovieScheduleResponse> => {
-      const url = new URL("/api/arabic-movies/calendar", window.location.origin);
-      url.searchParams.set("from", from);
-      url.searchParams.set("to", to);
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errorBody = await res.json().catch(() => ({}));
-        throw new Error(errorBody?.error || "Failed to load Arabic movie releases");
-      }
-      return res.json();
-    },
-    staleTime: 15 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-}
+type MovieScheduleResponse = ArabicMovieScheduleResponse;
 
-export type MovieScheduleResponse = ArabicMovieScheduleResponse;
-
-export type ReleaseScheduleOptions = {
+type ReleaseScheduleOptions = {
   language?: "ar" | "ja" | "en-US";
   originalLanguage?: string;
   excludedOriginalLanguage?: string;
@@ -962,62 +816,7 @@ export function useReleaseSchedule(
   });
 }
 
-/**
- * General movie release schedule. Same shape as useArabicMovieSchedule but
- * hits /api/movies/calendar (which supports any language filter).
- * Pass language="ar" or "ja" to get localized titles/posters.
- * Pass originalLanguage="ar" to filter to only Arabic-origin films.
- */
-export function useMovieSchedule(
-  from: string,
-  to: string,
-  opts?: { language?: "ar" | "ja" | "en-US"; originalLanguage?: string }
-) {
-  return useReleaseSchedule("movie", from, to, opts);
-}
-
-// Following - active TV tracking only; Planned remains a list-only state
-export function useFollowing(opts?: { enabled?: boolean }) {
-  return useQuery({
-    queryKey: ["media", "following"],
-    queryFn: async () => {
-      const url = withUserId(new URL("/api/media", window.location.origin));
-      url.searchParams.set("type", "series");
-      url.searchParams.set("tracked", "true");
-      url.searchParams.set("isAnime", "false");
-      url.searchParams.set("isArabic", "false");
-      url.searchParams.set("isAsian", "false");
-      url.searchParams.set("limit", "500");
-      const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) throw new Error("Failed to load");
-      const data = await res.json();
-      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
-    },
-    staleTime: 30_000,
-    enabled: opts?.enabled !== false,
-  });
-}
-
-// Tracked Shows - ALL series in the database (watched + unwatched, anime + non-anime)
-// Used to check if a show is already tracked (for Follow/Following button state)
-export function useTrackedShows() {
-  return useQuery({
-    queryKey: ["media", "tracked-shows"],
-    queryFn: async () => {
-      const url = withUserId(new URL("/api/media", window.location.origin));
-      url.searchParams.set("type", "series");
-      url.searchParams.set("tracked", "true");
-      url.searchParams.set("limit", "500");
-      const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) throw new Error("Failed to load");
-      const data = await res.json();
-      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
-    },
-    staleTime: 30_000,
-  });
-}
-
-export type FollowingToggleResult = {
+type FollowingToggleResult = {
   ok?: boolean;
   changed: boolean;
   action: string;
@@ -1115,25 +914,7 @@ export function useFollowingToggle() {
   });
 }
 
-// Ratings - reads from Neon (userRating != null)
-export function useRatings(mediaType?: "movie" | "tv") {
-  const type = mediaType === "tv" ? "series" : mediaType || undefined;
-  return useQuery({
-    queryKey: ["media", "ratings", type],
-    queryFn: async () => {
-      const url = withUserId(new URL("/api/media", window.location.origin));
-      url.searchParams.set("rated", "true");
-      if (type) url.searchParams.set("type", type);
-      const res = await fetch(url, { headers: userHeaders() });
-      if (!res.ok) throw new Error("Failed to load");
-      const data = await res.json();
-      return { items: (data.items || []).map((s: any) => mediaToLibraryCompat(s)) };
-    },
-    staleTime: 30_000,
-  });
-}
-
-export interface EpisodeRatingDB {
+interface EpisodeRatingDB {
   id: string;
   showId: number;
   seasonNumber: number;
@@ -1292,7 +1073,7 @@ export type TvTrackingCategory =
   | "stale"
   | "stopped";
 
-export interface TvTrackingCounts {
+interface TvTrackingCounts {
   all: number;
   planned: number;
   watchlist: number;
@@ -1307,7 +1088,7 @@ export interface TvTrackingCounts {
   stale?: number;
 }
 
-export interface TvTrackingItem extends MediaItemDB {
+interface TvTrackingItem extends MediaItemDB {
   _trackingStatus: TvTrackingState;
   _watchedEpisodeCount: number;
   _watchedAiredEpisodeCount: number;
@@ -1326,7 +1107,7 @@ export interface TvTrackingItem extends MediaItemDB {
   _nextEpisodeNumber: number | null;
 }
 
-export interface TvTrackingResponse {
+interface TvTrackingResponse {
   items: TvTrackingItem[];
   total: number;
   limit: number;
@@ -1338,7 +1119,7 @@ export interface TvTrackingResponse {
   world?: "standard" | "arabic" | "asian";
 }
 
-export interface TvTrackingCountsResponse {
+interface TvTrackingCountsResponse {
   counts: TvTrackingCounts;
   countsAreGlobal: boolean;
   repairedOnRead?: boolean;
@@ -1561,7 +1342,7 @@ export interface MediaItemDB {
   isFollowing: boolean;
 }
 
-export interface MediaStats {
+interface MediaStats {
   counts: {
     total: number;
     movies: number;
@@ -1638,15 +1419,7 @@ export function useMedia(params: {
   });
 }
 
-export function useMediaStats() {
-  return useQuery({
-    queryKey: ["media", "stats"],
-    queryFn: () => mediaGet<MediaStats>("stats"),
-  });
-}
-
-
-export interface GlobalLibraryCountsResponse {
+interface GlobalLibraryCountsResponse {
   counts: MediaStats["counts"];
   countsAreGlobal: true;
   source: "Media";

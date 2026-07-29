@@ -14,7 +14,7 @@ import {
 } from "@/lib/navigation";
 
 export type { NavigationEntry, ViewName } from "@/lib/navigation";
-export type DiscoverTab = "movies" | "tv";
+type DiscoverTab = "movies" | "tv";
 
 type RouteSyncMode = "reset" | "pop";
 

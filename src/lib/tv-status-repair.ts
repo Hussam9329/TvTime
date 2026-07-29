@@ -18,7 +18,7 @@ type LegacyCompletionMedia = {
   updatedAt?: Date | string | null;
 };
 
-export type LegacyCompletionMaterialization = {
+type LegacyCompletionMaterialization = {
   attempted: boolean;
   verified: boolean;
   materialized: boolean;

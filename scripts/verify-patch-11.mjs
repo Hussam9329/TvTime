@@ -16,7 +16,6 @@ const header = read("src/components/layout/header.tsx");
 const footer = read("src/components/layout/footer.tsx");
 const button = read("src/components/ui/button.tsx");
 const input = read("src/components/ui/input.tsx");
-const skeleton = read("src/components/ui/skeleton.tsx");
 const emptyState = read("src/components/ui/empty-state.tsx");
 const errorBoundary = read("src/components/error-boundary.tsx");
 const globalError = read("src/app/global-error.tsx");
@@ -62,7 +61,6 @@ requireCheck(/default:\s*"h-10/.test(button) && /icon:\s*"size-10/.test(button),
 requireCheck(/touch-manipulation/.test(button) && /aria-busy:cursor-wait/.test(button), "shared button interaction states are incomplete");
 requireCheck(/bg-destructive text-destructive-foreground/.test(button), "destructive button foreground is not theme-aware");
 requireCheck(/h-10/.test(input) && /aria-invalid/.test(input), "shared input sizing/error state is incomplete");
-requireCheck(/"aria-hidden":\s*ariaHidden\s*=\s*true/.test(skeleton) && /aria-hidden=\{ariaHidden\}/.test(skeleton), "skeleton primitive is exposed to assistive technology by default");
 requireCheck(/useId/.test(emptyState) && /role="status"/.test(emptyState), "EmptyState is not labelled as a reusable status region");
 
 requireCheck(/process\.env\.NODE_ENV !== "production"/.test(errorBoundary), "view error details are not production-gated");

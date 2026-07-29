@@ -3,7 +3,7 @@
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY?.trim() || "";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
-export const TMDB_IMG_BASE = "https://image.tmdb.org/t/p";
+const TMDB_IMG_BASE = "https://image.tmdb.org/t/p";
 
 // Internal helper that surfaces a clear error when the key is missing instead
 // of letting TMDB return a generic 401.
@@ -128,12 +128,12 @@ export interface Genre {
   name: string;
 }
 
-export interface Keyword {
+interface Keyword {
   id: number;
   name: string;
 }
 
-export interface Season {
+interface Season {
   id: number;
   name: string;
   season_number: number;
@@ -153,22 +153,6 @@ export interface Episode {
   still_path: string | null;
   runtime: number | null;
   vote_average: number;
-}
-
-export interface CastMember {
-  id: number;
-  name: string;
-  character: string;
-  profile_path: string | null;
-  order: number;
-}
-
-export interface CrewMember {
-  id: number;
-  name: string;
-  job: string;
-  department: string;
-  profile_path: string | null;
 }
 
 export interface MovieDetail extends MediaItem {
@@ -226,15 +210,6 @@ export interface SeasonDetail {
   air_date: string | null;
   overview: string;
   poster_path: string | null;
-}
-
-export interface Video {
-  id: string;
-  key: string;
-  name: string;
-  site: string;
-  type: string;
-  official: boolean;
 }
 
 // ---------- API functions ----------
@@ -358,7 +333,7 @@ export function pickArabicTitle(profile: any, mediaType: "movie" | "tv", fallbac
   return localized || original || fallback;
 }
 
-export async function localizeArabicPosters(items: MediaItem[], mediaType: "movie" | "tv"): Promise<MediaItem[]> {
+async function localizeArabicPosters(items: MediaItem[], mediaType: "movie" | "tv"): Promise<MediaItem[]> {
   const results: MediaItem[] = new Array(items.length);
   let cursor = 0;
   const workers = Array.from({ length: Math.min(6, items.length) }, async () => {
@@ -418,7 +393,7 @@ export function getTitle(m: MediaItem): string {
   return m.title || m.name || m.original_title || m.original_name || "Untitled";
 }
 
-export function getReleaseDate(m: MediaItem): string {
+function getReleaseDate(m: MediaItem): string {
   return m.release_date || m.first_air_date || "";
 }
 

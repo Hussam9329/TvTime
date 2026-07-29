@@ -1,5 +1,5 @@
-export type RequestAuthMode = "authenticated" | "public" | "invalid";
-export type RequestIdentityErrorCode = "AUTH_CONFIGURATION_ERROR" | "UNAUTHORIZED";
+type RequestAuthMode = "authenticated" | "public" | "invalid";
+type RequestIdentityErrorCode = "AUTH_CONFIGURATION_ERROR" | "UNAUTHORIZED";
 
 const DEFAULT_USER_ID = "cinetrack_default";
 
@@ -18,7 +18,7 @@ export class RequestIdentityError extends Error {
   }
 }
 
-export interface RequestIdentityInput {
+interface RequestIdentityInput {
   mode: RequestAuthMode;
   sessionUserId?: string | null;
   queryUserId?: string | null;

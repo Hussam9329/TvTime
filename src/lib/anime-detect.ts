@@ -23,7 +23,7 @@ const KNOWN_ANIME_TITLES = [
   "detective conan", "case closed", "meitantei conan",
 ];
 
-export function isKnownAnimeTitle(title: string): boolean {
+function isKnownAnimeTitle(title: string): boolean {
   const lower = title.toLowerCase();
   return KNOWN_ANIME_TITLES.some((k) => lower.includes(k));
 }

@@ -1,6 +1,6 @@
 import { isFutureEpisode, normalizeTvTrackingState, type TvTrackingState } from "@/lib/tv-status-engine";
 
-export type TvTrackingCounts = {
+type TvTrackingCounts = {
   all: number;
   planned: number;
   watchlist: number;
@@ -27,7 +27,7 @@ export type FastTvTrackingRow = {
   metadataFresh: boolean;
 };
 
-export type FastTvTrackingSummary = {
+type FastTvTrackingSummary = {
   counts: TvTrackingCounts;
   freshMetadataRows: number;
   unverifiedProgressRows: number;

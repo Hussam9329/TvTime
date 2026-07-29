@@ -17,7 +17,7 @@ export const LIBRARY_COLLECTIONS = [
 ] as const;
 
 export type LibraryCollection = (typeof LIBRARY_COLLECTIONS)[number];
-export type LibraryBackupVersion = (typeof LIBRARY_SUPPORTED_BACKUP_VERSIONS)[number];
+type LibraryBackupVersion = (typeof LIBRARY_SUPPORTED_BACKUP_VERSIONS)[number];
 
 export type LibraryBackupManifest = {
   recordType: "manifest";
@@ -42,12 +42,6 @@ export type LibraryBackupRecord = {
   collection: LibraryCollection;
   ordinal: number;
   data: unknown;
-};
-
-export type LibraryBackupEnd = {
-  recordType: "end";
-  collections: Record<LibraryCollection, number>;
-  totalRecords: number;
 };
 
 export type LibraryTransferRecord = {
@@ -80,7 +74,6 @@ export function normalizeCollectionCounts(value: unknown): Record<LibraryCollect
 export function isLibraryCollection(value: unknown): value is LibraryCollection {
   return typeof value === "string" && (LIBRARY_COLLECTIONS as readonly string[]).includes(value);
 }
-
 
 export function isSupportedBackupApp(value: unknown): boolean {
   return typeof value === "string"

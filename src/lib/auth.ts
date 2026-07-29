@@ -25,11 +25,11 @@ const SESSION_AUDIENCE = "tvtime";
 const SESSION_ISSUER = "tvtime";
 
 // 30 days — matches the original "personal app" expectation of long sessions.
-export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 const ENCODER = new TextEncoder();
 
-export interface SessionPayload {
+interface SessionPayload {
   sub: string;
   name: string;
 }
@@ -145,20 +145,6 @@ export async function resolveUserId(req: NextRequest): Promise<string> {
     queryUserId: url.searchParams.get("userId"),
     headerUserId: req.headers.get("x-user-id"),
   });
-}
-
-/**
- * Whether the request is authorized to mutate data.
- *
- * - Auth enabled: must have a valid session.
- * - Auth disabled: always true (legacy behavior).
- */
-export async function isAuthorized(req: NextRequest): Promise<boolean> {
-  const configuration = getAuthConfiguration();
-  if (configuration.mode === "public") return true;
-  if (configuration.mode === "invalid") return false;
-  const session = await getSession(req);
-  return session !== null;
 }
 
 /**

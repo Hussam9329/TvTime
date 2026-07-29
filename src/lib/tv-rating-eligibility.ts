@@ -3,7 +3,7 @@ import { episodeKey } from "@/lib/tv-status-engine";
 import { getTvStatusMetadata } from "@/lib/tv-status-server";
 import { isWholeSeriesRatingEligible } from "@/lib/tv-rating-rules";
 
-export type TvRatingEligibility = {
+type TvRatingEligibility = {
   allowed: boolean;
   reason: "ok" | "missing-tmdb-id" | "show-not-ended" | "not-fully-watched" | "tmdb-unverified";
   totalEpisodes: number;

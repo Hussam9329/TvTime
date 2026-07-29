@@ -48,7 +48,7 @@ check(/url\s*=\s*env\("DATABASE_URL"\)/.test(schema), "Prisma still reads DATABA
 check(!/db\s+(push|migrate|reset)/i.test(packageJson.scripts.build || ""), "Build performs no database migration/push/reset");
 check(!/userRating/.test(engine), "TV state engine has no rating input or dependency");
 check(/officiallyEnded\s*===\s*true\s*\?\s*"finished"\s*:\s*"uptodate"/.test(engine), "Only officially ended shows can become Finished");
-check(/filterReleasedEpisodes/.test(engine) && /isEpisodeReleased/.test(engine), "Released episode filtering is centralized");
+check(/inferAiredEpisodesFromTvDetail/.test(engine) && /isEpisodeReleased/.test(engine), "Released episode inference is centralized");
 check(/EPISODE_NOT_RELEASED/.test(watchedRoute), "API rejects future or unaired watched episodes");
 check(/validateReleasedEpisodeBatch/.test(watchedRoute), "Single and bulk episode writes use release validation");
 check(/TV_STATE_REQUIRES_EPISODE_ENGINE/.test(mediaRoute), "Direct TV progress writes are blocked");
@@ -59,7 +59,12 @@ check(/body:\s*JSON\.stringify\(\{\s*userRating:\s*null\s*\}\)/.test(hooks), "Ra
 check(/allEpisodes\s*=\s*allEpisodesIncludingFuture\.filter/.test(hooks), "Client progress separates released and future episodes");
 check(/nextEp\s*=\s*allEpisodes\.find/.test(hooks), "Next-to-watch is selected only from released episodes");
 check(/deriveTvTrackingState/.test(trackingRoute), "TV tracking API uses the central state engine");
-check(/type:\s*"series",\s*isAnime:\s*false,\s*isArabic:\s*false,\s*isFollowing:\s*true/.test(libraryCounts), "Following statistics use explicit TV following membership and exclude Anime and Arabic TV");
+check(
+  /resolveGeneralMediaClassifications/.test(libraryCounts)
+    && /classifyMediaWorld\(item\)\.collectionWorld/.test(libraryCounts)
+    && /world === "standard-tv" && item\.isFollowing/.test(libraryCounts),
+  "Following statistics use canonical standard-world classification and explicit following membership",
+);
 const seriesImportResetsWholeShowCompletion = importValidation
   ? /watched:\s*parsed\.type\s*===\s*"series"\s*\?\s*false/.test(importValidation)
   : /watched:\s*itemType\s*===\s*"series"\s*\?\s*false/.test(importRoute);

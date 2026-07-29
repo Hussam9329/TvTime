@@ -7,7 +7,7 @@ export type UserPreferences = {
 const STORAGE_KEY = "tvtime-preferences";
 export const USER_PREFERENCES_EVENT = "tvtime:user-preferences";
 
-export const DEFAULT_USER_PREFERENCES: UserPreferences = {
+const DEFAULT_USER_PREFERENCES: UserPreferences = {
   timezone: "Asia/Baghdad",
 };
 
@@ -20,7 +20,7 @@ function validTimezone(value: string): boolean {
   }
 }
 
-export function normalizeUserPreferences(value: unknown): UserPreferences {
+function normalizeUserPreferences(value: unknown): UserPreferences {
   const source = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const timezoneCandidate = String(source.timezone || DEFAULT_USER_PREFERENCES.timezone).trim();
   return {
@@ -45,11 +45,6 @@ export function getUserPreferences(): UserPreferences {
   }
 }
 
-/** Update the local cache immediately. Use saveUserPreferences for account sync. */
-export function setUserPreferences(prefs: Partial<UserPreferences>): UserPreferences {
-  return cachePreferences(normalizeUserPreferences({ ...getUserPreferences(), ...prefs }));
-}
-
 export async function fetchUserPreferences(): Promise<UserPreferences> {
   const response = await fetch("/api/user", { cache: "no-store" });
   if (!response.ok) throw new Error("Failed to load account preferences");
@@ -67,33 +62,6 @@ export async function saveUserPreferences(prefs: Partial<UserPreferences>): Prom
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : "Failed to save preferences");
   return cachePreferences(normalizeUserPreferences(payload?.user));
-}
-
-export function formatInTimezone(
-  date: Date | string,
-  timezone: string,
-  options?: Intl.DateTimeFormatOptions,
-): string {
-  const value = typeof date === "string" ? new Date(date) : date;
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: validTimezone(timezone) ? timezone : DEFAULT_USER_PREFERENCES.timezone,
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      ...options,
-    }).format(value);
-  } catch {
-    return value.toLocaleDateString("en-US", options);
-  }
-}
-
-export function formatInUserTimezone(date: Date | string, options?: Intl.DateTimeFormatOptions): string {
-  return formatInTimezone(date, getUserPreferences().timezone, options);
-}
-
-export function formatDateTimeInUserTimezone(date: Date | string): string {
-  return formatInUserTimezone(date, { hour: "2-digit", minute: "2-digit" });
 }
 
 export const TIMEZONE_OPTIONS = [

@@ -1,6 +1,6 @@
-export const TV_STARTED_STATUSES = new Set(["watching", "uptodate", "up_to_date", "finished", "watched"]);
+const TV_STARTED_STATUSES = new Set(["watching", "uptodate", "up_to_date", "finished", "watched"]);
 
-export type SeenMediaRow = {
+type SeenMediaRow = {
   tmdbId: number | null;
   watched?: boolean | null;
   status?: string | null;
