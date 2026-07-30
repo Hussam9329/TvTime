@@ -335,9 +335,9 @@ export function MovieDetailView() {
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="tvtime-movie-detail-hero__watch-button">
                     <ExternalLink /> Watch
-                    <ChevronDown />
+                    <ChevronDown className="tvtime-movie-detail-hero__watch-chevron" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
