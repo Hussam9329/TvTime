@@ -2215,10 +2215,6 @@ body {
   animation: tvtime-hero-slide-progress 7s linear forwards;
 }
 
-.tvtime-home-hero[data-carousel-paused="true"] .tvtime-home-hero__carousel-dot[data-active="true"]::after {
-  animation-play-state: paused;
-}
-
 @keyframes tvtime-hero-slide-progress {
   to {
     transform: scaleX(1);

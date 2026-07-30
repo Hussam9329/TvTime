@@ -246,7 +246,6 @@ function Hero({ items, greeting, userName }: { items: MediaItem[]; greeting: str
   const setView = useNav((s) => s.setView);
   const shouldReduceMotion = useReducedMotion();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [cycleVersion, setCycleVersion] = useState(0);
   const pointerStartX = useRef<number | null>(null);
   const item = items[activeIndex] ?? items[0];
@@ -259,14 +258,14 @@ function Hero({ items, greeting, userName }: { items: MediaItem[]; greeting: str
   }, [items.length]);
 
   useEffect(() => {
-    if (items.length < 2 || isPaused || shouldReduceMotion) return;
+    if (items.length < 2) return;
 
     const timer = window.setTimeout(() => {
       setActiveIndex((current) => (current + 1) % items.length);
     }, 7000);
 
     return () => window.clearTimeout(timer);
-  }, [activeIndex, cycleVersion, isPaused, items.length, shouldReduceMotion]);
+  }, [activeIndex, cycleVersion, items.length]);
 
   useEffect(() => {
     if (items.length < 2) return;
@@ -290,36 +289,24 @@ function Hero({ items, greeting, userName }: { items: MediaItem[]; greeting: str
   return (
     <motion.section
       data-ui-surface="hero"
-      data-carousel-paused={isPaused ? "true" : "false"}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
       className="tvtime-home-hero relative overflow-hidden"
       aria-label={`Featured ${mediaType === "movie" ? "movie" : "TV show"}: ${title}`}
       aria-roledescription="carousel"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onFocusCapture={() => setIsPaused(true)}
-      onBlurCapture={(event) => {
-        if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) {
-          setIsPaused(false);
-        }
-      }}
       onPointerDown={(event) => {
         if (event.pointerType !== "touch") return;
         pointerStartX.current = event.clientX;
-        setIsPaused(true);
       }}
       onPointerUp={(event) => {
         if (event.pointerType !== "touch" || pointerStartX.current === null) return;
         const distance = event.clientX - pointerStartX.current;
         pointerStartX.current = null;
-        setIsPaused(false);
         if (Math.abs(distance) >= 48) moveSlide(distance > 0 ? -1 : 1);
       }}
       onPointerCancel={() => {
         pointerStartX.current = null;
-        setIsPaused(false);
       }}
     >
       <AnimatePresence initial={false}>
