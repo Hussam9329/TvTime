@@ -4,15 +4,15 @@ import { useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackin
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
-import { ArrowRight, Compass, Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Compass, Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
-import { img, imgOrPlaceholder, getYear, getTitle } from "@/lib/tmdb";
+import { img, imgOrPlaceholder, getYear, getTitle, type MediaItem } from "@/lib/tmdb";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
-import { motion } from "framer-motion";
-import { useState, useEffect, type ComponentProps } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useState, useEffect, useRef, type ComponentProps } from "react";
 import { toast } from "sonner";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
@@ -36,6 +36,11 @@ export function HomeView() {
   const topMovieItems = (homeFeed.data?.topRatedMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
   const topTvItems = (homeFeed.data?.topRatedTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
   const upcomingMovieItems = (homeFeed.data?.upcomingMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
+  const heroCandidates = standardTrending.filter((media) => media.backdrop_path);
+  const heroItems = [
+    ...heroCandidates.filter((media) => (media.overview?.length || 0) > 100),
+    ...heroCandidates.filter((media) => (media.overview?.length || 0) <= 100),
+  ].slice(0, 5);
   const homeLibraryStates = useMediaStates([
     ...standardTrending.map((item) => ({ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" as const : "movie" as const })),
     ...popularMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
@@ -46,7 +51,6 @@ export function HomeView() {
     ...upcomingMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
   ]);
   const sharedLibraryStateSource = { data: homeLibraryStates.data };
-  const heroItem = standardTrending.find((media) => media.backdrop_path && (media.overview?.length || 0) > 100) || standardTrending[0];
 
   const [greeting, setGreeting] = useState("Good evening");
 
@@ -63,7 +67,7 @@ export function HomeView() {
   return (
     <div className="tvtime-home-view">
       {/* Hero featured */}
-      {heroItem && <Hero item={heroItem} greeting={greeting} userName={userName} />}
+      {heroItems.length > 0 && <Hero items={heroItems} greeting={greeting} userName={userName} />}
 
       {/* Library overview */}
       {stats.data && (
@@ -236,85 +240,203 @@ function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactN
   );
 }
 
-function Hero({ item, greeting, userName }: { item: any; greeting: string; userName: string }) {
+function Hero({ items, greeting, userName }: { items: MediaItem[]; greeting: string; userName: string }) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
+  const shouldReduceMotion = useReducedMotion();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [cycleVersion, setCycleVersion] = useState(0);
+  const pointerStartX = useRef<number | null>(null);
+  const item = items[activeIndex] ?? items[0];
   const mediaType = item.media_type === "tv" || !item.title ? "tv" : "movie";
   const title = getTitle(item);
+  const slideKey = `${mediaType}-${item.id}`;
+
+  useEffect(() => {
+    setActiveIndex((current) => Math.min(current, Math.max(items.length - 1, 0)));
+  }, [items.length]);
+
+  useEffect(() => {
+    if (items.length < 2 || isPaused || shouldReduceMotion) return;
+
+    const timer = window.setTimeout(() => {
+      setActiveIndex((current) => (current + 1) % items.length);
+    }, 7000);
+
+    return () => window.clearTimeout(timer);
+  }, [activeIndex, cycleVersion, isPaused, items.length, shouldReduceMotion]);
+
+  useEffect(() => {
+    if (items.length < 2) return;
+    const nextItem = items[(activeIndex + 1) % items.length];
+    if (!nextItem?.backdrop_path) return;
+
+    const preload = new Image();
+    preload.src = img(nextItem.backdrop_path, "w1280");
+  }, [activeIndex, items]);
+
+  const moveSlide = (direction: -1 | 1) => {
+    setActiveIndex((current) => (current + direction + items.length) % items.length);
+    setCycleVersion((current) => current + 1);
+  };
+
+  const selectSlide = (index: number) => {
+    setActiveIndex(index);
+    setCycleVersion((current) => current + 1);
+  };
 
   return (
     <motion.section
       data-ui-surface="hero"
+      data-carousel-paused={isPaused ? "true" : "false"}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
       className="tvtime-home-hero relative overflow-hidden"
       aria-label={`Featured ${mediaType === "movie" ? "movie" : "TV show"}: ${title}`}
+      aria-roledescription="carousel"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocusCapture={() => setIsPaused(true)}
+      onBlurCapture={(event) => {
+        if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) {
+          setIsPaused(false);
+        }
+      }}
+      onPointerDown={(event) => {
+        if (event.pointerType !== "touch") return;
+        pointerStartX.current = event.clientX;
+        setIsPaused(true);
+      }}
+      onPointerUp={(event) => {
+        if (event.pointerType !== "touch" || pointerStartX.current === null) return;
+        const distance = event.clientX - pointerStartX.current;
+        pointerStartX.current = null;
+        setIsPaused(false);
+        if (Math.abs(distance) >= 48) moveSlide(distance > 0 ? -1 : 1);
+      }}
+      onPointerCancel={() => {
+        pointerStartX.current = null;
+        setIsPaused(false);
+      }}
     >
-      <div className="tvtime-home-hero__backdrop absolute inset-0">
-        <SafeImage
-          src={img(item.backdrop_path, "w1280")}
-          alt=""
-          fill
-          variant="backdrop"
-          priority
-          className="object-cover"
-        />
-      </div>
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={`backdrop-${slideKey}`}
+          className="tvtime-home-hero__backdrop absolute inset-0"
+          initial={{ opacity: 0, scale: shouldReduceMotion ? 1 : 1.025 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.65, ease: "easeOut" }}
+        >
+          <SafeImage
+            src={img(item.backdrop_path, "w1280")}
+            alt=""
+            fill
+            variant="backdrop"
+            priority
+            className="object-cover"
+          />
+        </motion.div>
+      </AnimatePresence>
       <div className="tvtime-home-hero__scrim absolute inset-0 bg-gradient-to-r from-black/85" aria-hidden="true" />
       <div className="tvtime-home-hero__glow absolute inset-0" aria-hidden="true" />
 
-      <div className="tvtime-home-hero__content relative z-10 grid min-h-[clamp(27rem,48vw,35rem)] items-end gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_clamp(10rem,18vw,14rem)] lg:p-12">
-        <div className="min-w-0 self-end">
-          <p className="tvtime-home-hero__greeting">
-            <span className="tvtime-live-dot" aria-hidden="true" />
-            {greeting}, {userName}
-          </p>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={`content-${slideKey}`}
+          className="tvtime-home-hero__content relative z-10 grid min-h-[clamp(27rem,48vw,35rem)] items-end gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_clamp(10rem,18vw,14rem)] lg:p-12"
+          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: shouldReduceMotion ? 0 : -8 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: "easeOut" }}
+        >
+          <div className="min-w-0 self-end">
+            <p className="tvtime-home-hero__greeting">
+              <span className="tvtime-live-dot" aria-hidden="true" />
+              {greeting}, {userName}
+            </p>
 
-          <div className="tvtime-home-hero__meta">
-            <span className="tvtime-home-hero__featured">
-              <Flame aria-hidden="true" />
-              Featured
-            </span>
-            <span>{mediaType === "movie" ? "Movie" : "TV Show"}</span>
-            {getYear(item) && <span>{getYear(item)}</span>}
-            {item.vote_average > 0 && (
-              <span className="tvtime-home-hero__rating inline-flex items-center gap-1">
-                <Star className="fill-current" aria-hidden="true" />
-                {item.vote_average.toFixed(1)}
+            <div className="tvtime-home-hero__meta">
+              <span className="tvtime-home-hero__featured">
+                <Flame aria-hidden="true" />
+                Featured
               </span>
-            )}
+              <span>{mediaType === "movie" ? "Movie" : "TV Show"}</span>
+              {getYear(item) && <span>{getYear(item)}</span>}
+              {item.vote_average > 0 && (
+                <span className="tvtime-home-hero__rating inline-flex items-center gap-1">
+                  <Star className="fill-current" aria-hidden="true" />
+                  {item.vote_average.toFixed(1)}
+                </span>
+              )}
+            </div>
+
+            <h1 className="tvtime-home-hero__title">{title}</h1>
+            <p className="tvtime-home-hero__overview line-clamp-3 text-white/85">{item.overview}</p>
+
+            <div className="tvtime-home-hero__actions">
+              <Button size="lg" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
+                <Play className="fill-current" aria-hidden="true" />
+                View details
+              </Button>
+              <Button size="lg" variant="secondary" onClick={() => setView("discover")}>
+                <Compass className="h-4 w-4" aria-hidden="true" />
+                Explore more
+              </Button>
+            </div>
           </div>
 
-          <h1 className="tvtime-home-hero__title">{title}</h1>
-          <p className="tvtime-home-hero__overview line-clamp-3 text-white/85">{item.overview}</p>
-
-          <div className="tvtime-home-hero__actions">
-            <Button size="lg" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
-              <Play className="fill-current" aria-hidden="true" />
-              View details
-            </Button>
-            <Button size="lg" variant="secondary" onClick={() => setView("discover")}>
-              <Compass className="h-4 w-4" aria-hidden="true" />
-              Explore more
-            </Button>
+          <div className="tvtime-home-hero__poster hidden w-full lg:block" aria-hidden="true">
+            <div className="relative aspect-[2/3] overflow-hidden rounded-[1.25rem]">
+              <SafeImage
+                src={imgOrPlaceholder(item.poster_path, "w500")}
+                alt=""
+                fill
+                variant="poster"
+                priority
+              />
+            </div>
+            <span>Trending spotlight</span>
           </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {items.length > 1 && (
+        <div className="tvtime-home-hero__carousel-controls relative z-20" aria-label="Trending spotlight slides">
+          <button
+            type="button"
+            className="tvtime-home-hero__carousel-arrow"
+            onClick={() => moveSlide(-1)}
+            aria-label="Previous spotlight"
+          >
+            <ChevronLeft aria-hidden="true" />
+          </button>
+          <div className="tvtime-home-hero__carousel-dots">
+            {items.map((slide, index) => (
+              <button
+                key={`${slide.media_type ?? "media"}-${slide.id}-${index === activeIndex ? cycleVersion : 0}`}
+                type="button"
+                className="tvtime-home-hero__carousel-dot"
+                data-active={index === activeIndex ? "true" : "false"}
+                onClick={() => selectSlide(index)}
+                aria-label={`Show spotlight ${index + 1}: ${getTitle(slide)}`}
+                aria-current={index === activeIndex ? "true" : undefined}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="tvtime-home-hero__carousel-arrow"
+            onClick={() => moveSlide(1)}
+            aria-label="Next spotlight"
+          >
+            <ChevronRight aria-hidden="true" />
+          </button>
         </div>
-
-        <div className="tvtime-home-hero__poster hidden w-full lg:block" aria-hidden="true">
-          <div className="relative aspect-[2/3] overflow-hidden rounded-[1.25rem]">
-            <SafeImage
-              src={imgOrPlaceholder(item.poster_path, "w500")}
-              alt=""
-              fill
-              variant="poster"
-              priority
-            />
-          </div>
-          <span>Tonight&apos;s spotlight</span>
-        </div>
-      </div>
+      )}
     </motion.section>
   );
 }
