@@ -2960,7 +2960,7 @@ body {
   gap: 0.7rem;
 }
 
-.tvtime-movie-detail-hero__actions [data-slot="button"] {
+.tvtime-movie-detail-hero__actions :is([data-slot="button"], .tvtime-movie-detail-hero__watch-button) {
   width: 100%;
   min-width: 0;
   min-height: 3rem;
@@ -2970,7 +2970,7 @@ body {
   padding-inline: 0.9rem;
 }
 
-.tvtime-movie-detail-hero__actions [data-slot="button"] svg {
+.tvtime-movie-detail-hero__actions :is([data-slot="button"], .tvtime-movie-detail-hero__watch-button) svg {
   width: 1rem;
   height: 1rem;
 }
@@ -3612,7 +3612,7 @@ body {
     gap: 0.6rem;
   }
 
-  .tvtime-movie-detail-hero__actions [data-slot="button"] {
+  .tvtime-movie-detail-hero__actions :is([data-slot="button"], .tvtime-movie-detail-hero__watch-button) {
     min-height: 2.875rem;
     height: 100%;
     max-height: 2.875rem;
@@ -3631,7 +3631,7 @@ body {
     margin: 0 !important;
   }
 
-  .tvtime-movie-detail-hero__actions > [data-slot="button"]:last-child:nth-child(odd) {
+  .tvtime-movie-detail-hero__actions > :is([data-slot="button"], .tvtime-movie-detail-hero__watch-button):last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
 
