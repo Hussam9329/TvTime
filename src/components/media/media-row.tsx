@@ -48,7 +48,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
                 <span className="tvtime-section-heading__count tabular-nums">{items.length}</span>
               )}
             </div>
-            <p className="tvtime-section-heading__hint">Curated for your watch universe</p>
+            <p className="tvtime-section-heading__hint">Curated for you</p>
           </div>
         </div>
         <div className="tvtime-section-heading__actions">

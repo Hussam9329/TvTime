@@ -762,7 +762,6 @@
   .tvtime-primary-nav-item svg { width: 0.875rem; height: 0.875rem; }
   .tvtime-header-search { max-width: 15rem !important; }
   .tvtime-brand-copy { margin-right: 0.125rem; }
-  .tvtime-brand-tagline { display: none; }
 }
 @media (min-width: 1360px) and (max-width: 1535px) {
   .tvtime-header-search { max-width: 17rem !important; }
@@ -1808,10 +1807,6 @@ body {
 
 .tvtime-brand-copy {
   min-width: 0;
-}
-
-.tvtime-brand-tagline {
-  white-space: nowrap;
 }
 
 .tvtime-primary-nav-item {
@@ -3194,9 +3189,6 @@ body {
     max-width: 14rem !important;
   }
 
-  .tvtime-brand-tagline {
-    display: none;
-  }
 }
 
 @media (max-width: 1023px) {

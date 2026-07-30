@@ -250,12 +250,7 @@ export function Header() {
               <SheetHeader className="border-b border-border/60 p-5 text-left">
                 <SheetTitle className="flex items-center gap-3">
                   <BrandMark />
-                  <span className="min-w-0">
-                    <span className="block text-lg font-black tracking-tight">{APP_NAME}</span>
-                    <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Your watch universe
-                    </span>
-                  </span>
+                  <span className="min-w-0 text-lg font-black tracking-tight">{APP_NAME}</span>
                 </SheetTitle>
               </SheetHeader>
               <nav
@@ -299,9 +294,6 @@ export function Header() {
             <span className="tvtime-brand-copy hidden text-left sm:block">
               <span className="block text-lg font-black leading-none tracking-[-0.04em]">
                 Tv<span className="text-primary">Time</span>
-              </span>
-              <span className="tvtime-brand-tagline mt-0.5 hidden text-[9px] font-semibold uppercase tracking-[0.17em] text-muted-foreground 2xl:block">
-                Your watch universe
               </span>
             </span>
           </button>
