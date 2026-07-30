@@ -313,11 +313,11 @@ export function TvDetailView() {
 
   return (
     <div className="tvtime-tv-detail-page space-y-5">
-      <Button variant="ghost" size="sm" onClick={back} className="text-muted-foreground">
+      <Button variant="ghost" size="sm" onClick={back} className="tvtime-tv-detail-back-button text-muted-foreground">
         <ArrowLeft className="w-4 h-4 mr-1" /> Back
       </Button>
 
-      <section className="relative isolate overflow-hidden rounded-[28px] border border-white/15 bg-[#07101f] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
+      <section className="tvtime-tv-detail-hero relative isolate overflow-hidden rounded-[28px] border border-white/15 bg-[#07101f] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
       {/* Hero */}
       <div data-ui-surface="hero" className="absolute inset-0 -z-20 overflow-hidden">
         <div className="absolute inset-0">
@@ -328,8 +328,8 @@ export function TvDetailView() {
       </div>
 
       {/* Poster + title + actions */}
-      <div className="relative z-10 grid grid-cols-1 gap-6 p-5 sm:p-7 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8 lg:grid-cols-[270px_minmax(0,1fr)] lg:p-10">
-        <div className="w-36 flex-shrink-0 mx-auto sm:w-52 md:w-full md:mx-0">
+      <div className="tvtime-tv-detail-hero__layout relative z-10 grid grid-cols-1 gap-6 p-5 sm:p-7 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8 lg:grid-cols-[270px_minmax(0,1fr)] lg:p-10">
+        <div className="tvtime-tv-detail-hero__poster w-36 flex-shrink-0 mx-auto sm:w-52 md:w-full md:mx-0">
           <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
             <div className="relative aspect-[2/3]">
               <SafeImage src={mediaState.data?.tags?.some((tag) => tag.startsWith("custom-poster:")) ? mediaState.data.poster : mediaState.data?.isArabic ? imgOrPlaceholder(t.poster_path, "w342") : mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={displayTitle} fill variant="poster" />
@@ -337,10 +337,10 @@ export function TvDetailView() {
           </Card>
         </div>
 
-        <div className="min-w-0 space-y-5 md:pt-1">
+        <div className="tvtime-tv-detail-hero__content min-w-0 space-y-5 md:pt-1">
           {/* Title and badges */}
           <div>
-            <div className="mb-5 flex flex-wrap items-center gap-2.5 [&>*]:inline-flex [&>*]:h-10 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-4 [&>*]:text-sm [&>*]:font-semibold">
+            <div className="tvtime-tv-detail-hero__meta mb-5 flex flex-wrap items-center gap-2.5 [&>*]:inline-flex [&>*]:h-10 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-4 [&>*]:text-sm [&>*]:font-semibold">
               <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
               {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">Arabic TV</Badge>}
               {effectiveLabel === "finished" && (
@@ -371,11 +371,11 @@ export function TvDetailView() {
               {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
               {t.status && <Badge variant="secondary" className="border-0">{t.status}</Badge>}
             </div>
-            <h1 className="view-page-title text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.04em] leading-[0.95]">{displayTitle}</h1>
-            {t.tagline && <p className="text-base sm:text-lg italic text-foreground/70 mt-5">{t.tagline}</p>}
+            <h1 className="tvtime-tv-detail-hero__title view-page-title text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.04em] leading-[0.95]">{displayTitle}</h1>
+            {t.tagline && <p className="tvtime-tv-detail-hero__tagline text-base sm:text-lg italic text-foreground/70 mt-5">{t.tagline}</p>}
           </div>
           {/* Episode progress and following membership are intentionally separate. */}
-          <div className="flex flex-wrap items-center gap-3 [&>*]:h-12 [&>*]:rounded-xl [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&_button]:h-12 [&_button]:min-w-[150px] [&_button]:justify-center [&_button]:rounded-xl [&_button]:px-5 [&_button]:text-sm [&_button]:font-semibold">
+          <div className="tvtime-tv-detail-hero__actions flex flex-wrap items-center gap-3 [&>*]:h-12 [&>*]:rounded-xl [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&_button]:h-12 [&_button]:min-w-[150px] [&_button]:justify-center [&_button]:rounded-xl [&_button]:px-5 [&_button]:text-sm [&_button]:font-semibold">
             <OfficialPosterPicker tmdbId={t.id} mediaType="tv" title={displayTitle} posters={(t as any).images?.posters ?? []} />
             {effectiveLabel && effectiveLabel !== "planned" && (
               <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
@@ -456,9 +456,9 @@ export function TvDetailView() {
             </DropdownMenu>
           </div>
 
-          <Card className="rounded-2xl border-white/15 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-            <div className="grid grid-cols-1 items-center gap-5 md:grid-cols-[minmax(220px,1fr)_auto] xl:grid-cols-[minmax(260px,1fr)_auto_minmax(220px,auto)]">
-              <div className="flex min-w-0 items-center gap-4">
+          <Card className="tvtime-tv-detail-hero__rating-card rounded-2xl border-white/15 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
+            <div className="tvtime-tv-detail-hero__rating-grid grid grid-cols-1 items-center gap-5 md:grid-cols-[minmax(220px,1fr)_auto] xl:grid-cols-[minmax(260px,1fr)_auto_minmax(220px,auto)]">
+              <div className="tvtime-tv-detail-hero__rating-summary flex min-w-0 items-center gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Your rating</p>
                   {displayedShowRating != null ? (
@@ -485,7 +485,7 @@ export function TvDetailView() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 md:justify-self-end xl:justify-self-center">
+              <div className="tvtime-tv-detail-hero__rating-actions flex items-center gap-2 md:justify-self-end xl:justify-self-center">
                 {myRating != null && (
                   <Button variant="outline" size="sm" onClick={onRemoveRating}>
                     Remove rating
@@ -507,7 +507,7 @@ export function TvDetailView() {
                   {displayedShowRating != null ? "Re-rate" : canRateShow ? "Rate & finish" : "Rating locked"}
                 </Button>
               </div>
-              <div className="md:col-span-2 md:justify-self-end xl:col-span-1 xl:text-right">
+              <div className="tvtime-tv-detail-hero__tmdb-rating md:col-span-2 md:justify-self-end xl:col-span-1 xl:text-right">
                 <p className="text-xs text-muted-foreground mb-1">TMDB score</p>
                 <div className="flex items-center gap-1 text-amber-400 font-bold text-lg">
                   <Star className="w-5 h-5 fill-amber-400" />
@@ -516,7 +516,7 @@ export function TvDetailView() {
                 </div>
               </div>
               {showRatingLockMessage && (
-                <div className="flex items-start gap-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 text-xs text-amber-100/90 md:col-span-2 xl:col-span-3">
+                <div className="tvtime-tv-detail-hero__rating-lock flex items-start gap-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 text-xs text-amber-100/90 md:col-span-2 xl:col-span-3">
                   <Lock className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-300" />
                   <span className="leading-relaxed">{showRatingLockMessage}</span>
                 </div>
