@@ -27,7 +27,6 @@ export function HomeView() {
   const tvTrackingCounts = useTvTrackingCounts("standard");
 
   const setView = useNav((s) => s.setView);
-  const userName = useNav((s) => s.userName);
 
   const standardTrending = (homeFeed.data?.trending.results ?? []).filter((media) => !isArabicMediaItem(media));
   const popularMovieItems = (homeFeed.data?.popularMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
@@ -52,22 +51,10 @@ export function HomeView() {
   ]);
   const sharedLibraryStateSource = { data: homeLibraryStates.data };
 
-  const [greeting, setGreeting] = useState("Good evening");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const h = new Date().getHours();
-      if (h < 12) setGreeting("Good morning");
-      else if (h < 18) setGreeting("Good afternoon");
-      else setGreeting("Good evening");
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <div className="tvtime-home-view">
       {/* Hero featured */}
-      {heroItems.length > 0 && <Hero items={heroItems} greeting={greeting} userName={userName} />}
+      {heroItems.length > 0 && <Hero items={heroItems} />}
 
       {/* Library overview */}
       {stats.data && (
@@ -240,7 +227,7 @@ function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactN
   );
 }
 
-function Hero({ items, greeting, userName }: { items: MediaItem[]; greeting: string; userName: string }) {
+function Hero({ items }: { items: MediaItem[] }) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
@@ -341,11 +328,6 @@ function Hero({ items, greeting, userName }: { items: MediaItem[]; greeting: str
           transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: "easeOut" }}
         >
           <div className="min-w-0 self-end">
-            <p className="tvtime-home-hero__greeting">
-              <span className="tvtime-live-dot" aria-hidden="true" />
-              {greeting}, {userName}
-            </p>
-
             <div className="tvtime-home-hero__meta">
               <span className="tvtime-home-hero__featured">
                 <Flame aria-hidden="true" />

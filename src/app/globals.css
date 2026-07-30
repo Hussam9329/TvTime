@@ -2001,29 +2001,6 @@ body {
     linear-gradient(135deg, transparent 60%, rgb(255 255 255 / 0.035));
 }
 
-.tvtime-home-hero__greeting {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin-bottom: 1.25rem;
-  padding: 0.45rem 0.7rem;
-  border: 1px solid rgb(255 255 255 / 0.14);
-  border-radius: 999px;
-  background: rgb(9 14 25 / 0.55);
-  color: rgb(255 255 255 / 0.78);
-  font-size: 0.75rem;
-  font-weight: 700;
-  backdrop-filter: blur(12px);
-}
-
-.tvtime-live-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--primary) 82%, white);
-  box-shadow: 0 0 0 0.22rem color-mix(in oklab, var(--primary) 18%, transparent);
-}
-
 .tvtime-home-hero__meta {
   display: flex;
   flex-wrap: wrap;
@@ -3591,10 +3568,6 @@ body {
     padding: 1.25rem;
   }
 
-  .tvtime-home-hero__greeting {
-    margin-bottom: 0.9rem;
-  }
-
   .tvtime-home-hero__meta {
     gap: 0.38rem 0.58rem;
     font-size: 0.64rem;
@@ -3671,10 +3644,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tvtime-live-dot {
-    box-shadow: none;
-  }
-
   .tvtime-media-poster,
   .tvtime-media-poster__image,
   .tvtime-quick-stat,
@@ -3694,7 +3663,6 @@ body {
   .tvtime-mobile-search-panel,
   .tvtime-mobile-dock__surface,
   .tvtime-home-hero__poster,
-  .tvtime-home-hero__greeting,
   .tvtime-tmdb-score,
   .tvtime-media-menu,
   .tvtime-media-state-rail > span {
@@ -3747,7 +3715,6 @@ body {
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .tvtime-home-hero__poster,
-  .tvtime-home-hero__greeting,
   .tvtime-tmdb-score,
   .tvtime-media-menu,
   .tvtime-media-state-rail > span {
