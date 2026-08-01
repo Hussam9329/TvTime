@@ -21,6 +21,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { formatReleaseDateParts } from "@/lib/date-only";
 import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
+import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 export function MovieDetailView() {
   const { movieId, back, goPerson } = useNav();
@@ -32,6 +33,7 @@ export function MovieDetailView() {
   const watchlistToggle = useWatchlistToggle();
   const watchedToggle = useWatchedMovieToggle();
   const ratingMutate = useRatingMutate();
+  const showWatchUndo = useWatchUndo();
 
   const [activeTab, setActiveTab] = useState("overview");
   const [ratingIntent, setRatingIntent] = useState<"complete" | "edit" | null>(null);
@@ -124,7 +126,7 @@ export function MovieDetailView() {
         return;
       }
       try {
-        await watchedToggle.mutateAsync({
+        const result = await watchedToggle.mutateAsync({
           action: "add",
           tmdbId: m.id,
           title: displayTitle,
@@ -138,7 +140,7 @@ export function MovieDetailView() {
           originalLanguage: m.original_language,
           userRating: myRating,
         });
-        toast.success(`Marked as watched · Your rating ${myRating}/100`);
+        showWatchUndo(`Marked as watched · Your rating ${myRating}/100`, result);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to update watch status");
       }
@@ -146,7 +148,7 @@ export function MovieDetailView() {
     }
 
     try {
-      await watchedToggle.mutateAsync({
+      const result = await watchedToggle.mutateAsync({
         action: "remove",
         tmdbId: m.id,
         title: displayTitle,
@@ -159,7 +161,7 @@ export function MovieDetailView() {
         originCountry: originCountries,
         originalLanguage: m.original_language,
       });
-      toast.success("Marked as not watched");
+      showWatchUndo("Marked as not watched", result);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update watch status");
     }
@@ -167,8 +169,8 @@ export function MovieDetailView() {
 
   const onRewatch = async () => {
     try {
-      await watchedToggle.mutateAsync({ action: "rewatch", tmdbId: m.id, title: displayTitle, posterPath: m.poster_path, runtime: m.runtime });
-      toast.success("Rewatch recorded");
+      const result = await watchedToggle.mutateAsync({ action: "rewatch", tmdbId: m.id, title: displayTitle, posterPath: m.poster_path, runtime: m.runtime });
+      showWatchUndo("Rewatch recorded", result);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to record rewatch");
     }
@@ -176,7 +178,7 @@ export function MovieDetailView() {
 
   const onRateSubmit = async (v: number) => {
     if (ratingIntent === "complete") {
-      await watchedToggle.mutateAsync({
+      return watchedToggle.mutateAsync({
         action: "add",
         tmdbId: m.id,
         title: displayTitle,
@@ -190,10 +192,9 @@ export function MovieDetailView() {
         originalLanguage: m.original_language,
         userRating: v,
       });
-      return;
     }
     if (!isWatched) throw new Error("Mark this movie watched before rating it.");
-    await ratingMutate.mutateAsync({
+    return ratingMutate.mutateAsync({
       action: "set",
       mediaType: "movie",
       tmdbId: m.id,
@@ -212,8 +213,8 @@ export function MovieDetailView() {
 
   const onRemoveRating = async () => {
     try {
-      await ratingMutate.mutateAsync({ action: "remove", mediaType: "movie", tmdbId: m.id });
-      toast.success("Rating removed and movie marked as not watched");
+      const result = await ratingMutate.mutateAsync({ action: "remove", mediaType: "movie", tmdbId: m.id });
+      showWatchUndo("Rating removed and movie marked as not watched", result);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to remove rating");
     }

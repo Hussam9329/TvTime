@@ -23,6 +23,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 type CollectionWorld = "movies" | "anime" | "arabic-movies";
 type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
@@ -302,6 +303,7 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; index: number; tab: CollectionTab; layout: "grid" | "list" }) {
   const isWatchedTab = tab === "watched";
   const update = useMediaUpdate();
+  const showWatchUndo = useWatchUndo();
   const goMovie = useNav((state) => state.goMovie);
   const goTv = useNav((state) => state.goTv);
   const [ratingOpen, setRatingOpen] = useState(false);
@@ -341,14 +343,14 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
       return;
     }
     if (item.userRating != null) {
-      await update.mutateAsync({
+      const result = await update.mutateAsync({
         id: item.id,
         userRating: item.userRating,
         watched: true,
         watchedAt: new Date().toISOString(),
         status: "watched",
       });
-      toast.success(`Marked as watched · Your rating ${item.userRating}/100`);
+      showWatchUndo(`Marked as watched · Your rating ${item.userRating}/100`, result);
       return;
     }
     setRatingOpen(true);
@@ -356,20 +358,19 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
 
   const handleRate = async (rating: number) => {
     if (isMovie && !item.watched) {
-      await update.mutateAsync({
+      return update.mutateAsync({
         id: item.id,
         userRating: rating,
         watched: true,
         watchedAt: new Date().toISOString(),
         status: "watched",
       });
-      return;
     }
-    await update.mutateAsync({ id: item.id, userRating: rating });
+    return update.mutateAsync({ id: item.id, userRating: rating });
   };
 
   const handleRemoveRating = async () => {
-    await update.mutateAsync(isMovie
+    const result = await update.mutateAsync(isMovie
       ? {
           id: item.id,
           userRating: null,
@@ -378,19 +379,19 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
           status: null,
         }
       : { id: item.id, userRating: null });
-    toast.success(isMovie
+    showWatchUndo(isMovie
       ? "Rating removed and movie marked as not watched"
-      : "Rating removed and Finished status cleared");
+      : "Rating removed and Finished status cleared", result);
   };
 
   const handleUnwatch = async () => {
-    await update.mutateAsync({
+    const result = await update.mutateAsync({
       id: item.id,
       watched: false,
       watchedAt: null,
       status: null,
     });
-    toast.success("Removed from Watched. Rating was preserved.");
+    showWatchUndo("Removed from Watched. Rating was preserved.", result);
   };
 
   // Quick remove from watchlist — clears status only, doesn't touch watched/rating.

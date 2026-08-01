@@ -229,7 +229,7 @@ model Notification {
   id            String   @id @default(cuid())
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type          String   // "new_episode" | "movie_available" | "season_return" | "backlog_alert"
+  type          String   // "new_episode" | "movie_available" | "season_return" | "season_premiere" | "season_finale" | "backlog_alert"
   title         String
   body          String
   tmdbId        Int?

@@ -21,6 +21,11 @@ import { detectIsAnime } from "@/lib/anime-detect";
 import { detectIsArabic, normalizeCountryCodes } from "@/lib/arabic-media";
 import { canonicalMediaPoster } from "@/lib/media-poster";
 import { clearExplicitLegacyFinishedTag } from "@/lib/watch-next-state";
+import {
+  issueWatchUndoToken,
+  mediaWatchSnapshot,
+  type EpisodeRowSnapshot,
+} from "@/lib/watch-undo-token";
 
 type CompletionInfo = {
   newStatus: TvTrackingState;
@@ -207,6 +212,24 @@ function parseRequestedEpisode(value: unknown): TvEpisodeRequest | null {
   };
 }
 
+function episodeSnapshot(
+  seasonNumber: number,
+  episodeNumber: number,
+  row: { episodeName: string | null; runtime: number | null; watchedAt: Date | null } | null,
+): EpisodeRowSnapshot {
+  return {
+    seasonNumber,
+    episodeNumber,
+    row: row
+      ? {
+          episodeName: row.episodeName,
+          runtime: row.runtime,
+          watchedAt: (row.watchedAt ?? new Date()).toISOString(),
+        }
+      : null,
+  };
+}
+
 async function loadMutationMetadata(showId: number, now: Date): Promise<TvStatusMetadata | null> {
   try {
     return await getTvStatusMetadata(showId, now, { requireClassification: true });
@@ -334,11 +357,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const [existingMedia, existingEpisodeCount] = await Promise.all([
+    const [existingMedia, existingEpisodeCount, storedTargetEpisodes] = await Promise.all([
       db.media.findUnique({
         where: { userId_type_tmdbId: { userId: user.id, type: "series", tmdbId: showId } },
       }),
       db.watchedEpisode.count({ where: { userId: user.id, showId } }),
+      db.watchedEpisode.findMany({
+        where: {
+          userId: user.id,
+          showId,
+          OR: validation.released.map((episode) => ({
+            seasonNumber: episode.seasonNumber,
+            episodeNumber: episode.episodeNumber,
+          })),
+        },
+        select: {
+          seasonNumber: true,
+          episodeNumber: true,
+          episodeName: true,
+          runtime: true,
+          watchedAt: true,
+        },
+      }),
     ]);
     const legacySnapshot = existingMedia
       ? await materializeLegacyCompletionSnapshot({
@@ -354,6 +394,27 @@ export async function POST(req: NextRequest) {
         { status: 503 },
       );
     }
+
+    const storedByKey = new Map(storedTargetEpisodes.map((episode) => [
+      episodeKey(episode.seasonNumber, episode.episodeNumber),
+      episode,
+    ]));
+    const legacyByKey = new Map((legacySnapshot?.episodes ?? []).map((episode) => [
+      episodeKey(episode.seasonNumber, episode.episodeNumber),
+      {
+        episodeName: episode.episodeName,
+        runtime: episode.runtime,
+        watchedAt: legacySnapshot?.completionAt ?? now,
+      },
+    ]));
+    const episodesBefore = validation.released.map((episode) => {
+      const key = episodeKey(episode.seasonNumber, episode.episodeNumber);
+      return episodeSnapshot(
+        episode.seasonNumber,
+        episode.episodeNumber,
+        storedByKey.get(key) ?? legacyByKey.get(key) ?? null,
+      );
+    });
 
     const requestedNames = new Map(
       requested.map((episode) => [
@@ -418,6 +479,7 @@ export async function POST(req: NextRequest) {
             season: episode.seasonNumber,
             episode: episode.episodeNumber,
             watchedAt: now,
+            createdAt: now,
             duration: episode.runtime,
             rewatch: true,
           })),
@@ -427,11 +489,22 @@ export async function POST(req: NextRequest) {
       return updateShowStatusInTransaction(tx, lockedMedia, user.id, showId, metadata);
     }, { timeout: 30_000 });
 
+    const undoToken = await issueWatchUndoToken({
+      kind: "episodes",
+      userId: user.id,
+      showId,
+      mediaId: completion.mediaId,
+      mediaBefore: existingMedia ? mediaWatchSnapshot(existingMedia) : null,
+      episodesBefore,
+      rewatchCreatedAt: isRewatch ? now.toISOString() : null,
+    });
+
     return NextResponse.json({
       ok: true,
       count: validation.released.length,
       rewatch: isRewatch,
       completion,
+      undoToken,
     });
   } catch (error) {
     console.error("[watched-episodes:POST]", error);
@@ -465,11 +538,22 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const [existingMedia, existingCount] = await Promise.all([
+    const [existingMedia, existingCount, storedTargetEpisode] = await Promise.all([
       db.media.findUnique({
         where: { userId_type_tmdbId: { userId: user.id, type: "series", tmdbId: showId } },
       }),
       db.watchedEpisode.count({ where: { userId: user.id, showId } }),
+      db.watchedEpisode.findUnique({
+        where: {
+          userId_showId_seasonNumber_episodeNumber: {
+            userId: user.id,
+            showId,
+            seasonNumber,
+            episodeNumber,
+          },
+        },
+        select: { episodeName: true, runtime: true, watchedAt: true },
+      }),
     ]);
 
     if (!existingMedia && existingCount === 0) {
@@ -494,6 +578,21 @@ export async function DELETE(req: NextRequest) {
         { status: 503 },
       );
     }
+
+    const legacyTarget = legacySnapshot?.episodes.find((episode) => (
+      episode.seasonNumber === seasonNumber && episode.episodeNumber === episodeNumber
+    ));
+    const episodesBefore = [episodeSnapshot(
+      seasonNumber,
+      episodeNumber,
+      storedTargetEpisode ?? (legacyTarget
+        ? {
+            episodeName: legacyTarget.episodeName,
+            runtime: legacyTarget.runtime,
+            watchedAt: legacySnapshot?.completionAt ?? now,
+          }
+        : null),
+    )];
 
     const completion = await db.$transaction(async (tx) => {
       const ensuredMedia = await ensureSeriesMedia(tx, user.id, showId, metadata);
@@ -521,7 +620,17 @@ export async function DELETE(req: NextRequest) {
       return updateShowStatusInTransaction(tx, lockedMedia, user.id, showId, metadata);
     }, { timeout: 30_000 });
 
-    return NextResponse.json({ ok: true, completion });
+    const undoToken = await issueWatchUndoToken({
+      kind: "episodes",
+      userId: user.id,
+      showId,
+      mediaId: completion.mediaId,
+      mediaBefore: existingMedia ? mediaWatchSnapshot(existingMedia) : null,
+      episodesBefore,
+      rewatchCreatedAt: null,
+    });
+
+    return NextResponse.json({ ok: true, completion, undoToken });
   } catch (error) {
     console.error("[watched-episodes:DELETE]", error);
     return NextResponse.json({ error: "Failed to unmark episode" }, { status: 500 });

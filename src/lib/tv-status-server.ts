@@ -505,7 +505,7 @@ export async function getTvStatusMetadata(
   return metadata;
 }
 
-async function getTvSeasonDetail(tmdbId: number, seasonNumber: number): Promise<SeasonDetail> {
+export async function getTvSeasonDetail(tmdbId: number, seasonNumber: number): Promise<SeasonDetail> {
   const key = `${Number(tmdbId)}:${Number(seasonNumber)}`;
   const cached = readFresh(seasonCache.get(key), SEASON_TTL_MS);
   if (cached) return cached;

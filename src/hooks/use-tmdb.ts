@@ -642,6 +642,7 @@ export function useWatchedMovieToggle() {
               }),
         });
         await ensureApiOk(patchRes, "Failed to mark movie watched");
+        return patchRes.json();
       } else {
         // Remove from watched without touching the independent rating
         // TVM Fix: find by tmdbId DIRECTLY (not via paginated list .find())
@@ -653,7 +654,9 @@ export function useWatchedMovieToggle() {
             body: JSON.stringify({ watched: false, watchedAt: null, status: null }),
           });
           await ensureApiOk(patchRes, "Failed to remove movie from watched");
+          return patchRes.json();
         }
+        return null;
       }
     },
     onSuccess: () => {
@@ -710,7 +713,7 @@ export function useEpisodeToggle() {
       episodeNumber: number;
       episodeName?: string;
       rewatch?: boolean;
-    }): Promise<{ item?: any; ok?: boolean; completion?: EpisodeCompletion | null }> => {
+    }): Promise<{ item?: any; ok?: boolean; completion?: EpisodeCompletion | null; undoToken?: string | null }> => {
       if (args.action === "add" || args.action === "rewatch") {
         const res = await fetch(withUserId(new URL("/api/library/watched-episodes", window.location.origin)), {
           method: "POST",
@@ -762,7 +765,7 @@ export function useBulkEpisodeToggle() {
       showId: number;
       episodes: { seasonNumber: number; episodeNumber: number; episodeName?: string | null }[];
       rewatch?: boolean;
-    }): Promise<{ ok?: boolean; count?: number; completion?: EpisodeCompletion | null }> => {
+    }): Promise<{ ok?: boolean; count?: number; completion?: EpisodeCompletion | null; undoToken?: string | null }> => {
       const res = await fetch(withUserId(new URL("/api/library/watched-episodes", window.location.origin)), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...userHeaders() },
@@ -1041,6 +1044,7 @@ export function useRatingMutate() {
           const errorBody = await patchRes.json().catch(() => ({}));
           throw new Error(errorBody?.error || "Failed to save rating");
         }
+        return patchRes.json();
       } else {
         // Remove rating by direct identity. The server also clears completion
         // state for movies and Finished TV series.
@@ -1059,7 +1063,9 @@ export function useRatingMutate() {
               : { userRating: null }),
           });
           await ensureApiOk(patchRes, "Failed to remove rating");
+          return patchRes.json();
         }
+        return null;
       }
     },
     onSuccess: () => {

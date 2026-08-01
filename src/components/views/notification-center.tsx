@@ -11,6 +11,7 @@ import {
   Film,
   AlertTriangle,
   CalendarClock,
+  Flag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { userHeaders, withUserId } from "@/lib/client-user";
@@ -32,6 +33,8 @@ const TYPE_META: Record<string, { icon: React.ComponentType<{ size?: number; cla
   new_episode: { icon: Tv, color: "text-emerald-500", bg: "bg-emerald-500/15", label: "حلقة جديدة" },
   movie_available: { icon: Film, color: "text-blue-500", bg: "bg-blue-500/15", label: "فيلم متوفر" },
   season_return: { icon: CalendarClock, color: "text-purple-500", bg: "bg-purple-500/15", label: "عودة موسم" },
+  season_premiere: { icon: CalendarClock, color: "text-cyan-500", bg: "bg-cyan-500/15", label: "بداية موسم" },
+  season_finale: { icon: Flag, color: "text-fuchsia-500", bg: "bg-fuchsia-500/15", label: "نهاية موسم" },
   backlog_alert: { icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-500/15", label: "تراكم حلقات" },
 };
 

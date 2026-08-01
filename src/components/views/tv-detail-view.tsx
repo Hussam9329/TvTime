@@ -30,6 +30,7 @@ import {
   type WatchEpisodeRef,
 } from "@/lib/episode-watch-plan";
 import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
+import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 export function TvDetailView() {
   const { tvId, back, goPerson } = useNav();
@@ -762,6 +763,7 @@ function SeasonEpisodes({
   const watched = useWatchedEpisodes(tvId);
   const episodeToggle = useEpisodeToggle();
   const bulkEpisodeToggle = useBulkEpisodeToggle();
+  const showWatchUndo = useWatchUndo();
   const episodeRatings = useEpisodeRatings(tvId);
   const episodeRatingMutate = useEpisodeRatingMutate(tvId);
   const [ratingTarget, setRatingTarget] = useState<{
@@ -809,12 +811,13 @@ function SeasonEpisodes({
         : await bulkEpisodeToggle.mutateAsync({ showId: tvId, episodes });
       const previousCount = includePrevious ? plan.previousUnwatched.length : 0;
       const selectedCount = plan.selectedEpisodes.length;
-      toast.success(
+      showWatchUndo(
         previousCount > 0
           ? `Marked ${previousCount + selectedCount} released episodes as watched, including earlier gaps.`
           : plan.kind === "episode"
             ? `${plan.targetLabel} marked as watched.`
             : `${plan.targetLabel} marked as watched (${selectedCount} released episode${selectedCount === 1 ? "" : "s"}).`,
+        result,
       );
       onCompletion?.(result?.completion);
       setWatchPlan(null);
@@ -851,12 +854,12 @@ function SeasonEpisodes({
     }
     if (!window.confirm(`Record one rewatch for all ${releasedEpisodes.length} released episodes in ${currentSeason?.name || `Season ${season}`}?`)) return;
     try {
-      await bulkEpisodeToggle.mutateAsync({
+      const result = await bulkEpisodeToggle.mutateAsync({
         showId: tvId,
         rewatch: true,
         episodes: releasedEpisodes.map((episode: any) => ({ seasonNumber: episode.season_number, episodeNumber: episode.episode_number, episodeName: episode.name || null })),
       });
-      toast.success(`${currentSeason?.name || `Season ${season}`} rewatch recorded for every released episode.`);
+      showWatchUndo(`${currentSeason?.name || `Season ${season}`} rewatch recorded for every released episode.`, result);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to record season rewatch");
     }
@@ -874,14 +877,14 @@ function SeasonEpisodes({
 
     if (isWatched) {
       try {
-        await episodeToggle.mutateAsync({
+        const result = await episodeToggle.mutateAsync({
           action: "remove",
           showId: tvId,
           seasonNumber: sn,
           episodeNumber: en,
           episodeName: name,
         });
-        toast.success(`S${sn}E${en} marked as unwatched.`);
+        showWatchUndo(`S${sn}E${en} marked as unwatched.`, result);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to update episode");
       }
@@ -952,8 +955,8 @@ function SeasonEpisodes({
 
   const recordEpisodeRewatch = async (episode: { season_number: number; episode_number: number; name: string }) => {
     try {
-      await episodeToggle.mutateAsync({ action: "rewatch", showId: tvId, seasonNumber: episode.season_number, episodeNumber: episode.episode_number, episodeName: episode.name });
-      toast.success(`S${episode.season_number}E${episode.episode_number} rewatch recorded.`);
+      const result = await episodeToggle.mutateAsync({ action: "rewatch", showId: tvId, seasonNumber: episode.season_number, episodeNumber: episode.episode_number, episodeName: episode.name });
+      showWatchUndo(`S${episode.season_number}E${episode.episode_number} rewatch recorded.`, result);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to record rewatch");
     }

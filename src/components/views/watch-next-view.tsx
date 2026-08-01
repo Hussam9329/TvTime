@@ -12,6 +12,7 @@ import { userHeaders, withUserId } from "@/lib/client-user";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEpisodeToggle } from "@/hooks/use-tmdb";
 import { toast } from "sonner";
+import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 type WatchNextItem = { tmdbId: number; title: string; poster: string | null; seasonNumber: number; episodeNumber: number; watchedEpisodes: number; releasedEpisodes: number; lastActivity: string; isAnime: boolean; isArabic: boolean };
 type UpcomingItem = { tmdbId: number; title: string; poster: string | null; seasonNumber: number; episodeNumber: number; episodeName: string | null; airDate: string; isAnime: boolean; isArabic: boolean };
@@ -110,15 +111,16 @@ function UpcomingSection({ items, onOpen }: { items: UpcomingItem[]; onOpen: (id
 
 function WatchSection({ title, subtitle, items, onOpen, paused = false }: { title: string; subtitle: string; items: WatchNextItem[]; onOpen: (id: number) => void; paused?: boolean }) {
   const episodeToggle = useEpisodeToggle();
+  const showWatchUndo = useWatchUndo();
   const markWatched = async (item: WatchNextItem) => {
     try {
-      await episodeToggle.mutateAsync({
+      const result = await episodeToggle.mutateAsync({
         action: "add",
         showId: item.tmdbId,
         seasonNumber: item.seasonNumber,
         episodeNumber: item.episodeNumber,
       });
-      toast.success(`S${item.seasonNumber}E${item.episodeNumber} watched — loading the next episode`);
+      showWatchUndo(`S${item.seasonNumber}E${item.episodeNumber} watched — loading the next episode`, result);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to mark episode watched");
     }

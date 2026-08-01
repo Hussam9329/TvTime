@@ -17,6 +17,7 @@ import { RatingDialog } from "@/components/media/rating-dialog";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { isAsianMediaItem } from "@/lib/asian-media";
 import { useState } from "react";
+import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -40,6 +41,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   const goTv = useNav((s) => s.goTv);
   const watchlistToggle = useWatchlistToggle();
   const watchedToggle = useWatchedMovieToggle();
+  const showWatchUndo = useWatchUndo();
   const [ratingOpen, setRatingOpen] = useState(false);
 
   // Fix #1: Use forcedMediaType if provided (e.g., TV rows in Home/Discover).
@@ -94,12 +96,12 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
     if (!watched) {
       if (userRating != null) {
         try {
-          await watchedToggle.mutateAsync({
+          const result = await watchedToggle.mutateAsync({
             ...actionPayload,
             action: "add",
             userRating,
           });
-          toast.success(`Marked as watched · Your rating ${userRating}/100`);
+          showWatchUndo(`Marked as watched · Your rating ${userRating}/100`, result);
         } catch {
           toast.error("Failed to update watched status");
         }
@@ -109,12 +111,12 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       return;
     }
     try {
-      await watchedToggle.mutateAsync({ ...actionPayload, action: "remove" });
-      toast.success("Removed from watched");
+      const result = await watchedToggle.mutateAsync({ ...actionPayload, action: "remove" });
+      showWatchUndo("Removed from watched", result);
     } catch { toast.error("Failed to update watched status"); }
   };
   const completeWatchedWithRating = async (rating: number) => {
-    await watchedToggle.mutateAsync({
+    return watchedToggle.mutateAsync({
       ...actionPayload,
       action: "add",
       userRating: rating,

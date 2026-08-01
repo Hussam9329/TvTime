@@ -5,6 +5,7 @@ import { resolveUserId } from "@/lib/auth";
 import { normalizeMedia } from "@/lib/media-normalize";
 import { normalizeTvTrackingState } from "@/lib/tv-status-engine";
 import { saveTvCompletionRating, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
+import { issueWatchUndoToken, mediaWatchSnapshot } from "@/lib/watch-undo-token";
 
 export async function PATCH(
   req: NextRequest,
@@ -29,6 +30,13 @@ export async function PATCH(
 
     const hasRatingMutation = body.userRating !== undefined;
     const hasWatchMutation = body.watched !== undefined || body.watchedAt !== undefined || body.status !== undefined;
+    const createsMovieWatchUndo = existing.type === "movie" && Boolean(
+      body.watched !== undefined
+        || body.watchedAt !== undefined
+        || body.rewatchIncrement === true
+        || body.status === "watched"
+        || (body.status !== undefined && (existing.watched || existing.status === "watched")),
+    );
     if (existing.type === "series" && hasRatingMutation && hasWatchMutation) {
       return NextResponse.json(
         {
@@ -217,7 +225,15 @@ export async function PATCH(
     }
 
     const item = await db.media.update({ where: { id }, data });
-    return NextResponse.json({ item: normalizeMedia(item) });
+    const undoToken = createsMovieWatchUndo
+      ? await issueWatchUndoToken({
+          kind: "movie",
+          userId: user.id,
+          mediaId: existing.id,
+          mediaBefore: mediaWatchSnapshot(existing),
+        })
+      : undefined;
+    return NextResponse.json({ item: normalizeMedia(item), undoToken });
   } catch (error) {
     console.error("[media:update]", error);
     return NextResponse.json({ error: "Failed to update media item" }, { status: 500 });

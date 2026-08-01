@@ -29,6 +29,8 @@ const checks = [
   ["TVM-03/04/05", ["scripts/verify-tvm-03-04-05.mjs"]],
   ["TVM-06/07/08/09", ["scripts/verify-tvm-06-09.mjs"]],
   ["TVM-10/11/12/13", ["scripts/verify-tvm-10-13.mjs"]],
+  ["Watch Undo and season alert behavior", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-watch-features.ts"]],
+  ["Watch Undo and season alert guards", ["scripts/verify-watch-features.mjs"]],
 ];
 
 const failures = [];

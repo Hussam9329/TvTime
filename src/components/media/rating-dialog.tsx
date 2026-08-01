@@ -8,13 +8,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { SafeImage } from "@/components/media/safe-image";
+import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 interface RatingDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   title: string;
   poster: string | null;
-  onRate: (rating: number) => Promise<void> | void;
+  onRate: (rating: number) => Promise<unknown> | unknown;
   initialRating?: number | null;
   description?: string;
   submitLabel?: string;
@@ -42,6 +43,7 @@ export function RatingDialog({
     : Math.max(0, Math.min(100, Math.round(Number(initialRating))));
   const [rating, setRating] = useState(safeInitialRating);
   const [submitting, setSubmitting] = useState(false);
+  const showWatchUndo = useWatchUndo();
 
   // Fix #9: When dialog opens, reset to the correct initial rating
   // (either the user's current rating or 50 for new ratings)
@@ -57,8 +59,8 @@ export function RatingDialog({
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      await onRate(rating);
-      toast.success(successMessage(rating));
+      const result = await onRate(rating);
+      showWatchUndo(successMessage(rating), result as { undoToken?: string | null } | null | undefined);
       onOpenChange(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save rating");
