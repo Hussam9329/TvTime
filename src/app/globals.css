@@ -2546,6 +2546,12 @@ body {
   translate: 0.06rem 0;
 }
 
+/* Home cards already communicate clickability through their poster motion.
+   Keep the centered Play hover cue out of every Home collection row. */
+.tvtime-home-view .tvtime-media-open-cue {
+  display: none;
+}
+
 .tvtime-media-copy {
   min-height: 4.2rem;
   padding: 0.78rem 0.2rem 0.1rem;

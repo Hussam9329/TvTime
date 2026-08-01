@@ -105,7 +105,10 @@ export function SafeImage({
 
   const sharedProps = {
     src: finalSrc,
-    className: cn(fill && "object-cover", className),
+    // Edge attaches its Visual Search hover control to pointer-targetable
+    // <img> elements. Poster interactions are owned by their wrapping card,
+    // so the image itself can ignore pointer input without affecting clicks.
+    className: cn(fill && "object-cover", variant === "poster" && "pointer-events-none", className),
     priority,
     sizes: fill ? finalSizes : undefined,
     onError: () => setFailureStage((stage) => stage === 0 ? 1 : 2),
