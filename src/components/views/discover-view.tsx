@@ -32,6 +32,7 @@ import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-medi
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 import { standardMediaCountryPriority } from "@/lib/standard-media-priority";
+import { applyDiscoverPreset, type DiscoverPresetId } from "@/lib/discover-presets";
 
 export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "asian-tv";
 
@@ -82,12 +83,12 @@ const LANGUAGES = [
 
 // Quick preset combos for one-click filtering
 const PRESETS = [
-  { id: "trending", label: "Trending", sort: "popularity.desc", year: "" },
-  { id: "top2024", label: "Top 2024", sort: "vote_average.desc", year: "2024" },
-  { id: "hidden", label: "Hidden gems", sort: "vote_average.desc", year: "" },
-  { id: "newest", label: "Newest", sort: "primary_release_date.desc", year: "" },
-  { id: "classic", label: "Classics", sort: "popularity.desc", year: String(CURRENT_YEAR - 30) },
-];
+  { id: "trending", label: "Trending" },
+  { id: "top2024", label: "Top 2024" },
+  { id: "hidden", label: "Hidden gems" },
+  { id: "newest", label: "Newest" },
+  { id: "classic", label: "Classics" },
+] satisfies Array<{ id: DiscoverPresetId; label: string }>;
 
 interface DiscoverViewProps {
   world?: DiscoverWorld;
@@ -254,19 +255,17 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   };
 
   const applyPreset = (presetId: string) => {
-    const preset = PRESETS.find((p) => p.id === presetId);
+    const preset = PRESETS.find((item) => item.id === presetId);
     if (!preset) return;
-    setSortBy(preset.sort);
-    setFromYear(preset.year);
-    setToYear("");
-    setUserScoreMin("");
-    setUserScoreMax("");
-    setMinVotes(preset.id === "hidden" ? (isArabic ? "20" : "100") : "");
-    setRuntimeMin(""); setRuntimeMax("");
-    setSelectedGenres([]);
-    setCertification("");
-    setKeywords("");
-    setShowMe("all");
+    const next = applyDiscoverPreset(
+      { sortBy, fromYear, toYear, minVotes },
+      preset.id,
+      { isTv: effectiveIsTV, isArabic, currentYear: CURRENT_YEAR },
+    );
+    setSortBy(next.sortBy);
+    setFromYear(next.fromYear);
+    setToYear(next.toYear);
+    setMinVotes(next.minVotes);
     resetPagination();
     toast.success(`Applied preset: ${preset.label}`);
   };
