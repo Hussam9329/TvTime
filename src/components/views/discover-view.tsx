@@ -36,6 +36,7 @@ import { applyDiscoverPreset, type DiscoverPresetId } from "@/lib/discover-prese
 import { updateDiscoverRange } from "@/lib/discover-filter-state";
 
 export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "asian-tv";
+type TvFormatFilter = "all" | "miniseries" | "anthology";
 
 // Sort options
 const SORT_OPTIONS_MOVIES = [
@@ -91,6 +92,14 @@ const LANGUAGES = [
   { code: "fa", label: "Persian" },
 ];
 
+const BASE_PRESETS = [
+  { id: "trending", label: "Popular" },
+  { id: "top2024", label: `Top ${CURRENT_YEAR}` },
+  { id: "hidden", label: "Hidden gems" },
+  { id: "newest", label: "Newest" },
+  { id: "classic", label: "Classics" },
+] satisfies Array<{ id: DiscoverPresetId; label: string }>;
+
 interface DiscoverViewProps {
   world?: DiscoverWorld;
   embedded?: boolean;
@@ -100,13 +109,6 @@ interface DiscoverViewProps {
 }
 
 export function DiscoverView({ world = "movies", embedded = false, title, subtitle, mediaType }: DiscoverViewProps) {
-  const presets = useMemo(() => [
-    { id: "trending", label: "Popular" },
-    { id: "top2024", label: `Top ${CURRENT_YEAR}` },
-    { id: "hidden", label: "Hidden gems" },
-    { id: "newest", label: "Newest" },
-    { id: "classic", label: "Classics" },
-  ] satisfies Array<{ id: DiscoverPresetId; label: string }>, []);
   const isTV = world === "tv" || world === "arabic-tv" || world === "asian-tv" || (world === "anime" && mediaType !== "movie");
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";
@@ -118,6 +120,17 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const discoverTab = useNav((s) => s.discoverTab);
   const setDiscoverTab = useNav((s) => s.setDiscoverTab);
   const effectiveIsTV = embedded ? isTV : discoverTab === "tv";
+  const supportsTvFormat = effectiveIsTV && !isAnime && !isArabic && !isAsian;
+
+  const presets = useMemo(() => supportsTvFormat
+    ? [
+        ...BASE_PRESETS.slice(0, 3),
+        { id: "miniseries" as const, label: "Mini Series" },
+        { id: "anthology" as const, label: "Anthology" },
+        ...BASE_PRESETS.slice(3),
+      ]
+    : BASE_PRESETS,
+  [supportsTvFormat]);
 
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("popularity.desc");
@@ -133,6 +146,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const [language, setLanguage] = useState(forcedLang || "");
   const [keywords, setKeywords] = useState("");
   const [debouncedKeywords, setDebouncedKeywords] = useState("");
+  const [tvFormat, setTvFormat] = useState<TvFormatFilter>("all");
   const [showMe, setShowMe] = useState<"all" | "unseen" | "seen">("all");
   const [filteredCursors, setFilteredCursors] = useState<(string | null)[]>([null]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -203,6 +217,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     mediaType: resultMediaType,
     showMe: effectiveIsTV && showMe === "all" ? "all" : showMe === "seen" ? "seen" : "unseen",
     world: resultWorld,
+    tvFormat: supportsTvFormat && tvFormat !== "all" ? tvFormat : undefined,
     cursor: filteredCursors[page - 1] ?? null,
     maxRating,
     certification: certificationParam,
@@ -290,17 +305,26 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     setLanguage(forcedLang || "");
     setKeywords("");
     setDebouncedKeywords("");
+    setTvFormat("all");
     setShowMe("all");
     setSortBy("popularity.desc");
     resetPagination();
   };
 
   const applyPreset = (presetId: string) => {
+    if (presetId === "miniseries" || presetId === "anthology") {
+      const nextFormat = tvFormat === presetId ? "all" : presetId;
+      setTvFormat(nextFormat);
+      resetPagination();
+      toast.success(nextFormat === "all" ? "TV format filter cleared" : `Showing ${presetId === "miniseries" ? "Mini Series" : "Anthology"}`);
+      return;
+    }
+
     const preset = presets.find((item) => item.id === presetId);
     if (!preset) return;
     const next = applyDiscoverPreset(
       { sortBy, fromYear, toYear, minVotes },
-      preset.id,
+      preset.id as DiscoverPresetId,
       { isTv: effectiveIsTV, isArabic, currentYear: CURRENT_YEAR },
     );
     setSortBy(next.sortBy);
@@ -321,6 +345,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     Number(certification !== "") +
     Number(language !== "" && language !== forcedLang) +
     Number(keywords.trim() !== "") +
+    Number(tvFormat !== "all") +
     Number(showMe !== "all");
 
   // Build active-filter chips for the trail below the filter panel header
@@ -354,6 +379,12 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (runtimeMin) chips.push({ label: `≥ ${runtimeMin}min`, clear: () => { setRuntimeMin(""); resetPagination(); } });
     if (runtimeMax) chips.push({ label: `≤ ${runtimeMax}min`, clear: () => { setRuntimeMax(""); resetPagination(); } });
     if (keywords.trim()) chips.push({ label: `“${keywords.trim().slice(0, 20)}”`, clear: () => { setKeywords(""); resetPagination(); } });
+    if (tvFormat !== "all") {
+      chips.push({
+        label: tvFormat === "miniseries" ? "Mini Series" : "Anthology",
+        clear: () => { setTvFormat("all"); resetPagination(); },
+      });
+    }
     if (showMe !== "all") {
       chips.push({
         label: showMe === "seen" ? seenLabel : unseenLabel,
@@ -361,7 +392,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       });
     }
     return chips;
-  }, [selectedGenres, genres, sortBy, effectiveIsTV, fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe, seenLabel, unseenLabel, resetPagination]);
+  }, [selectedGenres, genres, sortBy, effectiveIsTV, fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, tvFormat, showMe, seenLabel, unseenLabel, resetPagination]);
 
   const advancedFilterCount =
     Number(userScoreMin !== "") +
@@ -425,10 +456,11 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
         {presets.map((p) => (
           <Button
             key={p.id}
-            variant="outline"
+            variant={(p.id === "miniseries" || p.id === "anthology") && tvFormat === p.id ? "secondary" : "outline"}
             size="sm"
             className="h-9 shrink-0 text-xs hover:border-primary/40 hover:bg-primary/5"
             onClick={() => applyPreset(p.id)}
+            aria-pressed={(p.id === "miniseries" || p.id === "anthology") ? tvFormat === p.id : undefined}
           >
             <Sparkles className="h-3.5 w-3.5" />
             {p.label}

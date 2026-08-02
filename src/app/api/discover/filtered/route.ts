@@ -21,6 +21,7 @@ import {
 
 type MediaType = "movie" | "tv";
 type ShowMe = "all" | "seen" | "unseen";
+type TvFormat = "all" | "miniseries" | "anthology";
 
 function optionalNumber(value: string | null): number | undefined {
   if (value == null || value === "") return undefined;
@@ -38,6 +39,10 @@ export async function GET(req: NextRequest) {
     const world: DiscoverWorld = requestedWorld === "arabic" || requestedWorld === "asian" || requestedWorld === "anime"
       ? requestedWorld
       : "standard";
+    const requestedTvFormat = search.get("tv_format");
+    const tvFormat: TvFormat = mediaType === "tv" && (requestedTvFormat === "miniseries" || requestedTvFormat === "anthology")
+      ? requestedTvFormat
+      : "all";
     const start = parseDiscoverCursor(search.get("cursor"));
 
     let seenIds = new Set<number>();
@@ -90,10 +95,14 @@ export async function GET(req: NextRequest) {
       release_date_lte: search.get("release_date_lte") || undefined,
       runtime_gte: optionalNumber(search.get("runtime_gte")),
       runtime_lte: optionalNumber(search.get("runtime_lte")),
+      series_type: tvFormat === "miniseries" ? 2 : undefined,
       language,
     };
     const keywordQuery = search.get("keyword_query")?.trim();
-    const keywordIds = keywordQuery ? await resolveTmdbKeywordIds(keywordQuery, language) : undefined;
+    const [keywordIds, anthologyKeywordIds] = await Promise.all([
+      keywordQuery ? resolveTmdbKeywordIds(keywordQuery, language) : Promise.resolve(undefined),
+      tvFormat === "anthology" ? resolveTmdbKeywordIds("anthology", "en-US") : Promise.resolve(undefined),
+    ]);
     if (keywordQuery && keywordIds?.length === 0) {
       return NextResponse.json({
         results: [],
@@ -102,6 +111,15 @@ export async function GET(req: NextRequest) {
         scan: { pages_fetched: 0, page_budget: DISCOVER_TMDB_PAGE_BUDGET, budget_exhausted: false },
       });
     }
+    if (tvFormat === "anthology" && anthologyKeywordIds?.length === 0) {
+      return NextResponse.json({
+        results: [],
+        has_more: false,
+        next_cursor: null,
+        scan: { pages_fetched: 0, page_budget: DISCOVER_TMDB_PAGE_BUDGET, budget_exhausted: false },
+      });
+    }
+    const keywordGroups = [keywordIds, anthologyKeywordIds].filter((group): group is number[] => Boolean(group?.length));
 
     const certification = search.get("certification") || undefined;
     const excludeArabic = search.get("exclude_arabic") === "true";
@@ -110,16 +128,16 @@ export async function GET(req: NextRequest) {
     const loadPage = (page: number): Promise<PaginatedResponse<MediaItem>> => {
       if (onlyArabic) {
         const params = mediaType === "tv"
-          ? { ...common, keyword_ids: keywordIds }
-          : { ...common, keyword_ids: keywordIds, certification };
+          ? { ...common, keyword_groups: keywordGroups }
+          : { ...common, keyword_groups: keywordGroups, certification };
         return discoverArabicByCountryPriority(mediaType, params, page);
       }
       if (mediaType === "tv" && common.originCountries === ASIAN_ORIGIN_COUNTRY_QUERY) {
-        return discoverAsianTvByPriority({ ...common, keyword_ids: keywordIds }, page);
+        return discoverAsianTvByPriority({ ...common, keyword_groups: keywordGroups }, page);
       }
       return mediaType === "tv"
-        ? tmdb.discoverTv({ ...common, keyword_ids: keywordIds, page })
-        : tmdb.discoverMovies({ ...common, keyword_ids: keywordIds, certification, page });
+        ? tmdb.discoverTv({ ...common, keyword_groups: keywordGroups, page })
+        : tmdb.discoverMovies({ ...common, keyword_groups: keywordGroups, certification, page });
     };
 
     const matchesState = (item: MediaItem) => {

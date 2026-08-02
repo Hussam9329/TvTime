@@ -212,6 +212,15 @@ export interface SeasonDetail {
   poster_path: string | null;
 }
 
+/** Build TMDB's keyword expression: OR inside one phrase, AND across filters. */
+export function buildTmdbKeywordFilter(groups: Array<number[] | undefined>): string | undefined {
+  const normalized = groups
+    .map((group) => [...new Set((group ?? []).filter((id) => Number.isInteger(id) && id > 0))])
+    .filter((group) => group.length > 0)
+    .map((group) => group.join("|"));
+  return normalized.length > 0 ? normalized.join(",") : undefined;
+}
+
 // ---------- API functions ----------
 export const tmdb = {
   // Trending
@@ -229,7 +238,7 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/movie/upcoming`, { page }),
   movieGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`),
-  discoverMovies: async (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; vote_average_lte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
+  discoverMovies: async (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; vote_average_lte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; keyword_groups?: number[][]; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
     if (params.vote_count_gte != null) p["vote_count.gte"] = params.vote_count_gte;
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
@@ -247,7 +256,8 @@ export const tmdb = {
     }
     if (params.runtime_gte != null) p["with_runtime.gte"] = params.runtime_gte;
     if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
-    if (params.keyword_ids?.length) p.with_keywords = params.keyword_ids.join("|");
+    const keywordFilter = buildTmdbKeywordFilter(params.keyword_groups ?? [params.keyword_ids]);
+    if (keywordFilter) p.with_keywords = keywordFilter;
     const response = await tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p, params.language);
     return params.language === "ar"
       ? { ...response, results: await localizeArabicPosters(response.results, "movie") }
@@ -265,11 +275,12 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/airing_today`, { page }),
   tvGenres: () =>
     tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
-  discoverTv: async (params: { genres?: number[]; without_genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; vote_average_lte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; language?: TmdbLanguage } = {}) => {
+  discoverTv: async (params: { genres?: number[]; without_genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; vote_average_lte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; keyword_groups?: number[][]; series_type?: number; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
     if (params.vote_count_gte != null) p["vote_count.gte"] = params.vote_count_gte;
     if (params.genres && params.genres.length > 0) p.with_genres = params.genres.join(",");
     if (params.without_genres && params.without_genres.length > 0) p.without_genres = params.without_genres.join(",");
+    if (params.series_type != null) p.with_type = params.series_type;
     if (params.year) p.first_air_date_year = params.year;
     if (params.vote_average_gte) p["vote_average.gte"] = params.vote_average_gte;
     if (params.vote_average_lte != null) p["vote_average.lte"] = params.vote_average_lte;
@@ -279,7 +290,8 @@ export const tmdb = {
     if (params.release_date_lte) p["first_air_date.lte"] = params.release_date_lte;
     if (params.runtime_gte != null) p["with_runtime.gte"] = params.runtime_gte;
     if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
-    if (params.keyword_ids?.length) p.with_keywords = params.keyword_ids.join("|");
+    const keywordFilter = buildTmdbKeywordFilter(params.keyword_groups ?? [params.keyword_ids]);
+    if (keywordFilter) p.with_keywords = keywordFilter;
     const response = await tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p, params.language);
     return params.language === "ar"
       ? { ...response, results: await localizeArabicPosters(response.results, "tv") }

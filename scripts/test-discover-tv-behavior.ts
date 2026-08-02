@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { matchesDiscoverWorld } from "../src/lib/discover-world.ts";
+import { buildTmdbKeywordFilter } from "../src/lib/tmdb.ts";
 
 const read = (path: string) => readFileSync(path, "utf8");
 const view = read("src/components/views/discover-view.tsx");
@@ -42,5 +43,18 @@ assert.doesNotMatch(view, /filtered = filtered\.filter\(\(m\) => \(m\.vote_avera
 assert.match(view, /sortBy === "popularity\.desc"/, "Country priority must not override explicit TV sort choices");
 assert.match(view, /setTimeout\(\(\) => setDebouncedKeywords/, "Keyword discovery must be debounced");
 assert.match(view, /advancedFilterCount/, "Advanced-filter badge must use the corrected filter count");
+
+assert.match(view, /label: "Mini Series"/, "TV Discover must expose a Mini Series quick filter");
+assert.match(view, /label: "Anthology"/, "TV Discover must expose an Anthology quick filter");
+assert.match(view, /tvFormat === presetId \? "all" : presetId/, "TV format quick filters must toggle without resetting other filters");
+assert.match(hooks, /tv_format.*params\.tvFormat/, "TV format must reach the Discover API");
+assert.match(filteredRoute, /series_type: tvFormat === "miniseries" \? 2/, "Mini Series must use TMDB TV type 2");
+assert.match(filteredRoute, /resolveTmdbKeywordIds\("anthology", "en-US"\)/, "Anthology must resolve the canonical TMDB keyword");
+assert.match(tmdb, /p\.with_type = params\.series_type/, "TMDB TV discovery must send with_type");
+assert.equal(
+  buildTmdbKeywordFilter([[10, 11, 10], [20, 21]]),
+  "10|11,20|21",
+  "User keywords and Anthology must combine as AND groups while alternatives remain OR",
+);
 
 console.log("PASS: TV Discover classification, ranges, sorting, score bounds, and request behavior");

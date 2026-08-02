@@ -134,6 +134,7 @@ export function useFilteredDiscover(params: {
   mediaType: "movie" | "tv";
   showMe: "all" | "seen" | "unseen";
   world?: "standard" | "arabic" | "asian" | "anime";
+  tvFormat?: "miniseries" | "anthology";
   cursor?: string | null;
   genres?: number[];
   sort_by?: string;
@@ -163,6 +164,7 @@ export function useFilteredDiscover(params: {
       url.searchParams.set("media_type", params.mediaType);
       url.searchParams.set("show_me", params.showMe);
       if (params.world) url.searchParams.set("world", params.world);
+      if (params.tvFormat) url.searchParams.set("tv_format", params.tvFormat);
       if (params.cursor) url.searchParams.set("cursor", params.cursor);
       if (params.genres?.length) url.searchParams.set("genre", params.genres.join(","));
       if (params.sort_by) url.searchParams.set("sort_by", params.sort_by);
