@@ -189,9 +189,6 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
               </span>
             )}
 
-            <span className="tvtime-media-open-cue pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2" aria-hidden="true">
-              <Play className="fill-current" />
-            </span>
           </div>
 
           <div className="tvtime-media-copy">

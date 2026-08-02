@@ -2523,35 +2523,6 @@ body {
   height: 0.7rem;
 }
 
-.tvtime-media-open-cue {
-  display: inline-flex;
-  width: 2.8rem;
-  height: 2.8rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgb(255 255 255 / 0.22);
-  border-radius: 999px;
-  background: rgb(6 10 18 / 0.62);
-  color: white;
-  box-shadow: 0 12px 28px rgb(0 0 0 / 0.3);
-  opacity: 0;
-  backdrop-filter: blur(12px);
-  transform: scale(0.86);
-  transition: opacity 200ms ease, transform 220ms ease;
-}
-
-.tvtime-media-open-cue svg {
-  width: 1rem;
-  height: 1rem;
-  translate: 0.06rem 0;
-}
-
-/* Home cards already communicate clickability through their poster motion.
-   Keep the centered Play hover cue out of every Home collection row. */
-.tvtime-home-view .tvtime-media-open-cue {
-  display: none;
-}
-
 .tvtime-media-copy {
   min-height: 4.2rem;
   padding: 0.78rem 0.2rem 0.1rem;
@@ -3230,7 +3201,6 @@ body {
     opacity: 0.92;
   }
 
-  .tvtime-media-card:hover .tvtime-media-open-cue,
   .tvtime-media-card:hover .tvtime-media-menu {
     opacity: 1;
     transform: none;
@@ -3830,10 +3800,6 @@ body {
   .tvtime-media-menu {
     opacity: 1;
     transform: none;
-  }
-
-  .tvtime-media-open-cue {
-    display: none;
   }
 
   .tvtime-quick-stat__arrow {
