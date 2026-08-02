@@ -33,6 +33,7 @@ const checks = [
   ["Watch Undo and season alert guards", ["scripts/verify-watch-features.mjs"]],
   ["Global poster hover cleanup", ["scripts/verify-poster-hover-cleanup.mjs"]],
   ["Discover preset behavior", ["--experimental-strip-types", "scripts/test-discover-presets.ts"]],
+  ["TV Discover behavior", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-discover-tv-behavior.ts"]],
 ];
 
 const failures = [];

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNav } from "@/lib/store";
-import { useDiscoverMovies, useDiscoverTv, useFilteredDiscover, useMovieGenres, useTvGenres } from "@/hooks/use-tmdb";
+import { useDiscoverMovies, useFilteredDiscover, useMovieGenres, useTvGenres } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,7 @@ import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 import { standardMediaCountryPriority } from "@/lib/standard-media-priority";
 import { applyDiscoverPreset, type DiscoverPresetId } from "@/lib/discover-presets";
+import { updateDiscoverRange } from "@/lib/discover-filter-state";
 
 export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "asian-tv";
 
@@ -61,7 +62,16 @@ const SORT_OPTIONS_TV = [
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: 80 }, (_, i) => CURRENT_YEAR - i);
+const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1899 }, (_, i) => CURRENT_YEAR - i);
+
+const RUNTIME_OPTIONS_MOVIES = {
+  min: [30, 60, 90, 120, 150, 180],
+  max: [60, 90, 120, 150, 180, 240],
+};
+const RUNTIME_OPTIONS_TV = {
+  min: [15, 30, 45, 60, 90, 120],
+  max: [15, 30, 45, 60, 90, 120, 180],
+};
 
 const CERTIFICATIONS_MOVIES = ["G", "PG", "PG-13", "R", "NC-17"];
 
@@ -81,15 +91,6 @@ const LANGUAGES = [
   { code: "fa", label: "Persian" },
 ];
 
-// Quick preset combos for one-click filtering
-const PRESETS = [
-  { id: "trending", label: "Trending" },
-  { id: "top2024", label: "Top 2024" },
-  { id: "hidden", label: "Hidden gems" },
-  { id: "newest", label: "Newest" },
-  { id: "classic", label: "Classics" },
-] satisfies Array<{ id: DiscoverPresetId; label: string }>;
-
 interface DiscoverViewProps {
   world?: DiscoverWorld;
   embedded?: boolean;
@@ -99,6 +100,13 @@ interface DiscoverViewProps {
 }
 
 export function DiscoverView({ world = "movies", embedded = false, title, subtitle, mediaType }: DiscoverViewProps) {
+  const presets = useMemo(() => [
+    { id: "trending", label: "Popular" },
+    { id: "top2024", label: `Top ${CURRENT_YEAR}` },
+    { id: "hidden", label: "Hidden gems" },
+    { id: "newest", label: "Newest" },
+    { id: "classic", label: "Classics" },
+  ] satisfies Array<{ id: DiscoverPresetId; label: string }>, []);
   const isTV = world === "tv" || world === "arabic-tv" || world === "asian-tv" || (world === "anime" && mediaType !== "movie");
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";
@@ -124,9 +132,15 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const [certification, setCertification] = useState("");
   const [language, setLanguage] = useState(forcedLang || "");
   const [keywords, setKeywords] = useState("");
+  const [debouncedKeywords, setDebouncedKeywords] = useState("");
   const [showMe, setShowMe] = useState<"all" | "unseen" | "seen">("all");
   const [filteredCursors, setFilteredCursors] = useState<(string | null)[]>([null]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedKeywords(keywords.trim()), 350);
+    return () => window.clearTimeout(timeout);
+  }, [keywords]);
 
   const movieGenres = useMovieGenres();
   const tvGenres = useTvGenres();
@@ -147,7 +161,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const voteCount = minVotes ? Number(minVotes) : undefined;
   const runtimeFrom = runtimeMin ? Number(runtimeMin) : undefined;
   const runtimeTo = runtimeMax ? Number(runtimeMax) : undefined;
-  const keywordsParam = keywords.trim() || undefined;
+  const keywordsParam = debouncedKeywords || undefined;
 
   // Apply a vote threshold only when the user explicitly selects one.
   const effectiveVoteCount = voteCount;
@@ -174,27 +188,34 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   };
 
   const resultMediaType: "movie" | "tv" = effectiveIsTV ? "tv" : "movie";
+  const resultWorld = isAnime ? "anime" : isArabic ? "arabic" : isAsian ? "asian" : "standard";
   const seenLabel = effectiveIsTV ? "Started" : "Seen";
   const unseenLabel = effectiveIsTV ? "Not started" : "Haven't seen";
-  const movieQuery = useDiscoverMovies({ ...commonParams, certification: certificationParam, page, enabled: !effectiveIsTV && showMe === "all" });
-  const tvQuery = useDiscoverTv({ ...commonParams, page, enabled: effectiveIsTV && showMe === "all" });
-  const catalogueQuery = effectiveIsTV ? tvQuery : movieQuery;
+  const movieQuery = useDiscoverMovies({
+    ...commonParams,
+    maxRating,
+    certification: certificationParam,
+    page,
+    enabled: !effectiveIsTV && showMe === "all",
+  });
   const filteredQuery = useFilteredDiscover({
     ...commonParams,
     mediaType: resultMediaType,
-    showMe: showMe === "seen" ? "seen" : "unseen",
+    showMe: effectiveIsTV && showMe === "all" ? "all" : showMe === "seen" ? "seen" : "unseen",
+    world: resultWorld,
     cursor: filteredCursors[page - 1] ?? null,
     maxRating,
     certification: certificationParam,
     excludeArabic: !isArabic,
     onlyArabic: isArabic,
-    enabled: showMe !== "all",
+    enabled: effectiveIsTV || showMe !== "all",
   });
 
-  const query = showMe === "all" ? catalogueQuery : filteredQuery;
+  const usesCursorPagination = effectiveIsTV || showMe !== "all";
+  const query = usesCursorPagination ? filteredQuery : movieQuery;
   const allResults = query.data?.results ?? [];
-  const totalAvailable = catalogueQuery.data?.total_results ?? 0;
-  const totalPages = Math.min(catalogueQuery.data?.total_pages ?? 1, 500);
+  const totalAvailable = movieQuery.data?.total_results ?? 0;
+  const totalPages = Math.min(movieQuery.data?.total_pages ?? 1, 500);
   const isLoading = query.isLoading;
   const isError = query.isError;
 
@@ -205,7 +226,9 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     }
     if (effectiveIsTV && world === "tv") {
       filtered = filtered.filter((media) => !isAsianMediaItem(media));
-      filtered.sort((left, right) => standardMediaCountryPriority(left) - standardMediaCountryPriority(right));
+      if (sortBy === "popularity.desc") {
+        filtered.sort((left, right) => standardMediaCountryPriority(left) - standardMediaCountryPriority(right));
+      }
     }
     if (world === "movies") {
       filtered.sort((left, right) => standardMediaCountryPriority(left) - standardMediaCountryPriority(right));
@@ -220,15 +243,11 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (forcedLang === "ja" && isAnime) {
       filtered = filtered.filter((m) => m.original_language === "ja");
     }
-    // Client-side filters for things TMDB doesn't support directly:
-    if (maxRating !== undefined) {
-      filtered = filtered.filter((m) => (m.vote_average || 0) <= maxRating);
-    }
     if (world === "arabic-movies" || world === "arabic-tv") {
       filtered.sort((left, right) => arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right));
     }
     return filtered;
-  }, [allResults, effectiveIsTV, forcedLang, isAnime, isArabic, isAsian, maxRating, world]);
+  }, [allResults, effectiveIsTV, forcedLang, isAnime, isArabic, isAsian, sortBy, world]);
 
   const resetPagination = useCallback(() => {
     setPage(1);
@@ -237,6 +256,27 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
   const toggleGenre = (genreId: number) => {
     setSelectedGenres((prev) => (prev.includes(genreId) ? prev.filter((g) => g !== genreId) : [...prev, genreId]));
+    resetPagination();
+  };
+
+  const updateYears = (boundary: "min" | "max", value: string) => {
+    const next = updateDiscoverRange({ min: fromYear, max: toYear }, boundary, value);
+    setFromYear(next.min);
+    setToYear(next.max);
+    resetPagination();
+  };
+
+  const updateScores = (boundary: "min" | "max", value: string) => {
+    const next = updateDiscoverRange({ min: userScoreMin, max: userScoreMax }, boundary, value);
+    setUserScoreMin(next.min);
+    setUserScoreMax(next.max);
+    resetPagination();
+  };
+
+  const updateRuntimes = (boundary: "min" | "max", value: string) => {
+    const next = updateDiscoverRange({ min: runtimeMin, max: runtimeMax }, boundary, value);
+    setRuntimeMin(next.min);
+    setRuntimeMax(next.max);
     resetPagination();
   };
 
@@ -249,13 +289,14 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     setCertification("");
     setLanguage(forcedLang || "");
     setKeywords("");
+    setDebouncedKeywords("");
     setShowMe("all");
     setSortBy("popularity.desc");
     resetPagination();
   };
 
   const applyPreset = (presetId: string) => {
-    const preset = PRESETS.find((item) => item.id === presetId);
+    const preset = presets.find((item) => item.id === presetId);
     if (!preset) return;
     const next = applyDiscoverPreset(
       { sortBy, fromYear, toYear, minVotes },
@@ -272,6 +313,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
   const activeFilters =
     selectedGenres.length +
+    Number(sortBy !== "popularity.desc") +
     Number(fromYear !== "") + Number(toYear !== "") +
     Number(userScoreMin !== "") + Number(userScoreMax !== "") +
     Number(minVotes !== "") +
@@ -284,6 +326,21 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   // Build active-filter chips for the trail below the filter panel header
   const activeFilterChips = useMemo(() => {
     const chips: { label: string; clear: () => void }[] = [];
+    selectedGenres.forEach((genreId) => {
+      const genreName = genres?.find((genre) => genre.id === genreId)?.name || `Genre ${genreId}`;
+      chips.push({
+        label: genreName,
+        clear: () => {
+          setSelectedGenres((current) => current.filter((id) => id !== genreId));
+          resetPagination();
+        },
+      });
+    });
+    if (sortBy !== "popularity.desc") {
+      const sortLabel = (effectiveIsTV ? SORT_OPTIONS_TV : SORT_OPTIONS_MOVIES)
+        .find((option) => option.value === sortBy)?.label || sortBy;
+      chips.push({ label: `Sort: ${sortLabel}`, clear: () => { setSortBy("popularity.desc"); resetPagination(); } });
+    }
     if (fromYear) chips.push({ label: `From ${fromYear}`, clear: () => { setFromYear(""); resetPagination(); } });
     if (toYear) chips.push({ label: `To ${toYear}`, clear: () => { setToYear(""); resetPagination(); } });
     if (certification) chips.push({ label: `Rating: ${certification}`, clear: () => { setCertification(""); resetPagination(); } });
@@ -304,7 +361,16 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       });
     }
     return chips;
-  }, [fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe, seenLabel, unseenLabel, resetPagination]);
+  }, [selectedGenres, genres, sortBy, effectiveIsTV, fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, showMe, seenLabel, unseenLabel, resetPagination]);
+
+  const advancedFilterCount =
+    Number(userScoreMin !== "") +
+    Number(userScoreMax !== "") +
+    Number(minVotes !== "") +
+    Number(runtimeMin !== "") +
+    Number(runtimeMax !== "") +
+    Number(Boolean(language && !forcedLang && !effectiveIsTV)) +
+    Number(keywords.trim() !== "");
 
   const headerTitle = title || (embedded
     ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : world === "asian-tv" ? "Asian TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
@@ -356,7 +422,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       {/* Quick Presets */}
       <div className="tvtime-discover-presets no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
         <span className="mr-1 shrink-0 text-xs font-bold uppercase tracking-wider text-muted-foreground">Quick picks</span>
-        {PRESETS.map((p) => (
+        {presets.map((p) => (
           <Button
             key={p.id}
             variant="outline"
@@ -468,7 +534,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             </FilterField>
 
             <FilterField label="From year">
-              <Select value={fromYear || "any"} onValueChange={(v) => { setFromYear(v === "any" ? "" : v); resetPagination(); }}>
+              <Select value={fromYear || "any"} onValueChange={(v) => updateYears("min", v === "any" ? "" : v)}>
                 <SelectTrigger className="h-9 w-full text-sm">
                   <Calendar className="mr-1.5 h-3.5 w-3.5" />
                   <SelectValue placeholder="From year" />
@@ -481,7 +547,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             </FilterField>
 
             <FilterField label="To year">
-              <Select value={toYear || "any"} onValueChange={(v) => { setToYear(v === "any" ? "" : v); resetPagination(); }}>
+              <Select value={toYear || "any"} onValueChange={(v) => updateYears("max", v === "any" ? "" : v)}>
                 <SelectTrigger className="h-9 w-full text-sm">
                   <Calendar className="mr-1.5 h-3.5 w-3.5" />
                   <SelectValue placeholder="To year" />
@@ -537,9 +603,9 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                   <span className="flex items-center gap-1.5">
                     <Sparkles className="h-3.5 w-3.5" />
                     {advancedOpen ? "Hide advanced filters" : "Show advanced filters"}
-                    {(userScoreMin || userScoreMax || minVotes || runtimeMin || runtimeMax || (language && !forcedLang && effectiveIsTV) || keywords) && (
+                    {advancedFilterCount > 0 && (
                       <Badge variant="secondary" className="ml-1 h-5 text-[10px]">
-                        {(userScoreMin ? 1 : 0) + (userScoreMax ? 1 : 0) + (minVotes ? 1 : 0) + (runtimeMin ? 1 : 0) + (runtimeMax ? 1 : 0) + ((language && !forcedLang && effectiveIsTV) ? 1 : 0) + (keywords ? 1 : 0)}
+                        {advancedFilterCount}
                       </Badge>
                     )}
                   </span>
@@ -571,8 +637,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                       </FilterField>
                     )}
 
-                    <FilterField label="Minimum score">
-                      <Select value={userScoreMin || "any"} onValueChange={(v) => { setUserScoreMin(v === "any" ? "" : v); resetPagination(); }}>
+                    <FilterField label="Minimum TMDB score">
+                      <Select value={userScoreMin || "any"} onValueChange={(v) => updateScores("min", v === "any" ? "" : v)}>
                         <SelectTrigger className="h-9 w-full text-sm">
                           <Star className="mr-1.5 h-3.5 w-3.5" />
                           <SelectValue placeholder="Min user score" />
@@ -584,8 +650,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                       </Select>
                     </FilterField>
 
-                    <FilterField label="Maximum score">
-                      <Select value={userScoreMax || "any"} onValueChange={(v) => { setUserScoreMax(v === "any" ? "" : v); resetPagination(); }}>
+                    <FilterField label="Maximum TMDB score">
+                      <Select value={userScoreMax || "any"} onValueChange={(v) => updateScores("max", v === "any" ? "" : v)}>
                         <SelectTrigger className="h-9 w-full text-sm">
                           <Star className="mr-1.5 h-3.5 w-3.5" />
                           <SelectValue placeholder="Max user score" />
@@ -620,27 +686,29 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                 <FilterSection title="Runtime and keywords" divided>
                   <FilterGrid className="lg:grid-cols-3">
                     <FilterField label="Minimum runtime">
-                      <Select value={runtimeMin || "any"} onValueChange={(v) => { setRuntimeMin(v === "any" ? "" : v); resetPagination(); }}>
+                      <Select value={runtimeMin || "any"} onValueChange={(v) => updateRuntimes("min", v === "any" ? "" : v)}>
                         <SelectTrigger className="h-9 w-full text-sm">
                           <Clock className="mr-1.5 h-3.5 w-3.5" />
                           <SelectValue placeholder="Min runtime" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="any">Any min runtime</SelectItem>
-                          {[30, 60, 90, 120, 150, 180].map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
+                          {(effectiveIsTV ? RUNTIME_OPTIONS_TV.min : RUNTIME_OPTIONS_MOVIES.min)
+                            .map((r) => <SelectItem key={r} value={String(r)}>{r}+ min</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </FilterField>
 
                     <FilterField label="Maximum runtime">
-                      <Select value={runtimeMax || "any"} onValueChange={(v) => { setRuntimeMax(v === "any" ? "" : v); resetPagination(); }}>
+                      <Select value={runtimeMax || "any"} onValueChange={(v) => updateRuntimes("max", v === "any" ? "" : v)}>
                         <SelectTrigger className="h-9 w-full text-sm">
                           <Clock className="mr-1.5 h-3.5 w-3.5" />
                           <SelectValue placeholder="Max runtime" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="any">Any max runtime</SelectItem>
-                          {[60, 90, 120, 150, 180, 240].map((r) => <SelectItem key={r} value={String(r)}>≤ {r} min</SelectItem>)}
+                          {(effectiveIsTV ? RUNTIME_OPTIONS_TV.max : RUNTIME_OPTIONS_MOVIES.max)
+                            .map((r) => <SelectItem key={r} value={String(r)}>≤ {r} min</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </FilterField>
@@ -661,7 +729,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                   {(runtimeMin || runtimeMax) && (
                     <div className="mt-2 flex items-center gap-1.5 text-[11px] leading-tight text-amber-500/80">
                       <Info className="h-3 w-3" />
-                      <span>Runtime filter is approximate (TMDB may store multiple cuts of the same film).</span>
+                      <span>{effectiveIsTV ? "Runtime uses TMDB's typical episode duration." : "Runtime is approximate because TMDB may store multiple cuts of the same film."}</span>
                     </div>
                   )}
                 </FilterSection>
@@ -675,10 +743,14 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {isLoading ? "Loading results…" : (
-            showMe === "all" ? (
+            !usesCursorPagination ? (
               <>
                 Showing <span className="font-bold text-foreground tabular-nums">{items.length}</span>
                 {" "}of <span className="font-bold text-foreground tabular-nums">{totalAvailable.toLocaleString()}</span> titles
+              </>
+            ) : showMe === "all" ? (
+              <>
+                Showing <span className="font-bold text-foreground tabular-nums">{items.length}</span> titles on this page
               </>
             ) : (
               <>
@@ -736,8 +808,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
       {/* Pagination */}
       {!isLoading && !isError && (
-        (showMe === "all" && totalPages > 1)
-        || (showMe !== "all" && (page > 1 || filteredQuery.data?.has_more))
+        (!usesCursorPagination && totalPages > 1)
+        || (usesCursorPagination && (page > 1 || filteredQuery.data?.has_more))
       ) && (
         <div className="flex items-center justify-center gap-2 pt-4">
           <Button variant="outline" size="sm" disabled={page === 1 || query.isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>
@@ -745,14 +817,14 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           </Button>
           <span className="text-sm text-muted-foreground px-3">
             Page <span className="font-bold text-foreground">{page}</span>
-            {showMe === "all" && ` of ${totalPages}`}
+            {!usesCursorPagination && ` of ${totalPages}`}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={query.isFetching || (showMe === "all" ? page >= totalPages : !filteredQuery.data?.has_more)}
+            disabled={query.isFetching || (usesCursorPagination ? !filteredQuery.data?.has_more : page >= totalPages)}
             onClick={() => {
-              if (showMe === "all") {
+              if (!usesCursorPagination) {
                 setPage((current) => current + 1);
                 return;
               }

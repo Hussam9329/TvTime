@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { updateDiscoverRange } from "../src/lib/discover-filter-state.ts";
 import { applyDiscoverPreset } from "../src/lib/discover-presets.ts";
 
 const selected = {
@@ -19,7 +20,7 @@ assert.deepEqual(
 assert.deepEqual(
   applyDiscoverPreset(selected, "top2024", { isTv: true, isArabic: false, currentYear: 2026 }),
   { ...selected, sortBy: "vote_average.desc" },
-  "Top 2024 must not replace a user-selected year range",
+  "Top-year must not replace a user-selected year range",
 );
 
 assert.deepEqual(
@@ -28,8 +29,8 @@ assert.deepEqual(
     "top2024",
     { isTv: true, isArabic: false, currentYear: 2026 },
   ),
-  { sortBy: "vote_average.desc", fromYear: "2024", toYear: "2024", minVotes: "" },
-  "Top 2024 should supply its year only when no year filter exists",
+  { sortBy: "vote_average.desc", fromYear: "2026", toYear: "2026", minVotes: "" },
+  "Top-year should use the current year only when no year filter exists",
 );
 
 assert.deepEqual(
@@ -52,6 +53,18 @@ assert.equal(
   applyDiscoverPreset(selected, "hidden", { isTv: true, isArabic: false, currentYear: 2026 }).minVotes,
   "500",
   "Hidden gems must preserve a user-selected vote threshold",
+);
+
+assert.deepEqual(
+  updateDiscoverRange({ min: "2020", max: "2024" }, "min", "2025"),
+  { min: "2025", max: "2025" },
+  "Moving the lower year past the upper year must keep a valid range",
+);
+
+assert.deepEqual(
+  updateDiscoverRange({ min: "7", max: "9" }, "max", "6"),
+  { min: "6", max: "6" },
+  "Moving the upper score below the lower score must keep a valid range",
 );
 
 const discoverView = readFileSync("src/components/views/discover-view.tsx", "utf8");

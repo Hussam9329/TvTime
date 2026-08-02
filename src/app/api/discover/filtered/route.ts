@@ -9,6 +9,7 @@ import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
 import { enrichMovieOriginCountries } from "@/lib/movie-origin-server";
 import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
+import { matchesDiscoverWorld, type DiscoverWorld } from "@/lib/discover-world";
 import {
   DISCOVER_PAGE_SIZE,
   DISCOVER_TMDB_MAX_PAGE,
@@ -19,7 +20,7 @@ import {
 } from "@/lib/discover-budget";
 
 type MediaType = "movie" | "tv";
-type ShowMe = "seen" | "unseen";
+type ShowMe = "all" | "seen" | "unseen";
 
 function optionalNumber(value: string | null): number | undefined {
   if (value == null || value === "") return undefined;
@@ -29,35 +30,42 @@ function optionalNumber(value: string | null): number | undefined {
 
 export async function GET(req: NextRequest) {
   try {
-    // Read-only route: resolving the signed request owner is enough. Creating a
-    // User or running legacy migrations during catalogue browsing would turn a
-    // retryable GET into a write operation.
-    const userId = await resolveUserId(req);
     const search = req.nextUrl.searchParams;
     const mediaType: MediaType = search.get("media_type") === "tv" ? "tv" : "movie";
-    const showMe: ShowMe = search.get("show_me") === "seen" ? "seen" : "unseen";
+    const showMeValue = search.get("show_me");
+    const showMe: ShowMe = showMeValue === "all" ? "all" : showMeValue === "seen" ? "seen" : "unseen";
+    const requestedWorld = search.get("world");
+    const world: DiscoverWorld = requestedWorld === "arabic" || requestedWorld === "asian" || requestedWorld === "anime"
+      ? requestedWorld
+      : "standard";
     const start = parseDiscoverCursor(search.get("cursor"));
 
-    const [mediaRows, legacyRows] = await Promise.all([
-      db.media.findMany({
-        where: {
-          userId,
-          type: mediaType === "tv" ? "series" : "movie",
-          tmdbId: { not: null },
-          ...(mediaType === "tv"
-            ? { OR: [{ watched: true }, { status: { in: ["watching", "uptodate", "up_to_date", "finished", "watched"] } }] }
-            : { watched: true }),
-        },
-        select: { tmdbId: true, watched: true, status: true },
-      }),
-      mediaType === "tv"
-        ? db.watchedEpisode.findMany({ where: { userId }, distinct: ["showId"], select: { showId: true } })
-        : db.watchedMovie.findMany({ where: { userId }, select: { tmdbId: true } }),
-    ]);
-    const legacyIds = mediaType === "tv"
-      ? legacyRows.map((row) => "showId" in row ? row.showId : 0)
-      : legacyRows.map((row) => "tmdbId" in row ? row.tmdbId : 0);
-    const seenIds = buildSeenIdSet(mediaType, mediaRows, legacyIds);
+    let seenIds = new Set<number>();
+    if (showMe !== "all") {
+      // Personal filters resolve the signed request owner without creating a
+      // User or running legacy migrations inside this read-only GET.
+      const userId = await resolveUserId(req);
+      const [mediaRows, legacyRows] = await Promise.all([
+        db.media.findMany({
+          where: {
+            userId,
+            type: mediaType === "tv" ? "series" : "movie",
+            tmdbId: { not: null },
+            ...(mediaType === "tv"
+              ? { OR: [{ watched: true }, { status: { in: ["watching", "uptodate", "up_to_date", "finished", "watched"] } }] }
+              : { watched: true }),
+          },
+          select: { tmdbId: true, watched: true, status: true },
+        }),
+        mediaType === "tv"
+          ? db.watchedEpisode.findMany({ where: { userId }, distinct: ["showId"], select: { showId: true } })
+          : db.watchedMovie.findMany({ where: { userId }, select: { tmdbId: true } }),
+      ]);
+      const legacyIds = mediaType === "tv"
+        ? legacyRows.map((row) => "showId" in row ? row.showId : 0)
+        : legacyRows.map((row) => "tmdbId" in row ? row.tmdbId : 0);
+      seenIds = buildSeenIdSet(mediaType, mediaRows, legacyIds);
+    }
 
     if (showMe === "seen" && seenIds.size === 0) {
       return NextResponse.json({
@@ -74,6 +82,7 @@ export async function GET(req: NextRequest) {
       genres: genres?.length ? genres : undefined,
       sort_by: search.get("sort_by") || undefined,
       vote_average_gte: optionalNumber(search.get("rating")),
+      vote_average_lte: optionalNumber(search.get("max_rating")),
       original_language: search.get("original_language") || undefined,
       originCountries: search.get("origin_country") || undefined,
       vote_count_gte: optionalNumber(search.get("vote_count")),
@@ -95,7 +104,6 @@ export async function GET(req: NextRequest) {
     }
 
     const certification = search.get("certification") || undefined;
-    const maxRating = optionalNumber(search.get("max_rating"));
     const excludeArabic = search.get("exclude_arabic") === "true";
     const onlyArabic = search.get("only_arabic") === "true";
 
@@ -115,12 +123,15 @@ export async function GET(req: NextRequest) {
     };
 
     const matchesState = (item: MediaItem) => {
+      if (showMe === "all") return true;
       const isSeen = seenIds.has(Number(item.id));
       return showMe === "seen" ? isSeen : !isSeen;
     };
-    const matchesCatalogue = (item: MediaItem) => (!excludeArabic || !isArabicMediaItem(item))
-      && (!onlyArabic || isArabicMediaItem(item))
-      && (maxRating === undefined || (item.vote_average || 0) <= maxRating);
+    const matchesCatalogue = (item: MediaItem) => {
+      const isArabic = isArabicMediaItem(item);
+      if ((excludeArabic && isArabic) || (onlyArabic && !isArabic)) return false;
+      return matchesDiscoverWorld(item, mediaType, world);
+    };
 
     const results: MediaItem[] = [];
     let nextCursor: string | null = null;
@@ -194,7 +205,12 @@ export async function GET(req: NextRequest) {
         budget_exhausted: budgetExhausted,
       },
     });
-    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set(
+      "Cache-Control",
+      showMe === "all"
+        ? "public, max-age=60, s-maxage=300, stale-while-revalidate=900"
+        : "private, no-store",
+    );
     response.headers.set("X-TvTime-TMDB-Pages", String(pagesFetched));
     response.headers.set("X-TvTime-TMDB-Page-Budget", String(DISCOVER_TMDB_PAGE_BUDGET));
     return response;

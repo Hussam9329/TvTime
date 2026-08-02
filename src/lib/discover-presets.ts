@@ -28,8 +28,8 @@ export function applyDiscoverPreset(
     case "top2024":
       next.sortBy = "vote_average.desc";
       if (!hasYearRange) {
-        next.fromYear = "2024";
-        next.toYear = "2024";
+        next.fromYear = String(options.currentYear);
+        next.toYear = String(options.currentYear);
       }
       break;
     case "hidden":

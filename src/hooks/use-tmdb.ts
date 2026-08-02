@@ -67,7 +67,7 @@ export function useTvGenres() {
   });
 }
 
-export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; certification?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
+export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; maxRating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; certification?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "movies", "discover", params],
     queryFn: () =>
@@ -77,6 +77,7 @@ export function useDiscoverMovies(params: { genres?: number[]; year?: number; so
         ...(params.sort_by ? { sort_by: params.sort_by } : {}),
         page: params.page || 1,
         ...(params.rating ? { rating: params.rating } : {}),
+        ...(params.maxRating != null ? { rating_max: params.maxRating } : {}),
         ...(params.originalLanguage ? { original_language: params.originalLanguage } : {}),
         ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
         ...(params.releaseDateFrom ? { release_date_gte: params.releaseDateFrom } : {}),
@@ -91,7 +92,7 @@ export function useDiscoverMovies(params: { genres?: number[]; year?: number; so
   });
 }
 
-export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; originalLanguage?: string; originCountries?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
+export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; maxRating?: number; originalLanguage?: string; originCountries?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "tv", "discover", params],
     queryFn: () =>
@@ -101,6 +102,7 @@ export function useDiscoverTv(params: { genres?: number[]; year?: number; sort_b
         ...(params.sort_by ? { sort_by: params.sort_by } : {}),
         page: params.page || 1,
         ...(params.rating ? { rating: params.rating } : {}),
+        ...(params.maxRating != null ? { rating_max: params.maxRating } : {}),
         ...(params.originalLanguage ? { original_language: params.originalLanguage } : {}),
         ...(params.originCountries ? { origin_country: params.originCountries } : {}),
         ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
@@ -130,7 +132,8 @@ type FilteredDiscoverResponse = {
 
 export function useFilteredDiscover(params: {
   mediaType: "movie" | "tv";
-  showMe: "seen" | "unseen";
+  showMe: "all" | "seen" | "unseen";
+  world?: "standard" | "arabic" | "asian" | "anime";
   cursor?: string | null;
   genres?: number[];
   sort_by?: string;
@@ -151,11 +154,15 @@ export function useFilteredDiscover(params: {
   enabled?: boolean;
 }) {
   return useQuery({
-    queryKey: ["media", "discover-filtered", getClientUserId(), params],
+    queryKey: params.showMe === "all"
+      ? ["media", "discover-catalogue", params]
+      : ["media", "discover-filtered", getClientUserId(), params],
     queryFn: async () => {
-      const url = withUserId(new URL("/api/discover/filtered", window.location.origin));
+      const endpoint = new URL("/api/discover/filtered", window.location.origin);
+      const url = params.showMe === "all" ? endpoint : withUserId(endpoint);
       url.searchParams.set("media_type", params.mediaType);
       url.searchParams.set("show_me", params.showMe);
+      if (params.world) url.searchParams.set("world", params.world);
       if (params.cursor) url.searchParams.set("cursor", params.cursor);
       if (params.genres?.length) url.searchParams.set("genre", params.genres.join(","));
       if (params.sort_by) url.searchParams.set("sort_by", params.sort_by);
@@ -174,7 +181,7 @@ export function useFilteredDiscover(params: {
       if (params.excludeArabic) url.searchParams.set("exclude_arabic", "true");
       if (params.onlyArabic) url.searchParams.set("only_arabic", "true");
 
-      const res = await fetch(url, { headers: userHeaders() });
+      const res = await fetch(url, params.showMe === "all" ? undefined : { headers: userHeaders() });
       await ensureApiOk(res, "Failed to load filtered Discover results");
       return res.json() as Promise<FilteredDiscoverResponse>;
     },
