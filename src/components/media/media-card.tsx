@@ -170,13 +170,8 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
 
             {!completed && <TmdbScoreIndicator rating={item.vote_average} />}
 
-            {(inWatchlist || isFollowing || (userRating != null && !completed)) && (
+            {(isFollowing || (userRating != null && !completed)) && (
               <span className="tvtime-media-state-rail absolute bottom-2 z-10" aria-label="Library status">
-                {inWatchlist && (
-                  <span data-state="watchlist" title="In watchlist">
-                    <ListPlus aria-hidden="true" />
-                  </span>
-                )}
                 {isFollowing && (
                   <span data-state="following" title="Following">
                     <Bell aria-hidden="true" />

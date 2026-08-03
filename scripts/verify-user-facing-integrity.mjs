@@ -136,6 +136,13 @@ check(
     && /tvtime-media-copy/.test(collection),
   "Movie Watchlist and Watched grids reuse Home's responsive poster presentation",
 );
+check(
+  !/data-state="watchlist"/.test(mediaCard)
+    && !/data-state="watchlist"/.test(collection)
+    && /ListPlus \/> \{inWatchlist \? "Remove from watchlist" : "Add to watchlist"\}/.test(mediaCard)
+    && /Remove from watchlist/.test(collection),
+  "Watchlist corner icons stay removed while watchlist actions remain available",
+);
 check(/value="not-started"/.test(collection) && /Not Started/.test(collection), "Anime not-started titles remain visible in their own tab");
 check(/status:\s*"not_started",\s*watched:\s*"false",\s*tracked:\s*"true"/.test(collection), "Anime Not Started requires explicit following membership and no watched progress");
 check(/value="watching"/.test(collection) && /In Progress/.test(collection), "Anime in-progress is visible and selectable");

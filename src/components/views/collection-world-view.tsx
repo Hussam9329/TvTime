@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List, ListPlus } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
@@ -459,14 +459,6 @@ function CollectionMediaCard({
               />
             )}
             {!isCompleted && <TmdbScoreIndicator rating={publicRating} />}
-
-            {useHomePresentation && tab === "watchlist" && (
-              <span className="tvtime-media-state-rail absolute bottom-2 z-10" aria-label="In watchlist">
-                <span data-state="watchlist" title="In watchlist">
-                  <ListPlus aria-hidden="true" />
-                </span>
-              </span>
-            )}
 
           </div>
 
