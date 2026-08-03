@@ -45,6 +45,7 @@ const mediaCard = read("src/components/media/media-card.tsx");
 const compactScoreCorner = read("src/components/media/compact-score-corner.tsx");
 const watchedIndicator = read("src/components/media/watched-indicator.tsx");
 const tmdbIndicator = read("src/components/media/tmdb-score-indicator.tsx");
+const watchlistIndicator = read("src/components/media/watchlist-indicator.tsx");
 const globalStyles = read("src/app/globals.css");
 const tvTrackingView = read("src/components/views/tv-tracking-view.tsx");
 const movieDetailView = read("src/components/views/movie-detail-view.tsx");
@@ -137,11 +138,16 @@ check(
   "Movie Watchlist and Watched grids reuse Home's responsive poster presentation",
 );
 check(
-  !/data-state="watchlist"/.test(mediaCard)
-    && !/data-state="watchlist"/.test(collection)
+  /<WatchlistIndicator \/>/.test(mediaCard)
+    && /tab === "watchlist" && <WatchlistIndicator \/>/.test(collection)
+    && /trackingStatus === "planned" && <WatchlistIndicator \/>/.test(tvTrackingView)
+    && /data-state="watchlist"/.test(watchlistIndicator)
+    && /Bookmark className="fill-current"/.test(watchlistIndicator)
+    && /--cinema-purple: #a78bfa/.test(globalStyles)
+    && /\.tvtime-watchlist-indicator\s*\{[\s\S]*border: 1px solid var\(--cinema-purple-line\)[\s\S]*border-radius: 0\.65rem[\s\S]*color: var\(--cinema-purple\)/.test(globalStyles)
     && /ListPlus \/> \{inWatchlist \? "Remove from watchlist" : "Add to watchlist"\}/.test(mediaCard)
     && /Remove from watchlist/.test(collection),
-  "Watchlist corner icons stay removed while watchlist actions remain available",
+  "Watchlist membership uses one compact purple bookmark badge while actions remain available",
 );
 check(/value="not-started"/.test(collection) && /Not Started/.test(collection), "Anime not-started titles remain visible in their own tab");
 check(/status:\s*"not_started",\s*watched:\s*"false",\s*tracked:\s*"true"/.test(collection), "Anime Not Started requires explicit following membership and no watched progress");
@@ -186,10 +192,11 @@ check(
     && /<CompactScoreCorner/.test(tmdbIndicator)
     && /side="left"/.test(watchedIndicator)
     && /side="right"/.test(tmdbIndicator)
-    && /left:[\s\S]*flex-row-reverse[\s\S]*rounded-r-full[\s\S]*border-r[\s\S]*shadow-\[2px_2px_7px/.test(compactScoreCorner)
-    && /right:[\s\S]*flex-row[\s\S]*rounded-l-full[\s\S]*border-l[\s\S]*shadow-\[-2px_2px_7px/.test(compactScoreCorner)
-    && /h-\[22px\] w-\[58px\]/.test(compactScoreCorner),
-  "Both compact score tabs share one exact mirrored geometry",
+    && /left: "left-2 flex-row rounded-\[10px\]"/.test(compactScoreCorner)
+    && /right: "right-2 flex-row rounded-\[10px\]"/.test(compactScoreCorner)
+    && /h-\[28px\] min-w-\[66px\]/.test(compactScoreCorner)
+    && /overflow-hidden border px-2 backdrop-blur-md/.test(compactScoreCorner),
+  "Both compact score badges share one exact rounded outlined geometry",
 );
 check(
   /scoreSource="tmdb"/.test(tmdbIndicator)
@@ -200,7 +207,7 @@ check(
 check(
   /!completed && <TmdbScoreIndicator rating=\{item\.vote_average\}/.test(mediaCard)
     && /className="tvtime-tmdb-score"[\s\S]*side="right"/.test(tmdbIndicator)
-    && /\.tvtime-tmdb-score[\s\S]*right: -1px !important/.test(globalStyles),
+    && /\.tvtime-tmdb-score\s*\{[\s\S]*right: 0\.625rem !important[\s\S]*left: auto !important/.test(globalStyles),
   "Uncompleted media keeps the TMDB score in the opposite top corner",
 );
 check(

@@ -14,20 +14,20 @@ type CompactScoreCornerProps = {
 };
 
 const SIDE_STYLES = {
-  left: "-left-px flex-row-reverse rounded-r-full border-r pr-2 shadow-[2px_2px_7px_rgba(0,0,0,0.24)]",
-  right: "-right-px flex-row rounded-l-full border-l pl-2 shadow-[-2px_2px_7px_rgba(0,0,0,0.24)]",
+  left: "left-2 flex-row rounded-[10px]",
+  right: "right-2 flex-row rounded-[10px]",
 } as const;
 
 const TONE_STYLES = {
   emerald: {
-    surface: "border-emerald-200/55 bg-emerald-400/95 text-emerald-950",
-    icon: "bg-emerald-950/90 text-emerald-200",
-    suffix: "text-emerald-950/65",
+    surface: "border-emerald-400/75 bg-[#06120e]/90 text-emerald-300 shadow-[0_7px_18px_rgba(0,0,0,0.36),0_0_14px_rgba(52,211,153,0.12)]",
+    icon: "text-emerald-300",
+    suffix: "text-emerald-300/65",
   },
   amber: {
-    surface: "border-amber-100/55 bg-amber-300/95 text-amber-950",
-    icon: "bg-amber-950/90 text-amber-200",
-    suffix: "text-amber-950/65",
+    surface: "border-amber-400/75 bg-[#140f06]/90 text-amber-300 shadow-[0_7px_18px_rgba(0,0,0,0.36),0_0_14px_rgba(251,191,36,0.12)]",
+    icon: "text-amber-300",
+    suffix: "text-amber-300/65",
   },
 } as const;
 
@@ -52,15 +52,15 @@ export function CompactScoreCorner({
       dir="ltr"
       title={title}
       aria-label={ariaLabel}
-      className={`${className} pointer-events-none absolute -top-px z-20 inline-flex h-[22px] w-[58px] items-center justify-center gap-0.5 overflow-hidden border-b px-1.5 ${SIDE_STYLES[side]} ${colors.surface}`}
+      className={`${className} pointer-events-none absolute top-2 z-20 inline-flex h-[28px] min-w-[66px] items-center justify-center gap-1.5 overflow-hidden border px-2 backdrop-blur-md ${SIDE_STYLES[side]} ${colors.surface}`}
     >
-      <span className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-full ${colors.icon}`}>
+      <span className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center ${colors.icon}`}>
         {icon}
       </span>
       {value != null && (
-        <span className="whitespace-nowrap text-[8px] font-extrabold tabular-nums leading-none tracking-tight">
+        <span className="whitespace-nowrap text-[10px] font-extrabold tabular-nums leading-none tracking-tight">
           {value}
-          <span className={`ml-px text-[6px] font-bold ${colors.suffix}`}>{suffix}</span>
+          <span className={`ml-px text-[7px] font-bold ${colors.suffix}`}>{suffix}</span>
         </span>
       )}
     </span>

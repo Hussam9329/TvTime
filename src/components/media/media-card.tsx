@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { toast } from "sonner";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
+import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { isAsianMediaItem } from "@/lib/asian-media";
@@ -169,6 +170,8 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             )}
 
             {!completed && <TmdbScoreIndicator rating={item.vote_average} />}
+
+            {inWatchlist && <WatchlistIndicator />}
 
             {(isFollowing || (userRating != null && !completed)) && (
               <span className="tvtime-media-state-rail absolute bottom-2 z-10" aria-label="Library status">

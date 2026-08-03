@@ -16,6 +16,7 @@ import { RatingDialog } from "@/components/media/rating-dialog";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
+import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -459,6 +460,7 @@ function CollectionMediaCard({
               />
             )}
             {!isCompleted && <TmdbScoreIndicator rating={publicRating} />}
+            {tab === "watchlist" && <WatchlistIndicator />}
 
           </div>
 

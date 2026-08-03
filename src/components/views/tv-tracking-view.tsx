@@ -9,6 +9,7 @@ import { FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
+import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
 import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronLeft, ChevronRight, Grid2X2, List, CircleStop } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
@@ -346,6 +347,7 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
           {trackingStatus !== "finished" && (
             <TmdbScoreIndicator rating={tmdbRating} />
           )}
+          {trackingStatus === "planned" && <WatchlistIndicator />}
           </div>
 
           <div className="flex min-w-0 flex-col">

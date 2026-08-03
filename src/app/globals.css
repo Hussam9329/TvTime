@@ -46,74 +46,74 @@
 
 /* Default = dark cinema theme */
 :root {
-  --radius: 0.75rem;
-  --background: oklch(0.16 0.02 280);
-  --foreground: oklch(0.96 0.005 280);
-  --card: oklch(0.21 0.025 280);
-  --card-foreground: oklch(0.96 0.005 280);
-  --popover: oklch(0.21 0.025 280);
-  --popover-foreground: oklch(0.96 0.005 280);
-  --primary: oklch(0.62 0.23 16);
-  --primary-foreground: oklch(0.15 0.02 280);
-  --secondary: oklch(0.27 0.02 280);
-  --secondary-foreground: oklch(0.96 0.005 280);
-  --muted: oklch(0.25 0.02 280);
-  --muted-foreground: oklch(0.68 0.02 280);
-  --accent: oklch(0.32 0.03 280);
-  --accent-foreground: oklch(0.96 0.005 280);
+  --radius: 0.7rem;
+  --background: oklch(0.105 0.012 72);
+  --foreground: oklch(0.965 0.012 84);
+  --card: oklch(0.145 0.014 72);
+  --card-foreground: oklch(0.965 0.012 84);
+  --popover: oklch(0.125 0.014 72);
+  --popover-foreground: oklch(0.965 0.012 84);
+  --primary: oklch(0.76 0.135 72);
+  --primary-foreground: oklch(0.115 0.018 66);
+  --secondary: oklch(0.19 0.018 72);
+  --secondary-foreground: oklch(0.95 0.014 84);
+  --muted: oklch(0.185 0.016 72);
+  --muted-foreground: oklch(0.7 0.022 78);
+  --accent: oklch(0.23 0.03 72);
+  --accent-foreground: oklch(0.965 0.012 84);
   --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.15 0.02 280);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.62 0.23 16);
-  --chart-1: oklch(0.62 0.23 16);
-  --chart-2: oklch(0.65 0.18 320);
-  --chart-3: oklch(0.7 0.15 180);
-  --chart-4: oklch(0.72 0.18 80);
+  --destructive-foreground: oklch(0.97 0.01 84);
+  --border: oklch(0.76 0.115 72 / 22%);
+  --input: oklch(0.76 0.115 72 / 28%);
+  --ring: oklch(0.8 0.14 75);
+  --chart-1: oklch(0.76 0.135 72);
+  --chart-2: oklch(0.67 0.18 305);
+  --chart-3: oklch(0.72 0.15 160);
+  --chart-4: oklch(0.78 0.15 80);
   --chart-5: oklch(0.6 0.2 260);
-  --sidebar: oklch(0.19 0.025 280);
-  --sidebar-foreground: oklch(0.96 0.005 280);
-  --sidebar-primary: oklch(0.62 0.23 16);
-  --sidebar-primary-foreground: oklch(0.15 0.02 280);
-  --sidebar-accent: oklch(0.27 0.02 280);
-  --sidebar-accent-foreground: oklch(0.96 0.005 280);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.62 0.23 16);
+  --sidebar: oklch(0.125 0.014 72);
+  --sidebar-foreground: oklch(0.965 0.012 84);
+  --sidebar-primary: oklch(0.76 0.135 72);
+  --sidebar-primary-foreground: oklch(0.115 0.018 66);
+  --sidebar-accent: oklch(0.2 0.022 72);
+  --sidebar-accent-foreground: oklch(0.965 0.012 84);
+  --sidebar-border: oklch(0.76 0.115 72 / 22%);
+  --sidebar-ring: oklch(0.8 0.14 75);
 }
 
 .light {
-  --background: oklch(0.98 0.005 280);
-  --foreground: oklch(0.18 0.02 280);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 280);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 280);
-  --primary: oklch(0.57 0.22 16);
-  --primary-foreground: oklch(0.98 0.01 16);
-  --secondary: oklch(0.95 0.01 280);
-  --secondary-foreground: oklch(0.18 0.02 280);
-  --muted: oklch(0.96 0.01 280);
-  --muted-foreground: oklch(0.5 0.02 280);
-  --accent: oklch(0.94 0.02 280);
-  --accent-foreground: oklch(0.18 0.02 280);
+  --background: oklch(0.965 0.018 84);
+  --foreground: oklch(0.19 0.022 68);
+  --card: oklch(0.99 0.01 84);
+  --card-foreground: oklch(0.19 0.022 68);
+  --popover: oklch(0.99 0.01 84);
+  --popover-foreground: oklch(0.19 0.022 68);
+  --primary: oklch(0.61 0.13 70);
+  --primary-foreground: oklch(0.99 0.01 84);
+  --secondary: oklch(0.92 0.025 82);
+  --secondary-foreground: oklch(0.19 0.022 68);
+  --muted: oklch(0.935 0.02 82);
+  --muted-foreground: oklch(0.49 0.03 72);
+  --accent: oklch(0.9 0.04 78);
+  --accent-foreground: oklch(0.19 0.022 68);
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(0.98 0.01 25);
-  --border: oklch(0.9 0.01 280);
-  --input: oklch(0.9 0.01 280);
-  --ring: oklch(0.57 0.22 16);
-  --chart-1: oklch(0.57 0.22 16);
-  --chart-2: oklch(0.6 0.18 320);
-  --chart-3: oklch(0.65 0.15 180);
-  --chart-4: oklch(0.68 0.18 80);
+  --border: oklch(0.68 0.09 72 / 38%);
+  --input: oklch(0.68 0.09 72 / 45%);
+  --ring: oklch(0.61 0.13 70);
+  --chart-1: oklch(0.61 0.13 70);
+  --chart-2: oklch(0.6 0.18 305);
+  --chart-3: oklch(0.62 0.15 160);
+  --chart-4: oklch(0.68 0.16 80);
   --chart-5: oklch(0.55 0.2 260);
-  --sidebar: oklch(0.97 0.01 280);
-  --sidebar-foreground: oklch(0.18 0.02 280);
-  --sidebar-primary: oklch(0.57 0.22 16);
-  --sidebar-primary-foreground: oklch(0.98 0.01 16);
-  --sidebar-accent: oklch(0.94 0.02 280);
-  --sidebar-accent-foreground: oklch(0.18 0.02 280);
-  --sidebar-border: oklch(0.9 0.01 280);
-  --sidebar-ring: oklch(0.57 0.22 16);
+  --sidebar: oklch(0.96 0.02 82);
+  --sidebar-foreground: oklch(0.19 0.022 68);
+  --sidebar-primary: oklch(0.61 0.13 70);
+  --sidebar-primary-foreground: oklch(0.99 0.01 84);
+  --sidebar-accent: oklch(0.91 0.03 80);
+  --sidebar-accent-foreground: oklch(0.19 0.022 68);
+  --sidebar-border: oklch(0.68 0.09 72 / 38%);
+  --sidebar-ring: oklch(0.61 0.13 70);
 }
 
 @layer base {
@@ -4436,5 +4436,438 @@ body {
 
   .tvtime-discover-title-row [data-slot="tabs-trigger"] {
     flex: 1;
+  }
+}
+
+/* Trakora cinema-gold system -------------------------------------------------
+   A single visual language for catalogue posters, library cards, filters,
+   dialogs and detail views: near-black enamel, precise amber lines and quiet
+   depth. Semantic score colours remain emerald (personal), amber (TMDB) and
+   violet (Watchlist). */
+:root {
+  --cinema-gold: #d8a34c;
+  --cinema-gold-bright: #f0bd63;
+  --cinema-line: rgb(216 163 76 / 0.28);
+  --cinema-line-strong: rgb(236 181 88 / 0.62);
+  --cinema-black: #080806;
+  --cinema-panel: rgb(15 14 11 / 0.94);
+  --cinema-panel-strong: rgb(10 10 8 / 0.98);
+  --cinema-purple: #a78bfa;
+  --cinema-purple-line: rgb(167 139 250 / 0.78);
+  --app-radius-control: 0.72rem;
+  --app-radius-card: 1.05rem;
+  --app-radius-hero: 1.45rem;
+  --app-surface: linear-gradient(145deg, rgb(19 18 14 / 0.94), rgb(9 9 7 / 0.97));
+  --app-surface-strong: rgb(11 11 9 / 0.98);
+  --app-surface-subtle: rgb(28 25 18 / 0.72);
+  --app-surface-border: var(--cinema-line);
+  --app-elevated-border: var(--cinema-line-strong);
+  --app-header-background: rgb(8 8 6 / 0.87);
+  --app-nav-active: rgb(216 163 76 / 0.12);
+  --app-page-background:
+    radial-gradient(circle at 50% -9rem, rgb(216 163 76 / 0.12), transparent 35rem),
+    radial-gradient(circle at 95% 18rem, rgb(216 163 76 / 0.035), transparent 30rem),
+    linear-gradient(180deg, #090907 0%, #060606 42rem, #080807 100%);
+  --app-hero-background:
+    radial-gradient(circle at 6% 0%, rgb(216 163 76 / 0.12), transparent 42%),
+    linear-gradient(145deg, rgb(19 18 14 / 0.98), rgb(7 7 6 / 0.98));
+  --app-shadow-sm: 0 10px 30px rgb(0 0 0 / 0.28);
+  --app-shadow-md: 0 20px 52px rgb(0 0 0 / 0.4);
+  --app-shadow-lg: 0 34px 96px rgb(0 0 0 / 0.55);
+  --app-shadow-poster:
+    0 18px 42px rgb(0 0 0 / 0.48),
+    0 0 18px rgb(216 163 76 / 0.055);
+}
+
+.light {
+  --cinema-line: rgb(154 108 36 / 0.28);
+  --cinema-line-strong: rgb(154 108 36 / 0.56);
+  --cinema-panel: rgb(255 252 245 / 0.96);
+  --cinema-panel-strong: rgb(255 253 248 / 0.99);
+  --app-surface: linear-gradient(145deg, rgb(255 253 248 / 0.98), rgb(246 239 226 / 0.98));
+  --app-surface-strong: rgb(255 253 248 / 0.99);
+  --app-surface-subtle: rgb(238 225 199 / 0.66);
+  --app-header-background: rgb(255 252 245 / 0.9);
+  --app-nav-active: rgb(154 108 36 / 0.1);
+  --app-page-background:
+    radial-gradient(circle at 50% -9rem, rgb(180 128 43 / 0.12), transparent 35rem),
+    linear-gradient(180deg, #fbf6eb 0%, #f7f0e3 42rem, #fbf8f1 100%);
+  --app-hero-background:
+    radial-gradient(circle at 6% 0%, rgb(180 128 43 / 0.1), transparent 42%),
+    linear-gradient(145deg, #fffdf8, #f2e8d5);
+  --app-shadow-sm: 0 10px 30px rgb(73 47 14 / 0.09);
+  --app-shadow-md: 0 20px 52px rgb(73 47 14 / 0.13);
+  --app-shadow-lg: 0 34px 96px rgb(73 47 14 / 0.18);
+  --app-shadow-poster:
+    0 18px 42px rgb(73 47 14 / 0.2),
+    0 0 18px rgb(154 108 36 / 0.07);
+}
+
+body {
+  background-color: var(--background);
+  background-image: var(--app-page-background) !important;
+}
+
+.tvtime-app::before {
+  background-image: radial-gradient(circle, rgb(240 189 99 / 0.13) 0.7px, transparent 0.8px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black, transparent 64%);
+  opacity: 0.42;
+}
+
+/* Header, navigation and brand */
+.tvtime-app-header {
+  background: linear-gradient(to bottom, rgb(4 4 3 / 0.9), transparent) !important;
+}
+
+.tvtime-header-inner,
+.tvtime-mobile-search-panel,
+.tvtime-mobile-dock__surface {
+  border-color: var(--cinema-line) !important;
+  background: var(--app-header-background) !important;
+  box-shadow:
+    0 18px 52px rgb(0 0 0 / 0.4),
+    inset 0 1px rgb(240 189 99 / 0.06) !important;
+  backdrop-filter: blur(24px) saturate(118%);
+}
+
+.tvtime-brand-mark {
+  background: linear-gradient(145deg, #f1c46f, #bf7d21) !important;
+  color: #100c05 !important;
+  box-shadow:
+    0 8px 24px rgb(216 163 76 / 0.24),
+    inset 0 1px rgb(255 244 207 / 0.48) !important;
+}
+
+.tvtime-brand-wordmark {
+  text-shadow: 0 0 1.5rem rgb(216 163 76 / 0.16) !important;
+}
+
+.tvtime-primary-nav-item[data-active="true"],
+.tvtime-app-header [data-ui-action="nav"][data-active="true"],
+.tvtime-app-header [data-ui-action="nav-more"][data-active="true"],
+.tvtime-mobile-dock__item.is-active {
+  border-color: var(--cinema-line) !important;
+  background: rgb(216 163 76 / 0.1) !important;
+  color: var(--cinema-gold-bright) !important;
+  box-shadow: inset 0 0 0 1px rgb(216 163 76 / 0.06) !important;
+}
+
+.tvtime-nav-active-indicator {
+  background: var(--cinema-gold-bright);
+  box-shadow: 0 0 13px rgb(240 189 99 / 0.52);
+}
+
+.tvtime-mobile-dock__item.is-active .tvtime-mobile-dock__icon {
+  background: linear-gradient(145deg, #e7b459, #b8781d) !important;
+  color: #100c05 !important;
+  box-shadow: 0 7px 18px rgb(216 163 76 / 0.22) !important;
+}
+
+/* Unified enamel surfaces */
+.tvtime-app :is([data-slot="card"], [data-ui-surface="panel"], [data-ui-surface="card"], .feedback-state),
+.tvtime-login-page :is([data-slot="card"], [data-ui-surface="panel"], [data-ui-surface="card"]) {
+  border-color: var(--cinema-line) !important;
+  border-radius: var(--app-radius-card);
+  background: var(--app-surface) !important;
+  box-shadow:
+    var(--app-shadow-sm),
+    inset 0 1px rgb(240 189 99 / 0.045) !important;
+}
+
+.tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="sheet-content"], .tvtime-portal-surface, .tvtime-portal-compact) {
+  border-color: var(--cinema-line-strong) !important;
+  background: linear-gradient(155deg, rgb(18 17 13 / 0.99), rgb(7 7 6 / 0.995)) !important;
+  box-shadow:
+    0 28px 84px rgb(0 0 0 / 0.62),
+    0 0 0 1px rgb(240 189 99 / 0.035),
+    inset 0 1px rgb(240 189 99 / 0.08) !important;
+}
+
+.light .tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="sheet-content"], .tvtime-portal-surface, .tvtime-portal-compact) {
+  background: linear-gradient(155deg, #fffdf8, #f3e9d7) !important;
+}
+
+[data-slot="dialog-overlay"],
+[data-slot="alert-dialog-overlay"] {
+  background: rgb(0 0 0 / 0.74) !important;
+  backdrop-filter: blur(8px);
+}
+
+.tvtime-app :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"], .tvtime-command-search),
+.tvtime-login-page :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"]) {
+  border-color: var(--cinema-line) !important;
+  background: rgb(6 6 5 / 0.58) !important;
+  box-shadow: inset 0 1px rgb(240 189 99 / 0.035) !important;
+}
+
+.light .tvtime-app :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"], .tvtime-command-search) {
+  background: rgb(255 252 245 / 0.82) !important;
+}
+
+.tvtime-app :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"], .tvtime-command-search):focus-visible {
+  border-color: var(--cinema-gold-bright) !important;
+  box-shadow: 0 0 0 3px rgb(216 163 76 / 0.13) !important;
+}
+
+.tvtime-app [data-slot="button"][data-variant="default"],
+.tvtime-login-page [data-slot="button"][data-variant="default"] {
+  border: 1px solid rgb(255 222 157 / 0.38);
+  background: linear-gradient(145deg, #e8b65d, #b9781d) !important;
+  color: #120d05 !important;
+  box-shadow:
+    0 9px 24px rgb(216 163 76 / 0.18),
+    inset 0 1px rgb(255 244 207 / 0.35) !important;
+}
+
+.tvtime-app [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]),
+.tvtime-login-page [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]) {
+  border-color: var(--cinema-line) !important;
+  background: rgb(15 14 11 / 0.78) !important;
+  color: var(--foreground);
+  box-shadow: inset 0 1px rgb(240 189 99 / 0.045);
+}
+
+.light .tvtime-app [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]) {
+  background: rgb(255 252 245 / 0.86) !important;
+}
+
+.tvtime-app [data-slot="tabs-list"] {
+  border: 1px solid var(--cinema-line);
+  background: rgb(8 8 6 / 0.66) !important;
+  box-shadow: inset 0 1px rgb(240 189 99 / 0.035);
+}
+
+.tvtime-app [data-slot="tabs-trigger"][data-state="active"] {
+  border-color: rgb(216 163 76 / 0.34) !important;
+  background: rgb(216 163 76 / 0.12) !important;
+  color: var(--cinema-gold-bright) !important;
+  box-shadow: 0 7px 18px rgb(0 0 0 / 0.2) !important;
+}
+
+.tvtime-app [data-slot="badge"] {
+  border-color: var(--cinema-line);
+  box-shadow: inset 0 1px rgb(240 189 99 / 0.035);
+}
+
+/* Posters and semantic corner badges */
+.tvtime-app .tvtime-media-card [data-slot="card"],
+.tvtime-app .tvtime-media-card-skeleton[data-slot="card"] {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tvtime-media-card-link {
+  border-radius: 1.02rem;
+}
+
+.tvtime-media-poster,
+.tvtime-home-hero__poster,
+.tvtime-movie-detail-hero__poster > [data-slot="card"],
+.tvtime-tv-detail-hero__poster > [data-slot="card"] {
+  border-color: var(--cinema-line-strong) !important;
+  border-radius: 1.02rem !important;
+  background: #070706 !important;
+  box-shadow:
+    var(--app-shadow-poster),
+    inset 0 0 0 1px rgb(255 226 167 / 0.025) !important;
+}
+
+.tvtime-media-poster__veil {
+  background:
+    linear-gradient(to top, rgb(5 4 2 / 0.54), transparent 38%),
+    linear-gradient(to bottom, rgb(8 5 1 / 0.12), transparent 24%);
+  opacity: 0.62;
+}
+
+.tvtime-user-score,
+.tvtime-tmdb-score {
+  top: 0.625rem !important;
+  border-radius: 0.65rem !important;
+  backdrop-filter: blur(12px) saturate(120%);
+}
+
+.tvtime-user-score {
+  right: auto !important;
+  left: 0.625rem !important;
+}
+
+.tvtime-tmdb-score {
+  right: 0.625rem !important;
+  left: auto !important;
+}
+
+.tvtime-watchlist-indicator {
+  position: absolute;
+  z-index: 20;
+  top: 0.625rem;
+  right: 0.625rem;
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cinema-purple-line);
+  border-radius: 0.65rem;
+  background: rgb(15 8 28 / 0.9);
+  color: var(--cinema-purple);
+  box-shadow:
+    0 8px 20px rgb(0 0 0 / 0.38),
+    0 0 15px rgb(139 92 246 / 0.14),
+    inset 0 1px rgb(221 214 254 / 0.08);
+  pointer-events: none;
+  backdrop-filter: blur(12px) saturate(125%);
+}
+
+.tvtime-watchlist-indicator svg {
+  width: 0.92rem;
+  height: 0.92rem;
+  fill-opacity: 0.18;
+  stroke-width: 1.8;
+}
+
+.tvtime-tmdb-score + .tvtime-watchlist-indicator {
+  top: 3rem;
+}
+
+.tvtime-media-menu {
+  border-color: var(--cinema-line-strong) !important;
+  border-radius: 0.65rem !important;
+  background: rgb(8 8 6 / 0.86) !important;
+  color: var(--cinema-gold-bright) !important;
+  box-shadow: 0 9px 24px rgb(0 0 0 / 0.42) !important;
+}
+
+.tvtime-media-copy {
+  padding-top: 0.72rem;
+}
+
+.tvtime-media-title {
+  color: color-mix(in oklab, var(--foreground) 96%, var(--cinema-gold) 4%);
+  font-weight: 760;
+}
+
+/* Feature, detail and utility pages */
+.tvtime-home-hero {
+  border-color: var(--cinema-line-strong) !important;
+  border-radius: var(--app-radius-hero);
+  background: #070706;
+  box-shadow:
+    var(--app-shadow-lg),
+    0 0 24px rgb(216 163 76 / 0.055),
+    inset 0 1px rgb(240 189 99 / 0.08) !important;
+}
+
+.tvtime-home-hero__scrim {
+  background:
+    linear-gradient(90deg, rgb(5 5 4 / 0.97) 0%, rgb(5 5 4 / 0.82) 46%, rgb(5 5 4 / 0.32) 76%, rgb(5 5 4 / 0.55) 100%),
+    linear-gradient(0deg, rgb(5 5 4 / 0.94) 0%, transparent 62%);
+}
+
+.tvtime-home-hero__carousel-controls,
+.tvtime-row-controls,
+.tvtime-section-heading__icon,
+.tvtime-watch-next-cta,
+.tvtime-quick-stat {
+  border-color: var(--cinema-line) !important;
+  background: rgb(13 12 9 / 0.75) !important;
+  box-shadow: inset 0 1px rgb(240 189 99 / 0.045) !important;
+}
+
+.tvtime-filter-panel {
+  border-color: var(--cinema-line-strong) !important;
+  background: linear-gradient(155deg, rgb(17 16 12 / 0.98), rgb(8 8 6 / 0.99)) !important;
+  box-shadow:
+    0 18px 54px rgb(0 0 0 / 0.34),
+    inset 0 1px rgb(240 189 99 / 0.065) !important;
+}
+
+.tvtime-filter-panel-header,
+.tvtime-filter-panel-pinned,
+.tvtime-filter-section.border-t {
+  border-color: var(--cinema-line) !important;
+}
+
+.tvtime-discover-preset-row > button,
+.tvtime-discover-status-toggle,
+.tvtime-tracking-status-option {
+  border-color: var(--cinema-line) !important;
+  background: rgb(11 10 8 / 0.72) !important;
+  box-shadow: inset 0 1px rgb(240 189 99 / 0.035);
+}
+
+.tvtime-discover-preset-row > button[data-active="true"],
+.tvtime-discover-status-toggle[data-active="true"],
+.tvtime-tracking-status-option[data-active="true"] {
+  border-color: var(--cinema-line-strong) !important;
+  background: rgb(216 163 76 / 0.11) !important;
+  box-shadow:
+    0 8px 22px rgb(0 0 0 / 0.2),
+    inset 0 1px rgb(240 189 99 / 0.07) !important;
+}
+
+.tvtime-page-titlebar::before {
+  background: linear-gradient(to bottom, #f2c46d, #a96718);
+  box-shadow: 0 0 1rem rgb(216 163 76 / 0.34);
+}
+
+.tvtime-movie-detail-hero,
+.tvtime-tv-detail-hero,
+.tvtime-rating-dialog {
+  border-color: var(--cinema-line-strong) !important;
+}
+
+.tvtime-detail-hero__actions :is([data-slot="button"], .tvtime-detail-hero__watch-button) {
+  border-color: var(--cinema-line) !important;
+  border-radius: 0.72rem !important;
+}
+
+.tvtime-tv-detail-hero__meta > * {
+  border-color: var(--cinema-line) !important;
+  background: rgb(13 12 9 / 0.72) !important;
+  box-shadow: inset 0 1px rgb(240 189 99 / 0.035);
+}
+
+.tvtime-rating-dialog input[type="range"] {
+  accent-color: var(--cinema-gold-bright);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-media-card:hover .tvtime-media-poster {
+    border-color: rgb(240 189 99 / 0.82) !important;
+    box-shadow:
+      0 24px 52px rgb(0 0 0 / 0.56),
+      0 0 24px rgb(216 163 76 / 0.12),
+      inset 0 0 0 1px rgb(255 226 167 / 0.035) !important;
+  }
+
+  .tvtime-app [data-slot="button"]:not(:disabled):hover,
+  .tvtime-app [data-slot="tabs-trigger"]:not(:disabled):hover {
+    border-color: var(--cinema-line-strong) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .tvtime-user-score,
+  .tvtime-tmdb-score {
+    top: 0.5rem !important;
+  }
+
+  .tvtime-user-score {
+    left: 0.5rem !important;
+  }
+
+  .tvtime-tmdb-score,
+  .tvtime-watchlist-indicator {
+    right: 0.5rem !important;
+  }
+
+  .tvtime-watchlist-indicator {
+    top: 0.5rem;
+  }
+
+  .tvtime-tmdb-score + .tvtime-watchlist-indicator {
+    top: 2.85rem;
   }
 }
