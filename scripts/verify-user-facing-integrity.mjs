@@ -153,6 +153,14 @@ check(
   "TV tracking posters separate finished user scores from unfinished TMDB scores",
 );
 check(
+  /className="tvtime-detail-hero__actions tvtime-movie-detail-hero__actions"/.test(movieDetailView)
+    && /className="tvtime-detail-hero__actions tvtime-tv-detail-hero__actions"/.test(tvDetailView)
+    && /tvtime-tv-detail-hero__poster-action[\s\S]*<OfficialPosterPicker/.test(tvDetailView)
+    && /\.tvtime-detail-hero__actions\s*\{[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(9\.5rem, 1fr\)\)[\s\S]*grid-auto-rows: 3rem/.test(globalStyles)
+    && !/tvtime-tv-detail-hero__actions flex flex-wrap/.test(tvDetailView),
+  "Movie and TV detail actions share one responsive button grid",
+);
+check(
   /if \(!isWatched\) \{\s*if \(myRating == null\)[\s\S]*setRatingIntent\("complete"\)/.test(movieDetailView)
     && /ratingIntent === "complete"[\s\S]*action: "add"[\s\S]*userRating: v/.test(movieDetailView)
     && /Closing or cancelling keeps it unwatched/.test(movieDetailView),

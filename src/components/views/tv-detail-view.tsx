@@ -14,7 +14,7 @@ import { SafeImage } from "@/components/media/safe-image";
 import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-  Star, Clock, Play, ListPlus, CheckCircle2, Circle, ArrowLeft,
+  Star, Clock, Play, ListPlus, Check, CheckCircle2, Circle, ArrowLeft,
   Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2, RotateCcw, ExternalLink, CircleStop,
 } from "lucide-react";
 import { useState } from "react";
@@ -336,6 +336,9 @@ export function TvDetailView() {
               <SafeImage src={mediaState.data?.tags?.some((tag) => tag.startsWith("custom-poster:")) ? mediaState.data.poster : mediaState.data?.isArabic ? imgOrPlaceholder(t.poster_path, "w342") : mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={displayTitle} fill variant="poster" />
             </div>
           </Card>
+          <div className="tvtime-tv-detail-hero__poster-action">
+            <OfficialPosterPicker tmdbId={t.id} mediaType="tv" title={displayTitle} posters={(t as any).images?.posters ?? []} />
+          </div>
         </div>
 
         <div className="tvtime-tv-detail-hero__content min-w-0 space-y-5 md:pt-1">
@@ -376,65 +379,53 @@ export function TvDetailView() {
             {t.tagline && <p className="tvtime-tv-detail-hero__tagline text-base sm:text-lg italic text-foreground/70 mt-5">{t.tagline}</p>}
           </div>
           {/* Episode progress and following membership are intentionally separate. */}
-          <div className="tvtime-tv-detail-hero__actions flex flex-wrap items-center gap-3 [&>*]:h-12 [&>*]:rounded-xl [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&_button]:h-12 [&_button]:min-w-[150px] [&_button]:justify-center [&_button]:rounded-xl [&_button]:px-5 [&_button]:text-sm [&_button]:font-semibold">
-            <OfficialPosterPicker tmdbId={t.id} mediaType="tv" title={displayTitle} posters={(t as any).images?.posters ?? []} />
-            {effectiveLabel && effectiveLabel !== "planned" && (
-              <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-primary/20 text-primary border-0">
-                {effectiveLabel === "finished" && <Trophy className="w-3.5 h-3.5" />}
-                {effectiveLabel === "uptodate" && <Zap className="w-3.5 h-3.5" />}
-                {effectiveLabel === "watching" && <Play className="w-3.5 h-3.5" />}
-                {effectiveLabel === "not_started" && <Circle className="w-3.5 h-3.5" />}
-                {effectiveLabel === "stopped" && <CircleStop className="w-3.5 h-3.5" />}
-                <span className="capitalize">{effectiveLabel.replace("_", " ")}</span>
-              </Badge>
-            )}
-
+          <div className="tvtime-detail-hero__actions tvtime-tv-detail-hero__actions">
             {isStopped ? (
-              <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
-                <Play className="w-4 h-4 mr-2 fill-current" /> Resume Watching
+              <Button variant="default" onClick={onFollow} disabled={followingToggle.isPending}>
+                <Play className="fill-current" /> Resume Watching
               </Button>
             ) : isFollowing ? (
               <>
-                <Button variant="default" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
-                  <Bell className="w-4 h-4 mr-2" /> Following
+                <Button variant="default" onClick={onFollow} disabled={followingToggle.isPending}>
+                  <Bell /> Following
                 </Button>
-                <Button variant="outline" onClick={() => setShowStopDialog(true)} className="h-10 border-rose-400/30 text-rose-300 hover:bg-rose-500/10 hover:text-rose-200" disabled={followingToggle.isPending}>
-                  <CircleStop className="w-4 h-4 mr-2" /> Stop Watching
+                <Button variant="outline" onClick={() => setShowStopDialog(true)} className="border-rose-400/30 text-rose-300 hover:bg-rose-500/10 hover:text-rose-200" disabled={followingToggle.isPending}>
+                  <CircleStop /> Stop Watching
                 </Button>
               </>
             ) : inWatchlist ? (
               <>
-                <Badge className="text-xs h-10 px-3 flex items-center gap-1.5 bg-purple-500/20 text-purple-400 border-0">
-                  <ListPlus className="w-3.5 h-3.5" /> In Watchlist
-                </Badge>
-                <Button variant="secondary" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
-                  <Bell className="w-4 h-4 mr-2" /> Follow
+                <Button variant="default" onClick={onWatchlist} disabled={watchlistToggle.isPending}>
+                  <Check /> In watchlist
+                </Button>
+                <Button variant="secondary" onClick={onFollow} disabled={followingToggle.isPending}>
+                  <Bell /> Follow
                 </Button>
               </>
             ) : hasSavedProgress ? (
-              <Button variant="outline" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
-                <Bell className="w-4 h-4 mr-2" /> Follow
+              <Button variant="outline" onClick={onFollow} disabled={followingToggle.isPending}>
+                <Bell /> Follow
               </Button>
             ) : (
               <>
-                <Button variant="secondary" onClick={onWatchlist} className="h-10" disabled={watchlistToggle.isPending}>
-                  <ListPlus className="w-4 h-4 mr-2" /> Plan to Watch
+                <Button variant="secondary" onClick={onWatchlist} disabled={watchlistToggle.isPending}>
+                  <ListPlus /> Plan to Watch
                 </Button>
-                <Button variant="outline" onClick={onFollow} className="h-10" disabled={followingToggle.isPending}>
-                  <Bell className="w-4 h-4 mr-2" /> Follow
+                <Button variant="outline" onClick={onFollow} disabled={followingToggle.isPending}>
+                  <Bell /> Follow
                 </Button>
               </>
             )}
             {trailer && (
-              <Button variant="outline" className="h-10" onClick={() => window.open(`https://www.youtube.com/watch?v=${trailer.key}`, "_blank")}>
-                <Play className="w-4 h-4 mr-2 fill-current" /> Trailer
+              <Button variant="outline" onClick={() => window.open(`https://www.youtube.com/watch?v=${trailer.key}`, "_blank")}>
+                <Play className="fill-current" /> Trailer
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-10">
-                  <ExternalLink className="w-4 h-4 mr-2" /> Watch
-                  <ChevronDown className="ml-2 h-4 w-4" />
+                <Button variant="outline" className="tvtime-detail-hero__watch-button tvtime-tv-detail-hero__watch-button">
+                  <ExternalLink /> Watch
+                  <ChevronDown className="tvtime-detail-hero__watch-chevron tvtime-tv-detail-hero__watch-chevron" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">

@@ -303,7 +303,7 @@ export function MovieDetailView() {
             </div>
 
             {/* Library actions remain disabled until their canonical state is known. */}
-            <div className="tvtime-movie-detail-hero__actions">
+            <div className="tvtime-detail-hero__actions tvtime-movie-detail-hero__actions">
               <Button
                 variant={isWatched ? "default" : "secondary"}
                 onClick={onWatched}
@@ -336,9 +336,9 @@ export function MovieDetailView() {
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="tvtime-movie-detail-hero__watch-button">
+                  <Button variant="outline" className="tvtime-detail-hero__watch-button tvtime-movie-detail-hero__watch-button">
                     <ExternalLink /> Watch
-                    <ChevronDown className="tvtime-movie-detail-hero__watch-chevron" />
+                    <ChevronDown className="tvtime-detail-hero__watch-chevron tvtime-movie-detail-hero__watch-chevron" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
