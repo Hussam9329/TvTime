@@ -2930,6 +2930,33 @@ body {
   height: 0.9rem;
 }
 
+.tvtime-tv-detail-hero__meta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+}
+
+.tvtime-tv-detail-hero__meta > * {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.36rem 0.62rem;
+  border-radius: 999px !important;
+  font-size: 0.7rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.tvtime-tv-detail-hero__meta svg {
+  width: 0.78rem;
+  height: 0.78rem;
+  margin: 0;
+}
+
 .tvtime-detail-hero__actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
@@ -2950,6 +2977,30 @@ body {
 .tvtime-detail-hero__actions :is([data-slot="button"], .tvtime-detail-hero__watch-button) svg {
   width: 1rem;
   height: 1rem;
+}
+
+.tvtime-tv-detail-hero__actions {
+  grid-template-columns: repeat(auto-fill, minmax(8.75rem, 10.5rem));
+  grid-auto-rows: 2.5rem;
+  justify-content: start;
+  gap: 0.55rem;
+}
+
+.tvtime-tv-detail-hero__actions :is([data-slot="button"], .tvtime-tv-detail-hero__watch-button) {
+  min-height: 2.5rem;
+  height: 2.5rem;
+  max-height: 2.5rem;
+  border-radius: 0.75rem;
+  padding-inline: 0.75rem;
+  font-size: 0.78rem;
+}
+
+.tvtime-tv-detail-hero__watch-button {
+  padding-inline: 1.9rem !important;
+}
+
+.tvtime-tv-detail-hero__watch-chevron {
+  right: 0.65rem;
 }
 
 .tvtime-detail-hero__watch-button {
@@ -3391,20 +3442,20 @@ body {
   }
 
   .tvtime-tv-detail-hero__meta {
-    gap: 0.4rem !important;
-    margin-bottom: 0.875rem !important;
+    gap: 0.35rem !important;
+    margin-bottom: 0.7rem !important;
   }
 
   .tvtime-tv-detail-hero__meta > * {
-    height: 2rem !important;
-    border-radius: 0.7rem !important;
-    padding-inline: 0.65rem !important;
-    font-size: 0.72rem !important;
+    min-height: 1.75rem !important;
+    height: 1.75rem !important;
+    padding-inline: 0.5rem !important;
+    font-size: 0.64rem !important;
   }
 
   .tvtime-tv-detail-hero__meta svg {
-    width: 0.75rem;
-    height: 0.75rem;
+    width: 0.68rem;
+    height: 0.68rem;
   }
 
   .tvtime-tv-detail-hero__title {
@@ -3586,6 +3637,23 @@ body {
 
   .tvtime-detail-hero__actions > :is([data-slot="button"], .tvtime-detail-hero__watch-button):last-child:nth-child(odd) {
     grid-column: 1 / -1;
+  }
+
+  .tvtime-tv-detail-hero__actions {
+    grid-auto-rows: 2.5rem;
+    gap: 0.5rem;
+  }
+
+  .tvtime-tv-detail-hero__actions :is([data-slot="button"], .tvtime-tv-detail-hero__watch-button) {
+    min-height: 2.5rem;
+    height: 2.5rem;
+    max-height: 2.5rem;
+    padding-inline: 0.55rem;
+    font-size: 0.74rem;
+  }
+
+  .tvtime-tv-detail-hero__watch-button {
+    padding-inline: 1.75rem !important;
   }
 
   .tvtime-movie-detail-rating {

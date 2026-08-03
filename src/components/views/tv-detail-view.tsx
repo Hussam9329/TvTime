@@ -344,7 +344,7 @@ export function TvDetailView() {
         <div className="tvtime-tv-detail-hero__content min-w-0 space-y-5 md:pt-1">
           {/* Title and badges */}
           <div>
-            <div className="tvtime-tv-detail-hero__meta mb-5 flex flex-wrap items-center gap-2.5 [&>*]:inline-flex [&>*]:h-10 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-4 [&>*]:text-sm [&>*]:font-semibold">
+            <div className="tvtime-tv-detail-hero__meta">
               <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
               {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">Arabic TV</Badge>}
               {effectiveLabel === "finished" && (

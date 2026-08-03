@@ -161,6 +161,17 @@ check(
   "Movie and TV detail actions share one responsive button grid",
 );
 check(
+  /\.tvtime-tv-detail-hero__actions\s*\{[\s\S]*grid-template-columns: repeat\(auto-fill, minmax\(8\.75rem, 10\.5rem\)\)[\s\S]*grid-auto-rows: 2\.5rem[\s\S]*justify-content: start/.test(globalStyles)
+    && /\.tvtime-tv-detail-hero__actions :is\(\[data-slot="button"\], \.tvtime-tv-detail-hero__watch-button\)\s*\{[\s\S]*max-height: 2\.5rem[\s\S]*font-size: 0\.78rem/.test(globalStyles),
+  "TV detail buttons stay compact instead of stretching across the hero",
+);
+check(
+  /className="tvtime-tv-detail-hero__meta"/.test(tvDetailView)
+    && !/tvtime-tv-detail-hero__meta[^\n]*\[&>\*\]:h-10/.test(tvDetailView)
+    && /\.tvtime-tv-detail-hero__meta > \*\s*\{[\s\S]*min-height: 2rem[\s\S]*padding: 0\.36rem 0\.62rem[\s\S]*border-radius: 999px[\s\S]*font-size: 0\.7rem/.test(globalStyles),
+  "TV type, state, year, seasons, score and certification render as compact metadata chips",
+);
+check(
   /if \(!isWatched\) \{\s*if \(myRating == null\)[\s\S]*setRatingIntent\("complete"\)/.test(movieDetailView)
     && /ratingIntent === "complete"[\s\S]*action: "add"[\s\S]*userRating: v/.test(movieDetailView)
     && /Closing or cancelling keeps it unwatched/.test(movieDetailView),
