@@ -301,6 +301,8 @@ export const tmdb = {
   // Details
   movieDetail: (id: number, language?: TmdbLanguage) =>
     tmdbFetch<MovieDetail>(`/movie/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,release_dates" }, language),
+  tvSummary: (id: number, language?: TmdbLanguage) =>
+    tmdbFetch<Pick<TvDetail, "id" | "number_of_seasons">>(`/tv/${id}`, {}, language),
   tvDetail: (id: number, language?: TmdbLanguage) =>
     tmdbFetch<TvDetail>(`/tv/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,external_ids,content_ratings" }, language),
   localizedMovieProfile: (id: number, language: TmdbLanguage = "ar") =>

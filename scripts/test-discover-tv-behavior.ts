@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { matchesDiscoverWorld } from "../src/lib/discover-world.ts";
 import { buildTmdbKeywordFilter } from "../src/lib/tmdb.ts";
+import { isStrictMiniSeries } from "../src/lib/tv-format.ts";
 
 const read = (path: string) => readFileSync(path, "utf8");
 const view = read("src/components/views/discover-view.tsx");
@@ -49,6 +50,10 @@ assert.match(view, /label: isArabicTv \? "أنثولوجيا" : "Anthology"/, "T
 assert.match(view, /tvFormat === presetId \? "all" : presetId/, "TV format quick filters must toggle without resetting other filters");
 assert.match(hooks, /tv_format.*params\.tvFormat/, "TV format must reach the Discover API");
 assert.match(filteredRoute, /series_type: tvFormat === "miniseries" \? 2/, "Mini Series must use TMDB TV type 2");
+assert.match(filteredRoute, /filterStrictMiniSeriesResults\(response\.results, language\)/, "Mini Series must verify the current season count");
+assert.equal(isStrictMiniSeries({ number_of_seasons: 1 }), true, "A one-season TMDB mini-series remains eligible");
+assert.equal(isStrictMiniSeries({ number_of_seasons: 5 }), false, "A five-season show must not leak into Mini Series");
+assert.equal(isStrictMiniSeries({ number_of_seasons: null }), false, "Unknown season counts must fail closed");
 assert.match(filteredRoute, /resolveTmdbKeywordIds\("anthology", "en-US"\)/, "Anthology must resolve the canonical TMDB keyword");
 assert.match(tmdb, /p\.with_type = params\.series_type/, "TMDB TV discovery must send with_type");
 assert.equal(

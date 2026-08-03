@@ -10,6 +10,7 @@ import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
 import { enrichMovieOriginCountries } from "@/lib/movie-origin-server";
 import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
 import { matchesDiscoverWorld, type DiscoverWorld } from "@/lib/discover-world";
+import { filterStrictMiniSeriesResults } from "@/lib/tv-format";
 import {
   DISCOVER_PAGE_SIZE,
   DISCOVER_TMDB_MAX_PAGE,
@@ -125,19 +126,28 @@ export async function GET(req: NextRequest) {
     const excludeArabic = search.get("exclude_arabic") === "true";
     const onlyArabic = search.get("only_arabic") === "true";
 
-    const loadPage = (page: number): Promise<PaginatedResponse<MediaItem>> => {
+    const loadPage = async (page: number): Promise<PaginatedResponse<MediaItem>> => {
+      let response: PaginatedResponse<MediaItem>;
       if (onlyArabic) {
         const params = mediaType === "tv"
           ? { ...common, keyword_groups: keywordGroups }
           : { ...common, keyword_groups: keywordGroups, certification };
-        return discoverArabicByCountryPriority(mediaType, params, page);
+        response = await discoverArabicByCountryPriority(mediaType, params, page);
+      } else if (mediaType === "tv" && common.originCountries === ASIAN_ORIGIN_COUNTRY_QUERY) {
+        response = await discoverAsianTvByPriority({ ...common, keyword_groups: keywordGroups }, page);
+      } else {
+        response = mediaType === "tv"
+          ? await tmdb.discoverTv({ ...common, keyword_groups: keywordGroups, page })
+          : await tmdb.discoverMovies({ ...common, keyword_groups: keywordGroups, certification, page });
       }
-      if (mediaType === "tv" && common.originCountries === ASIAN_ORIGIN_COUNTRY_QUERY) {
-        return discoverAsianTvByPriority({ ...common, keyword_groups: keywordGroups }, page);
+
+      if (mediaType === "tv" && tvFormat === "miniseries") {
+        return {
+          ...response,
+          results: await filterStrictMiniSeriesResults(response.results, language),
+        };
       }
-      return mediaType === "tv"
-        ? tmdb.discoverTv({ ...common, keyword_groups: keywordGroups, page })
-        : tmdb.discoverMovies({ ...common, keyword_groups: keywordGroups, certification, page });
+      return response;
     };
 
     const matchesState = (item: MediaItem) => {
@@ -179,7 +189,10 @@ export async function GET(req: NextRequest) {
 
     let done = false;
     while (!done && nextPage <= totalPages && pagesFetched < DISCOVER_TMDB_PAGE_BUDGET) {
-      const pages = nextDiscoverPageBatch({ nextPage, totalPages, pagesFetched });
+      const candidatePages = nextDiscoverPageBatch({ nextPage, totalPages, pagesFetched });
+      // Strict mini-series validation performs lightweight detail checks. Scan
+      // one source page at a time to keep TMDB concurrency bounded on Vercel.
+      const pages = tvFormat === "miniseries" ? candidatePages.slice(0, 1) : candidatePages;
       if (pages.length === 0) break;
       const batch = await Promise.all(pages.map(loadPage));
       pagesFetched += pages.length;
