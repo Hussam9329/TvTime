@@ -35,6 +35,7 @@ interface MediaCardProps {
 // Change card presentation here only; parent sections merely place cards.
 export const MEDIA_CARD_ROW_WIDTH_CLASS = "w-[130px] sm:w-[160px]";
 const MEDIA_CARD_GRID_CLASS = "grid grid-cols-2 gap-3 min-[480px]:grid-cols-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7";
+export const HOME_MEDIA_CARD_GRID_CLASS = "tvtime-home-media-grid";
 
 export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, libraryStateReady = false, enableNativeLink = true, priority = false, compactActions = true }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
@@ -271,21 +272,36 @@ interface MediaGridProps {
   showMediaType?: boolean;
   forcedMediaType?: "movie" | "tv";
   libraryStates?: Record<string, MediaBatchState>;
+  libraryStatesReady?: boolean;
   enableNativeLinks?: boolean;
+  presentation?: "default" | "home";
+  priorityCount?: number;
 }
 
-export function MediaGrid({ items, loading, showMediaType = true, forcedMediaType, libraryStates, enableNativeLinks = true }: MediaGridProps) {
+export function MediaGrid({
+  items,
+  loading,
+  showMediaType = true,
+  forcedMediaType,
+  libraryStates,
+  libraryStatesReady,
+  enableNativeLinks = true,
+  presentation = "default",
+  priorityCount = 4,
+}: MediaGridProps) {
+  const usesExternalLibraryStates = libraryStatesReady !== undefined;
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
     mediaType: forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
   }));
-  const states = useMediaStates(stateRequests, { enabled: libraryStates === undefined });
-  const resolvedStates = libraryStates ?? states.data;
-  const libraryStateReady = libraryStates !== undefined || states.isSuccess;
+  const states = useMediaStates(stateRequests, { enabled: !usesExternalLibraryStates });
+  const resolvedStates = usesExternalLibraryStates ? libraryStates : states.data;
+  const libraryStateReady = libraryStatesReady ?? states.isSuccess;
+  const gridClassName = presentation === "home" ? HOME_MEDIA_CARD_GRID_CLASS : MEDIA_CARD_GRID_CLASS;
 
   if (loading) {
     return (
-      <div className={MEDIA_CARD_GRID_CLASS} role="status" aria-busy="true" aria-label="Loading media">
+      <div className={gridClassName} role="status" aria-busy="true" aria-label="Loading media">
         {Array.from({ length: 12 }).map((_, i) => (
           <MediaCardSkeleton key={i} />
         ))}
@@ -293,7 +309,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
     );
   }
   return (
-    <div className={MEDIA_CARD_GRID_CLASS}>
+    <div className={gridClassName}>
       {items.map((item, i) => (
         <MediaCard
           key={`${item.id}-${item.media_type || ""}`}
@@ -307,7 +323,7 @@ export function MediaGrid({ items, loading, showMediaType = true, forcedMediaTyp
           )] ?? null}
           libraryStateReady={libraryStateReady}
           enableNativeLink={enableNativeLinks}
-          priority={i < 4}
+          priority={i < priorityCount}
         />
       ))}
     </div>

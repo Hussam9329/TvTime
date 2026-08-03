@@ -51,6 +51,7 @@ const movieDetailView = read("src/components/views/movie-detail-view.tsx");
 const tvDetailView = read("src/components/views/tv-detail-view.tsx");
 const ratingDialog = read("src/components/media/rating-dialog.tsx");
 const discoverView = read("src/components/views/discover-view.tsx");
+const releaseSchedule = read("src/components/views/movie-release-schedule.tsx");
 const filterPanel = read("src/components/ui/filter-panel.tsx");
 const pageTitlebar = read("src/components/ui/page-titlebar.tsx");
 const moviesView = read("src/components/views/movies-view.tsx");
@@ -223,6 +224,15 @@ check(
     && /\.tvtime-discover-preset-row\s*\{[\s\S]*grid-template-columns: repeat\(auto-fit/.test(globalStyles)
     && /@media \(max-width: 767px\)[\s\S]*\.tvtime-discover-preset-row\s*\{[\s\S]*overflow-x: auto/.test(globalStyles),
   "Discover controls use one aligned desktop hierarchy with a compact mobile quick-pick rail",
+);
+check(
+  (discoverView.match(/presentation="home"/g) || []).length >= 2
+    && /presentation="home"/.test(releaseSchedule)
+    && /libraryStatesReady=\{releaseLibraryStates\.isSuccess\}/.test(releaseSchedule)
+    && /const gridClassName = presentation === "home" \? HOME_MEDIA_CARD_GRID_CLASS/.test(mediaCard)
+    && /\.tvtime-home-media-grid\s*\{[\s\S]*grid-template-columns: repeat\(auto-fill, minmax\(min\(8\.75rem, 100%\), 10rem\)\)/.test(globalStyles)
+    && /@media \(min-width: 768px\)[\s\S]*\.tvtime-home-media-grid\s*\{[\s\S]*grid-template-columns: repeat\(auto-fill, clamp\(9\.4rem, 12vw, 11\.25rem\)\)/.test(globalStyles),
+  "Discover and release posters use Home's shared card presentation and sizing",
 );
 check(
   [moviesView, tvWorldPageView, animeView, arabicMoviesView, searchView, statsView, watchNextView, discoverView]

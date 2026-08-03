@@ -831,7 +831,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       )}
 
       {/* Loading */}
-      {isLoading && <MediaGrid items={[]} loading />}
+      {isLoading && <MediaGrid items={[]} loading presentation="home" />}
 
       {/* Empty */}
       {!isLoading && !isError && items.length === 0 && (
@@ -849,7 +849,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
       {/* Grid */}
       {!isLoading && !isError && items.length > 0 && (
-        <MediaGrid items={items} forcedMediaType={resultMediaType} enableNativeLinks />
+        <MediaGrid items={items} forcedMediaType={resultMediaType} enableNativeLinks presentation="home" />
       )}
 
       {/* Pagination */}

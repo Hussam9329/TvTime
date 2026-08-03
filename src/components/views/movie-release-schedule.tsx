@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Film, Search, Tv } from "lucide-react";
-import { mediaStateKey, useMediaStates, useReleaseSchedule } from "@/hooks/use-tmdb";
+import { useMediaStates, useReleaseSchedule } from "@/hooks/use-tmdb";
 import { dateOnlyFromLocalDate, formatDateOnly } from "@/lib/date-only";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { MediaCard, MediaGrid } from "@/components/media/media-card";
+import { MediaGrid } from "@/components/media/media-card";
 import { getTitle } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
@@ -133,7 +133,7 @@ export function ReleaseSchedule({
       </div>
 
       {schedule.isLoading ? (
-        <MediaGrid items={[]} loading forcedMediaType={mediaType} />
+        <MediaGrid items={[]} loading forcedMediaType={mediaType} presentation="home" />
       ) : schedule.isError ? (
         <Card className="feedback-state feedback-state--error p-12 text-center" role="alert">
           <AlertCircle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
@@ -160,19 +160,14 @@ export function ReleaseSchedule({
                 <h3 className="font-bold">{formatDateOnly(date, undefined, isRTL ? "ar-IQ" : "en-US") || (isRTL ? "تاريخ الإصدار غير متاح" : "Release date unavailable")}</h3>
                 <Badge variant="secondary">{releases.length}</Badge>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {releases.map((release, index) => (
-                  <MediaCard
-                    key={release.id}
-                    item={release}
-                    index={index}
-                    showMediaType={false}
-                    forcedMediaType={mediaType}
-                    libraryState={releaseLibraryStates.data?.[mediaStateKey(mediaType, Number(release.id))] ?? null}
-                    libraryStateReady={releaseLibraryStates.isSuccess}
-                  />
-                ))}
-              </div>
+              <MediaGrid
+                items={releases}
+                forcedMediaType={mediaType}
+                libraryStates={releaseLibraryStates.data}
+                libraryStatesReady={releaseLibraryStates.isSuccess}
+                presentation="home"
+                priorityCount={0}
+              />
             </section>
           ))}
         </div>
