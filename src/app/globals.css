@@ -4684,18 +4684,20 @@ body {
 .tvtime-user-score,
 .tvtime-tmdb-score {
   top: -1px !important;
-  border-radius: 0.65rem !important;
+  border-radius: 0.55rem !important;
   backdrop-filter: blur(12px) saturate(120%);
 }
 
 .tvtime-user-score {
   right: auto !important;
   left: -1px !important;
+  border-top-left-radius: 1.02rem !important;
 }
 
 .tvtime-tmdb-score {
   right: -1px !important;
   left: auto !important;
+  border-top-right-radius: 1.02rem !important;
 }
 
 .tvtime-watchlist-indicator {
@@ -4704,31 +4706,32 @@ body {
   top: -1px;
   right: -1px;
   display: inline-flex;
-  width: 2rem;
-  height: 2rem;
+  width: 1.65rem;
+  height: 1.65rem;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--cinema-purple-line);
-  border-radius: 0.65rem;
+  border-radius: 0.55rem 1.02rem 0.55rem 0.55rem;
   background: rgb(15 8 28 / 0.9);
   color: var(--cinema-purple);
   box-shadow:
-    0 8px 20px rgb(0 0 0 / 0.38),
-    0 0 15px rgb(139 92 246 / 0.14),
+    0 6px 16px rgb(0 0 0 / 0.36),
+    0 0 11px rgb(139 92 246 / 0.12),
     inset 0 1px rgb(221 214 254 / 0.08);
   pointer-events: none;
   backdrop-filter: blur(12px) saturate(125%);
 }
 
 .tvtime-watchlist-indicator svg {
-  width: 0.92rem;
-  height: 0.92rem;
+  width: 0.8rem;
+  height: 0.8rem;
   fill-opacity: 0.18;
   stroke-width: 1.8;
 }
 
 .tvtime-tmdb-score + .tvtime-watchlist-indicator {
-  top: 2.25rem;
+  top: 1.75rem;
+  border-radius: 0.55rem 0.3rem 0.3rem 0.55rem;
 }
 
 .tvtime-media-menu {
@@ -4868,6 +4871,6 @@ body {
   }
 
   .tvtime-tmdb-score + .tvtime-watchlist-indicator {
-    top: 2.25rem;
+    top: 1.75rem;
   }
 }

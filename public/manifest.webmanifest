@@ -17,7 +17,7 @@
   ],
   "icons": [
     {
-      "src": "/logo.svg",
+      "src": "/logo.svg?v=4",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
@@ -41,7 +41,7 @@
       "url": "/?view=discover",
       "icons": [
         {
-          "src": "/logo.svg",
+          "src": "/logo.svg?v=4",
           "sizes": "any",
           "type": "image/svg+xml"
         }
@@ -52,7 +52,7 @@
       "url": "/?view=tv-shows",
       "icons": [
         {
-          "src": "/logo.svg",
+          "src": "/logo.svg?v=4",
           "sizes": "any",
           "type": "image/svg+xml"
         }
@@ -63,7 +63,7 @@
       "url": "/?view=stats",
       "icons": [
         {
-          "src": "/logo.svg",
+          "src": "/logo.svg?v=4",
           "sizes": "any",
           "type": "image/svg+xml"
         }

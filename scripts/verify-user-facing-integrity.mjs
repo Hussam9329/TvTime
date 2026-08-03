@@ -102,7 +102,9 @@ check(
     && /url: "\/og-image\.png"/.test(rootLayout)
     && /"name": "Trakora"/.test(manifest)
     && /"short_name": "Trakora"/.test(manifest)
-    && /<title id="title">Trakora<\/title>/.test(publicLogo),
+    && /<title id="title">Trakora<\/title>/.test(publicLogo)
+    && /#d8a34c/.test(publicLogo)
+    && /\/logo\.svg\?v=4/.test(rootLayout),
   "Browser, installable app and social metadata expose the new Trakora identity",
 );
 
@@ -144,7 +146,7 @@ check(
     && /data-state="watchlist"/.test(watchlistIndicator)
     && /Bookmark className="fill-current"/.test(watchlistIndicator)
     && /--cinema-purple: #a78bfa/.test(globalStyles)
-    && /\.tvtime-watchlist-indicator\s*\{[\s\S]*border: 1px solid var\(--cinema-purple-line\)[\s\S]*border-radius: 0\.65rem[\s\S]*color: var\(--cinema-purple\)/.test(globalStyles)
+    && /\.tvtime-watchlist-indicator\s*\{[\s\S]*border: 1px solid var\(--cinema-purple-line\)[\s\S]*border-radius: 0\.55rem 1\.02rem 0\.55rem 0\.55rem[\s\S]*color: var\(--cinema-purple\)/.test(globalStyles)
     && /ListPlus \/> \{inWatchlist \? "Remove from watchlist" : "Add to watchlist"\}/.test(mediaCard)
     && /Remove from watchlist/.test(collection),
   "Watchlist membership uses one compact purple bookmark badge while actions remain available",
@@ -192,11 +194,12 @@ check(
     && /<CompactScoreCorner/.test(tmdbIndicator)
     && /side="left"/.test(watchedIndicator)
     && /side="right"/.test(tmdbIndicator)
-    && /left: "-left-px flex-row rounded-\[10px\]"/.test(compactScoreCorner)
-    && /right: "-right-px flex-row rounded-\[10px\]"/.test(compactScoreCorner)
+    && /left: "-left-px flex-row rounded-\[9px\]"/.test(compactScoreCorner)
+    && /right: "-right-px flex-row rounded-\[9px\]"/.test(compactScoreCorner)
     && /absolute -top-px z-20/.test(compactScoreCorner)
-    && /h-\[28px\] min-w-\[66px\]/.test(compactScoreCorner)
-    && /overflow-hidden border px-2 backdrop-blur-md/.test(compactScoreCorner),
+    && /h-\[24px\] min-w-\[58px\]/.test(compactScoreCorner)
+    && /text-\[10px\] font-bold/.test(compactScoreCorner)
+    && /overflow-hidden border px-1\.5 backdrop-blur-md/.test(compactScoreCorner),
   "Both compact score badges share one exact rounded outlined geometry",
 );
 check(

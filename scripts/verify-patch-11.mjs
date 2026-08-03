@@ -39,7 +39,7 @@ requireCheck(/@media \(forced-colors: active\)/.test(css), "forced-colors fallba
 requireCheck(/--font-arabic/.test(css) && /\[dir="rtl"\]/.test(css), "Arabic font/direction foundation is missing");
 requireCheck(/@supports not \(\(backdrop-filter/.test(css), "glass surfaces lack a no-backdrop-filter fallback");
 
-requireCheck(/icon:\s*"\/logo\.svg"/.test(layout), "root metadata still uses a poster as the app icon");
+requireCheck(/icons:\s*\{[\s\S]*url:\s*"\/logo\.svg\?v=4"/.test(layout), "root metadata does not use the current Trakora app icon");
 requireCheck(/colorScheme:\s*"dark light"/.test(layout), "viewport color scheme is missing");
 requireCheck(/<html lang="en" dir="ltr"/.test(layout), "document language and direction are not explicit");
 requireCheck(/min-h-dvh/.test(layout), "root body does not use dynamic viewport height");

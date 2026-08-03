@@ -1,5 +1,5 @@
-const CACHE = "trakora-shell-v3";
-const SHELL = ["/", "/manifest.webmanifest", "/logo.svg", "/placeholder-poster.svg"];
+const CACHE = "trakora-shell-v4";
+const SHELL = ["/", "/manifest.webmanifest", "/logo.svg?v=4", "/placeholder-poster.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -35,8 +35,8 @@ self.addEventListener("message", (event) => {
   if (event.data?.type !== "SHOW_NOTIFICATION") return;
   self.registration.showNotification(event.data.title || "Trakora", {
     body: event.data.body || "You have a new update.",
-    icon: "/logo.svg",
-    badge: "/logo.svg",
+    icon: "/logo.svg?v=4",
+    badge: "/logo.svg?v=4",
     data: { url: event.data.url || "/" },
   });
 });

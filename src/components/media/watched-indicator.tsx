@@ -19,8 +19,8 @@ export function WatchedIndicator({ rating, status = "watched" }: WatchedIndicato
       value={rating}
       suffix="/100"
       icon={rating != null
-        ? <Star className="h-[11px] w-[11px] fill-current" aria-hidden="true" />
-        : <Check className="h-[11px] w-[11px] stroke-[3.25]" aria-hidden="true" />}
+        ? <Star className="h-[10px] w-[10px] fill-current" aria-hidden="true" />
+        : <Check className="h-[10px] w-[10px] stroke-[3.25]" aria-hidden="true" />}
       title={rating != null ? `${label} · Your rating: ${rating}/100` : label}
       ariaLabel={rating != null ? `${label}, your rating ${rating} out of 100` : label}
     />

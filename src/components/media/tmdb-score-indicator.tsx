@@ -15,7 +15,7 @@ export function TmdbScoreIndicator({ rating }: { rating?: number | null }) {
       scoreSource="tmdb"
       value={displayScore.toFixed(1)}
       suffix="/10"
-      icon={<Star className="h-[9px] w-[9px] fill-current" aria-hidden="true" />}
+      icon={<Star className="h-[10px] w-[10px] fill-current" aria-hidden="true" />}
       title={`TMDB rating: ${displayScore.toFixed(1)} out of 10`}
       ariaLabel={`TMDB rating ${displayScore.toFixed(1)} out of 10`}
     />

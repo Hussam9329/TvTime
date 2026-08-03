@@ -44,12 +44,12 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "black-translucent" },
   icons: {
     icon: [
-      { url: "/favicon.ico?v=2", sizes: "16x16 32x32 48x48" },
-      { url: "/logo.svg?v=2", type: "image/svg+xml", sizes: "any" },
-      { url: "/icon-192.png?v=2", type: "image/png", sizes: "192x192" },
+      { url: "/logo.svg?v=4", type: "image/svg+xml", sizes: "any" },
+      { url: "/favicon.ico?v=4", sizes: "16x16 32x32 48x48" },
+      { url: "/icon-192.png?v=4", type: "image/png", sizes: "192x192" },
     ],
-    shortcut: "/favicon.ico?v=2",
-    apple: "/apple-touch-icon.png?v=2",
+    shortcut: "/favicon.ico?v=4",
+    apple: "/apple-touch-icon.png?v=4",
   },
   openGraph: {
     type: "website",
