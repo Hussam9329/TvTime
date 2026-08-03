@@ -153,6 +153,10 @@ check(
   "TV tracking posters separate finished user scores from unfinished TMDB scores",
 );
 check(
+  !/WatchedIndicator|TmdbScoreIndicator/.test(movieDetailView),
+  "Movie detail keeps the main poster free of corner rating indicators",
+);
+check(
   /className="tvtime-detail-hero__actions tvtime-movie-detail-hero__actions"/.test(movieDetailView)
     && /className="tvtime-detail-hero__actions tvtime-tv-detail-hero__actions"/.test(tvDetailView)
     && /tvtime-tv-detail-hero__poster-action[\s\S]*<OfficialPosterPicker/.test(tvDetailView)

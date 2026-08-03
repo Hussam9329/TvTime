@@ -63,7 +63,7 @@ export function ReleaseSchedule({
   const range = useMemo(() => rangeFromOffset(offset), [offset]);
   const isTV = mediaType === "tv";
   const isRTL = language === "ar";
-  const mediaLabel = isTV ? "TV show" : "movie";
+  const mediaLabel = isRTL ? (isTV ? "المسلسلات" : "الأفلام") : (isTV ? "TV show" : "movie");
   const resolvedTitle = title || (isTV ? "TV Release Schedule" : "Movie Release Schedule");
   const resolvedSubtitle = subtitle || `A six-month release agenda for upcoming ${isTV ? "shows" : "films"}. Dates are handled as date-only values and never shift with timezone conversion.`;
   const schedule = useReleaseSchedule(mediaType, range.from, range.to, {
@@ -113,21 +113,21 @@ export function ReleaseSchedule({
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setOffset((value) => value - 1)}>
-              <ChevronLeft className="mr-1 h-4 w-4" /> Earlier
+              <ChevronLeft className="mr-1 h-4 w-4" /> {isRTL ? "أقدم" : "Earlier"}
             </Button>
-            <Button variant="outline" size="sm" disabled={offset === 0} onClick={() => setOffset(0)}>Current window</Button>
+            <Button variant="outline" size="sm" disabled={offset === 0} onClick={() => setOffset(0)}>{isRTL ? "الفترة الحالية" : "Current window"}</Button>
             <Button variant="outline" size="sm" onClick={() => setOffset((value) => value + 1)}>
-              Later <ChevronRight className="ml-1 h-4 w-4" />
+              {isRTL ? "أحدث" : "Later"} <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Badge variant="secondary" className="w-fit px-3 py-1">
-            {formatDateOnly(range.from, { day: "numeric", month: "short", year: "numeric" })} – {formatDateOnly(range.to, { day: "numeric", month: "short", year: "numeric" })}
+            {formatDateOnly(range.from, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")} – {formatDateOnly(range.to, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")}
           </Badge>
           <div className="relative w-full sm:max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search this release schedule..." className="pl-9" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isRTL ? "ابحث في جدول الإصدارات..." : "Search this release schedule..."} className="pl-9" />
           </div>
         </div>
       </div>
@@ -137,27 +137,27 @@ export function ReleaseSchedule({
       ) : schedule.isError ? (
         <Card className="feedback-state feedback-state--error p-12 text-center" role="alert">
           <AlertCircle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
-          <p className="font-semibold">Could not load the {mediaLabel} schedule</p>
-          <p className="mt-1 text-sm text-muted-foreground">Your library is unaffected. TMDB may be temporarily unavailable.</p>
-          <Button variant="outline" className="mt-4" onClick={() => schedule.refetch()}>Retry</Button>
+          <p className="font-semibold">{isRTL ? `تعذر تحميل جدول ${mediaLabel}` : `Could not load the ${mediaLabel} schedule`}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{isRTL ? "مكتبتك لم تتأثر. قد تكون خدمة TMDB غير متاحة مؤقتاً." : "Your library is unaffected. TMDB may be temporarily unavailable."}</p>
+          <Button variant="outline" className="mt-4" onClick={() => schedule.refetch()}>{isRTL ? "إعادة المحاولة" : "Retry"}</Button>
         </Card>
       ) : groups.length === 0 ? (
         <Card className="feedback-state feedback-state--empty p-12 text-center text-muted-foreground" role="status">
           {isTV ? <Tv className="mx-auto mb-3 h-10 w-10 opacity-40" /> : <Film className="mx-auto mb-3 h-10 w-10 opacity-40" />}
-          <p className="font-medium">No {mediaLabel} releases match this window</p>
-          {search && <Button variant="outline" size="sm" className="mt-4" onClick={() => setSearch("")}>Clear search</Button>}
+          <p className="font-medium">{isRTL ? `لا توجد إصدارات ضمن ${mediaLabel} في هذه الفترة` : `No ${mediaLabel} releases match this window`}</p>
+          {search && <Button variant="outline" size="sm" className="mt-4" onClick={() => setSearch("")}>{isRTL ? "مسح البحث" : "Clear search"}</Button>}
         </Card>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-            <span><strong className="text-foreground">{items.length}</strong> scheduled releases</span>
-            {schedule.data?.truncated && <span>Showing the first {schedule.data.pagesFetched} TMDB pages for this window.</span>}
+            <span><strong className="text-foreground">{items.length}</strong> {isRTL ? "إصداراً مجدولاً" : "scheduled releases"}</span>
+            {schedule.data?.truncated && <span>{isRTL ? `تُعرض أول ${schedule.data.pagesFetched} صفحات من TMDB لهذه الفترة.` : `Showing the first ${schedule.data.pagesFetched} TMDB pages for this window.`}</span>}
           </div>
           {groups.map(([date, releases]) => (
             <section key={date} className="space-y-2">
               <div className="sticky top-16 z-10 flex items-center gap-2 bg-background/90 py-2 backdrop-blur">
                 <CalendarDays className={`h-4 w-4 ${accentClass}`} />
-                <h3 className="font-bold">{formatDateOnly(date) || "Release date unavailable"}</h3>
+                <h3 className="font-bold">{formatDateOnly(date, undefined, isRTL ? "ar-IQ" : "en-US") || (isRTL ? "تاريخ الإصدار غير متاح" : "Release date unavailable")}</h3>
                 <Badge variant="secondary">{releases.length}</Badge>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">

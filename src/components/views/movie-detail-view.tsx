@@ -10,7 +10,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
-import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
@@ -250,7 +249,6 @@ export function MovieDetailView() {
             <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
               <div className="relative aspect-[2/3]">
                 <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={displayTitle} fill variant="poster" />
-                {isWatched && <WatchedIndicator rating={myRating} />}
               </div>
             </Card>
             <div className="tvtime-movie-detail-hero__poster-action">

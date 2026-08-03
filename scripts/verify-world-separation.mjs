@@ -88,7 +88,7 @@ check(
   "TV Shows API excludes Anime and separates standard, Arabic and Asian TV through canonical metadata",
 );
 check(!/label="Finished Anime"/.test(tvShows) && !/label:\s*"Finished Anime"/.test(tvShows), "TV Shows no longer exposes an Anime filter");
-check(/world === "arabic" \? "Arabic TV Shows" : world === "asian" \? "Asian TV Shows" : "TV Shows"/.test(tvShows), "TV Shows page uses the requested world-specific name");
+check(/isArabic \? "المسلسلات العربية" : world === "asian" \? "Asian TV Shows" : "TV Shows"/.test(tvShows), "TV Shows page uses the requested world-specific name");
 
 check(/const movies = count\(\(\{ world \}\) => world === "movies"\)/.test(counts), "Standard movie counters use the shared world predicate");
 check(/const watchlistAnime = count\(\(entry\) => entry\.world === "anime" && isPlanned\(entry\)\)/.test(counts), "Anime Watchlist counter covers the dedicated Anime world");

@@ -112,6 +112,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const isTV = world === "tv" || world === "arabic-tv" || world === "asian-tv" || (world === "anime" && mediaType !== "movie");
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";
+  const isArabicTv = world === "arabic-tv";
   const isAsian = world === "asian-tv";
   const forcedLang = isAnime ? "ja" : isArabic ? "ar" : undefined;
   const forcedLanguageLabel = forcedLang === "ar" ? "Arabic" : forcedLang === "ja" ? "Japanese" : null;
@@ -120,17 +121,27 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const discoverTab = useNav((s) => s.discoverTab);
   const setDiscoverTab = useNav((s) => s.setDiscoverTab);
   const effectiveIsTV = embedded ? isTV : discoverTab === "tv";
-  const supportsTvFormat = effectiveIsTV && !isAnime && !isArabic && !isAsian;
+  const supportsTvFormat = effectiveIsTV && !isAnime;
 
-  const presets = useMemo(() => supportsTvFormat
-    ? [
-        ...BASE_PRESETS.slice(0, 3),
-        { id: "miniseries" as const, label: "Mini Series" },
-        { id: "anthology" as const, label: "Anthology" },
-        ...BASE_PRESETS.slice(3),
-      ]
-    : BASE_PRESETS,
-  [supportsTvFormat]);
+  const presets = useMemo(() => {
+    const basePresets = isArabicTv
+      ? [
+          { id: "trending", label: "الأكثر شعبية" },
+          { id: "top2024", label: `الأفضل في ${CURRENT_YEAR}` },
+          { id: "hidden", label: "جواهر مخفية" },
+          { id: "newest", label: "الأحدث" },
+          { id: "classic", label: "كلاسيكيات" },
+        ] satisfies Array<{ id: DiscoverPresetId; label: string }>
+      : BASE_PRESETS;
+    return supportsTvFormat
+      ? [
+          ...basePresets.slice(0, 3),
+          { id: "miniseries" as const, label: isArabicTv ? "مسلسل قصير" : "Mini Series" },
+          { id: "anthology" as const, label: isArabicTv ? "أنثولوجيا" : "Anthology" },
+          ...basePresets.slice(3),
+        ]
+      : basePresets;
+  }, [isArabicTv, supportsTvFormat]);
 
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("popularity.desc");
@@ -316,7 +327,11 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       const nextFormat = tvFormat === presetId ? "all" : presetId;
       setTvFormat(nextFormat);
       resetPagination();
-      toast.success(nextFormat === "all" ? "TV format filter cleared" : `Showing ${presetId === "miniseries" ? "Mini Series" : "Anthology"}`);
+      toast.success(nextFormat === "all"
+        ? (isArabicTv ? "تم إلغاء فلتر نوع المسلسل" : "TV format filter cleared")
+        : (isArabicTv
+          ? `عرض ${presetId === "miniseries" ? "المسلسلات القصيرة" : "مسلسلات الأنثولوجيا"}`
+          : `Showing ${presetId === "miniseries" ? "Mini Series" : "Anthology"}`));
       return;
     }
 
@@ -381,7 +396,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     if (keywords.trim()) chips.push({ label: `“${keywords.trim().slice(0, 20)}”`, clear: () => { setKeywords(""); resetPagination(); } });
     if (tvFormat !== "all") {
       chips.push({
-        label: tvFormat === "miniseries" ? "Mini Series" : "Anthology",
+        label: tvFormat === "miniseries" ? (isArabicTv ? "مسلسل قصير" : "Mini Series") : (isArabicTv ? "أنثولوجيا" : "Anthology"),
         clear: () => { setTvFormat("all"); resetPagination(); },
       });
     }
@@ -392,7 +407,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       });
     }
     return chips;
-  }, [selectedGenres, genres, sortBy, effectiveIsTV, fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, tvFormat, showMe, seenLabel, unseenLabel, resetPagination]);
+  }, [selectedGenres, genres, sortBy, effectiveIsTV, fromYear, toYear, certification, language, forcedLang, userScoreMin, userScoreMax, minVotes, runtimeMin, runtimeMax, keywords, tvFormat, showMe, seenLabel, unseenLabel, isArabicTv, resetPagination]);
 
   const advancedFilterCount =
     Number(userScoreMin !== "") +
@@ -452,7 +467,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
       {/* Quick Presets */}
       <div className="tvtime-discover-presets no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
-        <span className="mr-1 shrink-0 text-xs font-bold uppercase tracking-wider text-muted-foreground">Quick picks</span>
+        <span className="mr-1 shrink-0 text-xs font-bold uppercase tracking-wider text-muted-foreground">{isArabicTv ? "اختيارات سريعة" : "Quick picks"}</span>
         {presets.map((p) => (
           <Button
             key={p.id}

@@ -130,8 +130,9 @@ check(!trackingApi.includes("finished-anime"), "TV Tracking does not expose an i
 check(/INVALID_TV_TRACKING_CATEGORY/.test(trackingApi) && /status:\s*400/.test(trackingApi), "Invalid TV Tracking categories fail closed instead of widening to All");
 const expectedLabels = ["All", "Watchlist", "Up To Date", "Finished", "Upcoming", "Haven't Watched", "Haven't Started"];
 let lastLabelAt = -1;
+const trackingFilters = trackingView.slice(trackingView.indexOf("const filters:"), trackingView.indexOf("const activeFilterLabel"));
 for (const label of expectedLabels) {
-  const index = trackingView.indexOf(`label: "${label}"`);
+  const index = trackingFilters.indexOf(`: "${label}"`);
   check(index > lastLabelAt, `TV Tracking/All contains ${label} in the requested order`);
   lastLabelAt = index;
 }

@@ -44,8 +44,8 @@ assert.match(view, /sortBy === "popularity\.desc"/, "Country priority must not o
 assert.match(view, /setTimeout\(\(\) => setDebouncedKeywords/, "Keyword discovery must be debounced");
 assert.match(view, /advancedFilterCount/, "Advanced-filter badge must use the corrected filter count");
 
-assert.match(view, /label: "Mini Series"/, "TV Discover must expose a Mini Series quick filter");
-assert.match(view, /label: "Anthology"/, "TV Discover must expose an Anthology quick filter");
+assert.match(view, /label: isArabicTv \? "مسلسل قصير" : "Mini Series"/, "TV Discover must expose a Mini Series quick filter");
+assert.match(view, /label: isArabicTv \? "أنثولوجيا" : "Anthology"/, "TV Discover must expose an Anthology quick filter");
 assert.match(view, /tvFormat === presetId \? "all" : presetId/, "TV format quick filters must toggle without resetting other filters");
 assert.match(hooks, /tv_format.*params\.tvFormat/, "TV format must reach the Discover API");
 assert.match(filteredRoute, /series_type: tvFormat === "miniseries" \? 2/, "Mini Series must use TMDB TV type 2");
