@@ -35,6 +35,7 @@ const shell = read("src/components/app-shell.tsx");
 const header = read("src/components/layout/header.tsx");
 const searchView = read("src/components/views/search-view.tsx");
 const mediaCard = read("src/components/media/media-card.tsx");
+const compactScoreCorner = read("src/components/media/compact-score-corner.tsx");
 const watchedIndicator = read("src/components/media/watched-indicator.tsx");
 const tmdbIndicator = read("src/components/media/tmdb-score-indicator.tsx");
 const globalStyles = read("src/app/globals.css");
@@ -119,30 +120,30 @@ check(
   "Finished TV cards use the same completed-media indicator as watched movies",
 );
 check(
-  /data-score-source="user"/.test(watchedIndicator)
-    && /rating\}.*\/100/s.test(watchedIndicator)
+  /scoreSource="user"/.test(watchedIndicator)
+    && /suffix="\/100"/.test(watchedIndicator)
     && /status\?: "watched" \| "finished"/.test(watchedIndicator),
   "Green completed-media indicator identifies the user's score out of 100",
 );
 check(
-  /flex-row-reverse/.test(watchedIndicator)
-    && /rounded-br-xl[\s\S]*border-r/.test(watchedIndicator)
-    && /linear-gradient\(135deg/.test(watchedIndicator)
-    && /shadow-\[3px_4px_14px/.test(watchedIndicator)
-    && /rounded-bl-xl[\s\S]*border-l/.test(tmdbIndicator)
-    && /linear-gradient\(225deg/.test(tmdbIndicator)
-    && /shadow-\[-3px_4px_14px/.test(tmdbIndicator),
-  "Green user score is the exact horizontal mirror of the yellow TMDB badge",
+  /<CompactScoreCorner/.test(watchedIndicator)
+    && /<CompactScoreCorner/.test(tmdbIndicator)
+    && /side="left"/.test(watchedIndicator)
+    && /side="right"/.test(tmdbIndicator)
+    && /left:[\s\S]*flex-row-reverse[\s\S]*rounded-br-md[\s\S]*border-r[\s\S]*shadow-\[2px_2px_7px/.test(compactScoreCorner)
+    && /right:[\s\S]*flex-row[\s\S]*rounded-bl-md[\s\S]*border-l[\s\S]*shadow-\[-2px_2px_7px/.test(compactScoreCorner)
+    && /h-\[22px\] w-\[58px\]/.test(compactScoreCorner),
+  "Both compact score tabs share one exact mirrored geometry",
 );
 check(
-  /data-score-source="tmdb"/.test(tmdbIndicator)
+  /scoreSource="tmdb"/.test(tmdbIndicator)
     && /out of 10/.test(tmdbIndicator)
-    && /\/10/.test(tmdbIndicator),
+    && /suffix="\/10"/.test(tmdbIndicator),
   "Yellow catalogue indicator identifies the TMDB score out of 10",
 );
 check(
   /!completed && <TmdbScoreIndicator rating=\{item\.vote_average\}/.test(mediaCard)
-    && /className="tvtime-tmdb-score[\s\S]*-right-px -top-px/.test(tmdbIndicator)
+    && /className="tvtime-tmdb-score"[\s\S]*side="right"/.test(tmdbIndicator)
     && /\.tvtime-tmdb-score[\s\S]*right: -1px !important/.test(globalStyles),
   "Uncompleted media keeps the TMDB score in the opposite top corner",
 );
