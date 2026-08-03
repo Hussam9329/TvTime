@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const rows = [header.map(csv).join(",")];
     for (const item of media) rows.push(["media", item.tmdbId, item.type, item.title, item.year, item.status, item.watched, item.watchedAt?.toISOString(), item.userRating, item.rewatchCount, "", "", "", item.runtime, item.poster, item.genres].map(csv).join(","));
     for (const item of episodes) rows.push(["episode", item.showId, "series", "", "", "watched", true, item.watchedAt.toISOString(), "", "", item.seasonNumber, item.episodeNumber, item.episodeName, item.runtime, "", ""].map(csv).join(","));
-    return new NextResponse(`\uFEFF${rows.join("\r\n")}`, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="tvtime-library-${new Date().toISOString().slice(0, 10)}.csv"`, "Cache-Control": "private, no-store" } });
+    return new NextResponse(`\uFEFF${rows.join("\r\n")}`, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="trakora-library-${new Date().toISOString().slice(0, 10)}.csv"`, "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("[library:export:csv]", error);
     return NextResponse.json({ error: "Failed to export CSV" }, { status: 500 });

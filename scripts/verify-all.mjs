@@ -63,4 +63,4 @@ if (failures.length > 0) {
   console.error(`\n${failures.length} maintained verification suite(s) failed.`);
   process.exit(1);
 }
-console.log("\nAll maintained TvTime verification suites passed.");
+console.log("\nAll maintained Trakora verification suites passed.");

@@ -49,6 +49,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { APP_NAME } from "@/lib/brand";
 import { getViewLabel } from "@/lib/view-metadata";
+import { BrandMark, BrandWordmark } from "@/components/ui/brand-logo";
 
 const ProfileDialog = dynamic(
   () => import("@/components/profile/profile-dialog").then((module) => module.ProfileDialog),
@@ -292,9 +293,7 @@ export function Header() {
           >
             <BrandMark />
             <span className="tvtime-brand-copy hidden text-left sm:block">
-              <span className="block text-lg font-black leading-none tracking-[-0.04em]">
-                Tv<span className="text-primary">Time</span>
-              </span>
+              <BrandWordmark className="block text-lg" />
             </span>
           </button>
 
@@ -553,15 +552,6 @@ export function Header() {
         />
       )}
     </>
-  );
-}
-
-function BrandMark() {
-  return (
-    <span className="tvtime-brand-mark relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-primary-foreground transition-[box-shadow,filter] duration-200 group-hover:brightness-105 sm:h-10 sm:w-10">
-      <Play className="h-4 w-4 translate-x-px fill-current" />
-      <span className="absolute inset-x-1.5 top-1 h-px bg-white/45" />
-    </span>
   );
 }
 

@@ -62,7 +62,7 @@ requireCheck(String(pkg.scripts?.["verify:patch-10"] || "").includes("test-patch
 requireCheck(/Node\.js 20\.9\.0 or newer/.test(readme), "README still documents an unsupported Node version");
 requireCheck(/TMDB_API_KEY` is required/.test(readme) && /TMDB API key — required at runtime/.test(envExample), "TMDB requirement is not documented consistently");
 
-requireCheck(/APP_NAME = "TvTime"/.test(brand) && /BACKUP_FILE_PREFIX = "tvtime-backup"/.test(brand), "canonical product identity is not centralized");
+requireCheck(/APP_NAME = "Trakora"/.test(brand) && /BACKUP_FILE_PREFIX = "trakora-backup"/.test(brand), "canonical product identity is not centralized");
 for (const file of ["src/components/layout/header.tsx", "src/components/layout/footer.tsx", "src/app/login/page.tsx", "src/app/api/library/export/route.ts"]) {
   requireCheck(!/CineTrack/.test(read(file)), `${file} still exposes the legacy product name`);
 }

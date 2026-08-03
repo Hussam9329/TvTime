@@ -1805,7 +1805,11 @@ body {
 .tvtime-brand-mark {
   isolation: isolate;
   background:
-    linear-gradient(145deg, color-mix(in oklab, var(--primary) 88%, white), var(--primary));
+    linear-gradient(
+      145deg,
+      color-mix(in oklab, var(--primary) 82%, white),
+      color-mix(in oklab, var(--primary) 72%, var(--chart-2))
+    );
   box-shadow:
     0 9px 24px color-mix(in oklab, var(--primary) 22%, transparent),
     inset 0 1px rgb(255 255 255 / 0.26);
@@ -1813,6 +1817,11 @@ body {
 
 .tvtime-brand-copy {
   min-width: 0;
+}
+
+.tvtime-brand-wordmark {
+  color: var(--foreground);
+  text-shadow: 0 0 1.4rem color-mix(in oklab, var(--primary) 10%, transparent);
 }
 
 .tvtime-primary-nav-item {
@@ -3484,8 +3493,12 @@ body {
   height: 3.4rem;
   border: 1px solid color-mix(in oklab, var(--primary) 22%, var(--border));
   border-radius: 1rem !important;
-  background: color-mix(in oklab, var(--primary) 12%, var(--card)) !important;
-  box-shadow: 0 12px 30px color-mix(in oklab, var(--primary) 13%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--primary) 82%, white),
+    color-mix(in oklab, var(--primary) 72%, var(--chart-2))
+  ) !important;
+  box-shadow: 0 14px 36px color-mix(in oklab, var(--primary) 24%, transparent);
 }
 
 .tvtime-login-submit {

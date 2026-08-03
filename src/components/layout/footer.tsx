@@ -2,7 +2,8 @@
 
 import { Clapperboard, Film, Heart } from "lucide-react";
 import { useStats } from "@/hooks/use-tmdb";
-import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
+import { APP_TAGLINE } from "@/lib/brand";
+import { BrandMark, BrandWordmark } from "@/components/ui/brand-logo";
 
 export function Footer() {
   const stats = useStats();
@@ -24,14 +25,9 @@ export function Footer() {
       <div className="tvtime-footer-inner relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
         <div className="flex flex-col items-center justify-between gap-4 text-sm sm:flex-row">
           <div className="flex items-center gap-2.5">
-            <span className="relative" aria-hidden="true">
-              <span className="absolute inset-0 rounded-md bg-primary/35 blur-md" />
-              <span className="tvtime-footer-mark relative flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Clapperboard className="h-4 w-4 text-primary-foreground" />
-              </span>
-            </span>
+            <BrandMark className="tvtime-footer-mark h-8 w-8 rounded-lg sm:h-8 sm:w-8" />
             <span className="flex items-baseline gap-2">
-              <span className="text-gradient text-base font-extrabold">{APP_NAME}</span>
+              <BrandWordmark className="text-base" />
               <span className="hidden text-muted-foreground/40 sm:inline" aria-hidden="true">
                 ·
               </span>

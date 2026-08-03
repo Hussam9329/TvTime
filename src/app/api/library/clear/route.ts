@@ -42,7 +42,7 @@ export async function DELETE(req: NextRequest) {
       ok: true,
       deleted,
       preserved: ["account", "timezone"],
-      source: "all user-owned TvTime content tables",
+      source: "all user-owned Trakora content tables",
     });
   } catch (error) {
     console.error("[library:clear]", error);

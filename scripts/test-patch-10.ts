@@ -135,8 +135,9 @@ assert.deepEqual(
   "the page batch never crosses TMDB total_pages",
 );
 
-assert.equal(APP_NAME, "TvTime");
-assert.equal(BACKUP_FILE_PREFIX, "tvtime-backup");
+assert.equal(APP_NAME, "Trakora");
+assert.equal(BACKUP_FILE_PREFIX, "trakora-backup");
+assert.equal(isSupportedBackupApp("Trakora"), true);
 assert.equal(isSupportedBackupApp("TvTime"), true);
 assert.equal(isSupportedBackupApp("CineTrack"), true, "old backup identity remains import-compatible");
 assert.equal(isSupportedBackupApp("UnknownTracker"), false);

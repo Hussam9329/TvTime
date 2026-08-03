@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run a privacy-preserving, read-only audit against the TvTime database.
+"""Run a privacy-preserving, read-only audit against the Trakora database.
 
 The connection string is intentionally accepted only through the
 TVTIME_AUDIT_DATABASE_URL environment variable. Use a dedicated role that has

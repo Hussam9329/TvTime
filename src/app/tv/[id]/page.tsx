@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { tmdb } from "@/lib/tmdb";
+import { APP_NAME } from "@/lib/brand";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const fullTitle = year ? `${title} ${year}` : title;
     const description = show.overview
       ? show.overview.slice(0, 160)
-      : `Track episodes and ratings for ${title} on TvTime.`;
+      : `Track episodes and ratings for ${title} on ${APP_NAME}.`;
     const poster = show.poster_path
       ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
       : null;
@@ -37,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         canonical: `/tv/${tvId}`,
       },
       openGraph: {
-        title: `${fullTitle} — TvTime`,
+        title: `${fullTitle} — ${APP_NAME}`,
         description,
         type: "video.tv_show",
         url: `/tv/${tvId}`,
@@ -51,11 +52,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
               },
             ]
           : [],
-        siteName: "TvTime",
+        siteName: APP_NAME,
       },
       twitter: {
         card: "summary_large_image",
-        title: `${fullTitle} — TvTime`,
+        title: `${fullTitle} — ${APP_NAME}`,
         description,
         images: backdrop ? [backdrop] : poster ? [poster] : [],
       },
@@ -63,7 +64,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {
     return {
       title: `TV Show #${tvId}`,
-      description: "TV show details on TvTime.",
+      description: `TV show details on ${APP_NAME}.`,
     };
   }
 }

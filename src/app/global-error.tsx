@@ -1,5 +1,7 @@
 "use client";
 
+import { APP_NAME } from "@/lib/brand";
+
 /**
  * Top-level recovery UI. It intentionally avoids application components and
  * external styles because the root layout or CSS chunk may be the failing
@@ -66,7 +68,7 @@ export default function GlobalError({
             id="global-error-title"
             style={{ fontSize: "1.6rem", lineHeight: 1.2, fontWeight: 750, margin: "0 0 0.6rem" }}
           >
-            TvTime could not start
+            {APP_NAME} could not start
           </h1>
           <p
             id="global-error-description"

@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { APP_NAME } from "@/lib/brand";
 
 export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { userName, setUserName } = useNav();
@@ -180,7 +181,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     const url = withUserId(new URL("/api/library/export/csv", window.location.origin));
     const anchor = document.createElement("a");
     anchor.href = url.toString();
-    anchor.download = "tvtime-library.csv";
+    anchor.download = "trakora-library.csv";
     anchor.click();
   };
 
@@ -333,7 +334,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           </div>
 
           <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-            <div className="flex items-start gap-2"><Smartphone className="w-4 h-4 text-primary mt-0.5" /><div className="flex-1"><p className="text-sm font-semibold">Install & notifications</p><p className="text-xs text-muted-foreground">Install TvTime from your browser menu and receive alerts for released episodes.</p></div></div>
+            <div className="flex items-start gap-2"><Smartphone className="w-4 h-4 text-primary mt-0.5" /><div className="flex-1"><p className="text-sm font-semibold">Install & notifications</p><p className="text-xs text-muted-foreground">Install {APP_NAME} from your browser menu and receive alerts for released episodes.</p></div></div>
             <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => void enableNotifications()} disabled={notificationPermission === "granted" || notificationPermission === "unsupported"}><BellRing className="w-4 h-4 mr-1.5" />{notificationPermission === "granted" ? "Notifications enabled" : notificationPermission === "denied" ? "Blocked in browser settings" : "Enable notifications"}</Button>
           </div>
 

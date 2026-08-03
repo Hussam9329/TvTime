@@ -4,7 +4,7 @@ import { getAuthConfiguration, type AuthConfiguration } from "@/lib/auth-config"
 import { resolveRequestIdentity } from "@/lib/request-identity";
 
 /**
- * TvTime authentication layer.
+ * Trakora authentication layer.
  *
  * Design notes:
  * - Single-user personal app: APP_PASSWORD env var authorizes the owner.

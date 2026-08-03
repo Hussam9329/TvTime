@@ -1,4 +1,4 @@
-const CACHE = "tvtime-shell-v2";
+const CACHE = "trakora-shell-v3";
 const SHELL = ["/", "/manifest.webmanifest", "/logo.svg", "/placeholder-poster.svg"];
 
 self.addEventListener("install", (event) => {
@@ -33,7 +33,7 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type !== "SHOW_NOTIFICATION") return;
-  self.registration.showNotification(event.data.title || "TvTime", {
+  self.registration.showNotification(event.data.title || "Trakora", {
     body: event.data.body || "You have a new update.",
     icon: "/logo.svg",
     badge: "/logo.svg",

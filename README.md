@@ -1,4 +1,4 @@
-# TvTime — TV Time Clone
+# Trakora — Movies, TV Shows & Anime Tracker
 
 A complete movie & TV show tracking application built with Next.js 16, TypeScript, Prisma (PostgreSQL), and TMDB API.
 

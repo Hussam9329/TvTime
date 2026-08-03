@@ -33,6 +33,13 @@ const hooks = read("src/hooks/use-tmdb.ts");
 const shortcuts = read("src/components/layout/keyboard-shortcuts.tsx");
 const shell = read("src/components/app-shell.tsx");
 const header = read("src/components/layout/header.tsx");
+const footer = read("src/components/layout/footer.tsx");
+const login = read("src/app/login/page.tsx");
+const brand = read("src/lib/brand.ts");
+const brandLogo = read("src/components/ui/brand-logo.tsx");
+const rootLayout = read("src/app/layout.tsx");
+const manifest = read("public/manifest.webmanifest");
+const publicLogo = read("public/logo.svg");
 const searchView = read("src/components/views/search-view.tsx");
 const mediaCard = read("src/components/media/media-card.tsx");
 const compactScoreCorner = read("src/components/media/compact-score-corner.tsx");
@@ -74,6 +81,28 @@ check(/userId:\s*DEFAULT_USER_ID/.test(store), "Navigation/profile store starts 
 check(/partialize:\s*\(state\)\s*=>\s*\(\{\s*userName:/.test(store), "Random or stale user identifiers are not persisted");
 check(/merge:[\s\S]*userId:\s*DEFAULT_USER_ID/.test(store), "Previously persisted random user identifiers are corrected during hydration");
 check(/hydrateCanonicalProfile/.test(providers) && /\/api\/user/.test(providers), "Display name is hydrated from the same server user as the library");
+check(
+  /APP_NAME = "Trakora"/.test(brand)
+    && /APP_TAGLINE = "Track every story"/.test(brand)
+    && /BACKUP_FILE_PREFIX = "trakora-backup"/.test(brand)
+    && /LEGACY_APP_ALIASES = \["TvTime", "CineTrack"\]/.test(brand),
+  "Trakora is canonical while backups from both previous product names remain import-compatible",
+);
+check(
+  [header, footer, login].every((source) => /<BrandMark/.test(source))
+    && [header, footer, login].every((source) => /<BrandWordmark/.test(source))
+    && /Trak<span className="text-primary">ora<\/span>/.test(brandLogo)
+    && /m24\.25 17\.25 5\.25 3\.5-5\.25 3\.5/.test(brandLogo),
+  "Header, footer and login share the Trakora wordmark and playback-tracking monogram",
+);
+check(
+  /default: `\$\{APP_NAME\} — Movies, TV Shows & Anime`/.test(rootLayout)
+    && /url: "\/og-image\.png"/.test(rootLayout)
+    && /"name": "Trakora"/.test(manifest)
+    && /"short_name": "Trakora"/.test(manifest)
+    && /<title id="title">Trakora<\/title>/.test(publicLogo),
+  "Browser, installable app and social metadata expose the new Trakora identity",
+);
 
 check(/persist:\s*false/.test(watchedEpisodes), "Legacy whole-show snapshots are read without database writes during GET");
 check(/_virtualLegacySnapshot/.test(watchedEpisodes), "Legacy completion is represented immediately as a virtual episode snapshot");

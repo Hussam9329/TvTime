@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Trakora</title>
+  <desc id="desc">Trakora, track every story</desc>
+  <defs>
+    <linearGradient id="background" x1="90" y1="40" x2="1110" y2="590" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17121f"/>
+      <stop offset="0.5" stop-color="#090b13"/>
+      <stop offset="1" stop-color="#150914"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="120" y1="115" x2="390" y2="505" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fb7185"/>
+      <stop offset="0.52" stop-color="#e11d48"/>
+      <stop offset="1" stop-color="#a21caf"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(220 210) rotate(28) scale(470 390)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e11d48" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#e11d48" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#000" flood-opacity="0.46"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" rx="32" fill="url(#background)"/>
+  <rect width="1200" height="630" rx="32" fill="url(#glow)"/>
+  <path d="M0 516C260 438 422 585 691 518c202-50 310-146 509-110v222H0V516Z" fill="#fff" opacity="0.018"/>
+  <g filter="url(#shadow)">
+    <rect x="118" y="153" width="324" height="324" rx="96" fill="url(#brand)"/>
+    <rect x="121" y="156" width="318" height="318" rx="93" fill="none" stroke="#fff" stroke-opacity="0.16" stroke-width="6"/>
+    <path d="M194 237h143" stroke="#fff" stroke-width="31" stroke-linecap="round"/>
+    <path d="M265 244v138" stroke="#fff" stroke-width="31" stroke-linecap="round"/>
+    <path d="m316 290 57 38-57 38v-76Z" fill="#fff"/>
+    <path d="M179 363c21 39 77 59 127 44 25-7 45-23 57-43" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" opacity="0.66"/>
+    <circle cx="367" cy="355" r="14" fill="#fff"/>
+  </g>
+  <text x="514" y="305" fill="#fff" font-family="Inter, Geist, Arial, sans-serif" font-size="112" font-weight="850" letter-spacing="-6">Trak<tspan fill="#fb4f70">ora</tspan></text>
+  <text x="520" y="374" fill="#a8a8b3" font-family="Inter, Geist, Arial, sans-serif" font-size="33" font-weight="520" letter-spacing="1.5">TRACK EVERY STORY</text>
+  <rect x="520" y="414" width="250" height="5" rx="2.5" fill="url(#brand)"/>
+</svg>

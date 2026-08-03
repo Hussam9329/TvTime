@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
+import { APP_NAME } from "@/lib/brand";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,8 +21,8 @@ const siteUrl = "https://tvtime-iota.vercel.app";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "TvTime — Movies, TV Shows & Anime",
-    template: "%s — TvTime",
+    default: `${APP_NAME} — Movies, TV Shows & Anime`,
+    template: `%s — ${APP_NAME}`,
   },
   description:
     "Your personal cinema companion with separate spaces for movies, TV shows, anime, and Arabic content. Track what you watch, rate what you love.",
@@ -35,38 +36,39 @@ export const metadata: Metadata = {
     "cinema",
     "watchlist",
     "TMDB",
-    "tv time",
+    "Trakora",
   ],
-  authors: [{ name: "TvTime" }],
-  creator: "TvTime",
+  authors: [{ name: APP_NAME }],
+  creator: APP_NAME,
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "TvTime", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "black-translucent" },
   icons: {
     icon: "/logo.svg",
+    apple: "/apple-touch-icon.png",
   },
   openGraph: {
     type: "website",
     locale: "en_US",
     url: siteUrl,
-    siteName: "TvTime",
-    title: "TvTime — Movies, TV Shows & Anime",
+    siteName: APP_NAME,
+    title: `${APP_NAME} — Movies, TV Shows & Anime`,
     description:
       "Your personal cinema companion with separate spaces for movies, TV shows, anime, and Arabic content.",
     images: [
       {
-        url: "/placeholder-poster.svg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "TvTime",
+        alt: `${APP_NAME} — Track every story`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "TvTime — Movies, TV Shows & Anime",
+    title: `${APP_NAME} — Movies, TV Shows & Anime`,
     description:
       "Your personal cinema companion with separate spaces for movies, TV shows, anime, and Arabic content.",
-    images: ["/placeholder-poster.svg"],
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,

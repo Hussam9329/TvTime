@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Lock, Film, User, ShieldAlert } from "lucide-react";
+import { Loader2, Lock, User, ShieldAlert } from "lucide-react";
 import { safeNextPath } from "@/lib/safe-next-path";
-import { APP_NAME } from "@/lib/brand";
+import { BrandMark, BrandWordmark } from "@/components/ui/brand-logo";
 
 export default function LoginPage() {
   return (
@@ -146,11 +146,11 @@ function LoginPageInner() {
     <div className="tvtime-login-page min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4">
       <Card className="tvtime-login-card w-full max-w-sm border-border/60 shadow-2xl">
         <CardHeader className="tvtime-login-header text-center space-y-3">
-          <div className="tvtime-login-mark mx-auto w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Film className="w-6 h-6 text-primary" />
-          </div>
+          <BrandMark className="tvtime-login-mark mx-auto h-14 w-14 rounded-2xl sm:h-14 sm:w-14" />
           <div>
-            <CardTitle role="heading" aria-level={1} className="text-2xl font-extrabold">{APP_NAME}</CardTitle>
+            <CardTitle role="heading" aria-level={1} className="text-2xl font-extrabold">
+              <BrandWordmark />
+            </CardTitle>
             <CardDescription className="mt-1">
               Sign in to access your cinema library
             </CardDescription>

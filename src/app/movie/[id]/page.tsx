@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { tmdb } from "@/lib/tmdb";
+import { APP_NAME } from "@/lib/brand";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const fullTitle = year ? `${title} ${year}` : title;
     const description = movie.overview
       ? movie.overview.slice(0, 160)
-      : `Details and ratings for ${title} on TvTime.`;
+      : `Details and ratings for ${title} on ${APP_NAME}.`;
     const poster = movie.poster_path
       ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
       : null;
@@ -37,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         canonical: `/movie/${movieId}`,
       },
       openGraph: {
-        title: `${fullTitle} — TvTime`,
+        title: `${fullTitle} — ${APP_NAME}`,
         description,
         type: "video.movie",
         url: `/movie/${movieId}`,
@@ -51,11 +52,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
               },
             ]
           : [],
-        siteName: "TvTime",
+        siteName: APP_NAME,
       },
       twitter: {
         card: "summary_large_image",
-        title: `${fullTitle} — TvTime`,
+        title: `${fullTitle} — ${APP_NAME}`,
         description,
         images: backdrop ? [backdrop] : poster ? [poster] : [],
       },
@@ -64,7 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // TMDB fetch failed (timeout, 404, etc.) — fall back to a generic title.
     return {
       title: `Movie #${movieId}`,
-      description: "Movie details on TvTime.",
+      description: `Movie details on ${APP_NAME}.`,
     };
   }
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { tmdb } from "@/lib/tmdb";
+import { APP_NAME } from "@/lib/brand";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const name = person.name || `Person #${personId}`;
     const description = person.biography
       ? person.biography.slice(0, 160)
-      : `Filmography and credits for ${name} on TvTime.`;
+      : `Filmography and credits for ${name} on ${APP_NAME}.`;
     const profile = person.profile_path
       ? `https://image.tmdb.org/t/p/w500${person.profile_path}`
       : null;
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         canonical: `/person/${personId}`,
       },
       openGraph: {
-        title: `${name} — TvTime`,
+        title: `${name} — ${APP_NAME}`,
         description,
         type: "profile",
         url: `/person/${personId}`,
@@ -46,11 +47,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
               },
             ]
           : [],
-        siteName: "TvTime",
+        siteName: APP_NAME,
       },
       twitter: {
         card: "summary_large_image",
-        title: `${name} — TvTime`,
+        title: `${name} — ${APP_NAME}`,
         description,
         images: profile ? [profile] : [],
       },
@@ -58,7 +59,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {
     return {
       title: `Person #${personId}`,
-      description: "Person details on TvTime.",
+      description: `Person details on ${APP_NAME}.`,
     };
   }
 }

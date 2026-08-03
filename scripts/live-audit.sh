@@ -1,5 +1,5 @@
 #!/bin/bash
-# Live audit script for TvTime
+# Live audit script for Trakora
 
 echo "=== 1. Homepage HTTP check ==="
 curl -sI https://tvtime-iota.vercel.app/ | head -30
