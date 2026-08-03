@@ -4683,26 +4683,26 @@ body {
 
 .tvtime-user-score,
 .tvtime-tmdb-score {
-  top: 0.625rem !important;
+  top: 0.25rem !important;
   border-radius: 0.65rem !important;
   backdrop-filter: blur(12px) saturate(120%);
 }
 
 .tvtime-user-score {
   right: auto !important;
-  left: 0.625rem !important;
+  left: 0.25rem !important;
 }
 
 .tvtime-tmdb-score {
-  right: 0.625rem !important;
+  right: 0.25rem !important;
   left: auto !important;
 }
 
 .tvtime-watchlist-indicator {
   position: absolute;
   z-index: 20;
-  top: 0.625rem;
-  right: 0.625rem;
+  top: 0.25rem;
+  right: 0.25rem;
   display: inline-flex;
   width: 2rem;
   height: 2rem;
@@ -4728,7 +4728,7 @@ body {
 }
 
 .tvtime-tmdb-score + .tvtime-watchlist-indicator {
-  top: 3rem;
+  top: 2.5rem;
 }
 
 .tvtime-media-menu {
@@ -4851,23 +4851,23 @@ body {
 @media (max-width: 640px) {
   .tvtime-user-score,
   .tvtime-tmdb-score {
-    top: 0.5rem !important;
+    top: 0.25rem !important;
   }
 
   .tvtime-user-score {
-    left: 0.5rem !important;
+    left: 0.25rem !important;
   }
 
   .tvtime-tmdb-score,
   .tvtime-watchlist-indicator {
-    right: 0.5rem !important;
+    right: 0.25rem !important;
   }
 
   .tvtime-watchlist-indicator {
-    top: 0.5rem;
+    top: 0.25rem;
   }
 
   .tvtime-tmdb-score + .tvtime-watchlist-indicator {
-    top: 2.85rem;
+    top: 2.5rem;
   }
 }
