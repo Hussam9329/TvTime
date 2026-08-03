@@ -42,6 +42,7 @@ const globalStyles = read("src/app/globals.css");
 const tvTrackingView = read("src/components/views/tv-tracking-view.tsx");
 const movieDetailView = read("src/components/views/movie-detail-view.tsx");
 const tvDetailView = read("src/components/views/tv-detail-view.tsx");
+const ratingDialog = read("src/components/media/rating-dialog.tsx");
 const movieMediaRoute = read("src/app/api/media/[id]/route.ts");
 const watchedMoviesRoute = read("src/app/api/library/watched-movies/route.ts");
 const completionInvariant = read("src/lib/completion-rating-invariant.ts");
@@ -155,6 +156,18 @@ check(
 check(
   !/WatchedIndicator|TmdbScoreIndicator/.test(movieDetailView),
   "Movie detail keeps the main poster free of corner rating indicators",
+);
+check(
+  /tvtime-rating-dialog/.test(ratingDialog)
+    && /DialogHeader className="relative top-auto[^"]*bg-transparent/.test(ratingDialog)
+    && /DialogFooter className="static[^"]*grid grid-cols-/.test(ratingDialog),
+  "Rating dialog uses one coherent non-sticky surface without nested header or footer frames",
+);
+check(
+  /grid grid-cols-5 gap-2/.test(ratingDialog)
+    && /aria-label="Personal rating out of 100"/.test(ratingDialog)
+    && /aria-pressed=\{rating === value\}/.test(ratingDialog),
+  "Rating dialog keeps its slider and five quick values aligned and accessible",
 );
 check(
   /className="tvtime-detail-hero__actions tvtime-movie-detail-hero__actions"/.test(movieDetailView)
