@@ -125,6 +125,16 @@ check(
   "Green completed-media indicator identifies the user's score out of 100",
 );
 check(
+  /flex-row-reverse/.test(watchedIndicator)
+    && /rounded-br-xl[\s\S]*border-r/.test(watchedIndicator)
+    && /linear-gradient\(135deg/.test(watchedIndicator)
+    && /shadow-\[3px_4px_14px/.test(watchedIndicator)
+    && /rounded-bl-xl[\s\S]*border-l/.test(tmdbIndicator)
+    && /linear-gradient\(225deg/.test(tmdbIndicator)
+    && /shadow-\[-3px_4px_14px/.test(tmdbIndicator),
+  "Green user score is the exact horizontal mirror of the yellow TMDB badge",
+);
+check(
   /data-score-source="tmdb"/.test(tmdbIndicator)
     && /out of 10/.test(tmdbIndicator)
     && /\/10/.test(tmdbIndicator),
