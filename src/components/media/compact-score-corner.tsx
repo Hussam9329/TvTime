@@ -14,8 +14,8 @@ type CompactScoreCornerProps = {
 };
 
 const SIDE_STYLES = {
-  left: "-left-px flex-row-reverse rounded-br-md border-r pr-2 shadow-[2px_2px_7px_rgba(0,0,0,0.24)]",
-  right: "-right-px flex-row rounded-bl-md border-l pl-2 shadow-[-2px_2px_7px_rgba(0,0,0,0.24)]",
+  left: "-left-px flex-row-reverse rounded-r-full border-r pr-2 shadow-[2px_2px_7px_rgba(0,0,0,0.24)]",
+  right: "-right-px flex-row rounded-l-full border-l pl-2 shadow-[-2px_2px_7px_rgba(0,0,0,0.24)]",
 } as const;
 
 const TONE_STYLES = {

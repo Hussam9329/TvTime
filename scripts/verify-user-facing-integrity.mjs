@@ -130,8 +130,8 @@ check(
     && /<CompactScoreCorner/.test(tmdbIndicator)
     && /side="left"/.test(watchedIndicator)
     && /side="right"/.test(tmdbIndicator)
-    && /left:[\s\S]*flex-row-reverse[\s\S]*rounded-br-md[\s\S]*border-r[\s\S]*shadow-\[2px_2px_7px/.test(compactScoreCorner)
-    && /right:[\s\S]*flex-row[\s\S]*rounded-bl-md[\s\S]*border-l[\s\S]*shadow-\[-2px_2px_7px/.test(compactScoreCorner)
+    && /left:[\s\S]*flex-row-reverse[\s\S]*rounded-r-full[\s\S]*border-r[\s\S]*shadow-\[2px_2px_7px/.test(compactScoreCorner)
+    && /right:[\s\S]*flex-row[\s\S]*rounded-l-full[\s\S]*border-l[\s\S]*shadow-\[-2px_2px_7px/.test(compactScoreCorner)
     && /h-\[22px\] w-\[58px\]/.test(compactScoreCorner),
   "Both compact score tabs share one exact mirrored geometry",
 );
