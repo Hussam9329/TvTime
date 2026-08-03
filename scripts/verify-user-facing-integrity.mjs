@@ -127,6 +127,15 @@ check(
 );
 
 check(/type CollectionTab = "watchlist" \| "not-started" \| "watching" \| "watched"/.test(collection), "Anime collection models Watchlist, Not Started, In Progress and Watched separately");
+check(
+  /const usesHomePosterGrid = world === "movies" && layout === "grid"/.test(collection)
+    && /usesHomePosterGrid \? HOME_MEDIA_CARD_GRID_CLASS/.test(collection)
+    && /homePresentation=\{world === "movies"\}/.test(collection)
+    && /tvtime-media-card group relative min-w-0/.test(collection)
+    && /tvtime-media-poster relative aspect-\[2\/3\]/.test(collection)
+    && /tvtime-media-copy/.test(collection),
+  "Movie Watchlist and Watched grids reuse Home's responsive poster presentation",
+);
 check(/value="not-started"/.test(collection) && /Not Started/.test(collection), "Anime not-started titles remain visible in their own tab");
 check(/status:\s*"not_started",\s*watched:\s*"false",\s*tracked:\s*"true"/.test(collection), "Anime Not Started requires explicit following membership and no watched progress");
 check(/value="watching"/.test(collection) && /In Progress/.test(collection), "Anime in-progress is visible and selectable");

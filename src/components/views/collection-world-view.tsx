@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List, ListPlus } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
+import { HOME_MEDIA_CARD_GRID_CLASS, MediaCardSkeleton } from "@/components/media/media-card";
 
 type CollectionWorld = "movies" | "anime" | "arabic-movies";
 type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
@@ -114,6 +115,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const watchedCount = Number(counts?.[config.watchedCount] ?? 0);
   const notStartedCount = world === "anime" ? Number(counts?.notStartedAnime ?? 0) : 0;
   const watchingCount = world === "anime" ? Number(counts?.watchingAnime ?? 0) : 0;
+  const usesHomePosterGrid = world === "movies" && layout === "grid";
   return (
     <div className="tvtime-collection-world-page space-y-5">
       {!embedded && (
@@ -212,9 +214,11 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
 
       {/* Fix #14: Distinguish loading, error, empty, and success states */}
       {media.isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+        <div className={usesHomePosterGrid ? HOME_MEDIA_CARD_GRID_CLASS : "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"}>
           {Array.from({ length: 12 }).map((_, index) => (
-            <div key={index} className="aspect-[2/3] shimmer rounded-lg" />
+            usesHomePosterGrid
+              ? <MediaCardSkeleton key={index} />
+              : <div key={index} className="aspect-[2/3] shimmer rounded-lg" />
           ))}
         </div>
       ) : media.isError ? (
@@ -256,9 +260,16 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
           }
         />
       ) : (
-        <div className={layout === "grid" ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4" : "grid grid-cols-1 md:grid-cols-2 gap-3"}>
+        <div className={usesHomePosterGrid ? HOME_MEDIA_CARD_GRID_CLASS : layout === "grid" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" : "grid grid-cols-1 gap-3 md:grid-cols-2"}>
           {items.map((item, index) => (
-            <CollectionMediaCard key={item.id} item={item} index={index} tab={tab} layout={layout} />
+            <CollectionMediaCard
+              key={item.id}
+              item={item}
+              index={index}
+              tab={tab}
+              layout={layout}
+              homePresentation={world === "movies"}
+            />
           ))}
         </div>
       )}
@@ -289,7 +300,19 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; index: number; tab: CollectionTab; layout: "grid" | "list" }) {
+function CollectionMediaCard({
+  item,
+  index,
+  tab,
+  layout,
+  homePresentation = false,
+}: {
+  item: MediaItemDB;
+  index: number;
+  tab: CollectionTab;
+  layout: "grid" | "list";
+  homePresentation?: boolean;
+}) {
   const isWatchedTab = tab === "watched";
   const update = useMediaUpdate();
   const showWatchUndo = useWatchUndo();
@@ -306,6 +329,7 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
   const isMovie = item.type === "movie";
   const isFinishedShow = item.type === "series" && item.status === "finished";
   const isCompleted = (isMovie && item.watched) || isFinishedShow;
+  const useHomePresentation = homePresentation && layout === "grid";
 
   // Navigate to the correct detail page based on type
   const handleOpenDetails = () => {
@@ -400,11 +424,13 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
-        className="group"
+        className={useHomePresentation ? "tvtime-media-card group relative min-w-0" : "group"}
       >
-        <Card className={`overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card group ${layout === "list" ? "grid grid-cols-[92px_1fr]" : ""}`}>
+        <Card className={useHomePresentation ? "" : `group overflow-hidden border-border/50 bg-card p-0 transition-[border-color,box-shadow,background-color] duration-200 hover:border-primary/55 hover:shadow-lg hover:shadow-primary/10 ${layout === "list" ? "grid grid-cols-[92px_1fr]" : ""}`}>
           <div
-            className={`relative overflow-hidden bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${layout === "list" ? "aspect-[2/3] row-span-2" : "aspect-[2/3]"}`}
+            className={useHomePresentation
+              ? "tvtime-media-poster relative aspect-[2/3] cursor-pointer overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+              : `relative cursor-pointer overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${layout === "list" ? "row-span-2 aspect-[2/3]" : "aspect-[2/3]"}`}
             onClick={handleOpenDetails}
             onKeyDown={handleKeyDown}
             role="button"
@@ -412,12 +438,20 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
             aria-label={`Open details for ${item.title}${item.year ? ` (${item.year})` : ""}`}
           >
             {item.poster ? (
-              <SafeImage src={item.poster} alt={item.title} loading="lazy" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-95" />
+              <SafeImage
+                src={item.poster}
+                alt={item.title}
+                loading="lazy"
+                className={useHomePresentation
+                  ? "tvtime-media-poster__image relative h-full w-full object-cover"
+                  : "h-full w-full object-cover transition-opacity duration-200 group-hover:opacity-95"}
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 {item.type === "movie" ? <Film className="w-12 h-12" /> : <Tv className="w-12 h-12" />}
               </div>
             )}
+            {useHomePresentation && <div className="tvtime-media-poster__veil pointer-events-none absolute inset-0" aria-hidden="true" />}
             {isCompleted && (
               <WatchedIndicator
                 rating={userRating}
@@ -426,15 +460,26 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
             )}
             {!isCompleted && <TmdbScoreIndicator rating={publicRating} />}
 
+            {useHomePresentation && tab === "watchlist" && (
+              <span className="tvtime-media-state-rail absolute bottom-2 z-10" aria-label="In watchlist">
+                <span data-state="watchlist" title="In watchlist">
+                  <ListPlus aria-hidden="true" />
+                </span>
+              </span>
+            )}
+
           </div>
 
-          <div className={`flex min-w-0 items-center gap-2 border-t border-border/60 bg-card px-3 py-2.5 ${layout === "list" ? "" : "min-h-[4.5rem]"}`}>
+          <div className={useHomePresentation ? "tvtime-media-copy" : `flex min-w-0 items-center gap-2 border-t border-border/60 bg-card px-3 py-2.5 ${layout === "list" ? "" : "min-h-[4.5rem]"}`}>
             <div className="min-w-0 flex-1">
-              <h3 className="line-clamp-1 text-sm font-semibold leading-tight text-foreground">{item.title}</h3>
-              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <h3 className={useHomePresentation ? "tvtime-media-title line-clamp-2 text-left" : "line-clamp-1 text-sm font-semibold leading-tight text-foreground"} title={item.title}>{item.title}</h3>
+              <div className={useHomePresentation ? "tvtime-media-meta" : "mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground"}>
                 {item.year && <span>{item.year}</span>}
                 {item.year && <span aria-hidden="true">•</span>}
-                <span>{item.isAnime ? "Anime" : item.isArabic ? (isMovie ? "Arabic Movie" : "Arabic TV") : isMovie ? "Movie" : "TV"}</span>
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  {isMovie ? <Film aria-hidden="true" /> : <Tv aria-hidden="true" />}
+                  <span className="truncate">{item.isAnime ? "Anime" : item.isArabic ? (isMovie ? "Arabic Movie" : "Arabic TV") : isMovie ? "Movie" : "TV"}</span>
+                </span>
               </div>
             </div>
             <DropdownMenu>
@@ -442,7 +487,7 @@ function CollectionMediaCard({ item, index, tab, layout }: { item: MediaItemDB; 
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 w-8 shrink-0 p-0"
+                  className={useHomePresentation ? "tvtime-media-menu absolute z-20 h-8 w-8 p-0" : "h-8 w-8 shrink-0 p-0"}
                   aria-label={`More actions for ${item.title}`}
                   title="More actions"
                 >
