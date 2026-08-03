@@ -177,7 +177,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
         activeCount={filter === "all" ? 0 : 1}
       >
         <FilterSection title="Tracking status">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="tvtime-tracking-status-grid">
             {filters.map((item) => (
               <FilterChip
                 key={item.value}
@@ -270,16 +270,19 @@ function FilterChip({ active, onClick, label, icon, count, color }: {
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-[color,background-color,border-color,box-shadow] ${
+      data-active={active}
+      aria-pressed={active}
+      className={`tvtime-tracking-status-option ${
         active
-          ? `${color} border-current/30`
-          : "bg-muted/40 text-muted-foreground border-transparent hover:bg-muted hover:text-foreground"
+          ? `${color} border-current/30 shadow-[0_8px_22px_rgba(0,0,0,0.16)]`
+          : "border-white/[0.07] bg-background/35 text-muted-foreground hover:border-white/[0.13] hover:bg-muted/55 hover:text-foreground"
       }`}
     >
-      {icon}
-      {label}
-      <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${active ? "bg-background/40" : "bg-muted"}`}>{count}</span>
+      <span className="tvtime-tracking-status-option__icon" aria-hidden="true">{icon}</span>
+      <span className="tvtime-tracking-status-option__label">{label}</span>
+      <span className={`tvtime-tracking-status-option__count ${active ? "bg-background/45" : "bg-muted/80"}`}>{count}</span>
     </button>
   );
 }

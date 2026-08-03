@@ -2957,6 +2957,65 @@ body {
   margin: 0;
 }
 
+.tvtime-tracking-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.tvtime-tracking-status-option {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 3rem;
+  grid-template-columns: 1.55rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.48rem 0.58rem;
+  border-width: 1px;
+  border-radius: 0.85rem;
+  text-align: left;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.tvtime-tracking-status-option__icon {
+  display: grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border-radius: 0.55rem;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.tvtime-tracking-status-option__icon svg {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
+.tvtime-tracking-status-option__label {
+  min-width: 0;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.18;
+}
+
+.tvtime-tracking-status-option__count {
+  display: inline-grid;
+  min-width: 1.7rem;
+  height: 1.4rem;
+  place-items: center;
+  padding-inline: 0.35rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.tvtime-tracking-status-option[data-active="true"] {
+  transform: translateY(-1px);
+}
+
 .tvtime-detail-hero__actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
@@ -3456,6 +3515,36 @@ body {
   .tvtime-tv-detail-hero__meta svg {
     width: 0.68rem;
     height: 0.68rem;
+  }
+
+  .tvtime-tracking-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .tvtime-tracking-status-option {
+    min-height: 2.75rem;
+    grid-template-columns: 1.4rem minmax(0, 1fr) auto;
+    gap: 0.4rem;
+    padding: 0.4rem 0.45rem;
+    border-radius: 0.75rem;
+  }
+
+  .tvtime-tracking-status-option__icon {
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 0.48rem;
+  }
+
+  .tvtime-tracking-status-option__label {
+    font-size: 0.66rem;
+  }
+
+  .tvtime-tracking-status-option__count {
+    min-width: 1.45rem;
+    height: 1.25rem;
+    padding-inline: 0.25rem;
+    font-size: 0.6rem;
   }
 
   .tvtime-tv-detail-hero__title {

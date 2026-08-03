@@ -172,6 +172,15 @@ check(
   "TV type, state, year, seasons, score and certification render as compact metadata chips",
 );
 check(
+  (tvTrackingView.match(/\{ value: "/g) ?? []).length === 9
+    && ["all", "watchlist", "uptodate", "finished", "stopped", "upcoming", "havent-watched", "havent-started", "stale"].every((value) => tvTrackingView.includes(`{ value: "${value}"`))
+    && /className="tvtime-tracking-status-grid"/.test(tvTrackingView)
+    && /className=\{`tvtime-tracking-status-option/.test(tvTrackingView)
+    && /\.tvtime-tracking-status-grid\s*\{[\s\S]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/.test(globalStyles)
+    && /\.tvtime-tracking-status-option\s*\{[\s\S]*grid-template-columns: 1\.55rem minmax\(0, 1fr\) auto/.test(globalStyles),
+  "Tracking status preserves all nine filters in one aligned option grid",
+);
+check(
   /if \(!isWatched\) \{\s*if \(myRating == null\)[\s\S]*setRatingIntent\("complete"\)/.test(movieDetailView)
     && /ratingIntent === "complete"[\s\S]*action: "add"[\s\S]*userRating: v/.test(movieDetailView)
     && /Closing or cancelling keeps it unwatched/.test(movieDetailView),
