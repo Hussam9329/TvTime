@@ -43,6 +43,8 @@ const tvTrackingView = read("src/components/views/tv-tracking-view.tsx");
 const movieDetailView = read("src/components/views/movie-detail-view.tsx");
 const tvDetailView = read("src/components/views/tv-detail-view.tsx");
 const ratingDialog = read("src/components/media/rating-dialog.tsx");
+const discoverView = read("src/components/views/discover-view.tsx");
+const filterPanel = read("src/components/ui/filter-panel.tsx");
 const movieMediaRoute = read("src/app/api/media/[id]/route.ts");
 const watchedMoviesRoute = read("src/app/api/library/watched-movies/route.ts");
 const completionInvariant = read("src/lib/completion-rating-invariant.ts");
@@ -168,6 +170,23 @@ check(
     && /aria-label="Personal rating out of 100"/.test(ratingDialog)
     && /aria-pressed=\{rating === value\}/.test(ratingDialog),
   "Rating dialog keeps its slider and five quick values aligned and accessible",
+);
+check(
+  /pinnedContent=\{\(/.test(discoverView)
+    && /tvtime-discover-quick-picks/.test(discoverView)
+    && /tvtime-discover-preset-row/.test(discoverView)
+    && /pinnedContent\?: ReactNode/.test(filterPanel)
+    && /tvtime-filter-panel-pinned/.test(filterPanel),
+  "Discover quick picks stay attached to the filter console and visible above mobile filter details",
+);
+check(
+  /tvtime-discover-control-section/.test(discoverView)
+    && /tvtime-discover-status-toggle/.test(discoverView)
+    && /tvtime-discover-advanced-trigger/.test(discoverView)
+    && /tvtime-discover-results-bar/.test(discoverView)
+    && /\.tvtime-discover-preset-row\s*\{[\s\S]*grid-template-columns: repeat\(auto-fit/.test(globalStyles)
+    && /@media \(max-width: 767px\)[\s\S]*\.tvtime-discover-preset-row\s*\{[\s\S]*overflow-x: auto/.test(globalStyles),
+  "Discover controls use one aligned desktop hierarchy with a compact mobile quick-pick rail",
 );
 check(
   /className="tvtime-detail-hero__actions tvtime-movie-detail-hero__actions"/.test(movieDetailView)

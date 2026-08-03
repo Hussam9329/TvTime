@@ -15,6 +15,7 @@ type FilterPanelProps = {
   resetLabel?: string;
   onReset?: () => void;
   children: ReactNode;
+  pinnedContent?: ReactNode;
   className?: string;
   contentClassName?: string;
   collapsibleOnMobile?: boolean;
@@ -28,6 +29,7 @@ export function FilterPanel({
   resetLabel = "Reset all",
   onReset,
   children,
+  pinnedContent,
   className,
   contentClassName,
   collapsibleOnMobile = false,
@@ -88,6 +90,12 @@ export function FilterPanel({
           )}
         </div>
       </div>
+
+      {pinnedContent && (
+        <div className="tvtime-filter-panel-pinned">
+          {pinnedContent}
+        </div>
+      )}
 
       <div
         id={contentId}

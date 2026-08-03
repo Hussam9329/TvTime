@@ -428,7 +428,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const sortOptions = effectiveIsTV ? SORT_OPTIONS_TV : SORT_OPTIONS_MOVIES;
 
   return (
-    <div className="tvtime-discover-view space-y-5">
+    <div className="tvtime-discover-view space-y-4 sm:space-y-5">
       {/* Header */}
       {!embedded ? (
         <div className="view-page-header flex flex-wrap items-center justify-between gap-4">
@@ -465,24 +465,6 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
         </div>
       )}
 
-      {/* Quick Presets */}
-      <div className="tvtime-discover-presets no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
-        <span className="mr-1 shrink-0 text-xs font-bold uppercase tracking-wider text-muted-foreground">{isArabicTv ? "اختيارات سريعة" : "Quick picks"}</span>
-        {presets.map((p) => (
-          <Button
-            key={p.id}
-            variant={(p.id === "miniseries" || p.id === "anthology") && tvFormat === p.id ? "secondary" : "outline"}
-            size="sm"
-            className="h-9 shrink-0 text-xs hover:border-primary/40 hover:bg-primary/5"
-            onClick={() => applyPreset(p.id)}
-            aria-pressed={(p.id === "miniseries" || p.id === "anthology") ? tvFormat === p.id : undefined}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            {p.label}
-          </Button>
-        ))}
-      </div>
-
       {/* Filters panel */}
       <FilterPanel
         title="Filters"
@@ -490,10 +472,37 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
         activeCount={activeFilters}
         onReset={resetAll}
         collapsibleOnMobile
+        className="tvtime-discover-controls"
+        contentClassName="space-y-0 p-0 sm:p-0"
+        pinnedContent={(
+          <section className="tvtime-discover-quick-picks" aria-labelledby="discover-quick-picks-title">
+            <div className="tvtime-discover-section-heading">
+              <span className="tvtime-discover-section-icon" aria-hidden="true">
+                <Sparkles className="h-3.5 w-3.5" />
+              </span>
+              <h3 id="discover-quick-picks-title">{isArabicTv ? "اختيارات سريعة" : "Quick picks"}</h3>
+            </div>
+            <div className="tvtime-discover-preset-row no-scrollbar">
+              {presets.map((p) => (
+                <Button
+                  key={p.id}
+                  variant={(p.id === "miniseries" || p.id === "anthology") && tvFormat === p.id ? "secondary" : "outline"}
+                  size="sm"
+                  className="tvtime-discover-preset-button"
+                  onClick={() => applyPreset(p.id)}
+                  aria-pressed={(p.id === "miniseries" || p.id === "anthology") ? tvFormat === p.id : undefined}
+                >
+                  <span>{p.label}</span>
+                </Button>
+              ))}
+            </div>
+          </section>
+        )}
       >
         {/* Active filter chips trail */}
         {activeFilterChips.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-primary/15 bg-primary/[0.035] p-2.5">
+          <div className="tvtime-discover-active-filters">
+            <span className="tvtime-discover-active-label">Active</span>
             {activeFilterChips.map((chip, i) => (
               <Badge key={i} variant="default" className="gap-1 py-0.5 pl-2 pr-1 text-[11px]">
                 {chip.label}
@@ -509,24 +518,24 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           </div>
         )}
 
-        <FilterSection title="Viewing status">
-          <div className="flex flex-col gap-2 rounded-xl border border-border/50 bg-muted/20 p-2.5 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-xs text-muted-foreground">Limit results using your personal viewing history.</span>
+        <FilterSection title="Viewing status" className="tvtime-discover-control-section">
+          <div className="tvtime-discover-viewing-row">
+            <span className="text-xs leading-relaxed text-muted-foreground">Limit results using your personal viewing history.</span>
             <ToggleGroup
               type="single"
               value={showMe}
               onValueChange={(v) => { if (v) { setShowMe(v as any); resetPagination(); } }}
-              className="w-full justify-start rounded-md border border-border/60 bg-background/50 sm:w-auto"
+              className="tvtime-discover-status-toggle w-full justify-start sm:w-auto"
               size="sm"
             >
-              <ToggleGroupItem value="all" className="h-8 flex-1 px-3 text-xs sm:flex-none">Everything</ToggleGroupItem>
-              <ToggleGroupItem value="unseen" className="h-8 flex-1 px-3 text-xs sm:flex-none">{unseenLabel}</ToggleGroupItem>
-              <ToggleGroupItem value="seen" className="h-8 flex-1 px-3 text-xs sm:flex-none">{seenLabel}</ToggleGroupItem>
+              <ToggleGroupItem value="all" className="h-9 flex-1 px-3 text-xs sm:flex-none">Everything</ToggleGroupItem>
+              <ToggleGroupItem value="unseen" className="h-9 flex-1 px-3 text-xs sm:flex-none">{unseenLabel}</ToggleGroupItem>
+              <ToggleGroupItem value="seen" className="h-9 flex-1 px-3 text-xs sm:flex-none">{seenLabel}</ToggleGroupItem>
             </ToggleGroup>
           </div>
         </FilterSection>
 
-        <FilterSection title="Core filters" divided>
+        <FilterSection title="Core filters" divided className="tvtime-discover-control-section">
           <FilterGrid className="lg:grid-cols-3 xl:grid-cols-5">
             <FilterField label="Genres">
               <DropdownMenu>
@@ -639,28 +648,27 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           </FilterGrid>
         </FilterSection>
 
-        <FilterSection divided>
-          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-            <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/15">
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-10 w-full justify-between rounded-none px-3 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    {advancedOpen ? "Hide advanced filters" : "Show advanced filters"}
-                    {advancedFilterCount > 0 && (
-                      <Badge variant="secondary" className="ml-1 h-5 text-[10px]">
-                        {advancedFilterCount}
-                      </Badge>
-                    )}
-                  </span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
-                </Button>
-              </CollapsibleTrigger>
+        <FilterSection divided className="tvtime-discover-advanced-section">
+          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="tvtime-discover-advanced">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="tvtime-discover-advanced-trigger h-11 w-full justify-between px-4 text-xs text-muted-foreground hover:text-foreground sm:px-5"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {advancedOpen ? "Hide advanced filters" : "Show advanced filters"}
+                  {advancedFilterCount > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 text-[10px]">
+                      {advancedFilterCount}
+                    </Badge>
+                  )}
+                </span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+              </Button>
+            </CollapsibleTrigger>
 
-              <CollapsibleContent className="space-y-4 border-t border-border/50 p-3 sm:p-4">
+            <CollapsibleContent className="tvtime-discover-advanced-content space-y-4 border-t border-border/50 p-4 sm:p-5">
                 <FilterSection title="Ratings and reach">
                   <FilterGrid className={effectiveIsTV ? "lg:grid-cols-3" : "lg:grid-cols-4"}>
                     {!effectiveIsTV && (
@@ -780,15 +788,14 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                     </div>
                   )}
                 </FilterSection>
-              </CollapsibleContent>
-            </div>
+            </CollapsibleContent>
           </Collapsible>
         </FilterSection>
       </FilterPanel>
 
       {/* Result count — clearer wording */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
-        <p className="text-sm text-muted-foreground" aria-live="polite">
+      <div className="tvtime-discover-results-bar">
+        <p className="min-w-0 text-sm text-muted-foreground" aria-live="polite">
           {isLoading ? "Loading results…" : (
             !usesCursorPagination ? (
               <>
@@ -808,9 +815,9 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           )}
         </p>
         {!isLoading && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {activeFilters > 0 && <Badge variant="secondary">{activeFilters} active filters</Badge>}
-            <span className="tabular-nums">Page {page}</span>
+          <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+            {activeFilters > 0 && <Badge variant="secondary" className="h-7 rounded-lg px-2.5">{activeFilters} active filters</Badge>}
+            <Badge variant="outline" className="h-7 rounded-lg px-2.5 font-medium tabular-nums">Page {page}</Badge>
           </div>
         )}
       </div>
