@@ -14,8 +14,8 @@ type CompactScoreCornerProps = {
 };
 
 const SIDE_STYLES = {
-  left: "left-1 flex-row rounded-[10px]",
-  right: "right-1 flex-row rounded-[10px]",
+  left: "-left-px flex-row rounded-[10px]",
+  right: "-right-px flex-row rounded-[10px]",
 } as const;
 
 const TONE_STYLES = {
@@ -52,7 +52,7 @@ export function CompactScoreCorner({
       dir="ltr"
       title={title}
       aria-label={ariaLabel}
-      className={`${className} pointer-events-none absolute top-1 z-20 inline-flex h-[28px] min-w-[66px] items-center justify-center gap-1.5 overflow-hidden border px-2 backdrop-blur-md ${SIDE_STYLES[side]} ${colors.surface}`}
+      className={`${className} pointer-events-none absolute -top-px z-20 inline-flex h-[28px] min-w-[66px] items-center justify-center gap-1.5 overflow-hidden border px-2 backdrop-blur-md ${SIDE_STYLES[side]} ${colors.surface}`}
     >
       <span className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center ${colors.icon}`}>
         {icon}

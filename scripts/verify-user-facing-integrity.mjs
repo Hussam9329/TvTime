@@ -192,9 +192,9 @@ check(
     && /<CompactScoreCorner/.test(tmdbIndicator)
     && /side="left"/.test(watchedIndicator)
     && /side="right"/.test(tmdbIndicator)
-    && /left: "left-1 flex-row rounded-\[10px\]"/.test(compactScoreCorner)
-    && /right: "right-1 flex-row rounded-\[10px\]"/.test(compactScoreCorner)
-    && /absolute top-1 z-20/.test(compactScoreCorner)
+    && /left: "-left-px flex-row rounded-\[10px\]"/.test(compactScoreCorner)
+    && /right: "-right-px flex-row rounded-\[10px\]"/.test(compactScoreCorner)
+    && /absolute -top-px z-20/.test(compactScoreCorner)
     && /h-\[28px\] min-w-\[66px\]/.test(compactScoreCorner)
     && /overflow-hidden border px-2 backdrop-blur-md/.test(compactScoreCorner),
   "Both compact score badges share one exact rounded outlined geometry",
@@ -208,7 +208,7 @@ check(
 check(
   /!completed && <TmdbScoreIndicator rating=\{item\.vote_average\}/.test(mediaCard)
     && /className="tvtime-tmdb-score"[\s\S]*side="right"/.test(tmdbIndicator)
-    && /\.tvtime-tmdb-score\s*\{[\s\S]*right: 0\.25rem !important[\s\S]*left: auto !important/.test(globalStyles),
+    && /\.tvtime-tmdb-score\s*\{[\s\S]*right: -1px !important[\s\S]*left: auto !important/.test(globalStyles),
   "Uncompleted media keeps the TMDB score in the opposite top corner",
 );
 check(
