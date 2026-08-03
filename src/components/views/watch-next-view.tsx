@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Play, Clock3, Flame, CheckCircle2, Tv, Sparkles, Languages, CalendarDays, Loader2 } from "lucide-react";
+import { Play, Clock3, CheckCircle2, Tv, Sparkles, Languages, CalendarDays, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEpisodeToggle } from "@/hooks/use-tmdb";
 import { toast } from "sonner";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 
 type WatchNextItem = { tmdbId: number; title: string; poster: string | null; seasonNumber: number; episodeNumber: number; watchedEpisodes: number; releasedEpisodes: number; lastActivity: string; isAnime: boolean; isArabic: boolean };
 type UpcomingItem = { tmdbId: number; title: string; poster: string | null; seasonNumber: number; episodeNumber: number; episodeName: string | null; airDate: string; isAnime: boolean; isArabic: boolean };
@@ -34,13 +35,7 @@ export function WatchNextView() {
   const paused = items.filter((item) => daysSince(item.lastActivity) >= 30);
 
   return <div className="tvtime-watch-next-page space-y-7">
-    <section data-ui-surface="hero" className="tvtime-page-hero relative overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/20 via-background to-fuchsia-500/10 p-6 sm:p-9">
-      <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-      <div className="relative flex items-end justify-between gap-5 flex-wrap">
-        <div><Badge className="mb-3 border-0 bg-primary/20 text-primary"><Flame className="mr-1 h-3.5 w-3.5" /> Personal queue</Badge><h1 className="text-3xl sm:text-5xl font-black tracking-tight">Watch Next</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">The exact next released episode for every show you follow—ordered by your latest activity.</p></div>
-        <div className="rounded-2xl border border-white/10 bg-background/60 px-5 py-3 backdrop-blur"><p className="text-3xl font-black text-primary">{items.length}</p><p className="text-xs text-muted-foreground">shows ready</p></div>
-      </div>
-    </section>
+    <PageTitlebar title="Watch Next" />
 
     {query.isLoading ? <WatchNextSkeleton /> : query.isError ? (
       <EmptyState

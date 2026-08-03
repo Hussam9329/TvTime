@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Library, Sparkles, CalendarDays, Film } from "lucide-react";
+import { Library, Sparkles, CalendarDays } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
@@ -12,18 +13,7 @@ export function MoviesView() {
 
   return (
     <div className="tvtime-world-view tvtime-movies-view space-y-5">
-      {/* Hero banner — matches Arabic Movies page structure */}
-      <section data-ui-surface="hero" className="tvtime-page-hero rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
-        <div className="view-page-header flex items-start gap-3">
-          <Film className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <div className="min-w-0">
-            <h1 className="view-page-title text-xl font-extrabold tracking-tight">Movies</h1>
-            <p className="view-page-description mt-1 text-sm text-muted-foreground">
-              Track films you've watched, discover new ones, and stay on top of upcoming releases.
-            </p>
-          </div>
-        </div>
-      </section>
+      <PageTitlebar title="Movies" />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "library" | "discover" | "releases")} className="space-y-5">
         <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">

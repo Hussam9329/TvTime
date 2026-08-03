@@ -3,24 +3,24 @@
 import { useStats, useTvDetail } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
-import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, BarChart3, Languages, CalendarDays, Layers3 } from "lucide-react";
+import { Film, Tv, Clock, Star, BookOpen, Bell, TrendingUp, Trophy, Languages, CalendarDays, Layers3 } from "lucide-react";
 import { img } from "@/lib/tmdb";
 import { useNav } from "@/lib/store";
 import { SafeImage } from "@/components/media/safe-image";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 
 const PIE_COLORS = ["oklch(0.62 0.23 16)", "oklch(0.65 0.18 320)", "oklch(0.7 0.15 180)", "oklch(0.72 0.18 80)", "oklch(0.6 0.2 260)"];
 
 export function StatsView() {
   const stats = useStats();
   const { goTv, setView } = useNav();
-  const userName = useNav((s) => s.userName);
 
   if (stats.isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-32 shimmer rounded-xl" />
+      <div className="tvtime-stats-page space-y-5">
+        <PageTitlebar title="Your Statistics" />
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 shimmer rounded-xl" />)}
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 shimmer rounded-xl" />)}
         </div>
       </div>
     );
@@ -37,16 +37,7 @@ export function StatsView() {
 
   return (
     <div className="tvtime-stats-page space-y-5">
-      {/* Header */}
-      <div className="view-page-header flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-          <BarChart3 className="w-6 h-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">Your Statistics</h1>
-          <p className="view-page-description text-sm text-muted-foreground mt-0.5">Welcome back, <span className="text-foreground font-medium">{userName}</span></p>
-        </div>
-      </div>
+      <PageTitlebar title="Your Statistics" />
 
       {/* Big numbers */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Languages, Library, Sparkles } from "lucide-react";
+import { CalendarDays, Library, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
@@ -12,17 +13,7 @@ export function ArabicMoviesView() {
 
   return (
     <div className="tvtime-arabic-movies-page space-y-5" dir="rtl" lang="ar">
-      <section data-ui-surface="hero" className="tvtime-page-hero rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card to-card p-4 sm:p-5">
-        <div className="view-page-header flex items-start gap-3">
-          <Languages className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
-          <div className="min-w-0">
-            <h1 className="view-page-title text-xl font-extrabold tracking-tight">الأفلام العربية</h1>
-            <p className="view-page-description mt-1 text-sm text-muted-foreground">
-              تتبّع الأفلام العربية التي شاهدتها، واكتشف أعمالًا جديدة، وتابع الإصدارات القادمة.
-            </p>
-          </div>
-        </div>
-      </section>
+      <PageTitlebar title="الأفلام العربية" />
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
         <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">

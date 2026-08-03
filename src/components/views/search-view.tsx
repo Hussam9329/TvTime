@@ -12,6 +12,7 @@ import { img } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { isAsianMediaItem } from "@/lib/asian-media";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 
 export function SearchView() {
   const { searchQuery, goPerson } = useNav();
@@ -55,14 +56,7 @@ export function SearchView() {
 
   return (
     <div className="tvtime-search-view space-y-5">
-      <div className="view-page-header flex items-start gap-3">
-        <SearchIcon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-        <div className="min-w-0">
-          <p className="tvtime-eyebrow">Universal search</p>
-          <h1 className="view-page-title mb-1 text-2xl font-extrabold tracking-tight sm:text-3xl">Search</h1>
-          <p className="view-page-description text-sm text-muted-foreground">Find movies, TV shows, anime, Arabic titles and people from the TMDB database.</p>
-        </div>
-      </div>
+      <PageTitlebar title="Search" />
 
       {!searchQuery && (
         <EmptyState

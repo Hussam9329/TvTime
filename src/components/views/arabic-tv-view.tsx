@@ -1,15 +1,10 @@
-import { Languages } from "lucide-react";
 import { TvWorldPageView } from "@/components/views/tv-world-page-view";
 
 export function ArabicTvView() {
   return (
     <TvWorldPageView
       pageClassName="tvtime-arabic-tv-page"
-      icon={Languages}
-      iconClassName="text-amber-300"
-      heroClassName="border-amber-500/20 from-amber-500/15"
       title="المسلسلات العربية"
-      description="تتبّع مسلسلاتك، واكتشف إنتاجات عربية جديدة، وتابع مواعيد الإصدارات القادمة."
       trackingWorld="arabic"
       discoverWorld="arabic-tv"
       discoverTitle="اكتشف مسلسلات عربية"

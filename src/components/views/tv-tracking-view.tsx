@@ -14,6 +14,7 @@ import { img } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 
 
 // Tracking status is calculated by the shared server engine.
@@ -61,21 +62,7 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
   return (
     <div className="tvtime-tv-tracking-page space-y-5">
       {!embedded && (
-        <div className="view-page-header flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Clapperboard className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">{isArabic ? "المسلسلات العربية" : world === "asian" ? "Asian TV Shows" : "TV Shows"}</h1>
-            <p className="view-page-description text-sm text-muted-foreground mt-0.5">
-              {isArabic
-                ? "تتبّع مسلسلاتك العربية بصورة مستقلة عن المسلسلات العالمية والأنمي"
-                : world === "asian"
-                  ? "Asian series tracking, separated from standard TV, Arabic TV and Anime"
-                  : "Your complete non-anime, non-Arabic, non-Asian TV tracking world"}
-            </p>
-          </div>
-        </div>
+        <PageTitlebar title={isArabic ? "المسلسلات العربية" : world === "asian" ? "Asian TV Shows" : "TV Shows"} />
       )}
 
       {/* TV Shows filters, all backed by full-collection counters. */}

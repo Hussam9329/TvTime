@@ -4325,3 +4325,81 @@ body {
     padding: 0.625rem !important;
   }
 }
+
+/* Top-level views are already identified by the persistent app header. Keep
+   the in-page heading compact, modern and free from repeated descriptions. */
+.tvtime-page-titlebar {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0.35rem 0.4rem 0.35rem 1rem;
+}
+
+[dir="rtl"] .tvtime-page-titlebar {
+  padding-right: 1rem;
+  padding-left: 0.4rem;
+}
+
+.tvtime-page-titlebar::before {
+  position: absolute;
+  inset-inline-start: 0;
+  width: 0.22rem;
+  height: 1.65rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--page-accent, var(--primary)) 90%, white),
+    var(--page-accent, var(--primary))
+  );
+  box-shadow: 0 0 1rem color-mix(in oklab, var(--page-accent, var(--primary)) 34%, transparent);
+  content: "";
+}
+
+.tvtime-page-titlebar h1 {
+  min-width: 0;
+  margin: 0;
+  color: var(--foreground);
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.tvtime-discover-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .tvtime-page-titlebar {
+    min-height: 2.4rem;
+    padding-block: 0.25rem;
+  }
+
+  .tvtime-page-titlebar::before {
+    height: 1.4rem;
+  }
+
+  .tvtime-page-titlebar h1 {
+    font-size: 1.2rem;
+  }
+
+  .tvtime-discover-title-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .tvtime-discover-title-row [data-slot="tabs-list"] {
+    width: 100%;
+  }
+
+  .tvtime-discover-title-row [data-slot="tabs-trigger"] {
+    flex: 1;
+  }
+}

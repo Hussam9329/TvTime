@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarDays, Film, Library, Sparkles, Tv } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
@@ -23,17 +24,7 @@ export function AnimeView() {
 
   return (
     <div className="tvtime-world-view tvtime-anime-view space-y-5">
-      <section data-ui-surface="hero" className="tvtime-page-hero rounded-2xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-500/10 via-card to-card p-4 sm:p-5">
-        <div className="view-page-header flex items-start gap-3">
-          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-fuchsia-400" />
-          <div className="min-w-0">
-            <h1 className="view-page-title text-xl font-extrabold tracking-tight">Anime</h1>
-            <p className="view-page-description mt-1 text-sm text-muted-foreground">
-              Organize anime movies and series, discover Japanese animation, and browse new premieres.
-            </p>
-          </div>
-        </div>
-      </section>
+      <PageTitlebar title="Anime" />
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
         <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">

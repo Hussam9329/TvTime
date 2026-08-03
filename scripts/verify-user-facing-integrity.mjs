@@ -45,6 +45,13 @@ const tvDetailView = read("src/components/views/tv-detail-view.tsx");
 const ratingDialog = read("src/components/media/rating-dialog.tsx");
 const discoverView = read("src/components/views/discover-view.tsx");
 const filterPanel = read("src/components/ui/filter-panel.tsx");
+const pageTitlebar = read("src/components/ui/page-titlebar.tsx");
+const moviesView = read("src/components/views/movies-view.tsx");
+const tvWorldPageView = read("src/components/views/tv-world-page-view.tsx");
+const animeView = read("src/components/views/anime-view.tsx");
+const arabicMoviesView = read("src/components/views/arabic-movies-view.tsx");
+const statsView = read("src/components/views/stats-view.tsx");
+const watchNextView = read("src/components/views/watch-next-view.tsx");
 const movieMediaRoute = read("src/app/api/media/[id]/route.ts");
 const watchedMoviesRoute = read("src/app/api/library/watched-movies/route.ts");
 const completionInvariant = read("src/lib/completion-rating-invariant.ts");
@@ -187,6 +194,23 @@ check(
     && /\.tvtime-discover-preset-row\s*\{[\s\S]*grid-template-columns: repeat\(auto-fit/.test(globalStyles)
     && /@media \(max-width: 767px\)[\s\S]*\.tvtime-discover-preset-row\s*\{[\s\S]*overflow-x: auto/.test(globalStyles),
   "Discover controls use one aligned desktop hierarchy with a compact mobile quick-pick rail",
+);
+check(
+  [moviesView, tvWorldPageView, animeView, arabicMoviesView, searchView, statsView, watchNextView, discoverView]
+    .every((source) => /<PageTitlebar title=/.test(source))
+    && /tvtime-page-titlebar/.test(pageTitlebar)
+    && /\.tvtime-page-titlebar\s*\{[\s\S]*min-height: 2\.75rem/.test(globalStyles)
+    && /\.tvtime-page-titlebar h1\s*\{[\s\S]*font-size: clamp\(1\.2rem, 2vw, 1\.5rem\)/.test(globalStyles),
+  "Top-level pages use one compact title-only heading instead of repeated hero descriptions",
+);
+check(
+  !/Track films you've watched/.test(moviesView)
+    && !/data-ui-surface="hero"/.test(moviesView)
+    && !/data-ui-surface="hero"/.test(tvWorldPageView)
+    && !/Personal queue/.test(watchNextView)
+    && !/Universal search/.test(searchView)
+    && !/Welcome back/.test(statsView),
+  "Large duplicate page-identification banners stay removed from catalogue and utility views",
 );
 check(
   /className="tvtime-detail-hero__actions tvtime-movie-detail-hero__actions"/.test(movieDetailView)

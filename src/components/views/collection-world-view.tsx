@@ -24,13 +24,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 
 type CollectionWorld = "movies" | "anime" | "arabic-movies";
 type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
 
 type WorldConfig = {
   title: string;
-  subtitle: string;
   searchPlaceholder: string;
   icon: React.ElementType;
   type?: string;
@@ -43,7 +43,6 @@ type WorldConfig = {
 const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
   movies: {
     title: "Movies",
-    subtitle: "Your movie watchlist and watched collection",
     searchPlaceholder: "Search your movies...",
     icon: Film,
     type: "movie",
@@ -54,7 +53,6 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
   },
   "arabic-movies": {
     title: "Arabic Movies",
-    subtitle: "A dedicated library for Arabic-language cinema, separate from Movies and Anime",
     searchPlaceholder: "Search your Arabic movies...",
     icon: Film,
     type: "movie",
@@ -65,7 +63,6 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
   },
   anime: {
     title: "Anime",
-    subtitle: "A separate home for your anime watchlist and watched titles",
     searchPlaceholder: "Search your anime...",
     icon: Sparkles,
     isAnime: "true",
@@ -120,15 +117,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   return (
     <div className="tvtime-collection-world-page space-y-5">
       {!embedded && (
-        <div className="view-page-header flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-            <WorldIcon className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="view-page-title text-2xl sm:text-3xl font-extrabold tracking-tight">{config.title}</h1>
-            <p className="view-page-description text-sm text-muted-foreground mt-0.5">{config.subtitle}</p>
-          </div>
-        </div>
+        <PageTitlebar title={config.title} />
       )}
 
       <div className={`grid gap-3 ${world === "anime" ? "max-w-3xl grid-cols-2 sm:grid-cols-4" : "max-w-xl grid-cols-2"}`}>

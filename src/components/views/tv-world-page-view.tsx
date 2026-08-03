@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ComponentType } from "react";
+import { useState } from "react";
 import { CalendarDays, Library, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { TvShowsView } from "@/components/views/tv-tracking-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
@@ -15,11 +16,7 @@ type DiscoverWorld = "tv" | "arabic-tv" | "asian-tv";
 
 interface TvWorldPageViewProps {
   pageClassName: string;
-  icon: ComponentType<{ className?: string }>;
-  iconClassName: string;
-  heroClassName: string;
   title: string;
-  description: string;
   trackingWorld: TrackingWorld;
   discoverWorld: DiscoverWorld;
   discoverTitle?: string;
@@ -40,11 +37,7 @@ interface TvWorldPageViewProps {
  */
 export function TvWorldPageView({
   pageClassName,
-  icon: Icon,
-  iconClassName,
-  heroClassName,
   title,
-  description,
   trackingWorld,
   discoverWorld,
   discoverTitle,
@@ -67,18 +60,7 @@ export function TvWorldPageView({
       dir={isArabic ? "rtl" : undefined}
       lang={isArabic ? "ar" : undefined}
     >
-      <section
-        data-ui-surface="hero"
-        className={cn("tvtime-page-hero rounded-2xl border bg-gradient-to-br via-card to-card p-4 sm:p-5", heroClassName)}
-      >
-        <div className="view-page-header flex items-start gap-3">
-          <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", iconClassName)} />
-          <div className="min-w-0">
-            <h1 className="view-page-title text-xl font-extrabold tracking-tight">{title}</h1>
-            <p className="view-page-description mt-1 text-sm text-muted-foreground">{description}</p>
-          </div>
-        </div>
-      </section>
+      <PageTitlebar title={title} />
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
         <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">

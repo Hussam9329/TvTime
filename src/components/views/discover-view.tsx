@@ -34,6 +34,7 @@ import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem
 import { standardMediaCountryPriority } from "@/lib/standard-media-priority";
 import { applyDiscoverPreset, type DiscoverPresetId } from "@/lib/discover-presets";
 import { updateDiscoverRange } from "@/lib/discover-filter-state";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 
 export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "asian-tv";
 type TvFormatFilter = "all" | "miniseries" | "anthology";
@@ -431,17 +432,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     <div className="tvtime-discover-view space-y-4 sm:space-y-5">
       {/* Header */}
       {!embedded ? (
-        <div className="view-page-header flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary" aria-hidden="true">
-              <Compass className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <p className="tvtime-eyebrow">Curated catalogue</p>
-              <h1 className="view-page-title text-2xl font-extrabold tracking-tight sm:text-3xl">{headerTitle}</h1>
-              <p className="view-page-description mt-1 text-sm text-muted-foreground">{headerSubtitle}</p>
-            </div>
-          </div>
+        <div className="tvtime-discover-title-row">
+          <PageTitlebar title={headerTitle} className="min-w-0 flex-1" />
           <div className="flex items-center gap-2">
             <Tabs value={discoverTab} onValueChange={(v) => { setDiscoverTab(v as any); resetAll(); }}>
               <TabsList>
