@@ -4180,11 +4180,31 @@ body {
   }
 
   .tvtime-home-hero__carousel-controls {
-    padding: 0.5rem 0.65rem;
+    top: 0.7rem;
+    right: 0.7rem;
+    gap: 0;
+    padding: 0.4rem 0.55rem;
   }
 
   .tvtime-home-hero__carousel-arrow {
     display: none;
+  }
+
+  /* Keep the spotlight pagination compact on touch screens. The global 44px
+     touch-target rule otherwise turns every visual dot into a large circle. */
+  .tvtime-home-hero__carousel-dots {
+    gap: 0.32rem;
+  }
+
+  .tvtime-home-hero__carousel-dot {
+    width: 0.42rem !important;
+    min-width: 0 !important;
+    height: 0.42rem !important;
+    min-height: 0 !important;
+  }
+
+  .tvtime-home-hero__carousel-dot[data-active="true"] {
+    width: 1.35rem !important;
   }
 
   .tvtime-library-overview__header > div:first-child p:last-child {
