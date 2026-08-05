@@ -625,6 +625,22 @@
 .tvtime-stats-page [data-slot="card"], .tvtime-person-detail-page [data-slot="card"] { min-width: 0; }
 .tvtime-stats-page [data-slot="card"] > * { min-width: 0; }
 .tvtime-person-detail-page > .relative.rounded-2xl { box-shadow: 0 20px 50px -32px hsl(var(--foreground) / .32); }
+.tvtime-person-profile {
+  isolation: isolate;
+  box-shadow:
+    0 22px 46px rgb(0 0 0 / 0.4),
+    0 0 0 1px rgb(240 189 99 / 0.08),
+    inset 0 1px rgb(255 255 255 / 0.08);
+}
+.tvtime-person-profile::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: linear-gradient(180deg, transparent 68%, rgb(0 0 0 / 0.22));
+  content: "";
+  pointer-events: none;
+}
 .tvtime-profile-dialog [data-slot="dialog-header"] { padding-bottom: .75rem; border-bottom: 1px solid hsl(var(--border) / .65); }
 .tvtime-profile-dialog [data-slot="dialog-footer"] { padding-top: .75rem; border-top: 1px solid hsl(var(--border) / .65); }
 .tvtime-profile-dialog form, .tvtime-profile-dialog section, .tvtime-release-schedule > section, .tvtime-release-schedule > div { min-width: 0; }
