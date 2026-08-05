@@ -715,6 +715,10 @@
   font-size: 0.62rem;
   font-weight: 700;
 }
+.tvtime-person-credit__upcoming {
+  color: rgb(196 181 253);
+  font-weight: 850;
+}
 .tvtime-person-filmography-count {
   grid-column: 1 / -1;
 }
