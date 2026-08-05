@@ -46,8 +46,20 @@ export function PersonDetailView() {
   }
 
   const p = detail.data;
-  const movieCredits = (p.movie_credits?.cast ?? []).filter((c: any) => c.poster_path).sort((a: any, b: any) => (b.vote_average || 0) - (a.vote_average || 0));
-  const tvCredits = (p.tv_credits?.cast ?? []).filter((c: any) => c.poster_path).sort((a: any, b: any) => (b.vote_average || 0) - (a.vote_average || 0));
+  const newestCreditFirst = (a: any, b: any) => {
+    const aDate = a.release_date || a.first_air_date || "";
+    const bDate = b.release_date || b.first_air_date || "";
+
+    // ISO dates sort chronologically as strings. Missing dates always belong
+    // at the end, while popularity provides a stable order for equal dates.
+    if (aDate && bDate && aDate !== bDate) return bDate.localeCompare(aDate);
+    if (aDate && !bDate) return -1;
+    if (!aDate && bDate) return 1;
+    return (b.popularity || 0) - (a.popularity || 0);
+  };
+
+  const movieCredits = (p.movie_credits?.cast ?? []).filter((c: any) => c.poster_path).sort(newestCreditFirst);
+  const tvCredits = (p.tv_credits?.cast ?? []).filter((c: any) => c.poster_path).sort(newestCreditFirst);
   const knownFor = [...movieCredits, ...tvCredits].sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 10);
 
   const age = p.birthday ? Math.floor((Date.now() - new Date(p.birthday).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
