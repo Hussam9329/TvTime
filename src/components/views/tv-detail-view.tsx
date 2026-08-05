@@ -536,7 +536,7 @@ export function TvDetailView() {
       </section>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex h-14 w-full justify-stretch overflow-x-auto rounded-2xl border border-white/10 bg-[#0a1220]/90 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:flex-1 [&>*]:rounded-xl">
+        <TabsList className="tvtime-tv-detail-tabs flex h-14 w-full justify-stretch overflow-x-auto rounded-2xl border border-white/10 bg-[#0a1220]/90 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:flex-1 [&>*]:rounded-xl">
           <TabsTrigger value="seasons">Seasons & Episodes</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="cast">Cast</TabsTrigger>
@@ -961,11 +961,11 @@ function SeasonEpisodes({
   return (
     <div className="space-y-4">
       {/* Season selector */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="relative">
+      <div className="tvtime-season-toolbar flex items-center justify-between gap-3 flex-wrap">
+        <div className="tvtime-season-selector relative">
           <button
             onClick={() => setOpen((o) => !o)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-sm font-semibold hover:bg-accent transition-colors min-w-[180px]"
+            className="tvtime-season-selector__button flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-sm font-semibold hover:bg-accent transition-colors min-w-[180px]"
           >
             <Layers className="w-4 h-4" />
             {currentSeason?.name || `Season ${season}`}
@@ -990,7 +990,7 @@ function SeasonEpisodes({
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="tvtime-season-actions flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={markAllWatched} disabled={seasonData.isLoading || bulkEpisodeToggle.isPending || episodeToggle.isPending || releasedEpisodes.length === 0 || !watchPlanReady}>
             <CheckCheck className="w-4 h-4 mr-1.5" /> Mark season watched
           </Button>
@@ -1002,7 +1002,7 @@ function SeasonEpisodes({
 
       {/* Progress */}
       {seasonData.data && (
-        <div className="flex items-center gap-3 text-sm">
+        <div className="tvtime-season-progress flex items-center gap-3 text-sm">
           <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full bg-primary transition-[width] duration-300"
