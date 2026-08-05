@@ -166,10 +166,12 @@ function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: 
   })));
 
   return (
-    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+    <div className="tvtime-person-credits-grid">
       {items.map((c: any, i: number) => {
         const isMovie = Boolean(c.title);
         const mediaType = isMovie ? "movie" as const : "tv" as const;
+        const year = (c.release_date || c.first_air_date || "").slice(0, 4);
+        const role = c.character || c.job || "Role not listed";
         const libraryState = states.data?.[mediaStateKey(mediaType, Number(c.id))];
         const completed = isMovie ? Boolean(libraryState?.watched) : libraryState?.status === "finished";
         return (
@@ -179,10 +181,10 @@ function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: 
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: Math.min(i * 0.03, 0.3) }}
                 onClick={() => isMovie ? onGoMovie(c.id) : onGoTv(c.id)}
-                className="flex-shrink-0 w-[120px] sm:w-[140px] group text-left"
+                className="tvtime-person-credit group min-w-0 text-left"
               >
-                <Card className="overflow-hidden p-0 border-border/50 hover:border-primary/55 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-md">
-                  <div className="relative aspect-[2/3] overflow-hidden bg-muted">
+                <Card className="tvtime-person-credit__card overflow-hidden p-0 border-border/50 transition-[border-color,box-shadow,background-color] duration-200">
+                  <div className="tvtime-person-credit__poster relative aspect-[2/3] overflow-hidden bg-muted">
                     <SafeImage src={img(c.poster_path, "w342")} alt={c.title || c.name} fill variant="poster" className="transition-opacity duration-200 group-hover:opacity-95" />
                     {completed && (
                       <WatchedIndicator
@@ -192,9 +194,16 @@ function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: 
                     )}
                     {!completed && <TmdbScoreIndicator rating={c.vote_average} />}
                   </div>
-                  <div className="p-2">
-                    <p className="text-xs font-semibold line-clamp-1">{c.title || c.name}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{c.character || c.job}</p>
+                  <div className="tvtime-person-credit__body">
+                    <p className="tvtime-person-credit__title line-clamp-2">{c.title || c.name}</p>
+                    <div className="tvtime-person-credit__role">
+                      <span>Role</span>
+                      <p className="line-clamp-2">{role}</p>
+                    </div>
+                    <div className="tvtime-person-credit__meta">
+                      <span>{isMovie ? "Movie" : "TV Show"}</span>
+                      {year && <span>{year}</span>}
+                    </div>
                   </div>
                 </Card>
               </motion.button>
@@ -214,7 +223,7 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
     return <p className="text-muted-foreground text-center py-8">No credits available.</p>;
   }
   return (
-    <div className="space-y-2">
+    <div className="tvtime-person-filmography-grid">
       {visibleItems.map((c, i) => {
         const year = (c.release_date || c.first_air_date || "").slice(0, 4);
         const title = c.title || c.name;
@@ -227,12 +236,12 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: Math.min(i * 0.01, 0.3) }}
             onClick={() => onGo(c.id)}
-            className="w-full text-left"
+            className="tvtime-person-credit group min-w-0 text-left"
           >
-            <Card className="p-2.5 flex items-center gap-3 hover:border-primary/40 transition-colors group">
-              <div className="relative w-10 h-14 rounded-md overflow-hidden bg-muted flex-shrink-0">
+            <Card className="tvtime-person-credit__card overflow-hidden p-0 transition-[border-color,box-shadow,background-color] duration-200">
+              <div className="tvtime-person-credit__poster relative aspect-[2/3] overflow-hidden bg-muted">
                 {c.poster_path ? (
-                  <SafeImage src={img(c.poster_path, "w92")} alt={title} fill variant="poster" />
+                  <SafeImage src={img(c.poster_path, "w342")} alt={title} fill variant="poster" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                     {type === "movie" ? <Film className="w-4 h-4" /> : <Tv className="w-4 h-4" />}
@@ -244,25 +253,25 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
                     status={type === "movie" ? "watched" : "finished"}
                   />
                 )}
+                {!completed && <TmdbScoreIndicator rating={c.vote_average} />}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">{title}</p>
-                {c.character && <p className="text-xs text-muted-foreground line-clamp-1">as {c.character}</p>}
-              </div>
-              <div className="text-right flex-shrink-0">
-                {year && <p className="text-xs text-muted-foreground">{year}</p>}
-                {c.vote_average > 0 && (
-                  <p className="text-xs text-amber-400 flex items-center gap-0.5 justify-end">
-                    <Star className="w-3 h-3 fill-amber-400" /> {c.vote_average.toFixed(1)}
-                  </p>
-                )}
+              <div className="tvtime-person-credit__body">
+                <p className="tvtime-person-credit__title line-clamp-2">{title}</p>
+                <div className="tvtime-person-credit__role">
+                  <span>Role</span>
+                  <p className="line-clamp-2">{c.character || c.job || "Role not listed"}</p>
+                </div>
+                <div className="tvtime-person-credit__meta">
+                  <span>{type === "movie" ? "Movie" : "TV Show"}</span>
+                  {year && <span>{year}</span>}
+                </div>
               </div>
             </Card>
           </motion.button>
         );
       })}
       {items.length > 50 && (
-        <p className="text-center text-xs text-muted-foreground py-3">Showing 50 of {items.length} credits</p>
+        <p className="tvtime-person-filmography-count text-center text-xs text-muted-foreground py-3">Showing 50 of {items.length} credits</p>
       )}
     </div>
   );
