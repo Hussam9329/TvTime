@@ -260,7 +260,9 @@ function Hero({ items }: { items: MediaItem[] }) {
     if (!nextItem?.backdrop_path) return;
 
     const preload = new Image();
-    preload.src = img(nextItem.backdrop_path, "w1280");
+    // The hero can span wide/high-density displays. Preload the original TMDB
+    // backdrop so next/image is never forced to upscale a 1280px source.
+    preload.src = img(nextItem.backdrop_path, "original");
   }, [activeIndex, items]);
 
   const moveSlide = (direction: -1 | 1) => {
@@ -306,11 +308,12 @@ function Hero({ items }: { items: MediaItem[] }) {
           transition={{ duration: shouldReduceMotion ? 0 : 0.65, ease: "easeOut" }}
         >
           <SafeImage
-            src={img(item.backdrop_path, "w1280")}
+            src={img(item.backdrop_path, "original")}
             alt=""
             fill
             variant="backdrop"
             priority
+            sizes="100vw"
             className="object-cover"
           />
         </motion.div>
