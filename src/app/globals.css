@@ -3237,6 +3237,43 @@ body {
   margin-bottom: 0.9rem;
 }
 
+.tvtime-tv-detail-hero__user-state {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+  padding: 0.28rem 0.32rem 0.28rem 0.7rem;
+  border: 1px solid rgb(96 165 250 / 0.26);
+  border-radius: 999px;
+  background: rgb(8 18 35 / 0.7);
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.05);
+  backdrop-filter: blur(12px);
+}
+
+.tvtime-tv-detail-hero__user-state-label {
+  color: rgb(255 255 255 / 0.55);
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.tvtime-tv-detail-hero__user-state [data-slot="badge"] {
+  min-height: 1.65rem;
+  gap: 0.3rem;
+  padding-inline: 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.tvtime-tv-detail-hero__user-state svg {
+  width: 0.72rem;
+  height: 0.72rem;
+  margin: 0;
+}
+
 .tvtime-tv-detail-hero__meta > * {
   display: inline-flex;
   min-height: 2rem;
@@ -3786,28 +3823,67 @@ body {
   }
 
   .tvtime-tv-detail-hero__layout {
+    grid-template-columns: 6.75rem minmax(0, 1fr) !important;
+    align-items: start;
     gap: 0.875rem !important;
     padding: 0.875rem !important;
   }
 
   .tvtime-tv-detail-hero__poster {
+    grid-column: 1;
+    grid-row: 1;
     width: 6.75rem !important;
+    margin: 0 !important;
   }
 
   .tvtime-tv-detail-hero__poster > [data-slot="card"] {
     border-radius: 1rem;
   }
 
-  .tvtime-tv-detail-hero__content > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0.875rem !important;
+  .tvtime-tv-detail-hero__content {
+    display: contents;
+  }
+
+  .tvtime-tv-detail-hero__identity {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    align-self: center;
+  }
+
+  .tvtime-tv-detail-hero__user-state {
+    min-height: 1.9rem;
+    max-width: 100%;
+    margin-bottom: 0.55rem;
+    padding: 0.2rem 0.24rem 0.2rem 0.55rem;
+  }
+
+  .tvtime-tv-detail-hero__user-state-label {
+    font-size: 0.58rem;
+  }
+
+  .tvtime-tv-detail-hero__user-state [data-slot="badge"] {
+    min-height: 1.45rem !important;
+    padding-inline: 0.45rem;
+    font-size: 0.62rem;
   }
 
   .tvtime-tv-detail-hero__meta {
+    flex-wrap: nowrap;
     gap: 0.35rem !important;
     margin-bottom: 0.7rem !important;
+    padding-bottom: 0.1rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .tvtime-tv-detail-hero__meta::-webkit-scrollbar {
+    display: none;
   }
 
   .tvtime-tv-detail-hero__meta > * {
+    flex: 0 0 auto;
     min-height: 1.75rem !important;
     height: 1.75rem !important;
     padding-inline: 0.5rem !important;
@@ -3850,7 +3926,7 @@ body {
   }
 
   .tvtime-tv-detail-hero__title {
-    font-size: 1.85rem !important;
+    font-size: clamp(1.55rem, 7vw, 1.9rem) !important;
     line-height: 1 !important;
   }
 
@@ -3861,6 +3937,7 @@ body {
   }
 
   .tvtime-tv-detail-hero__rating-card {
+    grid-column: 1 / -1;
     padding: 0.875rem !important;
     border-radius: 1rem !important;
   }
@@ -4031,6 +4108,7 @@ body {
   }
 
   .tvtime-tv-detail-hero__actions {
+    grid-column: 1 / -1;
     grid-auto-rows: 2.5rem;
     gap: 0.5rem;
   }
@@ -4045,6 +4123,11 @@ body {
 
   .tvtime-tv-detail-hero__watch-button {
     padding-inline: 1.75rem !important;
+  }
+
+  .tvtime-tv-detail-hero__genres,
+  .tvtime-tv-detail-hero__creator {
+    grid-column: 1 / -1;
   }
 
   .tvtime-movie-detail-rating {
