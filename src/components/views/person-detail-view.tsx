@@ -58,9 +58,14 @@ export function PersonDetailView() {
     return (b.popularity || 0) - (a.popularity || 0);
   };
 
-  const movieCredits = (p.movie_credits?.cast ?? []).filter((c: any) => c.poster_path).sort(newestCreditFirst);
-  const tvCredits = (p.tv_credits?.cast ?? []).filter((c: any) => c.poster_path).sort(newestCreditFirst);
-  const knownFor = [...movieCredits, ...tvCredits].sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 10);
+  // Keep the complete TMDB cast history. Upcoming credits frequently have no
+  // poster yet, so filtering by artwork would silently hide confirmed work.
+  const movieCredits = (p.movie_credits?.cast ?? []).sort(newestCreditFirst);
+  const tvCredits = (p.tv_credits?.cast ?? []).sort(newestCreditFirst);
+  const knownFor = [...movieCredits, ...tvCredits]
+    .filter((credit: any) => credit.poster_path)
+    .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0))
+    .slice(0, 10);
 
   const age = p.birthday ? Math.floor((Date.now() - new Date(p.birthday).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
@@ -226,7 +231,7 @@ function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: 
 }
 
 function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | "tv"; onGo: (id: number) => void }) {
-  const visibleItems = items.slice(0, 50);
+  const visibleItems = items;
   const states = useMediaStates(
     visibleItems.map((item) => ({ tmdbId: Number(item.id), mediaType: type })),
   );
@@ -237,7 +242,9 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
   return (
     <div className="tvtime-person-filmography-grid">
       {visibleItems.map((c, i) => {
-        const year = (c.release_date || c.first_air_date || "").slice(0, 4);
+        const releaseDate = c.release_date || c.first_air_date || "";
+        const year = releaseDate.slice(0, 4);
+        const isUpcoming = Boolean(releaseDate && releaseDate > new Date().toISOString().slice(0, 10));
         const title = c.title || c.name;
         const libraryState = states.data?.[mediaStateKey(type, Number(c.id))];
         const completed = type === "movie" ? Boolean(libraryState?.watched) : libraryState?.status === "finished";
@@ -275,6 +282,7 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
                 </div>
                 <div className="tvtime-person-credit__meta">
                   <span>{type === "movie" ? "Movie" : "TV Show"}</span>
+                  {isUpcoming && <span className="tvtime-person-credit__upcoming">Upcoming</span>}
                   {year && <span>{year}</span>}
                 </div>
               </div>
@@ -282,9 +290,6 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
           </motion.button>
         );
       })}
-      {items.length > 50 && (
-        <p className="tvtime-person-filmography-count text-center text-xs text-muted-foreground py-3">Showing 50 of {items.length} credits</p>
-      )}
     </div>
   );
 }
