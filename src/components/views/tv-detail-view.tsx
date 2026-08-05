@@ -343,10 +343,9 @@ export function TvDetailView() {
 
         <div className="tvtime-tv-detail-hero__content min-w-0 space-y-5 md:pt-1">
           {/* Title and badges */}
-          <div>
-            <div className="tvtime-tv-detail-hero__meta">
-              <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
-              {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">Arabic TV</Badge>}
+          <div className="tvtime-tv-detail-hero__identity">
+            <div className="tvtime-tv-detail-hero__user-state" aria-label="Your viewing status">
+              <span className="tvtime-tv-detail-hero__user-state-label">Your status</span>
               {effectiveLabel === "finished" && (
                 <Badge data-status="finished" className="bg-emerald-500/20 text-emerald-400 border-0">
                   <Trophy className="w-3 h-3 mr-1" /> Finished
@@ -358,7 +357,9 @@ export function TvDetailView() {
                 </Badge>
               )}
               {effectiveLabel === "watching" && (
-                <Badge data-status="watching" className="bg-blue-500/20 text-blue-400 border-0">Watching</Badge>
+                <Badge data-status="watching" className="bg-blue-500/20 text-blue-400 border-0">
+                  <Play className="w-3 h-3 mr-1 fill-current" /> Watching
+                </Badge>
               )}
               {effectiveLabel === "not_started" && (
                 <Badge data-status="not_started" className="bg-slate-500/20 text-slate-300 border-0">Not Started</Badge>
@@ -366,6 +367,10 @@ export function TvDetailView() {
               {effectiveLabel === "planned" && (
                 <Badge data-status="planned" className="bg-violet-500/20 text-violet-300 border-0">Planned</Badge>
               )}
+            </div>
+            <div className="tvtime-tv-detail-hero__meta">
+              <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
+              {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">Arabic TV</Badge>}
               {year && <Badge variant="secondary" className="border-0">{year}</Badge>}
               {t.number_of_seasons > 0 && <Badge variant="secondary" className="border-0"><Layers className="w-3 h-3 mr-1" />{t.number_of_seasons} season{t.number_of_seasons > 1 ? "s" : ""}</Badge>}
               {runtime && <Badge variant="secondary" className="border-0"><Clock className="w-3 h-3 mr-1" />{runtime}</Badge>}
@@ -516,13 +521,13 @@ export function TvDetailView() {
             </div>
           </Card>
 
-          <div className="flex flex-wrap gap-2.5 [&>*]:rounded-xl [&>*]:px-4 [&>*]:py-2">
+          <div className="tvtime-tv-detail-hero__genres flex flex-wrap gap-2.5 [&>*]:rounded-xl [&>*]:px-4 [&>*]:py-2">
             {t.genres?.map((g) => (
               <Badge key={g.id} variant="outline" className="border-primary/30 text-primary/90">{g.name}</Badge>
             ))}
           </div>
           {t.created_by?.length > 0 && (
-            <p className="text-sm text-muted-foreground">
+            <p className="tvtime-tv-detail-hero__creator text-sm text-muted-foreground">
               Created by <span className="text-foreground font-medium">{t.created_by.map((c) => c.name).join(", ")}</span>
             </p>
           )}
