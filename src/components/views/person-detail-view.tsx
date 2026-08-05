@@ -66,17 +66,25 @@ export function PersonDetailView() {
               <SafeImage src={img(knownFor[0].backdrop_path, "w1280")} alt="" fill variant="backdrop" className="blur-2xl" />
             )}
           </div>
-          <div className="relative flex flex-col sm:flex-row gap-5 items-center sm:items-start">
-            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-background shadow-2xl flex-shrink-0">
+          <div className="relative flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+            <div className="tvtime-person-profile relative w-36 aspect-[2/3] sm:w-48 overflow-hidden rounded-[1.2rem] border border-primary/35 bg-muted shadow-2xl flex-shrink-0">
               {p.profile_path ? (
-                <SafeImage src={img(p.profile_path, "w300")} alt={p.name} fill variant="profile" />
+                <SafeImage
+                  src={img(p.profile_path, "w500")}
+                  alt={p.name}
+                  fill
+                  variant="profile"
+                  sizes="(max-width: 640px) 144px, 192px"
+                  className="object-cover object-top"
+                  priority
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-muted">
                   <Users className="w-12 h-12 text-muted-foreground" />
                 </div>
               )}
             </div>
-            <div className="flex-1 text-center sm:text-left">
+            <div className="min-w-0 flex-1 text-center sm:pt-2 sm:text-left">
               <h1 className="view-page-title text-2xl sm:text-4xl font-extrabold tracking-tight drop-shadow-lg">{p.name}</h1>
               {p.known_for_department && (
                 <Badge variant="secondary" className="mt-2 bg-primary/20 text-primary border-0">
