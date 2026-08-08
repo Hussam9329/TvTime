@@ -2,6 +2,6 @@
 
 import { MovieHubView } from "@/components/views/movie-hub-view";
 
-export function MoviesView() {
-  return <MovieHubView world="movies" />;
+export function AsianMoviesView() {
+  return <MovieHubView world="asian-movies" />;
 }

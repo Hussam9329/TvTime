@@ -3,7 +3,7 @@ import { resolveTmdbKeywordIds, tmdb, type TmdbLanguage } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
-import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
+import { discoverAsianMoviesByPriority, discoverAsianTvByPriority } from "@/lib/asian-discover-server";
 import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
 
 const handler = async (
@@ -88,7 +88,9 @@ const handler = async (
           keyword_ids: keywordIds,
           language,
         };
-        if (queryParams.original_language === "ar") {
+        if (queryParams.origin_country === ASIAN_ORIGIN_COUNTRY_QUERY) {
+          data = await discoverAsianMoviesByPriority(discoverParams, page);
+        } else if (queryParams.original_language === "ar") {
           data = await discoverArabicByCountryPriority("movie", discoverParams, page);
         } else {
           const discovered = await tmdb.discoverMovies(discoverParams);

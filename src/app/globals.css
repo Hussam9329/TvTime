@@ -44,6 +44,524 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Shared movie worlds: Movies, Arabic Movies and Asian Movies. */
+.tvtime-movie-hub {
+  --movie-world-accent: var(--primary);
+  --movie-world-accent-soft: color-mix(in oklab, var(--primary) 16%, transparent);
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  padding-bottom: 1rem;
+}
+
+.tvtime-movie-hub[data-world="arabic-movies"] {
+  --movie-world-accent: oklch(0.74 0.14 52);
+  --movie-world-accent-soft: oklch(0.74 0.14 52 / 16%);
+}
+
+.tvtime-movie-hub[data-world="asian-movies"] {
+  --movie-world-accent: oklch(0.7 0.17 43);
+  --movie-world-accent-soft: oklch(0.61 0.2 28 / 17%);
+}
+
+.tvtime-movie-hub__titlebar {
+  display: flex;
+  min-width: 0;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0.2rem 0.55rem;
+}
+
+.tvtime-movie-hub__eyebrow,
+.tvtime-movie-hub__section-kicker {
+  color: var(--movie-world-accent);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.tvtime-movie-hub__titlebar h1 {
+  margin-top: 0.12rem;
+  font-size: clamp(1.8rem, 3vw, 2.45rem);
+  font-weight: 950;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.tvtime-movie-hub__summary {
+  margin-top: 0.42rem;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.tvtime-movie-hub__browse[data-slot="button"] {
+  min-height: 2.55rem;
+  border: 1px solid color-mix(in oklab, var(--movie-world-accent) 38%, var(--border));
+  background: color-mix(in oklab, var(--movie-world-accent) 92%, black);
+  box-shadow: 0 12px 28px color-mix(in oklab, var(--movie-world-accent) 18%, transparent);
+}
+
+.tvtime-movie-hub__tabs[data-slot="tabs-list"] {
+  position: sticky;
+  z-index: 24;
+  top: 4.85rem;
+  display: grid;
+  width: min(100%, 44rem);
+  height: auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem;
+  padding: 0.28rem;
+  border: 1px solid color-mix(in oklab, var(--movie-world-accent) 16%, var(--border));
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--background) 86%, transparent);
+  box-shadow: 0 12px 35px rgb(0 0 0 / 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.tvtime-movie-hub__tabs [data-slot="tabs-trigger"] {
+  min-width: 0;
+  min-height: 2.45rem;
+  gap: 0.4rem;
+  border-radius: 0.75rem;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.tvtime-movie-hub__tabs [data-slot="tabs-trigger"] svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.tvtime-movie-hub__tabs [data-state="active"] {
+  background: var(--movie-world-accent);
+  color: #150f09;
+  box-shadow: 0 7px 18px color-mix(in oklab, var(--movie-world-accent) 20%, transparent);
+}
+
+.tvtime-movie-hub [data-slot="tabs-content"] {
+  min-width: 0;
+  padding-top: 1rem;
+}
+
+.tvtime-movie-hub__overview,
+.tvtime-movie-hub__skeleton {
+  display: grid;
+  min-width: 0;
+  gap: clamp(1.7rem, 3.6vw, 2.7rem);
+}
+
+.tvtime-movie-hub-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: clamp(24rem, 44vw, 33rem);
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--movie-world-accent) 43%, var(--border));
+  border-radius: 1.55rem;
+  background: #090806;
+  box-shadow: 0 28px 70px rgb(0 0 0 / 0.34), inset 0 1px rgb(255 255 255 / 0.08);
+}
+
+.tvtime-movie-hub-hero__backdrop,
+.tvtime-movie-hub-hero__scrim {
+  position: absolute;
+  inset: 0;
+}
+
+.tvtime-movie-hub-hero__backdrop {
+  z-index: -2;
+}
+
+.tvtime-movie-hub-hero__backdrop img {
+  object-fit: cover;
+  object-position: center 25%;
+}
+
+.tvtime-movie-hub-hero__scrim {
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgb(4 4 5 / 0.93) 0%, rgb(4 4 5 / 0.72) 46%, rgb(4 4 5 / 0.22) 82%),
+    linear-gradient(0deg, rgb(4 4 5 / 0.84) 0%, transparent 58%),
+    radial-gradient(circle at 18% 100%, var(--movie-world-accent-soft), transparent 42%);
+}
+
+.tvtime-movie-hub-hero__content {
+  display: flex;
+  min-height: clamp(24rem, 44vw, 33rem);
+  max-width: 52rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: end;
+  padding: clamp(1.35rem, 4vw, 3.5rem);
+}
+
+.tvtime-movie-hub-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  color: rgb(255 255 255 / 0.76);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.tvtime-movie-hub-hero__meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.34rem 0.52rem;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.32);
+  backdrop-filter: blur(12px);
+}
+
+.tvtime-movie-hub-hero__meta > span:first-child {
+  border-color: color-mix(in oklab, var(--movie-world-accent) 44%, transparent);
+  background: color-mix(in oklab, var(--movie-world-accent) 20%, rgb(0 0 0 / 0.45));
+  color: color-mix(in oklab, var(--movie-world-accent) 80%, white);
+}
+
+.tvtime-movie-hub-hero__meta svg {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
+.tvtime-movie-hub-hero__content h2 {
+  max-width: 13ch;
+  margin-top: 0.75rem;
+  color: white;
+  font-size: clamp(2.25rem, 6vw, 4.7rem);
+  font-weight: 950;
+  letter-spacing: -0.06em;
+  line-height: 0.96;
+  text-wrap: balance;
+  text-shadow: 0 12px 32px rgb(0 0 0 / 0.48);
+}
+
+.tvtime-movie-hub-hero__content > p {
+  max-width: 43rem;
+  margin-top: 0.9rem;
+  color: rgb(255 255 255 / 0.76);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.tvtime-movie-hub-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+
+.tvtime-movie-hub-hero__actions [data-slot="button"] {
+  min-height: 2.75rem;
+  border-radius: 0.9rem;
+  font-size: 0.78rem;
+}
+
+.tvtime-movie-hub-hero__watchlist[data-slot="button"] {
+  border-color: rgb(168 85 247 / 0.6);
+  background: rgb(126 34 206 / 0.76);
+  color: white;
+  box-shadow: 0 10px 28px rgb(126 34 206 / 0.2);
+}
+
+.tvtime-movie-hub-hero__dismiss {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  margin-top: 0.8rem;
+  padding: 0.32rem 0.1rem;
+  color: rgb(255 255 255 / 0.56);
+  font-size: 0.7rem;
+  font-weight: 650;
+  transition: color 160ms ease;
+}
+
+.tvtime-movie-hub-hero__dismiss:hover {
+  color: white;
+}
+
+.tvtime-movie-hub-hero__dismiss svg {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
+.tvtime-movie-hub-hero__controls {
+  position: absolute;
+  z-index: 3;
+  top: 1rem;
+  inset-inline-end: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.3rem;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.42);
+  backdrop-filter: blur(14px);
+}
+
+.tvtime-movie-hub-hero__controls > button {
+  display: grid;
+  width: 1.85rem;
+  height: 1.85rem;
+  place-items: center;
+  border-radius: 999px;
+  color: rgb(255 255 255 / 0.72);
+}
+
+.tvtime-movie-hub-hero__controls > button:hover {
+  background: rgb(255 255 255 / 0.1);
+  color: white;
+}
+
+.tvtime-movie-hub-hero__controls svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.tvtime-movie-hub-hero__controls > div {
+  display: flex;
+  gap: 0.28rem;
+}
+
+.tvtime-movie-hub-hero__controls > div button {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.35);
+  transition: width 180ms ease, background-color 180ms ease;
+}
+
+.tvtime-movie-hub-hero__controls > div button[data-active="true"] {
+  width: 1.2rem;
+  background: var(--movie-world-accent);
+}
+
+.tvtime-movie-hub__section-line {
+  display: flex;
+  min-width: 0;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.tvtime-movie-hub__section-line h2,
+.tvtime-movie-hub__empty-row h2 {
+  margin-top: 0.12rem;
+  font-size: 1.18rem;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+}
+
+.tvtime-movie-hub__quick-picks {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  gap: 0.38rem;
+  overflow-x: auto;
+  padding: 0.1rem;
+}
+
+.tvtime-movie-hub__quick-picks button {
+  flex: 0 0 auto;
+  padding: 0.46rem 0.7rem;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 0.7rem;
+  background: var(--app-surface-subtle);
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 750;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.tvtime-movie-hub__quick-picks button[data-active="true"] {
+  border-color: color-mix(in oklab, var(--movie-world-accent) 54%, var(--border));
+  background: var(--movie-world-accent-soft);
+  color: var(--foreground);
+}
+
+.tvtime-movie-hub__empty-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px dashed color-mix(in oklab, var(--movie-world-accent) 25%, var(--border));
+  border-radius: 1rem;
+  background: linear-gradient(120deg, var(--movie-world-accent-soft), transparent 55%);
+}
+
+.tvtime-movie-hub__empty-row > span {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.8rem;
+  background: var(--movie-world-accent-soft);
+  color: var(--movie-world-accent);
+}
+
+.tvtime-movie-hub__empty-row > span svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.tvtime-movie-hub__empty-row p,
+.tvtime-movie-hub__partial {
+  margin-top: 0.18rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.tvtime-movie-hub__error {
+  display: grid;
+  min-height: 20rem;
+  place-items: center;
+  align-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.tvtime-movie-hub__error > svg {
+  width: 2.4rem;
+  height: 2.4rem;
+  color: var(--movie-world-accent);
+}
+
+.tvtime-movie-hub__error p {
+  max-width: 30rem;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 767px) {
+  .tvtime-movie-hub {
+    gap: 0.75rem;
+    padding-bottom: calc(var(--tvtime-mobile-dock-offset, 6rem) + 1rem);
+  }
+
+  .tvtime-movie-hub__titlebar {
+    align-items: center;
+  }
+
+  .tvtime-movie-hub__titlebar h1 {
+    font-size: 1.75rem;
+  }
+
+  .tvtime-movie-hub__summary {
+    max-width: 25rem;
+    font-size: 0.68rem;
+    line-height: 1.45;
+  }
+
+  .tvtime-movie-hub__browse[data-slot="button"] {
+    width: 2.55rem;
+    min-width: 2.55rem;
+    padding-inline: 0;
+    font-size: 0;
+  }
+
+  .tvtime-movie-hub__browse svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .tvtime-movie-hub__tabs[data-slot="tabs-list"] {
+    top: 4.25rem;
+    width: 100%;
+  }
+
+  .tvtime-movie-hub__tabs [data-slot="tabs-trigger"] {
+    min-height: 2.3rem;
+    gap: 0.25rem;
+    padding-inline: 0.35rem;
+    font-size: 0.65rem;
+  }
+
+  .tvtime-movie-hub [data-slot="tabs-content"] {
+    padding-top: 0.75rem;
+  }
+
+  .tvtime-movie-hub-hero,
+  .tvtime-movie-hub-hero__content {
+    min-height: 29rem;
+  }
+
+  .tvtime-movie-hub-hero {
+    border-radius: 1.25rem;
+  }
+
+  .tvtime-movie-hub-hero__scrim {
+    background:
+      linear-gradient(0deg, rgb(4 4 5 / 0.97) 0%, rgb(4 4 5 / 0.78) 58%, rgb(4 4 5 / 0.24) 100%),
+      radial-gradient(circle at 20% 100%, var(--movie-world-accent-soft), transparent 48%);
+  }
+
+  .tvtime-movie-hub-hero__content {
+    justify-content: end;
+    padding: 1.1rem;
+  }
+
+  .tvtime-movie-hub-hero__content h2 {
+    max-width: 12ch;
+    font-size: clamp(2.15rem, 11vw, 3.25rem);
+  }
+
+  .tvtime-movie-hub-hero__content > p {
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  .tvtime-movie-hub-hero__actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.48rem;
+  }
+
+  .tvtime-movie-hub-hero__actions [data-slot="button"] {
+    min-width: 0;
+    min-height: 2.65rem;
+    padding-inline: 0.7rem;
+    font-size: 0.69rem;
+  }
+
+  .tvtime-movie-hub-hero__actions [data-slot="button"]:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .tvtime-movie-hub__section-line {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .tvtime-movie-hub__quick-picks {
+    width: calc(100% + 1.5rem);
+    margin-inline: -0.75rem;
+    padding-inline: 0.75rem;
+  }
+
+  .tvtime-movie-hub__empty-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 390px) {
+  .tvtime-movie-hub__tabs [data-slot="tabs-trigger"] svg {
+    display: none;
+  }
+}
+
 /* Default = dark cinema theme */
 :root {
   --radius: 0.7rem;

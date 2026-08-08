@@ -16,6 +16,7 @@ const shell = read("src/components/app-shell.tsx");
 const header = read("src/components/layout/header.tsx");
 const shortcuts = read("src/components/layout/keyboard-shortcuts.tsx");
 const arabicMovies = read("src/components/views/arabic-movies-view.tsx");
+const movieHub = read("src/components/views/movie-hub-view.tsx");
 const arabicTv = read("src/components/views/arabic-tv-view.tsx");
 const tvWorldPage = read("src/components/views/tv-world-page-view.tsx");
 const collection = read("src/components/views/collection-world-view.tsx");
@@ -75,7 +76,7 @@ check(
 );
 check(/Go to Arabic Movies/.test(shortcuts) && /Go to Arabic TV/.test(shortcuts), "Keyboard navigation reaches both Arabic worlds");
 
-check(/value="library"/.test(arabicMovies) && /value="discover"/.test(arabicMovies) && /value="releases"/.test(arabicMovies) && /CollectionWorldView/.test(arabicMovies) && /DiscoverView/.test(arabicMovies) && /ReleaseSchedule/.test(arabicMovies), "Arabic Movies has its own library, discovery and release schedule");
+check(/world="arabic-movies"/.test(arabicMovies) && /value="library"/.test(movieHub) && /value="discover"/.test(movieHub) && /value="releases"/.test(movieHub) && /CollectionWorldView/.test(movieHub) && /DiscoverView/.test(movieHub) && /ReleaseSchedule/.test(movieHub), "Arabic Movies has its own library, discovery and release schedule through the shared movie hub");
 check(
   /TvWorldPageView/.test(arabicTv)
     && /value="library"/.test(tvWorldPage)
@@ -87,8 +88,8 @@ check(
   "Arabic TV has its own tracking, discovery and releases",
 );
 check(/world="arabic-movies"/.test(arabicMovies), "Arabic Movies reads its dedicated collection world");
-check(/<DiscoverView world="arabic-movies" embedded/.test(arabicMovies), "Arabic Movies reuses the full Movies Discover experience");
-check(/<ReleaseSchedule[\s\S]*originalLanguage="ar"[\s\S]*language="ar"/.test(arabicMovies), "Arabic Movies reuses the full Movies release schedule with Arabic-only data");
+check(/<DiscoverView[\s\S]*world=\{world\}/.test(movieHub), "Arabic Movies reuses the full Movies Discover experience");
+check(/originalLanguage=\{world === "arabic-movies" \? "ar" : undefined\}[\s\S]*language=\{world === "arabic-movies" \? "ar" : undefined\}/.test(movieHub), "Arabic Movies reuses the full Movies release schedule with Arabic-only data");
 check(/trackingWorld="arabic"/.test(arabicTv), "Arabic TV reads its dedicated tracking world");
 check(/releaseOriginalLanguage="ar"/.test(arabicTv) && /originalLanguage=\{releaseOriginalLanguage\}/.test(tvWorldPage), "Arabic TV uses the shared Arabic-only release schedule");
 
@@ -129,12 +130,12 @@ check(/onlyArabic:\s*isArabic/.test(discover), "Arabic Seen/Haven't Seen filteri
 check(/disabled=\{Boolean\(forcedLang\)\}/.test(discover), "Arabic and Anime discovery cannot escape their fixed language world");
 check((home.match(/!isArabicMediaItem/g) || []).length >= 3, "Standard Home rows exclude Arabic titles");
 check(
-  /resolveGeneralMediaClassifications\(mediaMovies\)/.test(recently)
+  /resolveGeneralMediaClassifications\(mediaMovies, \{ allowNetwork: false \}\)/.test(recently)
     && /!classifyMediaWorld\(item\)\.isArabic/.test(recently),
   "Home recently watched excludes Arabic Movies through canonical classification",
 );
 check(
-  /resolveGeneralMediaClassifications\(mediaShows\)/.test(recently)
+  /resolveGeneralMediaClassifications\(mediaShows, \{ allowNetwork: false \}\)/.test(recently)
     && /const showIds = nonArabicShows/.test(recently)
     && /showId: \{ in: showIds \}/.test(recently),
   "Home recently watched includes episodes only from canonically non-Arabic series",

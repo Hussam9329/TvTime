@@ -29,6 +29,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
       lastModified: new Date(),
     },
+    {
+      url: `${baseUrl}/asian/movies`,
+      changeFrequency: "weekly",
+      priority: 0.6,
+      lastModified: new Date(),
+    },
   ];
 
   // Dynamic pages — one URL per tracked media item with a TMDB id.

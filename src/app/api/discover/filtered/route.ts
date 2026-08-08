@@ -6,7 +6,7 @@ import { resolveUserId } from "@/lib/auth";
 import { buildSeenIdSet } from "@/lib/discover-seen";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
-import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
+import { discoverAsianMoviesByPriority, discoverAsianTvByPriority } from "@/lib/asian-discover-server";
 import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
 import { matchesDiscoverWorld, type DiscoverWorld } from "@/lib/discover-world";
 import { filterStrictMiniSeriesResults } from "@/lib/tv-format";
@@ -132,8 +132,10 @@ export async function GET(req: NextRequest) {
           ? { ...common, keyword_groups: keywordGroups }
           : { ...common, keyword_groups: keywordGroups, certification };
         response = await discoverArabicByCountryPriority(mediaType, params, page);
-      } else if (mediaType === "tv" && common.originCountries === ASIAN_ORIGIN_COUNTRY_QUERY) {
-        response = await discoverAsianTvByPriority({ ...common, keyword_groups: keywordGroups }, page);
+      } else if (common.originCountries === ASIAN_ORIGIN_COUNTRY_QUERY) {
+        response = mediaType === "tv"
+          ? await discoverAsianTvByPriority({ ...common, keyword_groups: keywordGroups }, page)
+          : await discoverAsianMoviesByPriority({ ...common, keyword_groups: keywordGroups, certification }, page);
       } else {
         response = mediaType === "tv"
           ? await tmdb.discoverTv({ ...common, keyword_groups: keywordGroups, page })
@@ -220,7 +222,7 @@ export async function GET(req: NextRequest) {
       nextCursor = `${parsed.page}:${Math.min(parsed.index, pageSizeObserved)}`;
     }
 
-    const prioritizedResults = mediaType === "movie" && !onlyArabic
+    const prioritizedResults = mediaType === "movie" && !onlyArabic && world === "standard"
       ? sortByStandardMediaPriority(results)
       : results;
 

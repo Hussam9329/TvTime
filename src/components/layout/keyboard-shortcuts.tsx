@@ -26,6 +26,8 @@ const SHORTCUTS: { group: string; items: ShortcutItem[] }[] = [
       { keys: ["g", "m"], description: "Go to Movies" },
       { keys: ["g", "t"], description: "Go to TV Shows" },
       { keys: ["g", "a"], description: "Go to Anime" },
+      { keys: ["g", "k"], description: "Go to Asian Movies" },
+      { keys: ["g", "y"], description: "Go to Asian TV" },
       { keys: ["g", "f"], description: "Go to Arabic Movies" },
       { keys: ["g", "v"], description: "Go to Arabic TV" },
       { keys: ["g", "s"], description: "Go to Stats" },
@@ -116,6 +118,14 @@ export function KeyboardShortcuts() {
             e.preventDefault();
             setView("anime");
             break;
+          case "k":
+            e.preventDefault();
+            setView("asian-movies");
+            break;
+          case "y":
+            e.preventDefault();
+            setView("asian-tv");
+            break;
           case "f":
             e.preventDefault();
             setView("arabic-movies");
@@ -136,7 +146,7 @@ requestSearchFocus();
         return;
       }
 
-      // "g" prefix for navigation (including the independent Arabic Movies and Arabic TV worlds)
+      // "g" prefix for navigation across every independent media world.
       if (e.key.toLowerCase() === "g") {
         lastKeyRef.current = "g";
         lastKeyTimeRef.current = now;

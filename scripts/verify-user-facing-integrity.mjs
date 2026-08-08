@@ -56,6 +56,7 @@ const releaseSchedule = read("src/components/views/movie-release-schedule.tsx");
 const filterPanel = read("src/components/ui/filter-panel.tsx");
 const pageTitlebar = read("src/components/ui/page-titlebar.tsx");
 const moviesView = read("src/components/views/movies-view.tsx");
+const movieHubView = read("src/components/views/movie-hub-view.tsx");
 const tvWorldPageView = read("src/components/views/tv-world-page-view.tsx");
 const animeView = read("src/components/views/anime-view.tsx");
 const arabicMoviesView = read("src/components/views/arabic-movies-view.tsx");
@@ -153,9 +154,9 @@ check(
 
 check(/type CollectionTab = "watchlist" \| "not-started" \| "watching" \| "watched"/.test(collection), "Anime collection models Watchlist, Not Started, In Progress and Watched separately");
 check(
-  /const usesHomePosterGrid = world === "movies" && layout === "grid"/.test(collection)
+  /const usesHomePosterGrid = isMovieWorld && layout === "grid"/.test(collection)
     && /usesHomePosterGrid \? HOME_MEDIA_CARD_GRID_CLASS/.test(collection)
-    && /homePresentation=\{world === "movies"\}/.test(collection)
+    && /homePresentation=\{isMovieWorld\}/.test(collection)
     && /tvtime-media-card group relative min-w-0/.test(collection)
     && /tvtime-media-poster relative aspect-\[2\/3\]/.test(collection)
     && /tvtime-media-copy/.test(collection),
@@ -284,12 +285,26 @@ check(
   "Discover and release posters use Home's shared card presentation and sizing",
 );
 check(
-  [moviesView, tvWorldPageView, animeView, arabicMoviesView, searchView, statsView, watchNextView, discoverView]
+  [tvWorldPageView, animeView, searchView, statsView, watchNextView, discoverView]
     .every((source) => /<PageTitlebar title=/.test(source))
+    && /tvtime-movie-hub__titlebar/.test(movieHubView)
+    && /<MovieHubView world="movies"/.test(moviesView)
+    && /<MovieHubView world="arabic-movies"/.test(arabicMoviesView)
     && /tvtime-page-titlebar/.test(pageTitlebar)
     && /\.tvtime-page-titlebar\s*\{[\s\S]*min-height: 2\.75rem/.test(globalStyles)
     && /\.tvtime-page-titlebar h1\s*\{[\s\S]*font-size: clamp\(1\.2rem, 2vw, 1\.5rem\)/.test(globalStyles),
   "Top-level pages use one compact title-only heading instead of repeated hero descriptions",
+);
+check(
+  /world: MovieHubWorld/.test(movieHubView)
+    && /Pick for Tonight/.test(movieHubView)
+    && /New & Noteworthy/.test(movieHubView)
+    && /Hidden Gems/.test(movieHubView)
+    && /Recently Watched/.test(movieHubView)
+    && /Coming Soon/.test(movieHubView)
+    && /trakora:not-interested/.test(movieHubView)
+    && /trakora:movie-library-layout/.test(collection),
+  "All movie worlds share the cinematic overview, smart shelves, durable exclusions and saved library layout",
 );
 check(
   !/Track films you've watched/.test(moviesView)

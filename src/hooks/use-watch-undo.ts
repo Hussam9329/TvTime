@@ -48,6 +48,7 @@ export function useWatchUndo() {
                 queryClient.invalidateQueries({ queryKey: ["tv-tracking-counts"] }),
                 queryClient.invalidateQueries({ queryKey: ["episode-watch-plan"] }),
                 queryClient.invalidateQueries({ queryKey: ["watch-next"] }),
+                queryClient.invalidateQueries({ queryKey: ["movie-hub"] }),
                 queryClient.invalidateQueries({ queryKey: ["notifications"] }),
               ]);
               toast.success("Watch change undone", { id: loading });

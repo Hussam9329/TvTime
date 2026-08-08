@@ -104,4 +104,19 @@ assert.equal(
   "the same general classifier must include Hostages in standard TV",
 );
 
-console.log("Asian TV classification regression tests passed.");
+const koreanMovie = {
+  type: "movie",
+  title: "Korean Movie",
+  originalLanguage: "ko",
+  originCountries: ["KR"],
+  classificationComplete: true,
+};
+assert.equal(
+  classifyMediaWorld(koreanMovie).collectionWorld,
+  "asian-movies",
+  "Asian movies must use their own collection world instead of leaking into standard Movies",
+);
+assert.equal(recordMatchesMediaClassification(koreanMovie, { isAsian: true }), true);
+assert.equal(recordMatchesMediaClassification(koreanMovie, { isAsian: false }), false);
+
+console.log("Asian TV and movie classification regression tests passed.");

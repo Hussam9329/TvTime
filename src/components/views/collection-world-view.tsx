@@ -28,7 +28,7 @@ import { useWatchUndo } from "@/hooks/use-watch-undo";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { HOME_MEDIA_CARD_GRID_CLASS, MediaCardSkeleton } from "@/components/media/media-card";
 
-type CollectionWorld = "movies" | "anime" | "arabic-movies";
+type CollectionWorld = "movies" | "asian-movies" | "anime" | "arabic-movies";
 type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
 
 type WorldConfig = {
@@ -38,8 +38,9 @@ type WorldConfig = {
   type?: string;
   isAnime: "true" | "false";
   isArabic: "true" | "false";
-  watchlistCount: "watchlistMovies" | "watchlistAnime" | "watchlistArabicMovies";
-  watchedCount: "watchedMovies" | "watchedAnime" | "watchedArabicMovies";
+  isAsian: "true" | "false";
+  watchlistCount: "watchlistMovies" | "watchlistAsianMovies" | "watchlistAnime" | "watchlistArabicMovies";
+  watchedCount: "watchedMovies" | "watchedAsianMovies" | "watchedAnime" | "watchedArabicMovies";
 };
 
 const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
@@ -50,8 +51,20 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
     type: "movie",
     isAnime: "false",
     isArabic: "false",
+    isAsian: "false",
     watchlistCount: "watchlistMovies",
     watchedCount: "watchedMovies",
+  },
+  "asian-movies": {
+    title: "Asian Movies",
+    searchPlaceholder: "Search your Asian movies...",
+    icon: Film,
+    type: "movie",
+    isAnime: "false",
+    isArabic: "false",
+    isAsian: "true",
+    watchlistCount: "watchlistAsianMovies",
+    watchedCount: "watchedAsianMovies",
   },
   "arabic-movies": {
     title: "Arabic Movies",
@@ -60,6 +73,7 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
     type: "movie",
     isAnime: "false",
     isArabic: "true",
+    isAsian: "false",
     watchlistCount: "watchlistArabicMovies",
     watchedCount: "watchedArabicMovies",
   },
@@ -69,6 +83,7 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
     icon: Sparkles,
     isAnime: "true",
     isArabic: "false",
+    isAsian: "false",
     watchlistCount: "watchlistAnime",
     watchedCount: "watchedAnime",
   },
@@ -80,7 +95,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const setView = useNav((s) => s.setView);
   const [tab, setTab] = useState<CollectionTab>("watchlist");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("addedAt");
+  const [sortBy, setSortBy] = useState("smart");
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(0);
   const limit = 60;
@@ -89,10 +104,21 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const isWatchingTab = tab === "watching";
   const debouncedSearch = useDebounce(search, 400);
 
+  useEffect(() => {
+    const saved = window.localStorage.getItem("trakora:movie-library-layout");
+    if (saved === "grid" || saved === "list") setLayout(saved);
+  }, []);
+
+  const changeLayout = (next: "grid" | "list") => {
+    setLayout(next);
+    window.localStorage.setItem("trakora:movie-library-layout", next);
+  };
+
   const media = useMedia({
     type: isWatchingTab || isNotStartedTab ? "series" : config.type,
     isAnime: config.isAnime,
     isArabic: config.isArabic,
+    isAsian: config.isAsian,
     ...(isWatchedTab
       ? { watched: "true" }
       : isNotStartedTab
@@ -101,7 +127,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
           ? { status: "watching,uptodate", watched: "false" }
           : { status: "planned", watched: "false" }),
     search: debouncedSearch || undefined,
-    sortBy,
+    sortBy: sortBy === "smart" ? (isWatchedTab ? "watchedAt" : "addedAt") : sortBy,
     order: "desc",
     limit,
     offset: page * limit,
@@ -116,7 +142,8 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const watchedCount = Number(counts?.[config.watchedCount] ?? 0);
   const notStartedCount = world === "anime" ? Number(counts?.notStartedAnime ?? 0) : 0;
   const watchingCount = world === "anime" ? Number(counts?.watchingAnime ?? 0) : 0;
-  const usesHomePosterGrid = world === "movies" && layout === "grid";
+  const isMovieWorld = world === "movies" || world === "arabic-movies" || world === "asian-movies";
+  const usesHomePosterGrid = isMovieWorld && layout === "grid";
   return (
     <div className="tvtime-collection-world-page space-y-5">
       {!embedded && (
@@ -133,7 +160,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       <FilterPanel
         title="Library filters"
         description={`Browse your ${config.title.toLowerCase()} by collection status, search term and sort order.`}
-        activeCount={Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "addedAt")}
+        activeCount={Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart")}
       >
         <FilterSection title="Collection status">
           <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
@@ -184,6 +211,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
               <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-lg border border-border/50 bg-muted/25 p-1 lg:min-w-[310px]">
                 <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 text-muted-foreground" />
                 {[
+                  { value: "smart", label: "Smart" },
                   { value: "addedAt", label: "Recent" },
                   { value: "userRating", label: "Rating" },
                   { value: "title", label: "A-Z" },
@@ -206,11 +234,11 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       </FilterPanel>
 
       <p className="text-sm text-muted-foreground">
-        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "arabic-movies" ? "Arabic movies" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
+        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "Arabic movies" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
       </p>
       <div className="flex justify-end gap-1" aria-label="Library layout">
-        <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => setLayout("grid")} title="Poster grid"><Grid2X2 className="h-4 w-4" /></Button>
-        <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="h-8 w-8" onClick={() => setLayout("list")} title="Compact list"><List className="h-4 w-4" /></Button>
+        <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("grid")} title="Poster grid"><Grid2X2 className="h-4 w-4" /></Button>
+        <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("list")} title="Compact list"><List className="h-4 w-4" /></Button>
       </div>
 
       {/* Fix #14: Distinguish loading, error, empty, and success states */}
@@ -247,7 +275,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
             search
               ? `لم نجد أي عنصر يطابق "${search}". جرب كلمات مختلفة أو امسح البحث.`
               : tab === "watchlist"
-                ? `ابدأ بإضافة ${world === "movies" ? "أفلام" : world === "arabic-movies" ? "أفلام عربية" : "أنمي"} من صفحة الاستكشاف.`
+                ? `ابدأ بإضافة ${world === "movies" ? "أفلام" : world === "asian-movies" ? "أفلام آسيوية" : world === "arabic-movies" ? "أفلام عربية" : "أنمي"} من صفحة الاستكشاف.`
                 : tab === "watched"
                   ? "اضغط زر 'Mark watched' على أي فيلم لتظهره هنا."
                   : "أضف مسلسلات من صفحة الاستكشاف لتظهر هنا."
@@ -269,7 +297,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
               index={index}
               tab={tab}
               layout={layout}
-              homePresentation={world === "movies"}
+              homePresentation={isMovieWorld}
             />
           ))}
         </div>

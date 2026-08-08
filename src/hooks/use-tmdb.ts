@@ -35,6 +35,40 @@ type HomeFeedResponse = {
   topRatedTv: PaginatedResponse<MediaItem>;
 };
 
+export type MovieHubWorld = "movies" | "arabic-movies" | "asian-movies";
+export type MovieTonightMode = "smart" | "under100" | "rated" | "new" | "hidden" | "classic";
+export type MovieHubItem = MediaItem & { runtime?: number | null };
+export type MovieHubResponse = {
+  world: MovieHubWorld;
+  summary: { watchlist: number; watched: number; averageRating: number | null };
+  featured: MovieHubItem[];
+  shelves: {
+    watchlist: MovieHubItem[];
+    tonight: Record<MovieTonightMode, MovieHubItem[]>;
+    newNoteworthy: MovieHubItem[];
+    hiddenGems: MovieHubItem[];
+    recentlyWatched: MovieHubItem[];
+    comingSoon: MovieHubItem[];
+  };
+  partial?: boolean;
+};
+
+export function useMovieHub(world: MovieHubWorld) {
+  const userId = useNav((state) => state.userId);
+  return useQuery({
+    queryKey: ["movie-hub", userId || getClientUserId(), world],
+    queryFn: async () => {
+      const url = withUserId(new URL("/api/movie-hub", window.location.origin));
+      url.searchParams.set("world", world);
+      const response = await fetch(url, { headers: userHeaders() });
+      await ensureApiOk(response, "Failed to load the movie hub");
+      return response.json() as Promise<MovieHubResponse>;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 /** One browser request for every public catalogue row on the home screen. */
 export function useHomeFeed() {
   return useQuery({
@@ -554,6 +588,7 @@ export function useWatchlistToggle() {
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
       qc.invalidateQueries({ queryKey: ["watch-next"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["movie-hub"] });
     },
   });
 }
@@ -674,6 +709,7 @@ export function useWatchedMovieToggle() {
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+      qc.invalidateQueries({ queryKey: ["movie-hub"] });
     },
   });
 }
@@ -815,6 +851,7 @@ type ReleaseScheduleOptions = {
   excludedOriginalLanguage?: string;
   genres?: number[];
   withoutGenres?: number[];
+  originCountries?: string;
 };
 
 export function useReleaseSchedule(
@@ -834,6 +871,7 @@ export function useReleaseSchedule(
       if (opts?.excludedOriginalLanguage) url.searchParams.set("exclude_original_language", opts.excludedOriginalLanguage);
       if (opts?.genres?.length) url.searchParams.set("genre", opts.genres.join(","));
       if (opts?.withoutGenres?.length) url.searchParams.set("without_genre", opts.withoutGenres.join(","));
+      if (opts?.originCountries) url.searchParams.set("origin_country", opts.originCountries);
       const res = await fetch(url);
       if (!res.ok) {
         const errorBody = await res.json().catch(() => ({}));
@@ -1394,15 +1432,18 @@ interface MediaStats {
     ratedMovies?: number;
     ratedShows?: number;
     ratedAnime?: number;
+    ratedAsianMovies?: number;
     watched: number;
     planned: number;
     watchlist?: number;
     watchlistMovies?: number;
     watchlistShows?: number;
     watchlistAnime?: number;
+    watchlistAsianMovies?: number;
     watchedMovies?: number;
     watchedShows?: number;
     watchedAnime?: number;
+    watchedAsianMovies?: number;
     notStartedAnime?: number;
     watchingAnime?: number;
     watchlistArabicMovies?: number;
@@ -1450,6 +1491,7 @@ export function useMedia(params: {
   tracked?: string;
   isAnime?: string;
   isArabic?: string;
+  isAsian?: string;
   search?: string;
   sortBy?: string;
   order?: string;

@@ -13,9 +13,11 @@ export function matchesDiscoverWorld(
   const isArabic = isArabicMediaItem(item);
   const isAnime = isAnimeMediaItem(item);
   if (mediaType !== "tv") {
+    const isAsian = !isArabic && !isAnime && isAsianMediaItem(item);
     if (world === "arabic") return isArabic;
     if (world === "anime") return isAnime;
-    return !isArabic;
+    if (world === "asian") return isAsian;
+    return !isArabic && !isAnime && !isAsian;
   }
 
   const isAsian = !isArabic && !isAnime && isAsianMediaItem(item);

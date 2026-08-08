@@ -1,10 +1,31 @@
-import { isAsianMediaItem } from "@/lib/asian-media";
+import { ASIAN_COUNTRY_CODES, isAsianMediaItem } from "@/lib/asian-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 import { tmdb, type MediaItem, type PaginatedResponse } from "@/lib/tmdb";
 
 const PRIORITY_COUNTRIES = ["KR", "JP", "CN"] as const;
 const PAGE_SIZE = 20;
+
+export async function discoverAsianMoviesByPriority(
+  params: NonNullable<Parameters<typeof tmdb.discoverMovies>[0]>,
+  page: number,
+): Promise<PaginatedResponse<MediaItem>> {
+  const response = await tmdb.discoverMovies({
+    ...params,
+    page,
+    originCountries: ASIAN_COUNTRY_CODES.join("|"),
+  });
+  return {
+    ...response,
+    results: response.results
+      .filter((item) => isAsianMediaItem(item) && !isAnimeMediaItem(item) && !isArabicMediaItem(item))
+      .sort((left, right) => {
+        const countries = (item: MediaItem) => item.origin_country ?? [];
+        const rank = (item: MediaItem) => countries(item).includes("KR") ? 0 : countries(item).includes("JP") ? 1 : countries(item).includes("CN") ? 2 : 3;
+        return rank(left) - rank(right);
+      }),
+  };
+}
 
 export async function discoverAsianTvByPriority(
   params: NonNullable<Parameters<typeof tmdb.discoverTv>[0]>,

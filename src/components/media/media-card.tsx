@@ -77,11 +77,11 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
   const year = getYear(item);
   const isArabic = isArabicMediaItem(item);
   const isAnime = mediaType === "tv" && isAnimeMediaItem(item);
-  const isAsian = mediaType === "tv" && !isAnime && !isArabic && isAsianMediaItem(item);
+  const isAsian = !isAnime && !isArabic && isAsianMediaItem(item);
   const typeLabel = isAnime
     ? "Anime"
     : isAsian
-      ? "Asian TV"
+      ? (mediaType === "movie" ? "Asian Movie" : "Asian TV")
     : isArabic
       ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV")
       : (mediaType === "movie" ? "Movie" : "TV");

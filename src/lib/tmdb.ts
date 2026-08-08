@@ -293,6 +293,8 @@ export const tmdb = {
   },
 
   // Details
+  movieSummary: (id: number, language?: TmdbLanguage) =>
+    tmdbFetch<MovieDetail>(`/movie/${id}`, {}, language),
   movieDetail: (id: number, language?: TmdbLanguage) =>
     tmdbFetch<MovieDetail>(`/movie/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,release_dates" }, language),
   tvSummary: (id: number, language?: TmdbLanguage) =>

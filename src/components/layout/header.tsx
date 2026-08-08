@@ -76,8 +76,12 @@ const primaryNavItems: NavItem[] = [
 
 const exploreNavItems: NavItem[] = [
   { view: "discover", icon: Compass },
-  { view: "asian-tv", icon: Globe2 },
   { view: "stats", icon: BarChart3 },
+];
+
+const asianNavItems: NavItem[] = [
+  { view: "asian-movies", icon: Film },
+  { view: "asian-tv", icon: Globe2 },
 ];
 
 const arabicNavItems: NavItem[] = [
@@ -86,7 +90,7 @@ const arabicNavItems: NavItem[] = [
 ];
 
 const mobileDockItems = primaryNavItems.slice(0, 4);
-const overflowNavItems = [...exploreNavItems, ...arabicNavItems];
+const overflowNavItems = [...exploreNavItems, ...asianNavItems, ...arabicNavItems];
 
 const NOTIFICATION_QUERY_KEY = ["notifications", "unread-count", getClientUserId()] as const;
 
@@ -264,6 +268,9 @@ export function Header() {
                 <NavGroup label="Explore">
                   {exploreNavItems.map((item) => navButton(item, true))}
                 </NavGroup>
+                <NavGroup label="Asian World">
+                  {asianNavItems.map((item) => navButton(item, true))}
+                </NavGroup>
                 <NavGroup label="Arabic World">
                   {arabicNavItems.map((item) => navButton(item, true))}
                 </NavGroup>
@@ -320,6 +327,18 @@ export function Header() {
               <DropdownMenuContent align="start" className="w-56">
                 <DropdownMenuLabel>Explore</DropdownMenuLabel>
                 {exploreNavItems.map((item) => (
+                  <DropdownMenuItem
+                    key={item.view}
+                    onSelect={() => goTo(item.view)}
+                    onFocus={() => prefetchViewModule(item.view)}
+                  >
+                    <item.icon />
+                    {getViewLabel(item.view)}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Asian World</DropdownMenuLabel>
+                {asianNavItems.map((item) => (
                   <DropdownMenuItem
                     key={item.view}
                     onSelect={() => goTo(item.view)}

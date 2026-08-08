@@ -108,7 +108,7 @@ check(/tx\.media\.deleteMany/.test(clearRoute)
 check(/status:\s*"planned",\s*\n\s*watched:\s*false/.test(watchlist), "Watchlist API requires Planned and watched=false");
 check(
   /item\.status === "planned" && item\.watched === false/.test(counts)
-    && /watchlist:\s*watchlistMovies \+ watchlistShows \+ watchlistAnime \+ watchlistAsianShows \+ watchlistArabicMovies \+ watchlistArabicShows/.test(counts),
+    && /watchlist:\s*watchlistMovies \+ watchlistShows \+ watchlistAnime \+ watchlistAsianMovies \+ watchlistAsianShows \+ watchlistArabicMovies \+ watchlistArabicShows/.test(counts),
   "Global Watchlist counters require Planned and watched=false across every classified world",
 );
 check(/if \(status === "planned"\) where\.watched = false/.test(mediaList), "Generic Media listing enforces strict Watchlist semantics");

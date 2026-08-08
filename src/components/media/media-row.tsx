@@ -16,9 +16,10 @@ interface MediaRowProps {
   forcedMediaType?: "movie" | "tv";
   libraryStateSource?: { data?: Record<string, MediaBatchState> };
   compactCards?: boolean;
+  hideHeading?: boolean;
 }
 
-export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType, libraryStateSource, compactCards = true }: MediaRowProps) {
+export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType, libraryStateSource, compactCards = true, hideHeading = false }: MediaRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
@@ -38,7 +39,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
 
   return (
     <section className="tvtime-media-row">
-      <div className="tvtime-section-heading">
+      {!hideHeading && <div className="tvtime-section-heading">
         <div className="flex min-w-0 items-center gap-2.5">
           {icon && <span className="tvtime-section-heading__icon" aria-hidden="true">{icon}</span>}
           <div className="min-w-0">
@@ -78,7 +79,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
             </Button>
           </div>
         </div>
-      </div>
+      </div>}
       <div className="tvtime-media-row-viewport">
         <div
           ref={scrollRef}

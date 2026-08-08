@@ -12,7 +12,7 @@ import { MediaGrid } from "@/components/media/media-card";
 import { getTitle } from "@/lib/tmdb";
 import { isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
+import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 
 function rangeFromOffset(offset: number) {
   const now = new Date();
@@ -40,7 +40,7 @@ interface ReleaseScheduleProps {
   title?: string;
   /** Header subtitle override. */
   subtitle?: string;
-  collectionWorld?: "standard-tv" | "asian-tv";
+  collectionWorld?: "movies" | "arabic-movies" | "asian-movies" | "standard-tv" | "asian-tv";
 }
 
 /**
@@ -72,12 +72,16 @@ export function ReleaseSchedule({
     excludedOriginalLanguage,
     genres,
     withoutGenres,
+    originCountries: collectionWorld === "asian-movies" || collectionWorld === "asian-tv" ? ASIAN_ORIGIN_COUNTRY_QUERY : undefined,
   });
   const items = useMemo(() => {
     const query = search.trim().toLowerCase();
     let filtered = (schedule.data?.items ?? []).filter((item) => !query || getTitle(item).toLowerCase().includes(query));
     if (collectionWorld === "standard-tv") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
     if (collectionWorld === "asian-tv") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
+    if (collectionWorld === "movies") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
+    if (collectionWorld === "arabic-movies") filtered = filtered.filter(isArabicMediaItem);
+    if (collectionWorld === "asian-movies") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
     return filtered;
   }, [collectionWorld, schedule.data?.items, search]);
   const releaseLibraryStates = useMediaStates(items.map((item) => ({

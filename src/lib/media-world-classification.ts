@@ -2,6 +2,7 @@ import { classifyTvWorld, type TvWorldClassificationInput } from "@/lib/tv-world
 
 export type MediaCollectionWorld =
   | "movies"
+  | "asian-movies"
   | "anime"
   | "arabic-movies"
   | "standard-tv"
@@ -21,7 +22,7 @@ export type MediaClassificationFilters = {
 export function classifyMediaWorld(media: GeneralMediaClassificationInput) {
   const classification = classifyTvWorld(media);
   const isSeries = media.type === "series" || media.type === "tv";
-  const isAsian = isSeries && classification.isAsian;
+  const isAsian = classification.isAsian;
   const collectionWorld: MediaCollectionWorld = classification.isArabic
     ? isSeries
       ? "arabic-tv"
@@ -32,7 +33,9 @@ export function classifyMediaWorld(media: GeneralMediaClassificationInput) {
         ? isAsian
           ? "asian-tv"
           : "standard-tv"
-        : "movies";
+        : isAsian
+          ? "asian-movies"
+          : "movies";
 
   return {
     ...classification,

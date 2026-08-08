@@ -48,16 +48,19 @@ export async function getCanonicalLibraryCounts(userId: string) {
   const ratedShows = count((entry) =>
     entry.world === "standard-tv" && entry.item.status === "finished" && entry.item.userRating != null);
   const ratedAnime = count((entry) => entry.world === "anime" && hasEligibleRating(entry));
+  const ratedAsianMovies = count((entry) => entry.world === "asian-movies" && entry.item.userRating != null);
   const watched = count(({ item }) => item.watched);
   const planned = count(isPlanned);
   const watchlistMovies = count((entry) => entry.world === "movies" && isPlanned(entry));
   const watchlistShows = count((entry) => entry.world === "standard-tv" && isPlanned(entry));
   const watchlistAnime = count((entry) => entry.world === "anime" && isPlanned(entry));
   const watchlistAsianShows = count((entry) => entry.world === "asian-tv" && isPlanned(entry));
+  const watchlistAsianMovies = count((entry) => entry.world === "asian-movies" && isPlanned(entry));
   const watchedMovies = count(({ item, world }) => world === "movies" && item.watched);
   const watchedShows = count(({ item, world }) => world === "standard-tv" && item.watched);
   const watchedAnime = count(({ item, world }) => world === "anime" && item.watched);
   const watchedAsianShows = count(({ item, world }) => world === "asian-tv" && item.watched);
+  const watchedAsianMovies = count(({ item, world }) => world === "asian-movies" && item.watched);
   const notStartedAnime = count(({ item, world }) =>
     world === "anime"
     && item.type === "series"
@@ -91,17 +94,20 @@ export async function getCanonicalLibraryCounts(userId: string) {
     ratedAnime,
     watched,
     planned,
-    watchlist: watchlistMovies + watchlistShows + watchlistAnime + watchlistAsianShows + watchlistArabicMovies + watchlistArabicShows,
+    watchlist: watchlistMovies + watchlistShows + watchlistAnime + watchlistAsianMovies + watchlistAsianShows + watchlistArabicMovies + watchlistArabicShows,
     watchlistMovies,
     watchlistShows,
     watchlistAnime,
     watchlistAsianShows,
+    watchlistAsianMovies,
     watchlistArabicMovies,
     watchlistArabicShows,
     watchedMovies,
     watchedShows,
     watchedAnime,
     watchedAsianShows,
+    watchedAsianMovies,
+    ratedAsianMovies,
     notStartedAnime,
     watchingAnime,
     watchedArabicMovies,

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tmdb, type MediaItem } from "@/lib/tmdb";
 import { parseDateOnly } from "@/lib/date-only";
+import { ASIAN_COUNTRY_CODES, ASIAN_ORIGIN_COUNTRY_QUERY, isAsianMediaItem } from "@/lib/asian-media";
+import { isAnimeMediaItem } from "@/lib/anime-detect";
+import { isArabicMediaItem } from "@/lib/arabic-media";
 
 const MAX_RANGE_DAYS = 370;
 const MAX_PAGES = 5;
@@ -29,6 +32,7 @@ export async function GET(req: NextRequest) {
     const to = url.searchParams.get("to") || "";
     const language = (url.searchParams.get("language") as "ar" | "ja" | "en-US" | null) || undefined;
     const originalLanguage = url.searchParams.get("original_language") || undefined;
+    const originCountry = url.searchParams.get("origin_country") || undefined;
     const fromDay = dayNumber(from);
     const toDay = dayNumber(to);
     const days = fromDay == null || toDay == null ? null : toDay - fromDay + 1;
@@ -46,6 +50,9 @@ export async function GET(req: NextRequest) {
       language,
     };
     if (originalLanguage) baseParams.original_language = originalLanguage;
+    if (originCountry) baseParams.originCountries = originCountry === ASIAN_ORIGIN_COUNTRY_QUERY
+      ? ASIAN_COUNTRY_CODES.join("|")
+      : originCountry;
 
     const first = await tmdb.discoverMovies(baseParams);
     const pages = Math.min(first.total_pages || 1, MAX_PAGES);
@@ -71,6 +78,7 @@ export async function GET(req: NextRequest) {
       if (!item.id || !item.release_date) continue;
       // If original_language filter was set, double-check server-side (TMDB is usually correct, but be safe).
       if (originalLanguage && item.original_language !== originalLanguage) continue;
+      if (originCountry === ASIAN_ORIGIN_COUNTRY_QUERY && (!isAsianMediaItem(item) || isArabicMediaItem(item) || isAnimeMediaItem(item))) continue;
       byId.set(item.id, {
         ...item,
         title: ARABIC_TEXT.test(item.title || "")

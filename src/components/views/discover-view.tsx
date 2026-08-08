@@ -36,7 +36,7 @@ import { applyDiscoverPreset, type DiscoverPresetId } from "@/lib/discover-prese
 import { updateDiscoverRange } from "@/lib/discover-filter-state";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
 
-export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "asian-tv";
+export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "asian-movies" | "asian-tv";
 type TvFormatFilter = "all" | "miniseries" | "anthology";
 
 // Sort options
@@ -114,7 +114,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";
   const isArabicTv = world === "arabic-tv";
-  const isAsian = world === "asian-tv";
+  const isAsian = world === "asian-tv" || world === "asian-movies";
   const forcedLang = isAnime ? "ja" : isArabic ? "ar" : undefined;
   const forcedLanguageLabel = forcedLang === "ar" ? "Arabic" : forcedLang === "ja" ? "Japanese" : null;
   const tmdbLanguage = isArabic ? "ar" as const : isAnime ? "ja" as const : undefined;
@@ -420,10 +420,10 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
     Number(keywords.trim() !== "");
 
   const headerTitle = title || (embedded
-    ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : world === "asian-tv" ? "Asian TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
+    ? `Discover ${world === "anime" ? "Anime" : world === "arabic-movies" ? "Arabic Movies" : world === "arabic-tv" ? "Arabic TV Shows" : world === "asian-movies" ? "Asian Movies" : world === "asian-tv" ? "Asian TV Shows" : effectiveIsTV ? "TV Shows" : "Movies"}`
     : "Discover");
   const headerSubtitle = subtitle || (embedded
-    ? `Find new ${world === "anime" ? "anime" : world === "arabic-movies" || world === "arabic-tv" ? "Arabic" : world === "asian-tv" ? "Asian shows" : effectiveIsTV ? "shows" : "movies"} to add to your library`
+    ? `Find new ${world === "anime" ? "anime" : world === "arabic-movies" || world === "arabic-tv" ? "Arabic" : world === "asian-movies" ? "Asian movies" : world === "asian-tv" ? "Asian shows" : effectiveIsTV ? "shows" : "movies"} to add to your library`
     : `Find your next favorite ${effectiveIsTV ? "show" : "movie"}`);
 
   const sortOptions = effectiveIsTV ? SORT_OPTIONS_TV : SORT_OPTIONS_MOVIES;

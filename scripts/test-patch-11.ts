@@ -18,6 +18,7 @@ const expectedViews = [
   "anime",
   "stats",
   "tv-shows",
+  "asian-movies",
   "asian-tv",
   "arabic-movies",
   "arabic-tv",
