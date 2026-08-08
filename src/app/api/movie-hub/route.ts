@@ -122,7 +122,15 @@ export async function GET(req: NextRequest) {
     };
     const settled = await Promise.allSettled(Object.values(requests));
     const values = Object.fromEntries(Object.keys(requests).map((key, index) => [key, settled[index].status === "fulfilled" ? settled[index].value : []])) as Record<keyof typeof requests, MediaItem[]>;
-    const featuredBase = values.smart.filter((item) => item.backdrop_path).slice(0, 3);
+    const excludedFeaturedIds = new Set(
+      worldItems
+        .filter((item) => item.watched || item.userRating != null)
+        .map((item) => item.tmdbId)
+        .filter((tmdbId): tmdbId is number => tmdbId != null),
+    );
+    const featuredBase = values.smart
+      .filter((item) => item.backdrop_path && !excludedFeaturedIds.has(item.id))
+      .slice(0, 3);
     const featured = await Promise.all(featuredBase.map(async (item) => {
       try {
         const detail = await tmdb.movieSummary(item.id, language);

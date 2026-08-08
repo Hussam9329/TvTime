@@ -57,6 +57,7 @@ const filterPanel = read("src/components/ui/filter-panel.tsx");
 const pageTitlebar = read("src/components/ui/page-titlebar.tsx");
 const moviesView = read("src/components/views/movies-view.tsx");
 const movieHubView = read("src/components/views/movie-hub-view.tsx");
+const movieHubRoute = read("src/app/api/movie-hub/route.ts");
 const tvWorldPageView = read("src/components/views/tv-world-page-view.tsx");
 const animeView = read("src/components/views/anime-view.tsx");
 const arabicMoviesView = read("src/components/views/arabic-movies-view.tsx");
@@ -302,9 +303,12 @@ check(
     && /Hidden Gems/.test(movieHubView)
     && /Recently Watched/.test(movieHubView)
     && /Coming Soon/.test(movieHubView)
-    && /trakora:not-interested/.test(movieHubView)
+    && /excludedFeaturedIds/.test(movieHubRoute)
+    && /item\.watched \|\| item\.userRating != null/.test(movieHubRoute)
+    && /return !state\?\.watched && state\?\.userRating == null/.test(movieHubView)
+    && !/useWatchlistToggle|useWatchedMovieToggle|RatingDialog|trakora:not-interested/.test(movieHubView)
     && /trakora:movie-library-layout/.test(collection),
-  "All movie worlds share the cinematic overview, smart shelves, durable exclusions and saved library layout",
+  "All movie worlds share the cinematic overview, smart shelves, unwatched spotlight and saved library layout",
 );
 check(
   !/Track films you've watched/.test(moviesView)

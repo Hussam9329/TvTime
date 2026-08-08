@@ -5,11 +5,9 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bookmark,
   CalendarDays,
-  Check,
   ChevronLeft,
   ChevronRight,
   Clock3,
-  EyeOff,
   Film,
   Grid2X2,
   Library,
@@ -19,13 +17,11 @@ import {
   Star,
   WandSparkles,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SafeImage } from "@/components/media/safe-image";
 import { MediaRow } from "@/components/media/media-row";
-import { RatingDialog } from "@/components/media/rating-dialog";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
@@ -33,16 +29,13 @@ import {
   mediaStateKey,
   useMediaStates,
   useMovieHub,
-  useWatchedMovieToggle,
-  useWatchlistToggle,
   type MediaBatchState,
   type MovieHubItem,
   type MovieHubWorld,
   type MovieTonightMode,
 } from "@/hooks/use-tmdb";
-import { useWatchUndo } from "@/hooks/use-watch-undo";
 import { useNav } from "@/lib/store";
-import { getTitle, getYear, img, imgOrPlaceholder } from "@/lib/tmdb";
+import { getTitle, getYear, img } from "@/lib/tmdb";
 
 type HubTab = "overview" | "library" | "discover" | "releases";
 
@@ -59,11 +52,6 @@ type WorldCopy = {
   recent: string;
   comingSoon: string;
   viewDetails: string;
-  addWatchlist: string;
-  inWatchlist: string;
-  markWatched: string;
-  watched: string;
-  notInterested: string;
   retry: string;
   emptyWatchlist: string;
   emptyRecent: string;
@@ -83,11 +71,6 @@ const WORLD_COPY: Record<MovieHubWorld, WorldCopy> = {
     recent: "Recently Watched",
     comingSoon: "Coming Soon",
     viewDetails: "View details",
-    addWatchlist: "Add to Watchlist",
-    inWatchlist: "In Watchlist",
-    markWatched: "Mark watched",
-    watched: "Watched",
-    notInterested: "Not interested",
     retry: "Retry",
     emptyWatchlist: "Your watchlist is ready for its first movie.",
     emptyRecent: "Movies you finish will appear here without disappearing from your history.",
@@ -105,11 +88,6 @@ const WORLD_COPY: Record<MovieHubWorld, WorldCopy> = {
     recent: "شاهدتها مؤخراً",
     comingSoon: "قريباً",
     viewDetails: "عرض التفاصيل",
-    addWatchlist: "أضف لقائمة المشاهدة",
-    inWatchlist: "ضمن قائمة المشاهدة",
-    markWatched: "تحديد كمُشاهد",
-    watched: "تمت مشاهدته",
-    notInterested: "غير مهتم",
     retry: "إعادة المحاولة",
     emptyWatchlist: "قائمة مشاهدتك جاهزة لأول فيلم عربي.",
     emptyRecent: "الأفلام التي تنهيها ستظهر هنا وتبقى محفوظة في سجلّك.",
@@ -127,11 +105,6 @@ const WORLD_COPY: Record<MovieHubWorld, WorldCopy> = {
     recent: "Recently Watched",
     comingSoon: "Coming Soon",
     viewDetails: "View details",
-    addWatchlist: "Add to Watchlist",
-    inWatchlist: "In Watchlist",
-    markWatched: "Mark watched",
-    watched: "Watched",
-    notInterested: "Not interested",
     retry: "Retry",
     emptyWatchlist: "Your Asian movie watchlist is ready for its first title.",
     emptyRecent: "Asian movies you finish will appear here and remain in your history.",
@@ -257,15 +230,18 @@ function MovieHubOverview({
   }
 
   const tonightItems = data.shelves.tonight[tonightMode] ?? [];
+  const featuredItems = states.isSuccess
+    ? data.featured.filter((item) => {
+        const state = states.data?.[mediaStateKey("movie", item.id)];
+        return !state?.watched && state?.userRating == null;
+      })
+    : data.featured;
   return (
     <div className="tvtime-movie-hub__overview">
-      {data.featured.length > 0 && (
+      {featuredItems.length > 0 && (
         <MovieHubHero
-          items={data.featured}
+          items={featuredItems}
           copy={copy}
-          world={world}
-          states={states.data}
-          statesReady={states.isSuccess}
         />
       )}
 
@@ -358,96 +334,25 @@ function HubRowOrEmpty({
 function MovieHubHero({
   items,
   copy,
-  world,
-  states,
-  statesReady,
 }: {
   items: MovieHubItem[];
   copy: WorldCopy;
-  world: MovieHubWorld;
-  states?: Record<string, MediaBatchState>;
-  statesReady: boolean;
 }) {
   const goMovie = useNav((state) => state.goMovie);
   const reduceMotion = useReducedMotion();
-  const watchlistToggle = useWatchlistToggle();
-  const watchedToggle = useWatchedMovieToggle();
-  const showWatchUndo = useWatchUndo();
   const [active, setActive] = useState(0);
-  const [ratingOpen, setRatingOpen] = useState(false);
-  const [dismissed, setDismissed] = useState<number[]>([]);
   const pointerStart = useRef<number | null>(null);
-  const visibleItems = items.filter((item) => !dismissed.includes(item.id));
-  const item = visibleItems[active % Math.max(visibleItems.length, 1)] ?? items[0];
-  const state = states?.[mediaStateKey("movie", item.id)] ?? null;
-  const inWatchlist = Boolean(state?.inWatchlist);
-  const watched = Boolean(state?.watched);
+  const item = items[active % items.length];
   const title = getTitle(item);
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(`trakora:not-interested:${world}`) || "[]");
-      if (Array.isArray(saved)) setDismissed(saved.map(Number).filter(Number.isFinite));
-    } catch {
-      setDismissed([]);
-    }
-  }, [world]);
-
-  useEffect(() => {
-    if (visibleItems.length < 2) return;
-    const timer = window.setTimeout(() => setActive((value) => (value + 1) % visibleItems.length), 8000);
+    if (items.length < 2) return;
+    const timer = window.setTimeout(() => setActive((value) => (value + 1) % items.length), 8000);
     return () => window.clearTimeout(timer);
-  }, [active, visibleItems.length]);
-
-  const payload = {
-    tmdbId: item.id,
-    title,
-    posterPath: item.poster_path,
-    backdropPath: item.backdrop_path,
-    releaseDate: item.release_date,
-    voteAverage: item.vote_average,
-    overview: item.overview,
-    runtime: item.runtime,
-    originalLanguage: item.original_language,
-    originCountry: item.origin_country,
-  };
-
-  const toggleWatchlist = async () => {
-    if (!statesReady) return;
-    try {
-      await watchlistToggle.mutateAsync({ ...payload, mediaType: "movie", action: inWatchlist ? "remove" : "add" });
-      toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not update watchlist");
-    }
-  };
-
-  const toggleWatched = async () => {
-    if (!statesReady) return;
-    if (!watched) {
-      setRatingOpen(true);
-      return;
-    }
-    try {
-      const result = await watchedToggle.mutateAsync({ ...payload, action: "remove" });
-      showWatchUndo("Removed from watched", result);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not update watched status");
-    }
-  };
-
-  const dismiss = () => {
-    const next = [...new Set([...dismissed, item.id])];
-    const remaining = items.filter((candidate) => !next.includes(candidate.id));
-    const saved = remaining.length > 0 ? next : [];
-    setDismissed(saved);
-    setActive(0);
-    localStorage.setItem(`trakora:not-interested:${world}`, JSON.stringify(saved));
-    toast.success("This title will not be suggested in the spotlight.");
-  };
+  }, [active, items.length]);
 
   const move = (direction: -1 | 1) => {
-    setActive((value) => (value + direction + visibleItems.length) % visibleItems.length);
+    setActive((value) => (value + direction + items.length) % items.length);
   };
 
   return (
@@ -495,40 +400,21 @@ function MovieHubHero({
           <p className="line-clamp-2">{item.overview}</p>
           <div className="tvtime-movie-hub-hero__actions">
             <Button size="lg" onClick={() => goMovie(item.id)}><Play className="fill-current" /> {copy.viewDetails}</Button>
-            <Button size="lg" className="tvtime-movie-hub-hero__watchlist" variant="outline" onClick={() => void toggleWatchlist()} disabled={!statesReady || watchlistToggle.isPending}>
-              <Bookmark className={inWatchlist ? "fill-current" : ""} /> {inWatchlist ? copy.inWatchlist : copy.addWatchlist}
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => void toggleWatched()} disabled={!statesReady || watchedToggle.isPending}>
-              <Check /> {watched ? copy.watched : copy.markWatched}
-            </Button>
           </div>
-          <button type="button" className="tvtime-movie-hub-hero__dismiss" onClick={dismiss}><EyeOff /> {copy.notInterested}</button>
         </motion.div>
       </AnimatePresence>
 
-      {visibleItems.length > 1 && (
+      {items.length > 1 && (
         <div className="tvtime-movie-hub-hero__controls">
           <button type="button" onClick={() => move(-1)} aria-label="Previous featured movie"><ChevronLeft /></button>
           <div>
-            {visibleItems.map((candidate, index) => (
+            {items.map((candidate, index) => (
               <button key={candidate.id} type="button" data-active={index === active ? "true" : "false"} onClick={() => setActive(index)} aria-label={`Show ${getTitle(candidate)}`} />
             ))}
           </div>
           <button type="button" onClick={() => move(1)} aria-label="Next featured movie"><ChevronRight /></button>
         </div>
       )}
-
-      <RatingDialog
-        open={ratingOpen}
-        onOpenChange={setRatingOpen}
-        title={title}
-        poster={imgOrPlaceholder(item.poster_path, "w185")}
-        initialRating={state?.userRating ?? null}
-        description="Choose your rating out of 100 to mark this movie watched. Cancelling leaves it unchanged."
-        submitLabel="Save rating & mark watched"
-        successMessage={(rating) => `Marked as watched · Your rating ${rating}/100`}
-        onRate={(userRating) => watchedToggle.mutateAsync({ ...payload, action: "add", userRating })}
-      />
     </motion.section>
   );
 }
