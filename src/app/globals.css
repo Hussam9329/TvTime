@@ -52,17 +52,8 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  box-sizing: border-box;
-  overflow-x: hidden;
   gap: 1rem;
   padding-bottom: 1rem;
-}
-
-.tvtime-movie-hub > *,
-.tvtime-movie-hub > [data-slot="tabs"] > *,
-.tvtime-movie-hub [data-slot="tabs-content"] > * {
-  max-width: 100%;
-  min-width: 0;
 }
 
 .tvtime-movie-hub[data-world="arabic-movies"] {
@@ -82,11 +73,6 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.35rem 0.2rem 0.55rem;
-}
-
-.tvtime-movie-hub__titlebar > :first-child {
-  max-width: 100%;
-  min-width: 0;
 }
 
 .tvtime-movie-hub__eyebrow,
@@ -111,12 +97,9 @@
   color: var(--muted-foreground);
   font-size: 0.78rem;
   font-weight: 600;
-  overflow-wrap: anywhere;
 }
 
 .tvtime-movie-hub__browse[data-slot="button"] {
-  max-width: 100%;
-  flex: 0 0 auto;
   min-height: 2.55rem;
   border: 1px solid color-mix(in oklab, var(--movie-world-accent) 38%, var(--border));
   background: color-mix(in oklab, var(--movie-world-accent) 92%, black);
@@ -138,7 +121,6 @@
   background: color-mix(in oklab, var(--background) 86%, transparent);
   box-shadow: 0 12px 35px rgb(0 0 0 / 0.18);
   backdrop-filter: blur(18px);
-  overflow: hidden;
 }
 
 .tvtime-movie-hub__tabs [data-slot="tabs-trigger"] {
@@ -147,8 +129,6 @@
   gap: 0.4rem;
   border-radius: 0.75rem;
   font-size: 0.76rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -328,40 +308,6 @@
   gap: 0.38rem;
   overflow-x: auto;
   padding: 0.1rem;
-  overscroll-behavior-inline: contain;
-  scrollbar-width: none;
-}
-
-.tvtime-movie-hub__quick-picks::-webkit-scrollbar {
-  display: none;
-}
-
-.tvtime-movie-hub :is(
-  .tvtime-media-row,
-  .tvtime-media-row-viewport,
-  .tvtime-discover-view,
-  .tvtime-collection-world-page,
-  .tvtime-release-schedule,
-  .tvtime-filter-panel
-) {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.tvtime-movie-hub .tvtime-media-row-viewport {
-  overflow: hidden;
-}
-
-.tvtime-movie-hub .tvtime-media-row-scroller {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.tvtime-movie-hub :is(.tvtime-discover-results-bar, .tvtime-release-schedule__summary) > * {
-  max-width: 100%;
-  min-width: 0;
 }
 
 .tvtime-movie-hub__quick-picks button {
@@ -440,8 +386,9 @@
 
 @media (max-width: 767px) {
   .tvtime-movie-hub {
-    width: 100%;
-    max-width: 100%;
+    width: calc(100dvw - 1.5rem);
+    max-width: calc(100dvw - 1.5rem);
+    overflow-x: clip;
     gap: 0.75rem;
     padding-bottom: calc(var(--tvtime-mobile-dock-offset, 6rem) + 1rem);
   }
@@ -451,8 +398,8 @@
   .tvtime-movie-hub__overview,
   .tvtime-movie-hub__skeleton,
   .tvtime-movie-hub-hero {
-    width: 100%;
-    max-width: 100%;
+    width: calc(100dvw - 1.5rem);
+    max-width: calc(100dvw - 1.5rem);
     min-width: 0;
   }
 
@@ -514,8 +461,8 @@
   }
 
   .tvtime-movie-hub-hero__content {
-    width: 100%;
-    max-width: 100%;
+    width: calc(100dvw - 1.5rem);
+    max-width: calc(100dvw - 1.5rem);
     min-width: 0;
     justify-content: end;
     padding: 0.9rem;
@@ -528,7 +475,7 @@
   }
 
   .tvtime-movie-hub-hero__content > p {
-    max-width: 100%;
+    max-width: calc(100dvw - 3.3rem);
     font-size: 0.78rem;
     line-height: 1.5;
     white-space: normal;
@@ -564,73 +511,9 @@
   }
 
   .tvtime-movie-hub__quick-picks {
-    width: 100%;
-    margin-inline: 0;
-    padding-inline: 0.1rem;
-  }
-
-  .tvtime-movie-hub .tvtime-media-row-scroller {
-    margin-inline: 0;
-    padding-inline: 0.1rem;
-  }
-
-  .tvtime-movie-hub .tvtime-discover-preset-row {
-    width: 100%;
-    max-width: 100%;
-    margin-inline: 0;
-    padding-inline: 0;
-  }
-
-  .tvtime-movie-hub .tvtime-discover-results-bar > :last-child {
-    display: flex;
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .tvtime-movie-hub .tvtime-release-schedule__window-controls {
-    display: grid;
-    width: 100%;
-    max-width: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .tvtime-movie-hub .tvtime-release-schedule__window-controls [data-slot="button"] {
-    width: 100%;
-    min-width: 0;
-    padding-inline: 0.35rem;
-    font-size: 0.68rem;
-  }
-
-  .tvtime-movie-hub .tvtime-release-schedule__range {
-    width: 100%;
-    max-width: 100%;
-    justify-content: center;
-    overflow-wrap: anywhere;
-    text-align: center;
-    white-space: normal;
-  }
-
-  .tvtime-movie-hub .tvtime-release-schedule__summary {
-    align-items: flex-start;
-    flex-direction: column;
-    flex-wrap: wrap;
-  }
-
-  .tvtime-movie-hub .tvtime-collection-status-tabs {
-    width: 100%;
-    max-width: 100%;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: none;
-  }
-
-  .tvtime-movie-hub .tvtime-collection-status-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tvtime-movie-hub .tvtime-collection-sort-options {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+    width: calc(100% + 1.5rem);
+    margin-inline: -0.75rem;
+    padding-inline: 0.75rem;
   }
 
   .tvtime-movie-hub__empty-row {
