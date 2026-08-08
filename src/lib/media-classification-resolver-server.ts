@@ -43,6 +43,7 @@ async function mapWithConcurrency<T, R>(
  */
 export async function resolveGeneralMediaClassifications<T extends MediaRecord>(
   items: T[],
+  options: { allowNetwork?: boolean } = {},
 ): Promise<T[]> {
   if (items.length === 0) return [];
 
@@ -53,21 +54,23 @@ export async function resolveGeneralMediaClassifications<T extends MediaRecord>(
   const classifications = await batchReadDbClassifications(tvIds);
   const missingIds = tvIds.filter((id) => !classifications.has(id));
 
-  await mapWithConcurrency(missingIds, CLASSIFICATION_FETCH_CONCURRENCY, async (tmdbId) => {
-    try {
-      const metadata = await getTvStatusMetadata(tmdbId, new Date(), {
-        requireClassification: true,
-      });
-      classifications.set(tmdbId, {
-        originalLanguage: metadata.originalLanguage,
-        originCountries: metadata.originCountries,
-        genres: metadata.genres.map((genre) => genre.name),
-        classificationComplete: true,
-      });
-    } catch (error) {
-      console.warn("[media-classification] Unable to resolve TMDB metadata", tmdbId, error);
-    }
-  });
+  if (options.allowNetwork !== false) {
+    await mapWithConcurrency(missingIds, CLASSIFICATION_FETCH_CONCURRENCY, async (tmdbId) => {
+      try {
+        const metadata = await getTvStatusMetadata(tmdbId, new Date(), {
+          requireClassification: true,
+        });
+        classifications.set(tmdbId, {
+          originalLanguage: metadata.originalLanguage,
+          originCountries: metadata.originCountries,
+          genres: metadata.genres.map((genre) => genre.name),
+          classificationComplete: true,
+        });
+      } catch (error) {
+        console.warn("[media-classification] Unable to resolve TMDB metadata", tmdbId, error);
+      }
+    });
+  }
 
   return items.map((item) => {
     const tmdbId = Number(item.tmdbId);
