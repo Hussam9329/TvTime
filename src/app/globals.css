@@ -6007,14 +6007,14 @@ body {
 .tvtime-media-menu {
   inset-inline: auto !important;
   top: auto !important;
-  right: -1px !important;
-  /* Lock the action into the poster corner instead of floating over its edge. */
-  bottom: calc(4.2rem - 1px) !important;
+  right: 0.38rem !important;
+  /* Keep the compact action fully inside the poster and clear of its frame. */
+  bottom: calc(4.2rem + 0.38rem) !important;
   left: auto !important;
   width: 1.3rem !important;
   min-width: 1.3rem !important;
-  height: 1.15rem !important;
-  min-height: 1.15rem !important;
+  height: 0.9rem !important;
+  min-height: 0.9rem !important;
   padding: 0 !important;
 }
 
@@ -6022,8 +6022,8 @@ body {
   .tvtime-media-menu {
     width: 1.3rem !important;
     min-width: 1.3rem !important;
-    height: 1.15rem !important;
-    min-height: 1.15rem !important;
+    height: 0.9rem !important;
+    min-height: 0.9rem !important;
   }
 }
 
@@ -6465,24 +6465,22 @@ body {
 }
 
 .tvtime-media-menu {
-  border-color: var(--cinema-line-strong) !important;
-  border-right: 0 !important;
-  border-bottom: 0 !important;
-  border-radius: 0.42rem 0 0.86rem 0 !important;
-  background: rgb(8 8 6 / 0.86) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgb(5 5 4 / 0.78) !important;
   color: var(--cinema-gold-bright) !important;
-  box-shadow: -5px -5px 14px rgb(0 0 0 / 0.32) !important;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.34) !important;
 }
 
 .tvtime-media-menu::before {
   position: absolute;
-  inset: -0.42rem;
+  inset: -0.5rem;
   content: "";
 }
 
 .tvtime-media-menu svg {
-  width: 0.52rem !important;
-  height: 0.52rem !important;
+  width: 0.48rem !important;
+  height: 0.48rem !important;
 }
 
 .tvtime-media-copy {
