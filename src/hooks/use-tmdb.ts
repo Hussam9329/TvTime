@@ -53,6 +53,25 @@ export type MovieHubResponse = {
   partial?: boolean;
 };
 
+export type TvHubWorld = "standard" | "arabic" | "asian";
+export type TvHubCatalogueResponse = {
+  world: TvHubWorld;
+  popular: MediaItem[];
+  newNoteworthy: MediaItem[];
+  hiddenGems: MediaItem[];
+  airingToday: MediaItem[];
+  partial?: boolean;
+};
+
+export function useTvHubCatalogue(world: TvHubWorld) {
+  return useQuery({
+    queryKey: ["tmdb", "tv", "hub", world],
+    queryFn: () => tmdbGet<TvHubCatalogueResponse>("tv/hub", { world }),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useMovieHub(world: MovieHubWorld) {
   const userId = useNav((state) => state.userId);
   return useQuery({

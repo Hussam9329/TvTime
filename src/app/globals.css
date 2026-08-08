@@ -76,6 +76,27 @@
   --movie-world-accent-soft: oklch(0.61 0.2 28 / 17%);
 }
 
+.tvtime-tv-hub {
+  --movie-world-accent: oklch(0.72 0.15 252);
+  --movie-world-accent-soft: oklch(0.62 0.17 268 / 17%);
+}
+
+.tvtime-tv-hub[data-tv-world="arabic"] {
+  --movie-world-accent: oklch(0.76 0.14 65);
+  --movie-world-accent-soft: oklch(0.7 0.15 55 / 17%);
+}
+
+.tvtime-tv-hub[data-tv-world="asian"] {
+  --movie-world-accent: oklch(0.74 0.14 190);
+  --movie-world-accent-soft: oklch(0.64 0.15 195 / 17%);
+}
+
+.tvtime-tv-hub__overview {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .tvtime-movie-hub__titlebar {
   display: flex;
   min-width: 0;

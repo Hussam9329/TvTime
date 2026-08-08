@@ -58,6 +58,7 @@ const filterPanel = read("src/components/ui/filter-panel.tsx");
 const pageTitlebar = read("src/components/ui/page-titlebar.tsx");
 const moviesView = read("src/components/views/movies-view.tsx");
 const movieHubView = read("src/components/views/movie-hub-view.tsx");
+const tvHubOverview = read("src/components/views/tv-hub-overview.tsx");
 const movieHubRoute = read("src/app/api/movie-hub/route.ts");
 const tvWorldPageView = read("src/components/views/tv-world-page-view.tsx");
 const animeView = read("src/components/views/anime-view.tsx");
@@ -294,9 +295,10 @@ check(
   "Shared poster menus stay clear of titles and metadata on touch layouts",
 );
 check(
-  [tvWorldPageView, animeView, searchView, statsView, watchNextView, discoverView]
+  [animeView, searchView, statsView, watchNextView, discoverView]
     .every((source) => /<PageTitlebar title=/.test(source))
     && /tvtime-movie-hub__titlebar/.test(movieHubView)
+    && /tvtime-movie-hub__titlebar/.test(tvWorldPageView)
     && /<MovieHubView world="movies"/.test(moviesView)
     && /<MovieHubView world="arabic-movies"/.test(arabicMoviesView)
     && /tvtime-page-titlebar/.test(pageTitlebar)
@@ -330,6 +332,34 @@ check(
     && !/tvtime-movie-hub-hero__controls/.test(movieHubView)
     && /trakora:movie-library-layout/.test(collection),
   "All movie worlds share the cinematic overview, smart shelves, unwatched spotlight and saved library layout",
+);
+check(
+  /useState<"overview" \| "library" \| "discover" \| "releases">\("overview"\)/.test(tvWorldPageView)
+    && /<TabsTrigger value="overview">/.test(tvWorldPageView)
+    && /<TabsTrigger value="library">/.test(tvWorldPageView)
+    && /<TabsTrigger value="discover">/.test(tvWorldPageView)
+    && /<TabsTrigger value="releases">/.test(tvWorldPageView)
+    && /<TvHubOverview world=\{trackingWorld\}/.test(tvWorldPageView)
+    && /useTvTrackingCounts\(trackingWorld\)/.test(tvWorldPageView)
+    && /Continue Watching/.test(tvHubOverview)
+    && /Airing Today/.test(tvHubOverview)
+    && /Up to Date/.test(tvHubOverview)
+    && /New & Noteworthy/.test(tvHubOverview)
+    && /Returning Soon/.test(tvHubOverview)
+    && /Hidden Gems/.test(tvHubOverview)
+    && /Recently Watched/.test(tvHubOverview)
+    && /useTvTracking\(\{ world, category: "all"/.test(tvHubOverview)
+    && /useTvHubCatalogue\(world\)/.test(tvHubOverview)
+    && !/useFilteredDiscover/.test(tvHubOverview)
+    && /case "tv\/hub"/.test(tmdbProxyRoute)
+    && /Promise\.allSettled\(requests\)/.test(tmdbProxyRoute)
+    && /matchesDiscoverWorld\(item, "tv", world\)/.test(tmdbProxyRoute)
+    && /<MediaRow/.test(tvHubOverview)
+    && !/useWatchlistToggle|useWatchedMovieToggle|useFollowShow|useMutation|db\./.test(tvHubOverview)
+    && /tvtime-tv-hub\[data-tv-world="arabic"\]/.test(globalStyles)
+    && /tvtime-tv-hub\[data-tv-world="asian"\]/.test(globalStyles)
+    && !/\.tvtime-tv-hub \.tvtime-media-row-scroller\s*\{/.test(globalStyles),
+  "All TV worlds share one read-only cinematic overview without changing tracking state or shelf scrolling",
 );
 check(
   !/Track films you've watched/.test(moviesView)

@@ -36,21 +36,21 @@ function deriveTrackingStatus(show: any): TrackingStatus {
 
 function TrackingStatusBadge({ status, isArabic = false }: { status: TrackingStatus; isArabic?: boolean }) {
   if (status === "stopped") {
-    return <Badge data-status="stopped" className="h-10 gap-2 rounded-full border border-rose-400/20 bg-rose-500/15 px-4 text-sm font-bold text-rose-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><CircleStop className="h-4 w-4" /> {isArabic ? "توقفت عن مشاهدته" : "Stopped Watching"}</Badge>;
+    return <Badge data-status="stopped" className="h-8 gap-1.5 rounded-full border border-rose-400/20 bg-rose-500/15 px-3 text-xs font-bold text-rose-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><CircleStop className="h-3.5 w-3.5" /> {isArabic ? "توقفت عن مشاهدته" : "Stopped Watching"}</Badge>;
   }
   if (status === "finished") {
-    return <Badge data-status="finished" className="h-10 gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/15 px-4 text-sm font-bold text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Trophy className="h-4 w-4" /> {isArabic ? "مكتمل" : "Finished"}</Badge>;
+    return <Badge data-status="finished" className="h-8 gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/15 px-3 text-xs font-bold text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Trophy className="h-3.5 w-3.5" /> {isArabic ? "مكتمل" : "Finished"}</Badge>;
   }
   if (status === "uptodate") {
-    return <Badge data-status="uptodate" className="h-10 gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/15 px-4 text-sm font-bold text-cyan-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Zap className="h-4 w-4" /> {isArabic ? "محدّث" : "Up To Date"}</Badge>;
+    return <Badge data-status="uptodate" className="h-8 gap-1.5 rounded-full border border-cyan-400/20 bg-cyan-500/15 px-3 text-xs font-bold text-cyan-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Zap className="h-3.5 w-3.5" /> {isArabic ? "محدّث" : "Up To Date"}</Badge>;
   }
   if (status === "watching") {
-    return <Badge data-status="watching" className="h-10 gap-2 rounded-full border border-blue-400/20 bg-blue-500/15 px-4 text-sm font-bold text-blue-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Play className="h-4 w-4 fill-current" /> {isArabic ? "قيد المشاهدة" : "Watching"}</Badge>;
+    return <Badge data-status="watching" className="h-8 gap-1.5 rounded-full border border-blue-400/20 bg-blue-500/15 px-3 text-xs font-bold text-blue-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Play className="h-3.5 w-3.5 fill-current" /> {isArabic ? "قيد المشاهدة" : "Watching"}</Badge>;
   }
   if (status === "planned") {
-    return <Badge data-status="planned" className="h-10 gap-2 rounded-full border border-purple-400/20 bg-purple-500/15 px-4 text-sm font-bold text-purple-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><BookOpen className="h-4 w-4" /> {isArabic ? "قائمة المشاهدة" : "Planned"}</Badge>;
+    return <Badge data-status="planned" className="h-8 gap-1.5 rounded-full border border-purple-400/20 bg-purple-500/15 px-3 text-xs font-bold text-purple-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><BookOpen className="h-3.5 w-3.5" /> {isArabic ? "قائمة المشاهدة" : "Planned"}</Badge>;
   }
-  return <Badge data-status="not_started" className="h-10 gap-2 rounded-full border border-slate-400/20 bg-slate-500/15 px-4 text-sm font-bold text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Clock className="h-4 w-4" /> {isArabic ? "لم يبدأ" : "Not Started"}</Badge>;
+  return <Badge data-status="not_started" className="h-8 gap-1.5 rounded-full border border-slate-400/20 bg-slate-500/15 px-3 text-xs font-bold text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Clock className="h-3.5 w-3.5" /> {isArabic ? "لم يبدأ" : "Not Started"}</Badge>;
 }
 
 export function TvShowsView({ world = "standard", embedded = false }: { world?: "standard" | "arabic" | "asian"; embedded?: boolean }) {
@@ -67,15 +67,11 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
       )}
 
       {/* TV Shows filters, all backed by full-collection counters. */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
-        <StatCard icon={<Layers className="w-5 h-5" />} label={isArabic ? "الكل" : "All"} value={counts?.all ?? "…"} color="from-purple-500/20 to-purple-500/5" />
+      <div className="tvtime-tv-library-stats grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard icon={<Play className="w-5 h-5" />} label={isArabic ? "قيد المشاهدة" : "Watching"} value={counts?.watching ?? "…"} color="from-blue-500/20 to-blue-500/5" />
         <StatCard icon={<BookOpen className="w-5 h-5" />} label={isArabic ? "قائمة المشاهدة" : "Watchlist"} value={counts?.watchlist ?? counts?.planned ?? "…"} color="from-violet-500/20 to-violet-500/5" />
         <StatCard icon={<Zap className="w-5 h-5" />} label={isArabic ? "محدّث" : "Up To Date"} value={counts?.uptodate ?? "…"} color="from-cyan-500/20 to-cyan-500/5" />
         <StatCard icon={<Trophy className="w-5 h-5" />} label={isArabic ? "مكتمل" : "Finished"} value={counts?.finished ?? "…"} color="from-emerald-500/20 to-emerald-500/5" />
-        <StatCard icon={<CircleStop className="w-5 h-5" />} label={isArabic ? "توقفت عن مشاهدته" : "Stopped Watching"} value={counts?.stopped ?? "…"} color="from-rose-500/20 to-rose-500/5" />
-        <StatCard icon={<Calendar className="w-5 h-5" />} label={isArabic ? "قادم" : "Upcoming"} value={counts?.upcoming ?? "…"} color="from-amber-500/20 to-amber-500/5" />
-        <StatCard icon={<Play className="w-5 h-5" />} label={isArabic ? "لم أشاهده" : "Haven't Watched"} value={counts?.haventWatched ?? "…"} color="from-orange-500/20 to-orange-500/5" />
-        <StatCard icon={<Clock className="w-5 h-5" />} label={isArabic ? "لم أبدأه" : "Haven't Started"} value={counts?.haventStarted ?? counts?.notStarted ?? "…"} color="from-slate-500/20 to-slate-500/5" />
       </div>
 
       {stats.data?.watchTime && (
@@ -101,7 +97,7 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
 function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void; globalCounts?: any; world: "standard" | "arabic" | "asian" }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<TvTrackingCategory>("all");
-  const [layout, setLayout] = useState<"list" | "grid">("list");
+  const [layout, setLayout] = useState<"list" | "grid">("grid");
   const limit = 60;
   const tracking = useTvTracking({ category: filter, sortBy: "title", order: "asc", limit, offset: page * limit, world });
 
@@ -217,9 +213,9 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       </div>
 
       {tracking.isLoading ? (
-        <div className={cn("grid grid-cols-1 gap-4", layout === "grid" && "xl:grid-cols-2 min-[2100px]:grid-cols-3")}>
+        <div className={cn("grid grid-cols-1 gap-4", layout === "grid" && "lg:grid-cols-2 min-[2100px]:grid-cols-3")}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className={cn("shimmer h-[440px] rounded-[28px] sm:h-[310px]", layout === "grid" && "xl:h-[370px]")} />
+            <div key={i} className="shimmer h-[300px] rounded-[24px] sm:h-[280px]" />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -230,7 +226,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
         />
       ) : (
         <>
-          <div className={cn("grid grid-cols-1 gap-4 sm:gap-5", layout === "grid" && "xl:grid-cols-2 min-[2100px]:grid-cols-3")}>
+          <div className={cn("grid grid-cols-1 gap-4 sm:gap-5", layout === "grid" && "lg:grid-cols-2 min-[2100px]:grid-cols-3")}>
             {items.map((s: any) => (
               <AllShowCard key={s.id} show={{ ...s, _trackingStatus: s._trackingStatus ?? deriveTrackingStatus(s) }} onGo={() => s.tmdbId && onGo(s.tmdbId)} layout={layout} isArabic={isArabic} />
             ))}
@@ -325,17 +321,16 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
       className="block rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
     >
       <Card className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-[28px] border-white/[0.14] bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.07),transparent_30%),linear-gradient(145deg,rgba(21,25,36,0.98),rgba(10,14,23,0.98))] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.03)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_70px_rgba(0,0,0,0.4),0_0_28px_rgba(139,92,246,0.07)]",
-        compact ? "sm:p-6" : "sm:p-[clamp(2rem,5vw,4.5rem)]",
+        "group relative cursor-pointer overflow-hidden rounded-[24px] border-white/[0.14] bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.07),transparent_30%),linear-gradient(145deg,rgba(21,25,36,0.98),rgba(10,14,23,0.98))] p-3.5 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.03)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_70px_rgba(0,0,0,0.4),0_0_28px_rgba(139,92,246,0.07)] sm:p-5",
       )}>
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.018)_48%,transparent_72%)]" />
         <div className={cn(
-          "relative flex flex-col gap-5 sm:grid sm:items-center",
+          "relative grid grid-cols-[92px_minmax(0,1fr)] items-start gap-3.5 sm:items-center",
           compact
-            ? "sm:grid-cols-[clamp(112px,24%,150px)_minmax(0,1fr)] sm:gap-5"
-            : "sm:grid-cols-[clamp(150px,24%,340px)_minmax(0,1fr)] sm:gap-[clamp(2rem,4.5vw,4.5rem)]",
+            ? "sm:grid-cols-[clamp(105px,23%,135px)_minmax(0,1fr)] sm:gap-5"
+            : "sm:grid-cols-[clamp(125px,20%,175px)_minmax(0,1fr)] sm:gap-6",
         )}>
-          <div className="relative aspect-[0.618/1] w-[112px] overflow-hidden rounded-[18px] border border-white/10 bg-muted shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:w-full sm:self-center">
+          <div className="relative aspect-[0.618/1] w-full overflow-hidden rounded-[16px] border border-white/10 bg-muted shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:self-center">
           {show.poster ? (
             <SafeImage src={img(show.poster, "w342")} alt={show.title} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
           ) : (
@@ -352,46 +347,58 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
 
           <div className="flex min-w-0 flex-col">
             <h4 className={cn(
-              "line-clamp-2 text-2xl font-black tracking-[-0.035em] text-foreground transition-colors group-hover:text-white",
-              compact ? "sm:text-2xl lg:text-3xl" : "sm:text-4xl lg:text-5xl",
+              "line-clamp-2 text-xl font-black tracking-[-0.035em] text-foreground transition-colors group-hover:text-white",
+              compact ? "sm:text-xl lg:text-2xl" : "sm:text-2xl lg:text-3xl",
             )}>{show.title}</h4>
-            <div className="mt-4 h-px w-28 bg-gradient-to-r from-primary via-primary/25 to-transparent sm:mt-5" />
+            <div className="mt-2.5 h-px w-20 bg-gradient-to-r from-primary via-primary/25 to-transparent" />
 
-            <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-6">
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <TrackingStatusBadge status={trackingStatus} isArabic={isArabic} />
-              {show.isAnime && <Badge className="h-10 rounded-full border border-purple-400/20 bg-purple-500/15 px-4 text-sm font-bold text-purple-300">Anime</Badge>}
+              {show.isAnime && <Badge className="h-8 rounded-full border border-purple-400/20 bg-purple-500/15 px-3 text-xs font-bold text-purple-300">Anime</Badge>}
               {seasons != null && seasons > 0 && (
-                <Badge variant="secondary" className="h-10 rounded-full border border-white/[0.07] bg-white/[0.06] px-4 text-sm font-semibold text-foreground/90">
+                <Badge variant="secondary" className="h-8 rounded-full border border-white/[0.07] bg-white/[0.06] px-3 text-xs font-semibold text-foreground/90">
                   {isArabic ? `${seasons} موسم` : `${seasons} season${seasons > 1 ? "s" : ""}`}
                 </Badge>
               )}
             </div>
 
-            <div className={cn("my-5 h-px bg-white/[0.12]", compact ? "sm:my-5" : "sm:my-7")} />
+            {releasedEps != null && releasedEps > 0 && (
+              <div className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2.5">
+                <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-bold text-muted-foreground">
+                  <span>{isArabic ? "التقدم" : "Progress"}</span>
+                  <span className="tabular-nums text-foreground">{watchedEps}/{releasedEps}</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.round((watchedEps / releasedEps) * 100))}%` }} />
+                </div>
+              </div>
+            )}
 
-            <div className="grid grid-cols-1 divide-y divide-white/[0.1] min-[420px]:grid-cols-[1fr_2fr_1fr] min-[420px]:divide-x min-[420px]:divide-y-0">
+            <div className="my-3.5 h-px bg-white/[0.12]" />
+
+            <div className="grid grid-cols-3 divide-x divide-white/[0.1]">
               <ShowMetric icon={Clapperboard} value={totalEps != null ? (isArabic ? `${totalEps} حلقة` : `${totalEps} eps`) : "—"} label={isArabic ? "الحلقات" : "Episodes"} compact={compact} />
               <ShowMetric icon={CirclePlay} value={releasedEps != null ? (isArabic ? `${watchedEps}/${releasedEps} من الحلقات الصادرة` : `${watchedEps}/${releasedEps} released watched`) : (isArabic ? `${watchedEps} مشاهدة` : `${watchedEps} watched`)} label={isArabic ? "التقدم" : "Progress"} compact={compact} />
               <ShowMetric icon={Calendar} value={show.year || "—"} label={isArabic ? "سنة العرض" : "Released"} compact={compact} />
             </div>
 
             {userRating != null && (
-              <div className="mt-5 flex items-center gap-3 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] px-4 py-2.5">
+              <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] px-3 py-2">
                 <Star className="h-4 w-4 fill-emerald-400 text-emerald-400" />
-                <span className="text-sm font-bold text-emerald-300">{isArabic ? "تقييمك" : "Your rating"}: {userRating}/100</span>
+                <span className="text-xs font-bold text-emerald-300">{isArabic ? "تقييمك" : "Your rating"}: {userRating}/100</span>
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
                   <div className="h-full rounded-full bg-emerald-400" style={{ width: `${userRating}%` }} />
                 </div>
               </div>
             )}
 
-            <div className={cn("my-5 h-px bg-white/[0.12]", compact ? "sm:my-5" : "sm:my-7")} />
+            <div className="my-3.5 h-px bg-white/[0.12]" />
 
-            <div className={`flex min-h-14 items-center gap-4 rounded-2xl border px-4 py-3 transition-colors sm:mt-auto ${activityTone}`}>
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-current">
-                <ActivityIcon className="h-5 w-5" />
+            <div className={`flex min-h-12 items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors sm:mt-auto ${activityTone}`}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-current">
+                <ActivityIcon className="h-4 w-4" />
               </span>
-              <span className="min-w-0 flex-1 text-sm font-bold leading-snug sm:text-base">{activity.text}</span>
+              <span className="min-w-0 flex-1 text-xs font-bold leading-snug sm:text-sm">{activity.text}</span>
               {isArabic
                 ? <ChevronLeft className="h-6 w-6 shrink-0 transition-transform group-hover:-translate-x-1" />
                 : <ChevronRight className="h-6 w-6 shrink-0 transition-transform group-hover:translate-x-1" />}
@@ -405,11 +412,11 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
 
 function ShowMetric({ icon: Icon, value, label, compact = false }: { icon: React.ElementType; value: React.ReactNode; label: string; compact?: boolean }) {
   return (
-    <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 min-[420px]:justify-center min-[420px]:px-3 min-[420px]:py-0 first:min-[420px]:pl-0 last:min-[420px]:pr-0">
-      <Icon className={cn("h-5 w-5 shrink-0 text-primary", compact ? "sm:h-5 sm:w-5" : "sm:h-6 sm:w-6")} />
+    <div className="flex min-w-0 items-center justify-center gap-1.5 px-1.5 first:pl-0 last:pr-0 sm:gap-2 sm:px-3">
+      <Icon className={cn("h-3.5 w-3.5 shrink-0 text-primary", compact ? "sm:h-4 sm:w-4" : "sm:h-4 sm:w-4")} />
       <div className="min-w-0">
-        <p className={cn("truncate text-sm font-bold text-foreground/95", compact ? "sm:text-xs" : "sm:text-base")}>{value}</p>
-        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+        <p className="truncate text-[10px] font-bold text-foreground/95 sm:text-xs">{value}</p>
+        <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-[0.08em] text-muted-foreground sm:text-[9px]">{label}</p>
       </div>
     </div>
   );

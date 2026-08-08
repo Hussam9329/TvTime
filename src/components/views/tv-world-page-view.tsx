@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Library, Sparkles } from "lucide-react";
+import { CalendarDays, Grid2X2, Library, ListFilter, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageTitlebar } from "@/components/ui/page-titlebar";
+import { Button } from "@/components/ui/button";
 import { TvShowsView } from "@/components/views/tv-tracking-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
+import { TvHubOverview } from "@/components/views/tv-hub-overview";
+import { useTvTrackingCounts } from "@/hooks/use-tmdb";
 import { cn } from "@/lib/utils";
 
 const ANIMATION_GENRES = [16];
@@ -51,30 +53,45 @@ export function TvWorldPageView({
   releaseCollectionWorld,
   locale = "en",
 }: TvWorldPageViewProps) {
-  const [tab, setTab] = useState<"library" | "discover" | "releases">("library");
+  const [tab, setTab] = useState<"overview" | "library" | "discover" | "releases">("overview");
   const isArabic = locale === "ar";
+  const trackingCounts = useTvTrackingCounts(trackingWorld);
+  const counts = trackingCounts.data?.counts;
+  const eyebrow = isArabic ? "عالم مسلسلاتك" : trackingWorld === "asian" ? "Your Asian series world" : "Your series world";
+  const summary = isArabic
+    ? `${counts?.all ?? "…"} مسلسل • ${counts?.watching ?? "…"} قيد المشاهدة • ${counts?.upcoming ?? "…"} قادم`
+    : `${counts?.all ?? "…"} series • ${counts?.watching ?? "…"} Watching • ${counts?.upcoming ?? "…"} Upcoming`;
 
   return (
     <div
-      className={cn("tvtime-world-view tvtime-tv-world-view space-y-5", pageClassName)}
+      className={cn("tvtime-world-view tvtime-tv-world-view tvtime-movie-hub tvtime-tv-hub", pageClassName)}
+      data-tv-world={trackingWorld}
       dir={isArabic ? "rtl" : undefined}
       lang={isArabic ? "ar" : undefined}
     >
-      <PageTitlebar title={title} />
+      <header className="tvtime-movie-hub__titlebar">
+        <div className="min-w-0">
+          <p className="tvtime-movie-hub__eyebrow">{eyebrow}</p>
+          <h1>{title}</h1>
+          <p className="tvtime-movie-hub__summary" aria-live="polite">{summary}</p>
+        </div>
+        <Button className="tvtime-movie-hub__browse" onClick={() => setTab("discover")}>
+          <ListFilter aria-hidden="true" />
+          {isArabic ? "تصفّح" : "Browse"}
+        </Button>
+      </header>
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
-        <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
-          <TabsTrigger value="library" className="gap-2 py-2.5">
-            <Library className="h-4 w-4" /> {isArabic ? "مكتبتي" : "My Library"}
-          </TabsTrigger>
-          <TabsTrigger value="discover" className="gap-2 py-2.5">
-            <Sparkles className="h-4 w-4" /> {isArabic ? "اكتشاف" : "Discover"}
-          </TabsTrigger>
-          <TabsTrigger value="releases" className="gap-2 py-2.5">
-            <CalendarDays className="h-4 w-4" /> {isArabic ? "الإصدارات" : "Releases"}
-          </TabsTrigger>
+      <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="min-w-0">
+        <TabsList className="tvtime-movie-hub__tabs">
+          <TabsTrigger value="overview"><Grid2X2 /> {isArabic ? "نظرة عامة" : "Overview"}</TabsTrigger>
+          <TabsTrigger value="library"><Library /> {isArabic ? "مكتبتي" : "My Library"}</TabsTrigger>
+          <TabsTrigger value="discover"><Sparkles /> {isArabic ? "اكتشاف" : "Discover"}</TabsTrigger>
+          <TabsTrigger value="releases"><CalendarDays /> {isArabic ? "الإصدارات" : "Releases"}</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="overview" className="mt-0">
+          <TvHubOverview world={trackingWorld} onBrowse={() => setTab("discover")} />
+        </TabsContent>
         <TabsContent value="library" className="mt-0">
           <TvShowsView world={trackingWorld} embedded />
         </TabsContent>
