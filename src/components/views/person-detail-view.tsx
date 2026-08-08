@@ -14,6 +14,19 @@ import { ArrowLeft, Film, Tv, Cake, MapPin, Briefcase, Star, Users } from "lucid
 import { useState } from "react";
 import { motion } from "framer-motion";
 
+const SELF_CREDIT_PATTERN = /\b(self|himself|herself|themselves|host|guest|presenter|panelist|contestant|judge|interviewee|archive footage|archive sound)\b/i;
+const SELF_APPEARANCE_GENRES = new Set([10763, 10764, 10767]); // News, Reality, Talk
+
+function isSelfAppearance(credit: any): boolean {
+  const character = String(credit?.character || "").trim();
+  if (SELF_CREDIT_PATTERN.test(character)) return true;
+
+  // TMDB occasionally leaves the character empty for talk/news/reality
+  // appearances. Those credits still represent the person as themselves.
+  return !character && Array.isArray(credit?.genre_ids)
+    && credit.genre_ids.some((genreId: number) => SELF_APPEARANCE_GENRES.has(Number(genreId)));
+}
+
 export function PersonDetailView() {
   const { personId, back } = useNav();
   const detail = usePersonDetail(personId);
@@ -60,8 +73,13 @@ export function PersonDetailView() {
 
   // Keep the complete TMDB cast history. Upcoming credits frequently have no
   // poster yet, so filtering by artwork would silently hide confirmed work.
-  const movieCredits = (p.movie_credits?.cast ?? []).sort(newestCreditFirst);
-  const tvCredits = (p.tv_credits?.cast ?? []).sort(newestCreditFirst);
+  const allMovieCredits = [...(p.movie_credits?.cast ?? [])].sort(newestCreditFirst);
+  const allTvCredits = [...(p.tv_credits?.cast ?? [])].sort(newestCreditFirst);
+  const movieCredits = allMovieCredits.filter((credit: any) => !isSelfAppearance(credit));
+  const tvCredits = allTvCredits.filter((credit: any) => !isSelfAppearance(credit));
+  const selfCredits = [...allMovieCredits, ...allTvCredits]
+    .filter(isSelfAppearance)
+    .sort(newestCreditFirst);
   const knownFor = [...movieCredits, ...tvCredits]
     .filter((credit: any) => credit.poster_path)
     .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0))
@@ -132,7 +150,7 @@ export function PersonDetailView() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card className="p-4 text-center">
           <p className="text-2xl font-extrabold text-primary">{movieCredits.length}</p>
           <p className="text-xs text-muted-foreground">Movie credits</p>
@@ -140,6 +158,10 @@ export function PersonDetailView() {
         <Card className="p-4 text-center">
           <p className="text-2xl font-extrabold text-primary">{tvCredits.length}</p>
           <p className="text-xs text-muted-foreground">TV credits</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-2xl font-extrabold text-primary">{selfCredits.length}</p>
+          <p className="text-xs text-muted-foreground">Self appearances</p>
         </Card>
         <Card className="p-4 text-center">
           <p className="text-2xl font-extrabold text-primary">{p.popularity ? Math.round(p.popularity) : "—"}</p>
@@ -159,9 +181,10 @@ export function PersonDetailView() {
 
       {/* Full filmography */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
+        <TabsList className="tvtime-person-credit-tabs w-full justify-start overflow-x-auto no-scrollbar">
           <TabsTrigger value="movies"><Film className="w-4 h-4 mr-1.5" />Movies ({movieCredits.length})</TabsTrigger>
           <TabsTrigger value="tv"><Tv className="w-4 h-4 mr-1.5" />TV Shows ({tvCredits.length})</TabsTrigger>
+          <TabsTrigger value="self"><Users className="w-4 h-4 mr-1.5" />Self ({selfCredits.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="movies" className="mt-4">
@@ -170,6 +193,14 @@ export function PersonDetailView() {
 
         <TabsContent value="tv" className="mt-4">
           <FilmographyList items={tvCredits} type="tv" onGo={(id) => goTv(id)} />
+        </TabsContent>
+
+        <TabsContent value="self" className="mt-4">
+          {selfCredits.length > 0 ? (
+            <KnownForCards items={selfCredits} onGoMovie={goMovie} onGoTv={goTv} />
+          ) : (
+            <p className="py-8 text-center text-muted-foreground">No self appearances available.</p>
+          )}
         </TabsContent>
       </Tabs>
     </div>
@@ -187,7 +218,9 @@ function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: 
       {items.map((c: any, i: number) => {
         const isMovie = Boolean(c.title);
         const mediaType = isMovie ? "movie" as const : "tv" as const;
-        const year = (c.release_date || c.first_air_date || "").slice(0, 4);
+        const releaseDate = c.release_date || c.first_air_date || "";
+        const year = releaseDate.slice(0, 4);
+        const isUpcoming = Boolean(releaseDate && releaseDate > new Date().toISOString().slice(0, 10));
         const role = c.character || c.job || "Role not listed";
         const libraryState = states.data?.[mediaStateKey(mediaType, Number(c.id))];
         const completed = isMovie ? Boolean(libraryState?.watched) : libraryState?.status === "finished";
@@ -219,6 +252,7 @@ function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: 
                     </div>
                     <div className="tvtime-person-credit__meta">
                       <span>{isMovie ? "Movie" : "TV Show"}</span>
+                      {isUpcoming && <span className="tvtime-person-credit__upcoming">Upcoming</span>}
                       {year && <span>{year}</span>}
                     </div>
                   </div>
