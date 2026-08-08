@@ -6007,18 +6007,22 @@ body {
 .tvtime-media-menu {
   inset-inline: auto !important;
   top: auto !important;
-  right: 0.625rem !important;
+  right: 0.3rem !important;
   /* The menu belongs to the poster, not the title/meta block below it. */
-  bottom: calc(4.2rem + 0.625rem) !important;
+  bottom: calc(4.2rem + 0.3rem) !important;
   left: auto !important;
+  width: 1.9rem !important;
+  min-width: 1.9rem !important;
+  height: 1.9rem !important;
+  min-height: 1.9rem !important;
 }
 
 @media (hover: none), (pointer: coarse) {
   .tvtime-media-menu {
-    width: 2.25rem !important;
-    min-width: 2.25rem !important;
-    height: 2.25rem !important;
-    min-height: 2.25rem !important;
+    width: 1.9rem !important;
+    min-width: 1.9rem !important;
+    height: 1.9rem !important;
+    min-height: 1.9rem !important;
   }
 }
 
@@ -6461,10 +6465,15 @@ body {
 
 .tvtime-media-menu {
   border-color: var(--cinema-line-strong) !important;
-  border-radius: 0.65rem !important;
+  border-radius: 0.55rem !important;
   background: rgb(8 8 6 / 0.86) !important;
   color: var(--cinema-gold-bright) !important;
   box-shadow: 0 9px 24px rgb(0 0 0 / 0.42) !important;
+}
+
+.tvtime-media-menu svg {
+  width: 0.85rem !important;
+  height: 0.85rem !important;
 }
 
 .tvtime-media-copy {
