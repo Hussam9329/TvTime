@@ -6008,8 +6008,18 @@ body {
   inset-inline: auto !important;
   top: auto !important;
   right: 0.625rem !important;
-  bottom: 0.625rem !important;
+  /* The menu belongs to the poster, not the title/meta block below it. */
+  bottom: calc(4.2rem + 0.625rem) !important;
   left: auto !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tvtime-media-menu {
+    width: 2.25rem !important;
+    min-width: 2.25rem !important;
+    height: 2.25rem !important;
+    min-height: 2.25rem !important;
+  }
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {

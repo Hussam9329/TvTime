@@ -191,7 +191,7 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
           </div>
 
           <div className="tvtime-media-copy">
-            <h3 className="tvtime-media-title line-clamp-2 text-left" title={title}>
+            <h3 className="tvtime-media-title line-clamp-2 text-start" title={title}>
               {title}
             </h3>
             <div className="tvtime-media-meta">

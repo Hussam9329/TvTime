@@ -494,7 +494,7 @@ function CollectionMediaCard({
 
           <div className={useHomePresentation ? "tvtime-media-copy" : `flex min-w-0 items-center gap-2 border-t border-border/60 bg-card px-3 py-2.5 ${layout === "list" ? "" : "min-h-[4.5rem]"}`}>
             <div className="min-w-0 flex-1">
-              <h3 className={useHomePresentation ? "tvtime-media-title line-clamp-2 text-left" : "line-clamp-1 text-sm font-semibold leading-tight text-foreground"} title={item.title}>{item.title}</h3>
+              <h3 className={useHomePresentation ? "tvtime-media-title line-clamp-2 text-start" : "line-clamp-1 text-sm font-semibold leading-tight text-foreground"} title={item.title}>{item.title}</h3>
               <div className={useHomePresentation ? "tvtime-media-meta" : "mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground"}>
                 {item.year && <span>{item.year}</span>}
                 {item.year && <span aria-hidden="true">•</span>}

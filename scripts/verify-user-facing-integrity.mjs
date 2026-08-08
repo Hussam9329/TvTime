@@ -286,6 +286,13 @@ check(
   "Discover and release posters use Home's shared card presentation and sizing",
 );
 check(
+  /\.tvtime-media-menu\s*\{[\s\S]*bottom: calc\(4\.2rem \+ 0\.625rem\) !important;/.test(globalStyles)
+    && /@media \(hover: none\), \(pointer: coarse\)[\s\S]*\.tvtime-media-menu\s*\{[\s\S]*min-width: 2\.25rem !important;[\s\S]*min-height: 2\.25rem !important;/.test(globalStyles)
+    && /tvtime-media-title line-clamp-2 text-start/.test(mediaCard)
+    && /tvtime-media-title line-clamp-2 text-start/.test(collection),
+  "Shared poster menus stay clear of titles and metadata on touch layouts",
+);
+check(
   [tvWorldPageView, animeView, searchView, statsView, watchNextView, discoverView]
     .every((source) => /<PageTitlebar title=/.test(source))
     && /tvtime-movie-hub__titlebar/.test(movieHubView)
