@@ -722,6 +722,15 @@
 .tvtime-person-filmography-count {
   grid-column: 1 / -1;
 }
+.tvtime-person-credit-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+.tvtime-person-credit-tabs > [data-slot="tabs-trigger"] {
+  width: 100%;
+  min-width: 0;
+}
 @media (hover: hover) and (pointer: fine) {
   .tvtime-person-credit:hover .tvtime-person-credit__card {
     border-color: var(--cinema-line-strong) !important;
@@ -740,6 +749,17 @@
   }
   .tvtime-person-credit__title {
     font-size: 0.72rem;
+  }
+  .tvtime-person-credit-tabs > [data-slot="tabs-trigger"] {
+    gap: 0.3rem;
+    padding-inline: 0.35rem;
+    font-size: 0.68rem;
+    white-space: normal;
+  }
+  .tvtime-person-credit-tabs > [data-slot="tabs-trigger"] svg {
+    width: 0.8rem;
+    height: 0.8rem;
+    margin: 0;
   }
 }
 .tvtime-profile-dialog [data-slot="dialog-header"] { padding-bottom: .75rem; border-bottom: 1px solid hsl(var(--border) / .65); }
