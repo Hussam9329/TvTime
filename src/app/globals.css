@@ -6007,22 +6007,23 @@ body {
 .tvtime-media-menu {
   inset-inline: auto !important;
   top: auto !important;
-  right: 0.1rem !important;
-  /* The menu belongs to the poster, not the title/meta block below it. */
-  bottom: calc(4.2rem + 0.1rem) !important;
+  right: -1px !important;
+  /* Lock the action into the poster corner instead of floating over its edge. */
+  bottom: calc(4.2rem - 1px) !important;
   left: auto !important;
-  width: 1.45rem !important;
-  min-width: 1.45rem !important;
-  height: 1.45rem !important;
-  min-height: 1.45rem !important;
+  width: 1.3rem !important;
+  min-width: 1.3rem !important;
+  height: 1.15rem !important;
+  min-height: 1.15rem !important;
+  padding: 0 !important;
 }
 
 @media (hover: none), (pointer: coarse) {
   .tvtime-media-menu {
-    width: 1.45rem !important;
-    min-width: 1.45rem !important;
-    height: 1.45rem !important;
-    min-height: 1.45rem !important;
+    width: 1.3rem !important;
+    min-width: 1.3rem !important;
+    height: 1.15rem !important;
+    min-height: 1.15rem !important;
   }
 }
 
@@ -6465,15 +6466,23 @@ body {
 
 .tvtime-media-menu {
   border-color: var(--cinema-line-strong) !important;
-  border-radius: 0.55rem !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 0.42rem 0 0.86rem 0 !important;
   background: rgb(8 8 6 / 0.86) !important;
   color: var(--cinema-gold-bright) !important;
-  box-shadow: 0 9px 24px rgb(0 0 0 / 0.42) !important;
+  box-shadow: -5px -5px 14px rgb(0 0 0 / 0.32) !important;
+}
+
+.tvtime-media-menu::before {
+  position: absolute;
+  inset: -0.42rem;
+  content: "";
 }
 
 .tvtime-media-menu svg {
-  width: 0.58rem !important;
-  height: 0.58rem !important;
+  width: 0.52rem !important;
+  height: 0.52rem !important;
 }
 
 .tvtime-media-copy {
