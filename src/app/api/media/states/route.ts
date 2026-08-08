@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     // The migration makes duplicates impossible. Until it is applied, select the
     // strongest existing row so cards remain deterministic during rollout.
-    const classifiedRows = await resolveGeneralMediaClassifications(rows);
+    const classifiedRows = await resolveGeneralMediaClassifications(rows, { allowNetwork: false });
     const bestByKey = new Map<string, (typeof classifiedRows)[number]>();
     for (const row of classifiedRows) {
       if (row.tmdbId == null || (row.type !== "movie" && row.type !== "series")) continue;

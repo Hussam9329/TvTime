@@ -37,9 +37,11 @@ async function mapWithConcurrency<T, R>(
  * Resolve one canonical classification for every Media record.
  *
  * Complete TvMetadataCache rows are authoritative even when the episode/status
- * cache is stale. Missing TV classifications are fetched from TMDB once and
- * cached. Movie and non-TMDB rows still pass through the same pure classifier
- * using the best metadata stored on the record.
+ * cache is stale. Read paths are cache-only by default so a library response can
+ * never fan out into one TMDB request per title. Explicit maintenance/mutation
+ * work may opt into fetching a missing classification with allowNetwork: true.
+ * Movie and non-TMDB rows still pass through the same pure classifier using the
+ * best metadata stored on the record.
  */
 export async function resolveGeneralMediaClassifications<T extends MediaRecord>(
   items: T[],
@@ -54,7 +56,7 @@ export async function resolveGeneralMediaClassifications<T extends MediaRecord>(
   const classifications = await batchReadDbClassifications(tvIds);
   const missingIds = tvIds.filter((id) => !classifications.has(id));
 
-  if (options.allowNetwork !== false) {
+  if (options.allowNetwork === true) {
     await mapWithConcurrency(missingIds, CLASSIFICATION_FETCH_CONCURRENCY, async (tmdbId) => {
       try {
         const metadata = await getTvStatusMetadata(tmdbId, new Date(), {

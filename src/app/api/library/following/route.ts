@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       where: { userId: user.id, type: "series", isFollowing: true },
       orderBy: { addedAt: "desc" },
     });
-    const classified = await resolveGeneralMediaClassifications(candidates);
+    const classified = await resolveGeneralMediaClassifications(candidates, { allowNetwork: false });
     const items = classified.filter((item) =>
       classifyMediaWorld(item).collectionWorld === "standard-tv");
     return NextResponse.json({ items: items.map(toCompat), source: "Media" });

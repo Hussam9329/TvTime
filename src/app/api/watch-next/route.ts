@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       where: { userId: user.id, type: "series", isFollowing: true, tmdbId: { not: null } },
       select: { tmdbId: true, type: true, title: true, poster: true, watchedAt: true, updatedAt: true, watched: true, status: true, userRating: true, tags: true, isAnime: true, isArabic: true, originalLanguage: true, originCountries: true, genres: true },
     });
-    const shows = await resolveGeneralMediaClassifications(storedShows);
+    const shows = await resolveGeneralMediaClassifications(storedShows, { allowNetwork: false });
     const ids = shows.map((show) => show.tmdbId!).filter(Boolean);
     if (ids.length === 0) return NextResponse.json({ items: [] });
     const [metadata, watched] = await Promise.all([

@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
 import { normalizeMediaMany } from "@/lib/media-normalize";
-import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
 import type { Prisma } from "@prisma/client";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
 import {
@@ -70,42 +69,15 @@ export async function GET(req: NextRequest) {
     // paginate after classification; filtering a single DB page first can
     // produce wrong totals and let stale rows leak between collection worlds.
     const candidates = await db.media.findMany({ where, orderBy: { [sortBy]: order } });
-    const classifiedCandidates = await resolveGeneralMediaClassifications(candidates);
+    const classifiedCandidates = await resolveGeneralMediaClassifications(candidates, { allowNetwork: false });
     const matchingItems = classifiedCandidates.filter((item) =>
       recordMatchesMediaClassification(item, classificationFilters));
     const total = matchingItems.length;
     const items = matchingItems.slice(offset, offset + limit);
 
-    const displayItems = isArabic === "true"
-      ? await Promise.all(items.map(async (item) => {
-          const tmdbId = Number(item.tmdbId || 0);
-          if (!tmdbId) return item;
-          try {
-            const localized = item.type === "movie"
-              ? await tmdb.localizedMovieProfile(tmdbId, "ar").then((profile) => ({
-                  originalTitle: profile.original_title,
-                  title: profile.title,
-                  overview: profile.overview,
-                }))
-              : await tmdb.localizedTvProfile(tmdbId, "ar").then((profile) => ({
-                  originalTitle: profile.original_name,
-                  title: profile.name,
-                  overview: profile.overview,
-                }));
-            return {
-              ...item,
-              title: pickArabicTitle(localized, item.type === "movie" ? "movie" : "tv", item.title),
-              originalTitle: localized.originalTitle || item.originalTitle,
-              overview: localized.overview || item.overview,
-              poster: pickArabicPoster(localized) || item.poster,
-            };
-          } catch {
-            return item;
-          }
-        }))
-      : items;
-
-    return NextResponse.json({ items: normalizeMediaMany(displayItems), total, limit, offset });
+    // Arabic titles/posters are persisted when a title enters the library.
+    // Collection rendering must not issue one localization request per card.
+    return NextResponse.json({ items: normalizeMediaMany(items), total, limit, offset });
   } catch (error) {
     console.error("[media:list]", error);
     return NextResponse.json({ error: "Failed to load media library" }, { status: 500 });

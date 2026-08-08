@@ -258,10 +258,7 @@ export const tmdb = {
     if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
     const keywordFilter = buildTmdbKeywordFilter(params.keyword_groups ?? [params.keyword_ids]);
     if (keywordFilter) p.with_keywords = keywordFilter;
-    const response = await tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p, params.language);
-    return params.language === "ar"
-      ? { ...response, results: await localizeArabicPosters(response.results, "movie") }
-      : response;
+    return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/movie`, p, params.language);
   },
 
   // TV
@@ -292,10 +289,7 @@ export const tmdb = {
     if (params.runtime_lte != null) p["with_runtime.lte"] = params.runtime_lte;
     const keywordFilter = buildTmdbKeywordFilter(params.keyword_groups ?? [params.keyword_ids]);
     if (keywordFilter) p.with_keywords = keywordFilter;
-    const response = await tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p, params.language);
-    return params.language === "ar"
-      ? { ...response, results: await localizeArabicPosters(response.results, "tv") }
-      : response;
+    return tmdbFetch<PaginatedResponse<MediaItem>>(`/discover/tv`, p, params.language);
   },
 
   // Details
@@ -347,44 +341,6 @@ export function pickArabicTitle(profile: any, mediaType: "movie" | "tv", fallbac
   if (HAS_ARABIC_TEXT.test(String(localized || ""))) return localized;
   if (HAS_ARABIC_TEXT.test(String(original || ""))) return original;
   return localized || original || fallback;
-}
-
-async function localizeArabicPosters(items: MediaItem[], mediaType: "movie" | "tv"): Promise<MediaItem[]> {
-  const results: MediaItem[] = new Array(items.length);
-  let cursor = 0;
-  const workers = Array.from({ length: Math.min(6, items.length) }, async () => {
-    while (cursor < items.length) {
-      const index = cursor++;
-      const item = items[index];
-      try {
-        const profile = mediaType === "movie"
-          ? await tmdb.localizedMovieProfile(Number(item.id), "ar")
-          : await tmdb.localizedTvProfile(Number(item.id), "ar");
-        const fallbackTitle = mediaType === "movie" ? item.title : item.name;
-        results[index] = {
-          ...item,
-          ...(mediaType === "movie"
-            ? {
-                title: pickArabicTitle(profile, "movie", fallbackTitle || ""),
-                origin_country: Array.isArray(profile?.production_countries)
-                  ? profile.production_countries.map((country: any) => country?.iso_3166_1).filter(Boolean)
-                  : item.origin_country,
-              }
-            : {
-                name: pickArabicTitle(profile, "tv", fallbackTitle || ""),
-                origin_country: Array.isArray(profile?.origin_country)
-                  ? profile.origin_country
-                  : item.origin_country,
-              }),
-          poster_path: pickArabicPoster(profile) || item.poster_path,
-        };
-      } catch {
-        results[index] = item;
-      }
-    }
-  });
-  await Promise.all(workers);
-  return results;
 }
 
 /** Resolve a human keyword phrase to a bounded set of TMDB keyword IDs. */

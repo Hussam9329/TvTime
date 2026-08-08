@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     });
 
     const [classifiedItem] = item
-      ? await resolveGeneralMediaClassifications([item])
+      ? await resolveGeneralMediaClassifications([item], { allowNetwork: false })
       : [];
     return NextResponse.json({
       item: classifiedItem ? normalizeMedia(classifiedItem) : null,

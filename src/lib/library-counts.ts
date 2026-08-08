@@ -25,7 +25,9 @@ export async function getCanonicalLibraryCounts(userId: string) {
     db.media.findMany({ where: { userId } }),
     db.watchedEpisode.count({ where: { userId } }),
   ]);
-  const media = await resolveGeneralMediaClassifications(storedMedia);
+  // Counts are a read-time aggregate and must never wait for an external
+  // metadata request per library item. Cached/stored classification is enough.
+  const media = await resolveGeneralMediaClassifications(storedMedia, { allowNetwork: false });
   const classified = media.map((item) => ({
     item,
     world: classifyMediaWorld(item).collectionWorld,

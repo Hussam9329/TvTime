@@ -67,6 +67,15 @@ const completionInvariant = read("src/lib/completion-rating-invariant.ts");
 const watchNextRoute = read("src/app/api/watch-next/route.ts");
 const watchNextState = read("src/lib/watch-next-state.ts");
 const importValidation = read("src/lib/library-import-validation.ts");
+const mediaListRoute = read("src/app/api/media/route.ts");
+const mediaStatesRoute = read("src/app/api/media/states/route.ts");
+const mediaStateRoute = read("src/app/api/media/state/route.ts");
+const mediaRecentlyRoute = read("src/app/api/media/recently/route.ts");
+const followingRoute = read("src/app/api/library/following/route.ts");
+const classificationResolver = read("src/lib/media-classification-resolver-server.ts");
+const tmdbClient = read("src/lib/tmdb.ts");
+const discoverFilteredRoute = read("src/app/api/discover/filtered/route.ts");
+const tmdbProxyRoute = read("src/app/api/tmdb/[...path]/route.ts");
 const pkg = JSON.parse(read("package.json"));
 const schemaVerifier = read("scripts/verify-required-schema.mjs");
 
@@ -127,6 +136,19 @@ check(
 check(
   /const effectiveState = persisted === "stopped"[\s\S]*derived\.verified[\s\S]*watched\.count > 0[\s\S]*\? "watching"/.test(tracking),
   "TV tracking display preserves real episode progress when cache verification is incomplete",
+);
+check(
+  [tracking, counts, mediaListRoute, mediaStatesRoute, mediaStateRoute, mediaRecentlyRoute, watchNextRoute, followingRoute]
+    .every((source) => /resolveGeneralMediaClassifications\([^;]*\{ allowNetwork: false \}\)/s.test(source))
+    && /if \(options\.allowNetwork === true\)/.test(classificationResolver),
+  "Library and tracking read paths stay cache-only instead of requesting TMDB once per title",
+);
+check(
+  !/localizeArabicPosters/.test(tmdbClient)
+    && !/localized(?:Movie|Tv)Profile/.test(mediaListRoute)
+    && !/enrichMovieOriginCountries/.test(discoverFilteredRoute)
+    && !/enrichMovieOriginCountries/.test(tmdbProxyRoute),
+  "Discover and Arabic library lists avoid per-card localization and origin-detail fan-out",
 );
 
 check(/type CollectionTab = "watchlist" \| "not-started" \| "watching" \| "watched"/.test(collection), "Anime collection models Watchlist, Not Started, In Progress and Watched separately");

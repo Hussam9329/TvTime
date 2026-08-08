@@ -57,8 +57,8 @@ export async function GET(req: NextRequest) {
       }),
     ]);
     const [classifiedMovies, classifiedShows] = await Promise.all([
-      resolveGeneralMediaClassifications(mediaMovies),
-      resolveGeneralMediaClassifications(mediaShows),
+      resolveGeneralMediaClassifications(mediaMovies, { allowNetwork: false }),
+      resolveGeneralMediaClassifications(mediaShows, { allowNetwork: false }),
     ]);
     const nonArabicMovies = classifiedMovies.filter((item) =>
       !classifyMediaWorld(item).isArabic);

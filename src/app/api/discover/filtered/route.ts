@@ -7,7 +7,6 @@ import { buildSeenIdSet } from "@/lib/discover-seen";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
-import { enrichMovieOriginCountries } from "@/lib/movie-origin-server";
 import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
 import { matchesDiscoverWorld, type DiscoverWorld } from "@/lib/discover-world";
 import { filterStrictMiniSeriesResults } from "@/lib/tv-format";
@@ -222,7 +221,7 @@ export async function GET(req: NextRequest) {
     }
 
     const prioritizedResults = mediaType === "movie" && !onlyArabic
-      ? sortByStandardMediaPriority(await enrichMovieOriginCountries(results, language))
+      ? sortByStandardMediaPriority(results)
       : results;
 
     const response = NextResponse.json({

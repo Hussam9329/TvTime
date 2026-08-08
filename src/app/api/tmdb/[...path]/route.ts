@@ -4,7 +4,6 @@ import { isArabicMediaItem } from "@/lib/arabic-media";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import { discoverAsianTvByPriority } from "@/lib/asian-discover-server";
-import { enrichMovieOriginCountries } from "@/lib/movie-origin-server";
 import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
 
 const handler = async (
@@ -93,8 +92,7 @@ const handler = async (
           data = await discoverArabicByCountryPriority("movie", discoverParams, page);
         } else {
           const discovered = await tmdb.discoverMovies(discoverParams);
-          const enriched = await enrichMovieOriginCountries(discovered.results, language);
-          data = { ...discovered, results: sortByStandardMediaPriority(enriched) };
+          data = { ...discovered, results: sortByStandardMediaPriority(discovered.results) };
         }
         break;
       }
