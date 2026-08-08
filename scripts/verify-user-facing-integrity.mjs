@@ -374,6 +374,46 @@ check(
   "Watch Next preserves explicit rated legacy completions but releases them after an episode is unwatched",
 );
 check(
+  /readyEpisodes: result\.readyEpisodes \+ item\.readyEpisodes/.test(watchNextRoute)
+    && /estimatedMinutes: result\.estimatedMinutes \+ item\.readyEpisodes \* item\.estimatedRuntime/.test(watchNextRoute)
+    && /episodes ready/.test(watchNextView)
+    && /formatReadyTime\(estimatedMinutes\)/.test(watchNextView),
+  "Watch Next summarizes every ready episode and its estimated viewing time",
+);
+check(
+  /function FeaturedWatchCard/.test(watchNextView)
+    && /Mark episode watched/.test(watchNextView)
+    && /View episode/.test(watchNextView)
+    && /onNotNow/.test(watchNextView)
+    && /variant="backdrop" priority/.test(watchNextView)
+    && /tvtime-watch-featured/.test(globalStyles),
+  "Watch Next presents one cinematic lead episode with progress and direct actions",
+);
+check(
+  ["Continue Watching", "New Episodes", "Falling Behind", "Up to Date", "Coming Soon", "Paused"]
+    .every((label) => watchNextView.includes(label))
+    && /readyEpisodes >= 3/.test(watchNextView)
+    && /PAUSED_DAYS = 30/.test(watchNextView)
+    && /<Collapsible open=\{open\}/.test(watchNextView),
+  "Watch Next assigns each title to the requested logical queue section",
+);
+check(
+  /function smartPriority/.test(watchNextView)
+    && /item\.readyEpisodes === 1/.test(watchNextView)
+    && /progressPercent\(item\) \* 3/.test(watchNextView)
+    && /Reorder\.Group/.test(watchNextView)
+    && /useDragControls/.test(watchNextView)
+    && /localStorage\.setItem\(CUSTOM_ORDER_KEY/.test(watchNextView),
+  "Watch Next combines smart priority with persisted mouse and touch reordering",
+);
+check(
+  /tvtime-watch-personal-status/.test(watchNextView)
+    && /Watching<\/span>/.test(watchNextView)
+    && /rgb\(70 150 255/.test(globalStyles)
+    && /tvtime-watch-next-page[\s\S]*safe-area-inset-bottom/.test(globalStyles),
+  "Watch Next isolates the personal Watching state and clears the mobile navigation dock",
+);
+check(
   /if \(c\.needsRating\)[\s\S]*setPendingCompletionRating\(true\)[\s\S]*setRatingOpen\(true\)/.test(tvDetailView)
     && /Closing or cancelling keeps it Up To Date/.test(tvDetailView)
     && /Save rating & mark Finished/.test(tvDetailView),
