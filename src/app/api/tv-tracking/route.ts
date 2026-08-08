@@ -6,19 +6,15 @@ import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
 import {
   deriveTvTrackingState,
-  episodeKey,
   normalizeTvTrackingState,
   tvStateToMediaPatch,
   type TvTrackingState,
 } from "@/lib/tv-status-engine";
 import {
-  getTvStatusMetadata,
   batchReadDbMetadata,
   type TvStatusMetadata,
 } from "@/lib/tv-status-server";
-import { materializeLegacyCompletionSnapshot } from "@/lib/tv-status-repair";
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
-import { pickArabicPoster, pickArabicTitle, tmdb } from "@/lib/tmdb";
 import { recordMatchesTvWorld, type TvWorld } from "@/lib/tv-world-classification";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
 
@@ -223,7 +219,7 @@ async function buildTrackingCounts(userId: string, world: TvWorld, now = new Dat
       AND (media."status" IS NOT NULL OR media."watched" = TRUE OR COALESCE(progress."episodeCount", 0) > 0)
   `;
 
-  const classifiedRows = await resolveGeneralMediaClassifications(rows);
+  const classifiedRows = await resolveGeneralMediaClassifications(rows, { allowNetwork: false });
   return buildFastTvTrackingSummary(classifiedRows.filter((row) => recordMatchesTvWorld(row, world)).map((row): FastTvTrackingRow => ({
     ...row,
     episodeCount: Number(row.episodeCount),
@@ -278,7 +274,10 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
       ],
     },
   });
-  const classifiedCandidates = await resolveGeneralMediaClassifications(seriesCandidates);
+  // A collection page must never wait for one TMDB request per unclassified
+  // title. Stored fields plus any cached classification are sufficient here;
+  // detail and mutation flows continue to refresh authoritative metadata.
+  const classifiedCandidates = await resolveGeneralMediaClassifications(seriesCandidates, { allowNetwork: false });
   const series = classifiedCandidates.filter((show) => recordMatchesTvWorld(show, world));
 
   // ── BATCH METADATA READ ───────────────────────────────────────────────
@@ -287,9 +286,8 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
   // calls inside the loop below (each ~5ms = 3s total), we do ONE findMany
   // with `tmdbId IN (...)` that returns all rows in ~20ms.
   //
-  // Rows that are missing or stale are NOT in this map — the loop falls back
-  // to getTvStatusMetadata() for those, which lazily fetches from TMDB and
-  // populates the cache for next time.
+  // Collection rendering accepts stale rows. Missing metadata falls back to
+  // the persisted Media fields instead of blocking on an external request.
   const trackedTmdbIds = series
     .map((s: any) => Number(s.tmdbId))
     .filter((id: number) => Number.isFinite(id) && id > 0);
@@ -301,6 +299,9 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
     // Exact aired keys are required only for shows that have progress. Without
     // them an ongoing cached show cannot prove the watched/air-date boundary.
     episodeKeysForTmdbIds: showsNeedingKeys,
+    // Rendering the collection is latency-sensitive. Stale cache data is much
+    // safer than blocking the entire page on hundreds of external requests.
+    allowStale: true,
   });
 
   // ── FETCH WATCHED EPISODE KEYS ONLY FOR SHOWS THAT NEED THEM ─────────
@@ -333,37 +334,11 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
     const tmdbId = Number(show.tmdbId || 0);
     const watched = watchedByShow.get(tmdbId) ?? emptyWatchedMeta();
     let metadata: TvStatusMetadata | null = null;
-    let legacySnapshotMaterialized = false;
+    const legacySnapshotMaterialized = false;
 
     if (tmdbId > 0) {
-      // Fast path: metadata was pre-fetched by the batch query above.
+      // Cache-only path: never fan out to TMDB while opening the collection.
       metadata = metadataByTmdbId.get(tmdbId) ?? null;
-      if (!metadata) {
-        // Slow path: row missing or stale. Lazily fetch from TMDB and
-        // populate the cache for next time.
-        try {
-          metadata = await getTvStatusMetadata(tmdbId, now);
-        } catch (error) {
-          console.warn("[tv-tracking] Unable to verify TV metadata", tmdbId, error);
-        }
-      }
-    }
-
-    if (metadata && watched.count === 0) {
-      const snapshot = await materializeLegacyCompletionSnapshot({
-        media: show,
-        existingEpisodeCount: watched.count,
-        metadata,
-      });
-      if (snapshot.verified && snapshot.episodes.length > 0) {
-        legacySnapshotMaterialized = snapshot.materialized;
-        for (const episode of snapshot.episodes) {
-          watched.keys.add(episodeKey(episode.seasonNumber, episode.episodeNumber));
-        }
-        watched.count = watched.keys.size;
-        watched.lastWatchedAt = snapshot.completionAt;
-        watchedByShow.set(tmdbId, watched);
-      }
     }
 
     const persisted = normalizeTvTrackingState(show.status);
@@ -420,8 +395,13 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
     const since = daysSince(show._serverWatchedMeta.lastWatchedAt);
     return since != null && since >= STALE_WATCH_DAYS;
   };
-  const isUpcoming = (show: DecoratedShow) =>
-    show._serverTrackingStatus !== "stopped" && Boolean(show._serverTvMeta?.nextEpisode);
+  const isUpcoming = (show: DecoratedShow) => {
+    if (show._serverTrackingStatus === "stopped") return false;
+    const airDate = show._serverTvMeta?.nextEpisode?.airDate;
+    if (!airDate) return false;
+    const timestamp = Date.parse(airDate);
+    return Number.isFinite(timestamp) && timestamp > now.getTime();
+  };
 
   // Re-apply the canonical world after status metadata has been resolved.
   // This prevents a stale Media row from surviving in the wrong My Media
@@ -490,7 +470,7 @@ export async function GET(req: NextRequest) {
 
     if (countsOnly) {
       const summary = await buildTrackingCounts(requestUserId, world);
-      const response = NextResponse.json({
+    const response = NextResponse.json({
         counts: summary.counts,
         countsAreGlobal: true,
         repairedOnRead: false,
@@ -566,27 +546,10 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const displayItems = world === "arabic"
-      ? await mapWithConcurrency(pageItems, 6, async (show: any) => {
-          const tmdbId = Number(show.tmdbId || 0);
-          if (!tmdbId) return show;
-          try {
-            const localized = await tmdb.localizedTvProfile(tmdbId, "ar");
-            return {
-              ...show,
-              title: pickArabicTitle(localized, "tv", show.title),
-              originalTitle: localized.original_name || show.originalTitle,
-              overview: localized.overview || show.overview,
-              poster: pickArabicPoster(localized) || show.poster,
-            };
-          } catch {
-            return show;
-          }
-        })
-      : pageItems;
-
-    return NextResponse.json({
-      items: normalizeMediaMany(displayItems),
+    // Arabic localization is persisted when the title is added or refreshed.
+    // Never issue up to 60 TMDB profile requests while opening the collection.
+    const response = NextResponse.json({
+      items: normalizeMediaMany(pageItems),
       total: matching.length,
       limit,
       offset,
@@ -595,7 +558,13 @@ export async function GET(req: NextRequest) {
       countsAreGlobal: true,
       repairedOnRead: false,
       world,
+      fastPath: true,
+      metadataSource: "database-cache-only",
     });
+    response.headers.set("Server-Timing", "tv-tracking;desc=cache-only");
+    response.headers.set("X-Trakora-TV-Tracking-Path", "cache-only");
+    response.headers.set("Cache-Control", "private, max-age=15, stale-while-revalidate=60");
+    return response;
   } catch (error) {
     console.error("[tv-tracking]", error);
     return NextResponse.json({ error: "Failed to load TV tracking" }, { status: 500 });
