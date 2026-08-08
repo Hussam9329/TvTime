@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
         item.readyEpisodes === 0
         && item.releasedEpisodes > 0
         && item.watchedEpisodes === item.releasedEpisodes
-        && item.meta
+        && item.meta?.officiallyEnded === false
         && !upcomingIds.has(item.tmdbId))
       .map((item) => ({
         tmdbId: item.tmdbId,

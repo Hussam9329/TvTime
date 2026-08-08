@@ -394,7 +394,8 @@ check(
     .every((label) => watchNextView.includes(label))
     && /readyEpisodes >= 3/.test(watchNextView)
     && /PAUSED_DAYS = 30/.test(watchNextView)
-    && /<Collapsible open=\{open\}/.test(watchNextView),
+    && /<Collapsible open=\{open\}/.test(watchNextView)
+    && /item\.meta\?\.officiallyEnded === false/.test(watchNextRoute),
   "Watch Next assigns each title to the requested logical queue section",
 );
 check(
