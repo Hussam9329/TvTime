@@ -296,7 +296,7 @@ async function readDbMetadata(
 export async function batchReadDbMetadata(
   tmdbIds: number[],
   now: Date,
-  options: { includeEpisodeKeys?: boolean; episodeKeysForTmdbIds?: number[] } = {},
+  options: { includeEpisodeKeys?: boolean; episodeKeysForTmdbIds?: number[]; allowStale?: boolean } = {},
 ): Promise<Map<number, TvStatusMetadata>> {
   const result = new Map<number, TvStatusMetadata>();
   if (tmdbIds.length === 0) return result;
@@ -353,10 +353,13 @@ export async function batchReadDbMetadata(
       WHERE "tmdbId" IN (${Prisma.join(tmdbIds)})
     `;
     for (const row of rows) {
-      // Skip stale rows — the caller will fetch fresh data from TMDB.
-      if (row.refreshAfter <= now) continue;
-      // Skip rows whose next-episode boundary has just been crossed.
-      if (row.nextEpisodeAirDate && isEpisodeReleased(row.nextEpisodeAirDate, now)) continue;
+      // Interactive detail flows require fresh metadata. Collection pages may
+      // explicitly accept stale cache rows so opening a large library never
+      // fans out into hundreds of blocking TMDB requests.
+      if (options.allowStale !== true) {
+        if (row.refreshAfter <= now) continue;
+        if (row.nextEpisodeAirDate && isEpisodeReleased(row.nextEpisodeAirDate, now)) continue;
+      }
       result.set(row.tmdbId, metadataFromDbRow(row));
     }
   } catch (error) {
