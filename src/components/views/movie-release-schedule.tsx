@@ -115,7 +115,7 @@ export function ReleaseSchedule({
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">{resolvedSubtitle}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="tvtime-release-schedule__window-controls flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setOffset((value) => value - 1)}>
               <ChevronLeft className="mr-1 h-4 w-4" /> {isRTL ? "أقدم" : "Earlier"}
             </Button>
@@ -126,7 +126,7 @@ export function ReleaseSchedule({
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Badge variant="secondary" className="w-fit px-3 py-1">
+          <Badge variant="secondary" className="tvtime-release-schedule__range w-fit px-3 py-1">
             {formatDateOnly(range.from, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")} – {formatDateOnly(range.to, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")}
           </Badge>
           <div className="relative w-full sm:max-w-sm">
@@ -153,7 +153,7 @@ export function ReleaseSchedule({
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+          <div className="tvtime-release-schedule__summary flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span><strong className="text-foreground">{items.length}</strong> {isRTL ? "إصداراً مجدولاً" : "scheduled releases"}</span>
             {schedule.data?.truncated && <span>{isRTL ? `تُعرض أول ${schedule.data.pagesFetched} صفحات من TMDB لهذه الفترة.` : `Showing the first ${schedule.data.pagesFetched} TMDB pages for this window.`}</span>}
           </div>
