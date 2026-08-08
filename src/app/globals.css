@@ -49,6 +49,8 @@
   --movie-world-accent: var(--primary);
   --movie-world-accent-soft: color-mix(in oklab, var(--primary) 16%, transparent);
   display: grid;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   gap: 1rem;
   padding-bottom: 1rem;
@@ -142,8 +144,17 @@
 }
 
 .tvtime-movie-hub [data-slot="tabs-content"] {
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   padding-top: 1rem;
+}
+
+.tvtime-movie-hub > [data-slot="tabs"],
+.tvtime-movie-hub__overview,
+.tvtime-movie-hub__skeleton {
+  width: 100%;
+  max-width: 100%;
 }
 
 .tvtime-movie-hub__overview,
@@ -156,6 +167,9 @@
 .tvtime-movie-hub-hero {
   position: relative;
   isolation: isolate;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: clamp(20rem, 32vw, 26rem);
   overflow: hidden;
   border: 1px solid color-mix(in oklab, var(--movie-world-accent) 43%, var(--border));
@@ -189,8 +203,11 @@
 
 .tvtime-movie-hub-hero__content {
   display: flex;
+  width: min(100%, 52rem);
+  max-width: 100%;
+  min-width: 0;
   min-height: clamp(20rem, 32vw, 26rem);
-  max-width: 52rem;
+  box-sizing: border-box;
   flex-direction: column;
   align-items: flex-start;
   justify-content: end;
@@ -230,6 +247,7 @@
 }
 
 .tvtime-movie-hub-hero__content h2 {
+  min-width: 0;
   max-width: 13ch;
   margin-top: 0.75rem;
   color: white;
@@ -238,10 +256,13 @@
   letter-spacing: -0.06em;
   line-height: 0.96;
   text-wrap: balance;
+  overflow-wrap: anywhere;
   text-shadow: 0 12px 32px rgb(0 0 0 / 0.48);
 }
 
 .tvtime-movie-hub-hero__content > p {
+  width: 100%;
+  min-width: 0;
   max-width: 43rem;
   margin-top: 0.9rem;
   color: rgb(255 255 255 / 0.76);
@@ -251,6 +272,7 @@
 
 .tvtime-movie-hub-hero__actions {
   display: flex;
+  max-width: 100%;
   flex-wrap: wrap;
   gap: 0.6rem;
   margin-top: 1.2rem;
@@ -478,8 +500,9 @@
   }
 
   .tvtime-movie-hub-hero__content {
+    width: 100%;
     justify-content: end;
-    padding: 1rem;
+    padding: 0.9rem;
   }
 
   .tvtime-movie-hub-hero__content h2 {
@@ -494,7 +517,7 @@
 
   .tvtime-movie-hub-hero__actions {
     display: flex;
-    width: 100%;
+    width: min(100%, 13.5rem);
     gap: 0.48rem;
   }
 
@@ -503,6 +526,15 @@
     min-height: 2.65rem;
     padding-inline: 0.7rem;
     font-size: 0.69rem;
+  }
+
+  .tvtime-movie-hub-hero__meta {
+    gap: 0.3rem;
+    font-size: 0.64rem;
+  }
+
+  .tvtime-movie-hub-hero__meta > span {
+    padding: 0.28rem 0.42rem;
   }
 
   .tvtime-movie-hub__section-line {
