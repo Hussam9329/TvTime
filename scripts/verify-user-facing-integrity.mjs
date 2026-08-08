@@ -309,6 +309,8 @@ check(
     && !/useWatchlistToggle|useWatchedMovieToggle|RatingDialog|trakora:not-interested/.test(movieHubView)
     && /\.tvtime-movie-hub-hero\s*\{[\s\S]*width: 100%;[\s\S]*max-width: 100%;[\s\S]*min-width: 0;/.test(globalStyles)
     && /\.tvtime-movie-hub-hero__content\s*\{[\s\S]*width: min\(100%, 52rem\);[\s\S]*box-sizing: border-box;/.test(globalStyles)
+    && /@media \(max-width: 767px\)[\s\S]*\.tvtime-movie-hub\s*\{[\s\S]*width: calc\(100dvw - 1\.5rem\);[\s\S]*overflow-x: clip;/.test(globalStyles)
+    && /\.tvtime-movie-hub-hero__content > p\s*\{[\s\S]*max-width: calc\(100dvw - 3\.3rem\);[\s\S]*white-space: normal;/.test(globalStyles)
     && /trakora:movie-library-layout/.test(collection),
   "All movie worlds share the cinematic overview, smart shelves, unwatched spotlight and saved library layout",
 );

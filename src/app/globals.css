@@ -438,8 +438,21 @@
 
 @media (max-width: 767px) {
   .tvtime-movie-hub {
+    width: calc(100dvw - 1.5rem);
+    max-width: calc(100dvw - 1.5rem);
+    overflow-x: clip;
     gap: 0.75rem;
     padding-bottom: calc(var(--tvtime-mobile-dock-offset, 6rem) + 1rem);
+  }
+
+  .tvtime-movie-hub > [data-slot="tabs"],
+  .tvtime-movie-hub [data-slot="tabs-content"],
+  .tvtime-movie-hub__overview,
+  .tvtime-movie-hub__skeleton,
+  .tvtime-movie-hub-hero {
+    width: calc(100dvw - 1.5rem);
+    max-width: calc(100dvw - 1.5rem);
+    min-width: 0;
   }
 
   .tvtime-movie-hub__titlebar {
@@ -500,9 +513,12 @@
   }
 
   .tvtime-movie-hub-hero__content {
-    width: 100%;
+    width: calc(100dvw - 1.5rem);
+    max-width: calc(100dvw - 1.5rem);
+    min-width: 0;
     justify-content: end;
     padding: 0.9rem;
+    overflow: hidden;
   }
 
   .tvtime-movie-hub-hero__content h2 {
@@ -511,8 +527,11 @@
   }
 
   .tvtime-movie-hub-hero__content > p {
+    max-width: calc(100dvw - 3.3rem);
     font-size: 0.78rem;
     line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .tvtime-movie-hub-hero__actions {
