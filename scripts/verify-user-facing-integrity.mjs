@@ -42,6 +42,7 @@ const manifest = read("public/manifest.webmanifest");
 const publicLogo = read("public/logo.svg");
 const searchView = read("src/components/views/search-view.tsx");
 const mediaCard = read("src/components/media/media-card.tsx");
+const mediaRow = read("src/components/media/media-row.tsx");
 const compactScoreCorner = read("src/components/media/compact-score-corner.tsx");
 const watchedIndicator = read("src/components/media/watched-indicator.tsx");
 const tmdbIndicator = read("src/components/media/tmdb-score-indicator.tsx");
@@ -321,6 +322,8 @@ check(
     && /tvtime-collection-status-tabs/.test(collection)
     && /tvtime-release-schedule__window-controls/.test(releaseSchedule)
     && /\.tvtime-movie-hub \.tvtime-release-schedule__window-controls\s*\{[\s\S]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/.test(globalStyles)
+    && /\.tvtime-movie-hub__tonight,[\s\S]*\.tvtime-media-row,[\s\S]*\.tvtime-media-row-viewport\s*\{[\s\S]*width: 100%;[\s\S]*max-width: 100%;[\s\S]*min-width: 0;/.test(globalStyles)
+    && /tvtime-media-row-scroller no-scrollbar flex overflow-x-auto scroll-smooth/.test(mediaRow)
     && !/\.tvtime-movie-hub \.tvtime-media-row-scroller\s*\{/.test(globalStyles)
     && /tvtime-home-hero__carousel-controls/.test(movieHubView)
     && /tvtime-home-hero__carousel-dot/.test(movieHubView)

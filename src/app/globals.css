@@ -3957,8 +3957,14 @@ body {
   height: 0.9rem;
 }
 
-/* Shared editorial section headings and horizontal rows */
-.tvtime-media-row {
+/* Shared editorial section headings and horizontal rows.
+   The Tonight shelf has one extra grid wrapper; it must be allowed to shrink
+   to the page width so its child remains the horizontal scroll container. */
+.tvtime-movie-hub__tonight,
+.tvtime-media-row,
+.tvtime-media-row-viewport {
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -4036,7 +4042,6 @@ body {
 
 .tvtime-media-row-viewport {
   position: relative;
-  min-width: 0;
 }
 
 .tvtime-media-row-scroller,
@@ -4046,6 +4051,7 @@ body {
   scroll-padding-inline: 0.15rem;
   scroll-snap-type: x proximity;
   overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tvtime-media-row-item {
