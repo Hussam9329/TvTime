@@ -164,7 +164,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       >
         <FilterSection title="Collection status">
           <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
-            <TabsList className="h-auto w-full justify-start overflow-x-auto">
+            <TabsList className="tvtime-collection-status-tabs h-auto w-full justify-start overflow-x-auto">
               <TabsTrigger value="watchlist" className="h-10 min-w-36">
                 <WorldIcon className="mr-2 h-4 w-4" />
                 Watchlist
@@ -208,7 +208,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
             </FilterField>
 
             <FilterField label="Sort by">
-              <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-lg border border-border/50 bg-muted/25 p-1 lg:min-w-[310px]">
+              <div className="tvtime-collection-sort-options flex min-h-9 flex-wrap items-center gap-1 rounded-lg border border-border/50 bg-muted/25 p-1 lg:min-w-[310px]">
                 <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 text-muted-foreground" />
                 {[
                   { value: "smart", label: "Smart" },
