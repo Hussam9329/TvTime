@@ -405,14 +405,22 @@ function MovieHubHero({
       </AnimatePresence>
 
       {items.length > 1 && (
-        <div className="tvtime-movie-hub-hero__controls">
-          <button type="button" onClick={() => move(-1)} aria-label="Previous featured movie"><ChevronLeft /></button>
-          <div>
+        <div className="tvtime-home-hero__carousel-controls relative z-20" aria-label="Featured movie slides">
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => move(-1)} aria-label="Previous featured movie"><ChevronLeft /></button>
+          <div className="tvtime-home-hero__carousel-dots">
             {items.map((candidate, index) => (
-              <button key={candidate.id} type="button" data-active={index === active ? "true" : "false"} onClick={() => setActive(index)} aria-label={`Show ${getTitle(candidate)}`} />
+              <button
+                key={candidate.id}
+                type="button"
+                className="tvtime-home-hero__carousel-dot"
+                data-active={index === active ? "true" : "false"}
+                onClick={() => setActive(index)}
+                aria-label={`Show ${getTitle(candidate)}`}
+                aria-current={index === active ? "true" : undefined}
+              />
             ))}
           </div>
-          <button type="button" onClick={() => move(1)} aria-label="Next featured movie"><ChevronRight /></button>
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => move(1)} aria-label="Next featured movie"><ChevronRight /></button>
         </div>
       )}
     </motion.section>

@@ -284,58 +284,6 @@
   font-size: 0.78rem;
 }
 
-.tvtime-movie-hub-hero__controls {
-  position: absolute;
-  z-index: 3;
-  top: 1rem;
-  inset-inline-end: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.42rem;
-  padding: 0.3rem;
-  border: 1px solid rgb(255 255 255 / 0.12);
-  border-radius: 999px;
-  background: rgb(0 0 0 / 0.42);
-  backdrop-filter: blur(14px);
-}
-
-.tvtime-movie-hub-hero__controls > button {
-  display: grid;
-  width: 1.85rem;
-  height: 1.85rem;
-  place-items: center;
-  border-radius: 999px;
-  color: rgb(255 255 255 / 0.72);
-}
-
-.tvtime-movie-hub-hero__controls > button:hover {
-  background: rgb(255 255 255 / 0.1);
-  color: white;
-}
-
-.tvtime-movie-hub-hero__controls svg {
-  width: 0.9rem;
-  height: 0.9rem;
-}
-
-.tvtime-movie-hub-hero__controls > div {
-  display: flex;
-  gap: 0.28rem;
-}
-
-.tvtime-movie-hub-hero__controls > div button {
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.35);
-  transition: width 180ms ease, background-color 180ms ease;
-}
-
-.tvtime-movie-hub-hero__controls > div button[data-active="true"] {
-  width: 1.2rem;
-  background: var(--movie-world-accent);
-}
-
 .tvtime-movie-hub__section-line {
   display: flex;
   min-width: 0;
