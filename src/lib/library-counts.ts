@@ -41,6 +41,14 @@ export async function getCanonicalLibraryCounts(userId: string) {
   const isWatching = (status: string | null) => status === "watching" || status === "uptodate";
 
   const total = classified.length;
+  const movieWatchlistAll = count((entry) => entry.item.type === "movie" && isPlanned(entry));
+  const watchedMoviesAll = count(({ item }) => item.type === "movie" && item.watched);
+  const seriesAll = count(({ item }) => item.type === "series");
+  const animeTitles = count(({ world }) => world === "anime");
+  const arabicMovies = count(({ world }) => world === "arabic-movies");
+  const arabicShows = count(({ world }) => world === "arabic-tv");
+  const asianMovies = count(({ world }) => world === "asian-movies");
+  const asianShows = count(({ world }) => world === "asian-tv");
   const movies = count(({ world }) => world === "movies");
   const series = count(({ world }) => world === "standard-tv");
   const rated = count(hasEligibleRating);
@@ -85,6 +93,14 @@ export async function getCanonicalLibraryCounts(userId: string) {
 
   return {
     total,
+    movieWatchlistAll,
+    watchedMoviesAll,
+    seriesAll,
+    animeTitles,
+    arabicMovies,
+    arabicShows,
+    asianMovies,
+    asianShows,
     movies,
     series,
     rated,

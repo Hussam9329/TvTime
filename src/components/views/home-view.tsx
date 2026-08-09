@@ -1,10 +1,10 @@
 "use client";
 
-import { useHomeFeed, useMediaStates, useRecentlyWatched, useStats, useTvTrackingCounts } from "@/hooks/use-tmdb";
+import { useHomeFeed, useMediaStates, useRecentlyWatched, useStats } from "@/hooks/use-tmdb";
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
-import { ArrowRight, ChevronLeft, ChevronRight, Compass, Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Compass, Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle, type MediaItem } from "@/lib/tmdb";
@@ -24,7 +24,6 @@ export function HomeView() {
   const homeFeed = useHomeFeed();
 
   const stats = useStats();
-  const tvTrackingCounts = useTvTrackingCounts("standard");
 
   const setView = useNav((s) => s.setView);
 
@@ -91,45 +90,57 @@ export function HomeView() {
           <div className="tvtime-stat-grid">
             <QuickStat
               icon={<BookOpen />}
-              label="Movie Watchlist"
-              value={stats.data.counts.watchlistMovies ?? 0}
-              onClick={() => setView("movies")}
+              label="All Movie Watchlists"
+              value={stats.data.counts.movieWatchlistAll ?? 0}
+              onClick={() => setView("stats")}
             />
             <QuickStat
               icon={<Film />}
-              label="Movies Watched"
-              value={stats.data.counts.watchedMovies ?? 0}
-              onClick={() => setView("movies")}
+              label="All Movies Watched"
+              value={stats.data.counts.watchedMoviesAll ?? 0}
+              onClick={() => setView("stats")}
             />
             <QuickStat
               icon={<Tv />}
-              label="TV Shows"
-              value={tvTrackingCounts.data?.counts.all ?? "…"}
-              onClick={() => setView("tv-shows")}
-            />
-            <QuickStat
-              icon={<BookOpen />}
-              label="Anime Watchlist"
-              value={stats.data.counts.watchlistAnime ?? 0}
-              onClick={() => setView("anime")}
+              label="All TV Shows"
+              value={stats.data.counts.seriesAll ?? 0}
+              onClick={() => setView("stats")}
             />
             <QuickStat
               icon={<Check />}
-              label="Anime Watched"
-              value={stats.data.counts.watchedAnime ?? 0}
+              label="Episodes Watched"
+              value={stats.data.counts.watchedEpisodes ?? 0}
+              onClick={() => setView("stats")}
+            />
+            <QuickStat
+              icon={<Star />}
+              label="Anime Collection"
+              value={stats.data.counts.animeTitles ?? 0}
               onClick={() => setView("anime")}
             />
             <QuickStat
               icon={<Languages />}
               label="Arabic Movies"
-              value={(stats.data.counts.watchlistArabicMovies ?? 0) + (stats.data.counts.watchedArabicMovies ?? 0)}
+              value={stats.data.counts.arabicMovies ?? 0}
               onClick={() => setView("arabic-movies")}
             />
             <QuickStat
               icon={<Languages />}
               label="Arabic TV"
-              value={stats.data.counts.followingArabicShows ?? 0}
+              value={stats.data.counts.arabicShows ?? 0}
               onClick={() => setView("arabic-tv")}
+            />
+            <QuickStat
+              icon={<Globe2 />}
+              label="Asian Movies"
+              value={stats.data.counts.asianMovies ?? 0}
+              onClick={() => setView("asian-movies")}
+            />
+            <QuickStat
+              icon={<Globe2 />}
+              label="Asian TV"
+              value={stats.data.counts.asianShows ?? 0}
+              onClick={() => setView("asian-tv")}
             />
             <QuickStat
               icon={<Clock />}

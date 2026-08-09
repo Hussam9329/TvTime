@@ -1445,6 +1445,14 @@ export interface MediaItemDB {
 interface MediaStats {
   counts: {
     total: number;
+    movieWatchlistAll?: number;
+    watchedMoviesAll?: number;
+    seriesAll?: number;
+    animeTitles?: number;
+    arabicMovies?: number;
+    arabicShows?: number;
+    asianMovies?: number;
+    asianShows?: number;
     movies: number;
     series: number;
     rated: number;
