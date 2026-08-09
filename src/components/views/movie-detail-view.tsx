@@ -230,7 +230,7 @@ export function MovieDetailView() {
   return (
     <div className="tvtime-movie-detail-page space-y-5">
       <Button variant="ghost" size="sm" onClick={back} className="tvtime-detail-back-button text-muted-foreground">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Back
+        <ArrowLeft className="w-4 h-4 mr-1" /> {isArabicMovie ? "رجوع" : "Back"}
       </Button>
 
       <section className="tvtime-movie-detail-hero relative isolate overflow-hidden border border-white/15 bg-[#07101f]">
@@ -260,12 +260,12 @@ export function MovieDetailView() {
             <header className="tvtime-movie-detail-hero__identity">
               <div className="tvtime-movie-detail-hero__eyebrow">
                 <span className="tvtime-movie-detail-hero__kind">
-                  <Film aria-hidden="true" /> Movie
+                  <Film aria-hidden="true" /> {isArabicMovie ? "فيلم" : "Movie"}
                 </span>
                 {releaseDate?.year && <span>{releaseDate.year}</span>}
                 {isArabicMovie && (
                   <span className="tvtime-movie-detail-hero__arabic">
-                    Arabic Movie
+                    فيلم عربي
                   </span>
                 )}
               </div>
@@ -363,7 +363,7 @@ export function MovieDetailView() {
             <Card className="tvtime-movie-detail-rating">
               <div className="tvtime-movie-detail-rating__grid">
                 <div className="tvtime-movie-detail-rating__user">
-                  <p>Your rating</p>
+                  <p>{isArabicMovie ? "تقييمك" : "Your rating"}</p>
                   {myRating != null ? (
                     <div className="tvtime-movie-detail-rating__value">
                       <strong className={ratingColor}>
@@ -376,12 +376,12 @@ export function MovieDetailView() {
                   ) : (
                     <div className="tvtime-movie-detail-rating__empty">
                       <strong>—</strong>
-                      <span>Not rated yet</span>
+                      <span>{isArabicMovie ? "لم تقيّمه بعد" : "Not rated yet"}</span>
                     </div>
                   )}
                 </div>
                 <div className="tvtime-movie-detail-rating__tmdb">
-                  <p>TMDB score</p>
+                  <p>{isArabicMovie ? "تقييم TMDB" : "TMDB score"}</p>
                   <div>
                     <Star className="fill-current" />
                     <strong>{m.vote_average.toFixed(1)}</strong>
@@ -411,22 +411,22 @@ export function MovieDetailView() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex h-14 w-full justify-stretch overflow-x-auto rounded-2xl border border-white/10 bg-[#0a1220]/90 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:flex-1 [&>*]:rounded-xl">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="cast">Cast</TabsTrigger>
-          {m.budget > 0 && <TabsTrigger value="details">Details</TabsTrigger>}
-          {trailer && <TabsTrigger value="videos">Videos</TabsTrigger>}
+          <TabsTrigger value="overview">{isArabicMovie ? "نظرة عامة" : "Overview"}</TabsTrigger>
+          <TabsTrigger value="cast">{isArabicMovie ? "طاقم العمل" : "Cast"}</TabsTrigger>
+          {m.budget > 0 && <TabsTrigger value="details">{isArabicMovie ? "التفاصيل" : "Details"}</TabsTrigger>}
+          {trailer && <TabsTrigger value="videos">{isArabicMovie ? "الفيديوهات" : "Videos"}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 mt-4">
           <div>
-            <h3 className="text-lg font-bold mb-2">Synopsis</h3>
+            <h3 className="text-lg font-bold mb-2">{isArabicMovie ? "القصة" : "Synopsis"}</h3>
             <p className="text-foreground/80 leading-relaxed">{m.overview || "No overview available."}</p>
           </div>
           {recommendations.length > 0 && (
-            <MediaRow title="Recommendations" icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="movie" />
+            <MediaRow title={isArabicMovie ? "اقتراحات لك" : "Recommendations"} icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="movie" />
           )}
           {similar.length > 0 && (
-            <MediaRow title="More like this" icon={<Heart className="w-5 h-5" />} items={similar} forcedMediaType="movie" />
+            <MediaRow title={isArabicMovie ? "أعمال مشابهة" : "More like this"} icon={<Heart className="w-5 h-5" />} items={similar} forcedMediaType="movie" />
           )}
         </TabsContent>
 
@@ -454,23 +454,23 @@ export function MovieDetailView() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">No cast information available.</p>
+            <p className="text-muted-foreground text-center py-8">{isArabicMovie ? "لا تتوفر معلومات عن طاقم العمل." : "No cast information available."}</p>
           )}
         </TabsContent>
 
         {m.budget > 0 && (
           <TabsContent value="details" className="mt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label="Budget" value={`$${m.budget.toLocaleString()}`} />
-              <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label="Revenue" value={`$${m.revenue.toLocaleString()}`} />
-              <DetailCard icon={<Calendar className="w-5 h-5 text-primary" />} label="Release date" value={releaseDate?.full || "—"} />
-              <DetailCard icon={<Clock className="w-5 h-5 text-primary" />} label="Runtime" value={runtime || "—"} />
-              <DetailCard icon={<Film className="w-5 h-5 text-primary" />} label="Status" value={m.status || "—"} />
-              <DetailCard icon={<Users className="w-5 h-5 text-primary" />} label="Language" value={m.spoken_languages?.map((l) => l.english_name).join(", ") || "—"} />
+              <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label={isArabicMovie ? "الميزانية" : "Budget"} value={`$${m.budget.toLocaleString()}`} />
+              <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label={isArabicMovie ? "الإيرادات" : "Revenue"} value={`$${m.revenue.toLocaleString()}`} />
+              <DetailCard icon={<Calendar className="w-5 h-5 text-primary" />} label={isArabicMovie ? "تاريخ الإصدار" : "Release date"} value={releaseDate?.full || "—"} />
+              <DetailCard icon={<Clock className="w-5 h-5 text-primary" />} label={isArabicMovie ? "المدة" : "Runtime"} value={runtime || "—"} />
+              <DetailCard icon={<Film className="w-5 h-5 text-primary" />} label={isArabicMovie ? "الحالة" : "Status"} value={m.status || "—"} />
+              <DetailCard icon={<Users className="w-5 h-5 text-primary" />} label={isArabicMovie ? "اللغة" : "Language"} value={m.spoken_languages?.map((l) => l.name || l.english_name).join(", ") || "—"} />
             </div>
             {m.production_companies?.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-bold mb-2">Production</h4>
+                <h4 className="text-sm font-bold mb-2">{isArabicMovie ? "الإنتاج" : "Production"}</h4>
                 <div className="flex flex-wrap gap-2">
                   {m.production_companies.map((p) => (
                     <Badge key={p.id} variant="secondary">{p.name}</Badge>

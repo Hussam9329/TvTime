@@ -104,18 +104,18 @@ export function useOnTheAirTv(page = 1) {
   });
 }
 
-export function useMovieGenres() {
+export function useMovieGenres(language?: "ar" | "ja" | "en-US") {
   return useQuery({
-    queryKey: ["tmdb", "movies", "genres"],
-    queryFn: async () => (await tmdbGet<{ genres: Genre[] }>("movies/genres")).genres,
+    queryKey: ["tmdb", "movies", "genres", language || "default"],
+    queryFn: async () => (await tmdbGet<{ genres: Genre[] }>("movies/genres", language ? { language } : undefined)).genres,
     staleTime: Infinity,
   });
 }
 
-export function useTvGenres() {
+export function useTvGenres(language?: "ar" | "ja" | "en-US") {
   return useQuery({
-    queryKey: ["tmdb", "tv", "genres"],
-    queryFn: async () => (await tmdbGet<{ genres: Genre[] }>("tv/genres")).genres,
+    queryKey: ["tmdb", "tv", "genres", language || "default"],
+    queryFn: async () => (await tmdbGet<{ genres: Genre[] }>("tv/genres", language ? { language } : undefined)).genres,
     staleTime: Infinity,
   });
 }

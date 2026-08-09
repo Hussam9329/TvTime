@@ -11,7 +11,7 @@ import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
 import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronLeft, ChevronRight, Grid2X2, List, CircleStop } from "lucide-react";
-import { img } from "@/lib/tmdb";
+import { img, pickArabicTitle } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -286,6 +286,7 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
   const totalEps = show._airedEpisodeCount ?? show.episodes;
   const seasons = show.seasons;
   const compact = layout === "grid";
+  const displayTitle = isArabic ? pickArabicTitle(show, "tv", show.title) : show.title;
   const watchedEps = show._watchedAiredEpisodeCount ?? 0;
   const releasedEps = show._airedEpisodeCount ?? totalEps ?? null;
 
@@ -332,7 +333,7 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
         )}>
           <div className="relative aspect-[0.618/1] w-full overflow-hidden rounded-[16px] border border-white/10 bg-muted shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:self-center">
           {show.poster ? (
-            <SafeImage src={img(show.poster, "w342")} alt={show.title} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
+            <SafeImage src={img(show.poster, "w342")} alt={displayTitle} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
           ) : (
             <div className="flex h-full w-full items-center justify-center"><Tv className="h-8 w-8 text-muted-foreground" /></div>
           )}
@@ -349,7 +350,7 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
             <h4 className={cn(
               "line-clamp-2 text-xl font-black tracking-[-0.035em] text-foreground transition-colors group-hover:text-white",
               compact ? "sm:text-xl lg:text-2xl" : "sm:text-2xl lg:text-3xl",
-            )}>{show.title}</h4>
+            )}>{displayTitle}</h4>
             <div className="mt-2.5 h-px w-20 bg-gradient-to-r from-primary via-primary/25 to-transparent" />
 
             <div className="mt-3 flex flex-wrap items-center gap-1.5">

@@ -236,8 +236,8 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/movie/now_playing`, { page }),
   upcomingMovies: (page = 1) =>
     tmdbFetch<PaginatedResponse<MediaItem>>(`/movie/upcoming`, { page }),
-  movieGenres: () =>
-    tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`),
+  movieGenres: (language?: TmdbLanguage) =>
+    tmdbFetch<{ genres: Genre[] }>(`/genre/movie/list`, {}, language),
   discoverMovies: async (params: { genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; vote_average_lte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; certification?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; keyword_groups?: number[][]; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
     if (params.vote_count_gte != null) p["vote_count.gte"] = params.vote_count_gte;
@@ -270,8 +270,8 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/on_the_air`, { page }),
   airingTodayTv: (page = 1) =>
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/airing_today`, { page }),
-  tvGenres: () =>
-    tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`),
+  tvGenres: (language?: TmdbLanguage) =>
+    tmdbFetch<{ genres: Genre[] }>(`/genre/tv/list`, {}, language),
   discoverTv: async (params: { genres?: number[]; without_genres?: number[]; year?: number; sort_by?: string; page?: number; vote_average_gte?: number; vote_average_lte?: number; original_language?: string; originCountries?: string; vote_count_gte?: number; release_date_gte?: string; release_date_lte?: string; runtime_gte?: number; runtime_lte?: number; keyword_ids?: number[]; keyword_groups?: number[][]; series_type?: number; language?: TmdbLanguage } = {}) => {
     const p: Record<string, string | number> = { page: params.page || 1, sort_by: params.sort_by || "popularity.desc" };
     if (params.vote_count_gte != null) p["vote_count.gte"] = params.vote_count_gte;
@@ -339,7 +339,9 @@ const HAS_ARABIC_TEXT = /[\u0600-\u06FF]/;
 
 export function pickArabicTitle(profile: any, mediaType: "movie" | "tv", fallback: string): string {
   const localized = mediaType === "movie" ? profile?.title : profile?.name;
-  const original = mediaType === "movie" ? profile?.original_title : profile?.original_name;
+  const original = mediaType === "movie"
+    ? profile?.original_title ?? profile?.originalTitle
+    : profile?.original_name ?? profile?.originalName ?? profile?.originalTitle;
   if (HAS_ARABIC_TEXT.test(String(localized || ""))) return localized;
   if (HAS_ARABIC_TEXT.test(String(original || ""))) return original;
   return localized || original || fallback;

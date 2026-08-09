@@ -315,7 +315,7 @@ export function TvDetailView() {
   return (
     <div className="tvtime-tv-detail-page space-y-5">
       <Button variant="ghost" size="sm" onClick={back} className="tvtime-tv-detail-back-button text-muted-foreground">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Back
+        <ArrowLeft className="w-4 h-4 mr-1" /> {isArabicShow ? "رجوع" : "Back"}
       </Button>
 
       <section className="tvtime-tv-detail-hero relative isolate overflow-hidden rounded-[28px] border border-white/15 bg-[#07101f] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
@@ -344,35 +344,35 @@ export function TvDetailView() {
         <div className="tvtime-tv-detail-hero__content min-w-0 space-y-5 md:pt-1">
           {/* Title and badges */}
           <div className="tvtime-tv-detail-hero__identity">
-            <div className="tvtime-tv-detail-hero__user-state" aria-label="Your viewing status">
-              <span className="tvtime-tv-detail-hero__user-state-label">Your status</span>
+            <div className="tvtime-tv-detail-hero__user-state" aria-label={isArabicShow ? "حالة مشاهدتك" : "Your viewing status"}>
+              <span className="tvtime-tv-detail-hero__user-state-label">{isArabicShow ? "حالتك" : "Your status"}</span>
               {effectiveLabel === "finished" && (
                 <Badge data-status="finished" className="bg-emerald-500/20 text-emerald-400 border-0">
-                  <Trophy className="w-3 h-3 mr-1" /> Finished
+                  <Trophy className="w-3 h-3 mr-1" /> {isArabicShow ? "مكتمل" : "Finished"}
                 </Badge>
               )}
               {effectiveLabel === "uptodate" && (
                 <Badge data-status="uptodate" className="bg-cyan-500/20 text-cyan-400 border-0">
-                  <Zap className="w-3 h-3 mr-1" /> Up To Date
+                  <Zap className="w-3 h-3 mr-1" /> {isArabicShow ? "مواكب للحلقات" : "Up To Date"}
                 </Badge>
               )}
               {effectiveLabel === "watching" && (
                 <Badge data-status="watching" className="bg-blue-500/20 text-blue-400 border-0">
-                  <Play className="w-3 h-3 mr-1 fill-current" /> Watching
+                  <Play className="w-3 h-3 mr-1 fill-current" /> {isArabicShow ? "قيد المشاهدة" : "Watching"}
                 </Badge>
               )}
               {effectiveLabel === "not_started" && (
-                <Badge data-status="not_started" className="bg-slate-500/20 text-slate-300 border-0">Not Started</Badge>
+                <Badge data-status="not_started" className="bg-slate-500/20 text-slate-300 border-0">{isArabicShow ? "لم يبدأ" : "Not Started"}</Badge>
               )}
               {effectiveLabel === "planned" && (
-                <Badge data-status="planned" className="bg-violet-500/20 text-violet-300 border-0">Planned</Badge>
+                <Badge data-status="planned" className="bg-violet-500/20 text-violet-300 border-0">{isArabicShow ? "ضمن الخطة" : "Planned"}</Badge>
               )}
             </div>
             <div className="tvtime-tv-detail-hero__meta">
-              <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />TV Show</Badge>
-              {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">Arabic TV</Badge>}
+              <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />{isArabicShow ? "مسلسل" : "TV Show"}</Badge>
+              {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">مسلسل عربي</Badge>}
               {year && <Badge variant="secondary" className="border-0">{year}</Badge>}
-              {t.number_of_seasons > 0 && <Badge variant="secondary" className="border-0"><Layers className="w-3 h-3 mr-1" />{t.number_of_seasons} season{t.number_of_seasons > 1 ? "s" : ""}</Badge>}
+              {t.number_of_seasons > 0 && <Badge variant="secondary" className="border-0"><Layers className="w-3 h-3 mr-1" />{isArabicShow ? `${t.number_of_seasons} موسم` : `${t.number_of_seasons} season${t.number_of_seasons > 1 ? "s" : ""}`}</Badge>}
               {runtime && <Badge variant="secondary" className="border-0"><Clock className="w-3 h-3 mr-1" />{runtime}</Badge>}
               {t.vote_average > 0 && (
                 <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0"><Star className="w-3 h-3 mr-1 fill-amber-300" />{t.vote_average.toFixed(1)}</Badge>
@@ -457,7 +457,7 @@ export function TvDetailView() {
             <div className="tvtime-tv-detail-hero__rating-grid grid grid-cols-1 items-center gap-5 md:grid-cols-[minmax(220px,1fr)_auto] xl:grid-cols-[minmax(260px,1fr)_auto_minmax(220px,auto)]">
               <div className="tvtime-tv-detail-hero__rating-summary flex min-w-0 items-center gap-4">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Your rating</p>
+                  <p className="text-xs text-muted-foreground mb-1">{isArabicShow ? "تقييمك" : "Your rating"}</p>
                   {displayedShowRating != null ? (
                     <div className="flex items-center gap-2">
                       <div className={`text-4xl font-extrabold ${ratingColor}`}>
@@ -476,7 +476,7 @@ export function TvDetailView() {
                           ? "Rate to mark this show Finished"
                           : effectiveLabel === "uptodate"
                             ? "Rate later when show ends"
-                            : "Not rated yet"}
+                            : isArabicShow ? "لم تقيّمه بعد" : "Not rated yet"}
                       </span>
                     </div>
                   )}
@@ -505,7 +505,7 @@ export function TvDetailView() {
                 </Button>
               </div>
               <div className="tvtime-tv-detail-hero__tmdb-rating md:col-span-2 md:justify-self-end xl:col-span-1 xl:text-right">
-                <p className="text-xs text-muted-foreground mb-1">TMDB score</p>
+                <p className="text-xs text-muted-foreground mb-1">{isArabicShow ? "تقييم TMDB" : "TMDB score"}</p>
                 <div className="flex items-center gap-1 text-amber-400 font-bold text-lg">
                   <Star className="w-5 h-5 fill-amber-400" />
                   {t.vote_average.toFixed(1)}
@@ -528,7 +528,7 @@ export function TvDetailView() {
           </div>
           {t.created_by?.length > 0 && (
             <p className="tvtime-tv-detail-hero__creator text-sm text-muted-foreground">
-              Created by <span className="text-foreground font-medium">{t.created_by.map((c) => c.name).join(", ")}</span>
+              {isArabicShow ? "ابتكره" : "Created by"} <span className="text-foreground font-medium">{t.created_by.map((c) => c.name).join(", ")}</span>
             </p>
           )}
         </div>
@@ -537,10 +537,10 @@ export function TvDetailView() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="tvtime-tv-detail-tabs flex h-14 w-full justify-stretch overflow-x-auto rounded-2xl border border-white/10 bg-[#0a1220]/90 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:flex-1 [&>*]:rounded-xl">
-          <TabsTrigger value="seasons">Seasons & Episodes</TabsTrigger>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="cast">Cast</TabsTrigger>
-          {trailer && <TabsTrigger value="videos">Videos</TabsTrigger>}
+          <TabsTrigger value="seasons">{isArabicShow ? "المواسم والحلقات" : "Seasons & Episodes"}</TabsTrigger>
+          <TabsTrigger value="overview">{isArabicShow ? "نظرة عامة" : "Overview"}</TabsTrigger>
+          <TabsTrigger value="cast">{isArabicShow ? "طاقم العمل" : "Cast"}</TabsTrigger>
+          {trailer && <TabsTrigger value="videos">{isArabicShow ? "الفيديوهات" : "Videos"}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="seasons" className="mt-4">
@@ -570,12 +570,12 @@ export function TvDetailView() {
 
         <TabsContent value="overview" className="space-y-4 mt-4">
           <div>
-            <h3 className="text-lg font-bold mb-2">Synopsis</h3>
-            <p className="text-foreground/80 leading-relaxed">{t.overview || "No overview available."}</p>
+            <h3 className="text-lg font-bold mb-2">{isArabicShow ? "القصة" : "Synopsis"}</h3>
+            <p className="text-foreground/80 leading-relaxed">{t.overview || (isArabicShow ? "لا يتوفر ملخص حالياً." : "No overview available.")}</p>
           </div>
           {t.networks?.length > 0 && (
             <div>
-              <h4 className="text-sm font-bold mb-2">Networks</h4>
+              <h4 className="text-sm font-bold mb-2">{isArabicShow ? "شبكات العرض" : "Networks"}</h4>
               <div className="flex flex-wrap gap-2">
                 {t.networks.map((n) => (
                   <Badge key={n.id} variant="secondary">{n.name}</Badge>
@@ -584,10 +584,10 @@ export function TvDetailView() {
             </div>
           )}
           {recommendations.length > 0 && (
-            <MediaRow title="Recommendations" icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="tv" />
+            <MediaRow title={isArabicShow ? "اقتراحات لك" : "Recommendations"} icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="tv" />
           )}
           {similar.length > 0 && (
-            <MediaRow title="More like this" icon={<Heart className="w-5 h-5" />} items={similar} forcedMediaType="tv" />
+            <MediaRow title={isArabicShow ? "أعمال مشابهة" : "More like this"} icon={<Heart className="w-5 h-5" />} items={similar} forcedMediaType="tv" />
           )}
         </TabsContent>
 
@@ -615,7 +615,7 @@ export function TvDetailView() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">No cast information available.</p>
+            <p className="text-muted-foreground text-center py-8">{isArabicShow ? "لا تتوفر معلومات عن طاقم العمل." : "No cast information available."}</p>
           )}
         </TabsContent>
 

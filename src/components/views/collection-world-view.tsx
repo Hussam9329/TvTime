@@ -27,6 +27,7 @@ import {
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { HOME_MEDIA_CARD_GRID_CLASS, MediaCardSkeleton } from "@/components/media/media-card";
+import { pickArabicTitle } from "@/lib/tmdb";
 
 type CollectionWorld = "movies" | "asian-movies" | "anime" | "arabic-movies";
 type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
@@ -67,8 +68,8 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
     watchedCount: "watchedAsianMovies",
   },
   "arabic-movies": {
-    title: "Arabic Movies",
-    searchPlaceholder: "Search your Arabic movies...",
+    title: "الأفلام العربية",
+    searchPlaceholder: "ابحث في أفلامك العربية...",
     icon: Film,
     type: "movie",
     isAnime: "false",
@@ -100,6 +101,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const [page, setPage] = useState(0);
   const limit = 60;
   const isWatchedTab = tab === "watched";
+  const isArabicWorld = world === "arabic-movies";
   const isNotStartedTab = tab === "not-started";
   const isWatchingTab = tab === "watching";
   const debouncedSearch = useDebounce(search, 400);
@@ -151,23 +153,23 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       )}
 
       <div className={`grid gap-3 ${world === "anime" ? "max-w-3xl grid-cols-2 sm:grid-cols-4" : "max-w-xl grid-cols-2"}`}>
-        <MiniStat label="Watchlist" value={watchlistCount} />
+        <MiniStat label={isArabicWorld ? "قائمة المشاهدة" : "Watchlist"} value={watchlistCount} />
         {world === "anime" && <MiniStat label="Not started" value={notStartedCount} />}
         {world === "anime" && <MiniStat label="In progress" value={watchingCount} />}
-        <MiniStat label="Watched" value={watchedCount} />
+        <MiniStat label={isArabicWorld ? "تمت مشاهدتها" : "Watched"} value={watchedCount} />
       </div>
 
       <FilterPanel
-        title="Library filters"
-        description={`Browse your ${config.title.toLowerCase()} by collection status, search term and sort order.`}
+        title={isArabicWorld ? "فلاتر المكتبة" : "Library filters"}
+        description={isArabicWorld ? "تصفّح أفلامك العربية حسب حالة المجموعة والبحث والترتيب." : `Browse your ${config.title.toLowerCase()} by collection status, search term and sort order.`}
         activeCount={Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart")}
       >
-        <FilterSection title="Collection status">
+        <FilterSection title={isArabicWorld ? "حالة المجموعة" : "Collection status"}>
           <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
             <TabsList className="tvtime-collection-status-tabs h-auto w-full justify-start overflow-x-auto">
               <TabsTrigger value="watchlist" className="h-10 min-w-36">
                 <WorldIcon className="mr-2 h-4 w-4" />
-                Watchlist
+                {isArabicWorld ? "قائمة المشاهدة" : "Watchlist"}
                 <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchlistCount}</span>
               </TabsTrigger>
               {world === "anime" && (
@@ -186,16 +188,16 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
               )}
               <TabsTrigger value="watched" className="h-10 min-w-36">
                 <Check className="mr-2 h-4 w-4" />
-                Watched
+                {isArabicWorld ? "تمت مشاهدتها" : "Watched"}
                 <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchedCount}</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
         </FilterSection>
 
-        <FilterSection title="Search and sort" divided>
+        <FilterSection title={isArabicWorld ? "البحث والترتيب" : "Search and sort"} divided>
           <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_auto]">
-            <FilterField label="Search collection">
+            <FilterField label={isArabicWorld ? "البحث في المجموعة" : "Search collection"}>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -207,15 +209,15 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
               </div>
             </FilterField>
 
-            <FilterField label="Sort by">
+            <FilterField label={isArabicWorld ? "الترتيب حسب" : "Sort by"}>
               <div className="tvtime-collection-sort-options flex min-h-9 flex-wrap items-center gap-1 rounded-lg border border-border/50 bg-muted/25 p-1 lg:min-w-[310px]">
                 <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 text-muted-foreground" />
                 {[
-                  { value: "smart", label: "Smart" },
-                  { value: "addedAt", label: "Recent" },
-                  { value: "userRating", label: "Rating" },
-                  { value: "title", label: "A-Z" },
-                  { value: "year", label: "Year" },
+                  { value: "smart", label: isArabicWorld ? "ذكي" : "Smart" },
+                  { value: "addedAt", label: isArabicWorld ? "الأحدث إضافة" : "Recent" },
+                  { value: "userRating", label: isArabicWorld ? "تقييمي" : "Rating" },
+                  { value: "title", label: isArabicWorld ? "أ-ي" : "A-Z" },
+                  { value: "year", label: isArabicWorld ? "السنة" : "Year" },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -234,11 +236,11 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       </FilterPanel>
 
       <p className="text-sm text-muted-foreground">
-        Showing <span className="font-bold text-foreground">{items.length}</span> of <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "Arabic movies" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
+        {isArabicWorld ? "يُعرض" : "Showing"} <span className="font-bold text-foreground">{items.length}</span> {isArabicWorld ? "من" : "of"} <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "فيلماً عربياً" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
       </p>
-      <div className="flex justify-end gap-1" aria-label="Library layout">
-        <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("grid")} title="Poster grid"><Grid2X2 className="h-4 w-4" /></Button>
-        <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("list")} title="Compact list"><List className="h-4 w-4" /></Button>
+      <div className="flex justify-end gap-1" aria-label={isArabicWorld ? "طريقة عرض المكتبة" : "Library layout"}>
+        <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("grid")} title={isArabicWorld ? "شبكة البوسترات" : "Poster grid"}><Grid2X2 className="h-4 w-4" /></Button>
+        <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("list")} title={isArabicWorld ? "قائمة مختصرة" : "Compact list"}><List className="h-4 w-4" /></Button>
       </div>
 
       {/* Fix #14: Distinguish loading, error, empty, and success states */}
@@ -298,6 +300,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
               tab={tab}
               layout={layout}
               homePresentation={isMovieWorld}
+              arabicUi={isArabicWorld}
             />
           ))}
         </div>
@@ -306,13 +309,13 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>
-            Prev
+            {isArabicWorld ? "السابق" : "Prev"}
           </Button>
           <span className="text-sm text-muted-foreground px-3">
-            Page <span className="font-bold text-foreground">{page + 1}</span> of {totalPages}
+            {isArabicWorld ? "الصفحة" : "Page"} <span className="font-bold text-foreground">{page + 1}</span> {isArabicWorld ? "من" : "of"} {totalPages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((current) => current + 1)}>
-            Next
+            {isArabicWorld ? "التالي" : "Next"}
           </Button>
         </div>
       )}
@@ -335,12 +338,14 @@ function CollectionMediaCard({
   tab,
   layout,
   homePresentation = false,
+  arabicUi = false,
 }: {
   item: MediaItemDB;
   index: number;
   tab: CollectionTab;
   layout: "grid" | "list";
   homePresentation?: boolean;
+  arabicUi?: boolean;
 }) {
   const isWatchedTab = tab === "watched";
   const update = useMediaUpdate();
@@ -359,6 +364,9 @@ function CollectionMediaCard({
   const isFinishedShow = item.type === "series" && item.status === "finished";
   const isCompleted = (isMovie && item.watched) || isFinishedShow;
   const useHomePresentation = homePresentation && layout === "grid";
+  const displayTitle = arabicUi
+    ? pickArabicTitle(item, isMovie ? "movie" : "tv", item.title)
+    : item.title;
 
   // Navigate to the correct detail page based on type
   const handleOpenDetails = () => {
@@ -464,12 +472,12 @@ function CollectionMediaCard({
             onKeyDown={handleKeyDown}
             role="button"
             tabIndex={0}
-            aria-label={`Open details for ${item.title}${item.year ? ` (${item.year})` : ""}`}
+            aria-label={`${arabicUi ? "فتح تفاصيل" : "Open details for"} ${displayTitle}${item.year ? ` (${item.year})` : ""}`}
           >
             {item.poster ? (
               <SafeImage
                 src={item.poster}
-                alt={item.title}
+                alt={displayTitle}
                 loading="lazy"
                 className={useHomePresentation
                   ? "tvtime-media-poster__image relative h-full w-full object-cover"
@@ -494,13 +502,13 @@ function CollectionMediaCard({
 
           <div className={useHomePresentation ? "tvtime-media-copy" : `flex min-w-0 items-center gap-2 border-t border-border/60 bg-card px-3 py-2.5 ${layout === "list" ? "" : "min-h-[4.5rem]"}`}>
             <div className="min-w-0 flex-1">
-              <h3 className={useHomePresentation ? "tvtime-media-title line-clamp-2 text-start" : "line-clamp-1 text-sm font-semibold leading-tight text-foreground"} title={item.title}>{item.title}</h3>
+              <h3 className={useHomePresentation ? "tvtime-media-title line-clamp-2 text-start" : "line-clamp-1 text-sm font-semibold leading-tight text-foreground"} title={displayTitle}>{displayTitle}</h3>
               <div className={useHomePresentation ? "tvtime-media-meta" : "mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground"}>
                 {item.year && <span>{item.year}</span>}
                 {item.year && <span aria-hidden="true">•</span>}
                 <span className="inline-flex min-w-0 items-center gap-1">
                   {isMovie ? <Film aria-hidden="true" /> : <Tv aria-hidden="true" />}
-                  <span className="truncate">{item.isAnime ? "Anime" : item.isArabic ? (isMovie ? "Arabic Movie" : "Arabic TV") : isMovie ? "Movie" : "TV"}</span>
+                  <span className="truncate">{item.isAnime ? "Anime" : item.isArabic ? (arabicUi ? (isMovie ? "فيلم عربي" : "مسلسل عربي") : (isMovie ? "Arabic Movie" : "Arabic TV")) : isMovie ? "Movie" : "TV"}</span>
                 </span>
               </div>
             </div>
@@ -510,16 +518,16 @@ function CollectionMediaCard({
                   size="sm"
                   variant="outline"
                   className={useHomePresentation ? "tvtime-media-menu absolute z-20 h-8 w-8 p-0" : "h-8 w-8 shrink-0 p-0"}
-                  aria-label={`More actions for ${item.title}`}
-                  title="More actions"
+                  aria-label={`${arabicUi ? "إجراءات إضافية لـ" : "More actions for"} ${displayTitle}`}
+                  title={arabicUi ? "إجراءات إضافية" : "More actions"}
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{item.title}</DropdownMenuLabel>
+                <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{displayTitle}</DropdownMenuLabel>
                 <DropdownMenuItem onSelect={handleOpenDetails}>
-                  <Play /> Open details
+                  <Play /> {arabicUi ? "فتح التفاصيل" : "Open details"}
                 </DropdownMenuItem>
                 {!isWatchedTab && (
                   <DropdownMenuItem onSelect={() => void handleMarkWatched()} disabled={update.isPending}>
@@ -556,7 +564,7 @@ function CollectionMediaCard({
       <RatingDialog
         open={ratingOpen}
         onOpenChange={setRatingOpen}
-        title={item.title}
+        title={displayTitle}
         poster={item.poster}
         onRate={handleRate}
         initialRating={item.userRating ?? null}

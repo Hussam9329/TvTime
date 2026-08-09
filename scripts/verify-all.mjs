@@ -24,6 +24,7 @@ const checks = [
   ["User-facing integrity", ["scripts/verify-user-facing-integrity.mjs"]],
   ["Episode watch flow and posters", ["scripts/verify-episode-watch-poster.mjs"]],
   ["Arabic media worlds", ["scripts/verify-arabic-worlds.mjs"]],
+  ["Arabic title localization", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-arabic-title-localization.ts"]],
   ["Arabic Movies Egyptian priority", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-arabic-movie-priority.ts"]],
   ["Asian TV classification", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-asian-classification.ts"]],
   ["World separation", ["scripts/verify-world-separation.mjs"]],

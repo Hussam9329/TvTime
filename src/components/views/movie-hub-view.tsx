@@ -120,6 +120,15 @@ const TONIGHT_OPTIONS: Array<{ value: MovieTonightMode; label: string }> = [
   { value: "classic", label: "Classic" },
 ];
 
+const TONIGHT_OPTIONS_AR: Array<{ value: MovieTonightMode; label: string }> = [
+  { value: "smart", label: "مختار لك" },
+  { value: "under100", label: "أقل من 100 دقيقة" },
+  { value: "rated", label: "الأعلى تقييماً" },
+  { value: "new", label: "جديد" },
+  { value: "hidden", label: "جوهرة مخفية" },
+  { value: "classic", label: "كلاسيكي" },
+];
+
 export function MovieHubView({ world }: { world: MovieHubWorld }) {
   const copy = WORLD_COPY[world];
   const isArabic = world === "arabic-movies";
@@ -199,6 +208,7 @@ function MovieHubOverview({
   onBrowse: () => void;
 }) {
   const [tonightMode, setTonightMode] = useState<MovieTonightMode>("smart");
+  const isArabic = world === "arabic-movies";
   const data = query.data;
   const allItems = useMemo(() => {
     if (!data) return [];
@@ -222,8 +232,8 @@ function MovieHubOverview({
     return (
       <Card className="tvtime-movie-hub__error" role="alert">
         <Film aria-hidden="true" />
-        <h2>Could not load this movie world</h2>
-        <p>Your library is safe. The catalogue service may be temporarily unavailable.</p>
+        <h2>{isArabic ? "تعذر تحميل واجهة الأفلام العربية" : "Could not load this movie world"}</h2>
+        <p>{isArabic ? "مكتبتك آمنة. قد تكون خدمة الكتالوج غير متاحة مؤقتاً." : "Your library is safe. The catalogue service may be temporarily unavailable."}</p>
         <Button variant="outline" onClick={() => query.refetch()}>{copy.retry}</Button>
       </Card>
     );
@@ -247,7 +257,7 @@ function MovieHubOverview({
 
       <HubRowOrEmpty
         title={copy.watchlist}
-        hint="Saved for later"
+        hint={isArabic ? "محفوظة للمشاهدة لاحقاً" : "Saved for later"}
         icon={<Bookmark />}
         items={data.shelves.watchlist}
         emptyText={copy.emptyWatchlist}
@@ -259,11 +269,11 @@ function MovieHubOverview({
       <section className="tvtime-movie-hub__tonight" aria-labelledby={`tonight-${world}`}>
         <div className="tvtime-movie-hub__section-line">
           <div>
-            <p className="tvtime-movie-hub__section-kicker">Smart picks</p>
+            <p className="tvtime-movie-hub__section-kicker">{isArabic ? "اختيارات ذكية" : "Smart picks"}</p>
             <h2 id={`tonight-${world}`}>{copy.tonight}</h2>
           </div>
-          <div className="tvtime-movie-hub__quick-picks no-scrollbar" aria-label="Tonight filters">
-            {TONIGHT_OPTIONS.map((option) => (
+          <div className="tvtime-movie-hub__quick-picks no-scrollbar" aria-label={isArabic ? "فلاتر اختيار الليلة" : "Tonight filters"}>
+            {(isArabic ? TONIGHT_OPTIONS_AR : TONIGHT_OPTIONS).map((option) => (
               <button
                 key={option.value}
                 type="button"
@@ -282,7 +292,7 @@ function MovieHubOverview({
       <MediaRow title={copy.hiddenGems} icon={<Star />} items={data.shelves.hiddenGems} forcedMediaType="movie" libraryStateSource={sharedStates} />
       <HubRowOrEmpty
         title={copy.recent}
-        hint="Your viewing history"
+        hint={isArabic ? "سجل مشاهدتك" : "Your viewing history"}
         icon={<Clock3 />}
         items={data.shelves.recentlyWatched}
         emptyText={copy.emptyRecent}
@@ -291,7 +301,7 @@ function MovieHubOverview({
       <MediaRow title={copy.comingSoon} icon={<CalendarDays />} items={data.shelves.comingSoon} forcedMediaType="movie" libraryStateSource={sharedStates} />
 
       {data.partial && (
-        <p className="tvtime-movie-hub__partial" role="status">Some recommendations are temporarily unavailable; your library sections are still complete.</p>
+        <p className="tvtime-movie-hub__partial" role="status">{isArabic ? "بعض الاقتراحات غير متاحة مؤقتاً، لكن أقسام مكتبتك ما زالت كاملة." : "Some recommendations are temporarily unavailable; your library sections are still complete."}</p>
       )}
     </div>
   );

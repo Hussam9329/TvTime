@@ -60,7 +60,7 @@ const handler = async (
         data = await tmdb.upcomingMovies(Number(queryParams.page) || 1);
         break;
       case "movies/genres":
-        data = await tmdb.movieGenres();
+        data = await tmdb.movieGenres((queryParams.language as TmdbLanguage) || undefined);
         break;
       case "movies/discover": {
         const page = Number(queryParams.page) || 1;
@@ -167,7 +167,7 @@ const handler = async (
         break;
       }
       case "tv/genres":
-        data = await tmdb.tvGenres();
+        data = await tmdb.tvGenres((queryParams.language as TmdbLanguage) || undefined);
         break;
       case "tv/discover": {
         const page = Number(queryParams.page) || 1;

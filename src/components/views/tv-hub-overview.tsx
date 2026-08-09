@@ -27,7 +27,7 @@ import {
   type TvHubWorld,
 } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
-import { img, type MediaItem } from "@/lib/tmdb";
+import { getTitle, img, type MediaItem } from "@/lib/tmdb";
 
 type TvHubCopy = {
   featured: string;
@@ -75,7 +75,7 @@ function copyFor(world: TvHubWorld): TvHubCopy {
 }
 
 function mediaTitle(item: MediaItem) {
-  return item.name || item.title || item.original_name || item.original_title || "Untitled";
+  return getTitle(item);
 }
 
 function mediaYear(item: MediaItem) {

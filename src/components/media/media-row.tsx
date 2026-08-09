@@ -21,6 +21,7 @@ interface MediaRowProps {
 
 export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType, libraryStateSource, compactCards = true, hideHeading = false }: MediaRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isArabic = /[\u0600-\u06FF]/.test(title);
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
     mediaType: forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
@@ -49,13 +50,13 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
                 <span className="tvtime-section-heading__count tabular-nums">{items.length}</span>
               )}
             </div>
-            <p className="tvtime-section-heading__hint">Curated for you</p>
+            <p className="tvtime-section-heading__hint">{isArabic ? "مختارة لك" : "Curated for you"}</p>
           </div>
         </div>
         <div className="tvtime-section-heading__actions">
           {onSeeAll && (
             <Button variant="ghost" size="sm" className="tvtime-see-all" onClick={onSeeAll}>
-              See all
+              {isArabic ? "عرض الكل" : "See all"}
             </Button>
           )}
           <div className="tvtime-row-controls hidden items-center sm:flex">
@@ -64,7 +65,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
               size="icon"
               className="h-8 w-8"
               onClick={() => scroll("left")}
-              aria-label={`Scroll ${title} left`}
+              aria-label={isArabic ? `مرّر ${title} إلى اليمين` : `Scroll ${title} left`}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -73,7 +74,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
               size="icon"
               className="h-8 w-8"
               onClick={() => scroll("right")}
-              aria-label={`Scroll ${title} right`}
+              aria-label={isArabic ? `مرّر ${title} إلى اليسار` : `Scroll ${title} right`}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
