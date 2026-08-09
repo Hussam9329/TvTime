@@ -1,40 +1,58 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Film, Library, Sparkles, Tv } from "lucide-react";
+import { CalendarDays, Film, Grid2X2, Library, ListFilter, Sparkles, Tv } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageTitlebar } from "@/components/ui/page-titlebar";
+import { Button } from "@/components/ui/button";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
+import { AnimeHubOverview } from "@/components/views/anime-hub-overview";
+import { useAnimeHub } from "@/hooks/use-tmdb";
 
 const ANIMATION_GENRES = [16];
 type AnimeMediaType = "movie" | "tv";
 
 export function AnimeView() {
-  const [tab, setTab] = useState<"library" | "discover" | "releases">("library");
+  const [tab, setTab] = useState<"overview" | "library" | "discover" | "releases">("overview");
   const [mediaType, setMediaType] = useState<AnimeMediaType>("tv");
+  const hub = useAnimeHub();
+  const summary = hub.data?.summary;
+  const summaryLine = `${summary?.titles ?? "…"} titles • ${summary?.inProgress ?? "…"} In Progress • ${summary?.episodesWatched ?? "…"} Episodes Watched`;
 
   const mediaSwitch = (
-    <div className="mb-4 inline-flex rounded-lg border border-border bg-card p-1" role="group" aria-label="Anime media type">
-      <button type="button" aria-pressed={mediaType === "movie"} onClick={() => setMediaType("movie")} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${mediaType === "movie" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}><Film className="h-4 w-4" /> Movies</button>
-      <button type="button" aria-pressed={mediaType === "tv"} onClick={() => setMediaType("tv")} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${mediaType === "tv" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}><Tv className="h-4 w-4" /> Series</button>
+    <div className="tvtime-anime-media-switch mb-4 inline-flex rounded-xl border border-border/70 bg-card/75 p-1 shadow-sm" role="group" aria-label="Anime media type">
+      <button type="button" aria-pressed={mediaType === "movie"} onClick={() => setMediaType("movie")} className={`flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors ${mediaType === "movie" ? "bg-[var(--movie-world-accent)] text-black shadow-sm" : "text-muted-foreground hover:bg-accent"}`}><Film className="h-4 w-4" /> Movies</button>
+      <button type="button" aria-pressed={mediaType === "tv"} onClick={() => setMediaType("tv")} className={`flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors ${mediaType === "tv" ? "bg-[var(--movie-world-accent)] text-black shadow-sm" : "text-muted-foreground hover:bg-accent"}`}><Tv className="h-4 w-4" /> Series</button>
     </div>
   );
 
   return (
-    <div className="tvtime-world-view tvtime-anime-view space-y-5">
-      <PageTitlebar title="Anime" />
+    <div className="tvtime-world-view tvtime-anime-view tvtime-movie-hub" data-world="anime">
+      <header className="tvtime-movie-hub__titlebar">
+        <div className="min-w-0">
+          <p className="tvtime-movie-hub__eyebrow">Your Anime world</p>
+          <h1>Anime</h1>
+          <p className="tvtime-movie-hub__summary" aria-live="polite">{summaryLine}</p>
+        </div>
+        <Button className="tvtime-movie-hub__browse" onClick={() => setTab("discover")}>
+          <ListFilter aria-hidden="true" /> Browse
+        </Button>
+      </header>
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="space-y-5">
-        <TabsList className="tvtime-world-tabs grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1 sm:w-[620px]">
-          <TabsTrigger value="library" className="gap-2 py-2.5"><Library className="h-4 w-4" /> My Library</TabsTrigger>
-          <TabsTrigger value="discover" className="gap-2 py-2.5"><Sparkles className="h-4 w-4" /> Discover</TabsTrigger>
-          <TabsTrigger value="releases" className="gap-2 py-2.5"><CalendarDays className="h-4 w-4" /> Releases</TabsTrigger>
+      <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="min-w-0">
+        <TabsList className="tvtime-movie-hub__tabs">
+          <TabsTrigger value="overview"><Grid2X2 /> Overview</TabsTrigger>
+          <TabsTrigger value="library"><Library /> My Library</TabsTrigger>
+          <TabsTrigger value="discover"><Sparkles /> Discover</TabsTrigger>
+          <TabsTrigger value="releases"><CalendarDays /> Releases</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="overview" className="mt-0">
+          <AnimeHubOverview onBrowse={() => setTab("discover")} />
+        </TabsContent>
         <TabsContent value="library" className="mt-0">
-          <CollectionWorldView world="anime" embedded />
+          <CollectionWorldView world="anime" embedded onDiscover={() => setTab("discover")} />
         </TabsContent>
         <TabsContent value="discover" className="mt-0">
           {mediaSwitch}
@@ -53,9 +71,11 @@ export function AnimeView() {
             genres={ANIMATION_GENRES}
             originalLanguage="ja"
             language="ja"
+            collectionWorld="anime"
+            seasonal
             accentClass="text-fuchsia-400"
-            title={`Anime ${mediaType === "movie" ? "Movie" : "Series"} Release Schedule`}
-            subtitle={`A six-month agenda for new Japanese anime ${mediaType === "movie" ? "films" : "episodes and premieres"}.`}
+            title={`Anime ${mediaType === "movie" ? "Movie" : "Series"} Seasonal Calendar`}
+            subtitle={`A Winter, Spring, Summer and Fall calendar for Japanese anime ${mediaType === "movie" ? "film" : "series"} premieres.`}
           />
         </TabsContent>
       </Tabs>

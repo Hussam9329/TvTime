@@ -90,7 +90,7 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
   },
 };
 
-export function CollectionWorldView({ world, embedded = false }: { world: CollectionWorld; embedded?: boolean }) {
+export function CollectionWorldView({ world, embedded = false, onDiscover }: { world: CollectionWorld; embedded?: boolean; onDiscover?: () => void }) {
   const config = WORLD_CONFIG[world];
   const WorldIcon = config.icon;
   const setView = useNav((s) => s.setView);
@@ -98,6 +98,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("smart");
   const [layout, setLayout] = useState<"grid" | "list">("grid");
+  const [animeMediaKind, setAnimeMediaKind] = useState<"all" | "movie" | "series">("all");
   const [page, setPage] = useState(0);
   const limit = 60;
   const isWatchedTab = tab === "watched";
@@ -105,19 +106,24 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const isNotStartedTab = tab === "not-started";
   const isWatchingTab = tab === "watching";
   const debouncedSearch = useDebounce(search, 400);
+  const layoutStorageKey = world === "anime" ? "trakora:anime-library-layout" : "trakora:movie-library-layout";
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("trakora:movie-library-layout");
+    const saved = window.localStorage.getItem(layoutStorageKey);
     if (saved === "grid" || saved === "list") setLayout(saved);
-  }, []);
+  }, [layoutStorageKey]);
 
   const changeLayout = (next: "grid" | "list") => {
     setLayout(next);
-    window.localStorage.setItem("trakora:movie-library-layout", next);
+    window.localStorage.setItem(layoutStorageKey, next);
   };
 
   const media = useMedia({
-    type: isWatchingTab || isNotStartedTab ? "series" : config.type,
+    type: isWatchingTab || isNotStartedTab
+      ? "series"
+      : world === "anime" && animeMediaKind !== "all"
+        ? animeMediaKind
+        : config.type,
     isAnime: config.isAnime,
     isArabic: config.isArabic,
     isAsian: config.isAsian,
@@ -145,7 +151,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
   const notStartedCount = world === "anime" ? Number(counts?.notStartedAnime ?? 0) : 0;
   const watchingCount = world === "anime" ? Number(counts?.watchingAnime ?? 0) : 0;
   const isMovieWorld = world === "movies" || world === "arabic-movies" || world === "asian-movies";
-  const usesHomePosterGrid = isMovieWorld && layout === "grid";
+  const usesHomePosterGrid = (isMovieWorld || world === "anime") && layout === "grid";
   return (
     <div className="tvtime-collection-world-page space-y-5">
       {!embedded && (
@@ -162,8 +168,34 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       <FilterPanel
         title={isArabicWorld ? "فلاتر المكتبة" : "Library filters"}
         description={isArabicWorld ? "تصفّح أفلامك العربية حسب حالة المجموعة والبحث والترتيب." : `Browse your ${config.title.toLowerCase()} by collection status, search term and sort order.`}
-        activeCount={Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart")}
+        activeCount={Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart") + Number(world === "anime" && animeMediaKind !== "all")}
       >
+        {world === "anime" && !isNotStartedTab && !isWatchingTab && (
+          <FilterSection title="Anime type">
+            <div className="tvtime-anime-library-type" role="group" aria-label="Filter Anime library by media type">
+              {[
+                { value: "all", label: "All", icon: Sparkles },
+                { value: "series", label: "Series", icon: Tv },
+                { value: "movie", label: "Movies", icon: Film },
+              ].map((option) => {
+                const Icon = option.icon;
+                const active = animeMediaKind === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={active}
+                    data-active={active ? "true" : "false"}
+                    onClick={() => { setAnimeMediaKind(option.value as typeof animeMediaKind); setPage(0); }}
+                  >
+                    <Icon aria-hidden="true" /> {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </FilterSection>
+        )}
+
         <FilterSection title={isArabicWorld ? "حالة المجموعة" : "Collection status"}>
           <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
             <TabsList className="tvtime-collection-status-tabs h-auto w-full justify-start overflow-x-auto">
@@ -236,7 +268,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
       </FilterPanel>
 
       <p className="text-sm text-muted-foreground">
-        {isArabicWorld ? "يُعرض" : "Showing"} <span className="font-bold text-foreground">{items.length}</span> {isArabicWorld ? "من" : "of"} <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "فيلماً عربياً" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : "anime titles"}
+        {isArabicWorld ? "يُعرض" : "Showing"} <span className="font-bold text-foreground">{items.length}</span> {isArabicWorld ? "من" : "of"} <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "فيلماً عربياً" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : animeMediaKind === "movie" ? "anime movies" : animeMediaKind === "series" ? "anime series" : "anime titles"}
       </p>
       <div className="flex justify-end gap-1" aria-label={isArabicWorld ? "طريقة عرض المكتبة" : "Library layout"}>
         <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("grid")} title={isArabicWorld ? "شبكة البوسترات" : "Poster grid"}><Grid2X2 className="h-4 w-4" /></Button>
@@ -264,28 +296,28 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
           icon={<WorldIcon className="w-12 h-12" />}
           title={
             search
-              ? "لا توجد نتائج مطابقة"
+              ? (isArabicWorld ? "لا توجد نتائج مطابقة" : "No matching results")
               : tab === "watchlist"
-                ? `قائمة المشاهدة فارغة`
+                ? (isArabicWorld ? "قائمة المشاهدة فارغة" : "Your watchlist is empty")
                 : tab === "not-started"
-                  ? "لا توجد مسلسلات لم تبدأها بعد"
+                  ? "No Anime series are waiting to be started"
                   : tab === "watching"
-                    ? "لا توجد مسلسلات قيد المشاهدة حالياً"
-                    : "لم تتم مشاهدته أي شيء بعد"
+                    ? "No Anime series are in progress"
+                    : (isArabicWorld ? "لم تتم مشاهدة أي شيء بعد" : "Nothing watched yet")
           }
           description={
             search
-              ? `لم نجد أي عنصر يطابق "${search}". جرب كلمات مختلفة أو امسح البحث.`
+              ? (isArabicWorld ? `لم نجد أي عنصر يطابق "${search}". جرب كلمات مختلفة أو امسح البحث.` : `No title matches “${search}”. Try another search or clear it.`)
               : tab === "watchlist"
-                ? `ابدأ بإضافة ${world === "movies" ? "أفلام" : world === "asian-movies" ? "أفلام آسيوية" : world === "arabic-movies" ? "أفلام عربية" : "أنمي"} من صفحة الاستكشاف.`
+                ? (isArabicWorld ? "ابدأ بإضافة أفلام عربية من صفحة الاستكشاف." : `Add ${world === "anime" ? "Anime titles" : world === "asian-movies" ? "Asian movies" : "movies"} from Discover.`)
                 : tab === "watched"
-                  ? "اضغط زر 'Mark watched' على أي فيلم لتظهره هنا."
-                  : "أضف مسلسلات من صفحة الاستكشاف لتظهر هنا."
+                  ? "Mark a title as watched and it will appear here."
+                  : "Add Anime series from Discover and track their released episodes."
           }
           action={
             !search && (
-              <Button onClick={() => setView("discover")} size="sm">
-                استكشاف المزيد
+              <Button onClick={() => onDiscover ? onDiscover() : setView("discover")} size="sm">
+                {isArabicWorld ? "استكشاف المزيد" : world === "anime" ? "Discover Anime" : "Discover more"}
               </Button>
             )
           }
@@ -299,7 +331,7 @@ export function CollectionWorldView({ world, embedded = false }: { world: Collec
               index={index}
               tab={tab}
               layout={layout}
-              homePresentation={isMovieWorld}
+              homePresentation={isMovieWorld || world === "anime"}
               arabicUi={isArabicWorld}
             />
           ))}

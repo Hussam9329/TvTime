@@ -148,7 +148,15 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const supportsTvFormat = effectiveIsTV && !isAnime;
 
   const presets = useMemo(() => {
-    const basePresets = isArabic
+    const basePresets = isAnime
+      ? [
+          { id: "trending", label: "Trending Anime" },
+          { id: "top2024", label: `Top Anime ${CURRENT_YEAR}` },
+          { id: "hidden", label: "Hidden Anime Gems" },
+          { id: "newest", label: "Newest Anime" },
+          { id: "classic", label: "Anime Classics" },
+        ] satisfies Array<{ id: DiscoverPresetId; label: string }>
+      : isArabic
       ? [
           { id: "trending", label: "الأكثر شعبية" },
           { id: "top2024", label: `الأفضل في ${CURRENT_YEAR}` },
@@ -165,7 +173,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           ...basePresets.slice(3),
         ]
       : basePresets;
-  }, [isArabic, isArabicTv, supportsTvFormat]);
+  }, [isAnime, isArabic, isArabicTv, supportsTvFormat]);
 
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("popularity.desc");

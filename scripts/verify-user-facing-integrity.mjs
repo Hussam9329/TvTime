@@ -157,9 +157,9 @@ check(
 
 check(/type CollectionTab = "watchlist" \| "not-started" \| "watching" \| "watched"/.test(collection), "Anime collection models Watchlist, Not Started, In Progress and Watched separately");
 check(
-  /const usesHomePosterGrid = isMovieWorld && layout === "grid"/.test(collection)
+  /const usesHomePosterGrid = \(isMovieWorld \|\| world === "anime"\) && layout === "grid"/.test(collection)
     && /usesHomePosterGrid \? HOME_MEDIA_CARD_GRID_CLASS/.test(collection)
-    && /homePresentation=\{isMovieWorld\}/.test(collection)
+    && /homePresentation=\{isMovieWorld \|\| world === "anime"\}/.test(collection)
     && /tvtime-media-card group relative min-w-0/.test(collection)
     && /tvtime-media-poster relative aspect-\[2\/3\]/.test(collection)
     && /tvtime-media-copy/.test(collection),
@@ -295,8 +295,9 @@ check(
   "Shared poster menus stay clear of titles and metadata on touch layouts",
 );
 check(
-  [animeView, searchView, statsView, watchNextView, discoverView]
+  [searchView, statsView, watchNextView, discoverView]
     .every((source) => /<PageTitlebar title=/.test(source))
+    && /tvtime-movie-hub__titlebar/.test(animeView)
     && /tvtime-movie-hub__titlebar/.test(movieHubView)
     && /tvtime-movie-hub__titlebar/.test(tvWorldPageView)
     && /<MovieHubView world="movies"/.test(moviesView)

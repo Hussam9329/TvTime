@@ -53,6 +53,38 @@ export type MovieHubResponse = {
   partial?: boolean;
 };
 
+export type AnimeHubItem = MediaItem & { media_type: "movie" | "tv" };
+export type AnimeHubResponse = {
+  summary: {
+    titles: number;
+    watchlist: number;
+    inProgress: number;
+    watched: number;
+    episodesWatched: number;
+    averageRating: number | null;
+  };
+  currentSeason: string;
+  featured: AnimeHubItem[];
+  nextEpisodes: Array<{
+    item: AnimeHubItem;
+    airDate: string;
+    name: string | null;
+    seasonNumber: number | null;
+    episodeNumber: number | null;
+  }>;
+  shelves: {
+    watchlist: AnimeHubItem[];
+    continueWatching: AnimeHubItem[];
+    airingToday: AnimeHubItem[];
+    thisSeason: AnimeHubItem[];
+    newNoteworthy: AnimeHubItem[];
+    hiddenGems: AnimeHubItem[];
+    upcoming: AnimeHubItem[];
+    recentlyWatched: AnimeHubItem[];
+  };
+  partial?: boolean;
+};
+
 export type TvHubWorld = "standard" | "arabic" | "asian";
 export type TvHubCatalogueResponse = {
   world: TvHubWorld;
@@ -82,6 +114,22 @@ export function useMovieHub(world: MovieHubWorld) {
       const response = await fetch(url, { headers: userHeaders() });
       await ensureApiOk(response, "Failed to load the movie hub");
       return response.json() as Promise<MovieHubResponse>;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useAnimeHub() {
+  const userId = useNav((state) => state.userId);
+  return useQuery({
+    queryKey: ["lib", "anime-hub", userId || getClientUserId()],
+    queryFn: async () => {
+      const response = await fetch(withUserId(new URL("/api/anime/hub", window.location.origin)), {
+        headers: userHeaders(),
+      });
+      await ensureApiOk(response, "Failed to load the Anime hub");
+      return response.json() as Promise<AnimeHubResponse>;
     },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,

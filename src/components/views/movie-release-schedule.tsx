@@ -14,8 +14,14 @@ import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-medi
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 
-function rangeFromOffset(offset: number) {
+function rangeFromOffset(offset: number, seasonal = false) {
   const now = new Date();
+  if (seasonal) {
+    const currentQuarterMonth = Math.floor(now.getMonth() / 3) * 3;
+    const from = new Date(now.getFullYear(), currentQuarterMonth + offset * 3, 1, 12);
+    const to = new Date(from.getFullYear(), from.getMonth() + 3, 0, 12);
+    return { from: dateOnlyFromLocalDate(from), to: dateOnlyFromLocalDate(to) };
+  }
   const from = offset === 0
     ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12)
     : new Date(now.getFullYear(), now.getMonth() + offset * 6, 1, 12);
@@ -40,7 +46,15 @@ interface ReleaseScheduleProps {
   title?: string;
   /** Header subtitle override. */
   subtitle?: string;
-  collectionWorld?: "movies" | "arabic-movies" | "asian-movies" | "standard-tv" | "asian-tv";
+  collectionWorld?: "movies" | "arabic-movies" | "asian-movies" | "standard-tv" | "asian-tv" | "anime";
+  /** Align navigation to calendar quarters. Used by Anime for Winter/Spring/Summer/Fall seasons. */
+  seasonal?: boolean;
+}
+
+function seasonLabel(date: string) {
+  const parsed = new Date(`${date}T12:00:00`);
+  const season = ["Winter", "Spring", "Summer", "Fall"][Math.floor(parsed.getMonth() / 3)];
+  return `${season} ${parsed.getFullYear()}`;
 }
 
 /**
@@ -57,10 +71,11 @@ export function ReleaseSchedule({
   title,
   subtitle,
   collectionWorld,
+  seasonal = false,
 }: ReleaseScheduleProps) {
   const [offset, setOffset] = useState(0);
   const [search, setSearch] = useState("");
-  const range = useMemo(() => rangeFromOffset(offset), [offset]);
+  const range = useMemo(() => rangeFromOffset(offset, seasonal), [offset, seasonal]);
   const isTV = mediaType === "tv";
   const isRTL = language === "ar";
   const mediaLabel = isRTL ? (isTV ? "المسلسلات" : "الأفلام") : (isTV ? "TV show" : "movie");
@@ -78,6 +93,7 @@ export function ReleaseSchedule({
     const query = search.trim().toLowerCase();
     let filtered = (schedule.data?.items ?? []).filter((item) => !query || getTitle(item).toLowerCase().includes(query));
     if (collectionWorld === "standard-tv") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
+    if (collectionWorld === "anime") filtered = filtered.filter(isAnimeMediaItem);
     if (collectionWorld === "asian-tv") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
     if (collectionWorld === "movies") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
     if (collectionWorld === "arabic-movies") filtered = filtered
@@ -119,16 +135,17 @@ export function ReleaseSchedule({
           </div>
           <div className="tvtime-release-schedule__window-controls flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setOffset((value) => value - 1)}>
-              <ChevronLeft className="mr-1 h-4 w-4" /> {isRTL ? "أقدم" : "Earlier"}
+              <ChevronLeft className="mr-1 h-4 w-4" /> {isRTL ? "أقدم" : seasonal ? "Previous season" : "Earlier"}
             </Button>
-            <Button variant="outline" size="sm" disabled={offset === 0} onClick={() => setOffset(0)}>{isRTL ? "الفترة الحالية" : "Current window"}</Button>
+            <Button variant="outline" size="sm" disabled={offset === 0} onClick={() => setOffset(0)}>{isRTL ? "الفترة الحالية" : seasonal ? "Current season" : "Current window"}</Button>
             <Button variant="outline" size="sm" onClick={() => setOffset((value) => value + 1)}>
-              {isRTL ? "أحدث" : "Later"} <ChevronRight className="ml-1 h-4 w-4" />
+              {isRTL ? "أحدث" : seasonal ? "Next season" : "Later"} <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Badge variant="secondary" className="tvtime-release-schedule__range w-fit px-3 py-1">
+            {seasonal && <span className="mr-1 font-bold text-foreground">{seasonLabel(range.from)} ·</span>}
             {formatDateOnly(range.from, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")} – {formatDateOnly(range.to, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")}
           </Badge>
           <div className="relative w-full sm:max-w-sm">
