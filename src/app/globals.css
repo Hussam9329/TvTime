@@ -1307,7 +1307,7 @@
 }
 
 .tvtime-watch-progress {
-  margin-top: 0.72rem;
+  margin-top: 0.48rem;
 }
 
 .tvtime-watch-progress.is-featured {
@@ -1402,24 +1402,63 @@
 
 .tvtime-watch-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-  gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
+  align-items: start;
+  gap: 0.8rem;
 }
 
 .tvtime-app .tvtime-watch-card {
+  --watch-card-accent: color-mix(in oklab, var(--primary) 82%, white);
   display: grid !important;
-  grid-template-columns: 96px minmax(0, 1fr) !important;
-  min-height: 14.2rem;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  grid-template-columns: 6.75rem minmax(0, 1fr) !important;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem;
   overflow: hidden;
-  border: 1px solid color-mix(in oklab, var(--primary) 15%, var(--border));
-  border-radius: 0.95rem;
-  background: linear-gradient(145deg, color-mix(in oklab, var(--card) 97%, black), color-mix(in oklab, var(--background) 97%, var(--primary) 3%));
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.12), inset 0 1px color-mix(in oklab, white 4%, transparent);
+  border: 1px solid color-mix(in oklab, var(--watch-card-accent) 18%, var(--border));
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in oklab, var(--watch-card-accent) 7%, transparent), transparent 13rem),
+    linear-gradient(145deg, color-mix(in oklab, var(--card) 98%, black), color-mix(in oklab, var(--background) 96%, var(--watch-card-accent) 4%));
+  box-shadow: 0 10px 26px rgb(0 0 0 / 0.16), inset 0 1px color-mix(in oklab, white 5%, transparent);
+}
+
+.tvtime-app .tvtime-watch-card::before {
+  position: absolute;
+  z-index: 2;
+  width: 3.25rem;
+  height: 1px;
+  inset-inline-end: 0.8rem;
+  top: 0;
+  content: "";
+  background: linear-gradient(90deg, transparent, var(--watch-card-accent));
+  opacity: 0.72;
+}
+
+.tvtime-app .tvtime-watch-card[data-tone="new"] {
+  --watch-card-accent: #78d8ff;
+}
+
+.tvtime-app .tvtime-watch-card[data-tone="behind"] {
+  --watch-card-accent: #ffae61;
+}
+
+.tvtime-app .tvtime-watch-card[data-tone="paused"] {
+  --watch-card-accent: #c4a7ff;
 }
 
 .tvtime-app .tvtime-watch-card:hover {
-  border-color: color-mix(in oklab, var(--primary) 32%, var(--border));
-  box-shadow: 0 15px 32px rgb(0 0 0 / 0.18);
+  border-color: color-mix(in oklab, var(--watch-card-accent) 38%, var(--border));
+  box-shadow: 0 15px 34px rgb(0 0 0 / 0.22), inset 0 1px color-mix(in oklab, white 7%, transparent);
 }
 
 .tvtime-app .tvtime-watch-card > .tvtime-watch-card__poster {
@@ -1427,42 +1466,59 @@
   display: block;
   width: 100% !important;
   min-width: 0 !important;
-  min-height: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  aspect-ratio: 2 / 3 !important;
+  align-self: center;
   overflow: hidden;
-  border: 0;
-  border-radius: 0;
-  background: var(--muted);
+  border: 1px solid color-mix(in oklab, var(--watch-card-accent) 22%, var(--border));
+  border-radius: 0.72rem;
+  background: #070707;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 0.24);
   cursor: pointer;
 }
 
 .tvtime-watch-card__poster img {
-  transition: transform 350ms ease;
+  object-fit: contain !important;
+  object-position: center !important;
+  transition: filter 250ms ease;
 }
 
 .tvtime-watch-card:hover .tvtime-watch-card__poster img {
-  transform: scale(1.025);
+  filter: brightness(1.06) saturate(1.03);
 }
 
 .tvtime-app .tvtime-watch-card > .tvtime-watch-card__body {
   display: flex;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   flex-direction: column;
-  padding: 0.85rem !important;
+  align-self: stretch;
+  justify-content: center;
+  padding: 0.12rem 0.2rem 0.12rem 0 !important;
   overflow: hidden;
 }
 
+.tvtime-watch-card__topline {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
 .tvtime-watch-card__title {
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
-  margin-top: 0.48rem;
-  overflow: hidden;
+  margin-top: 0.38rem;
   color: var(--foreground);
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   font-weight: 900;
-  line-height: 1.2;
+  line-height: 1.18;
   text-align: start;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .tvtime-watch-card__title:hover {
@@ -1470,14 +1526,11 @@
 }
 
 .tvtime-watch-card__episode {
-  display: -webkit-box;
-  margin-top: 0.28rem;
-  overflow: hidden;
+  margin-top: 0.24rem;
   color: var(--muted-foreground);
-  font-size: 0.71rem;
-  line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  font-size: 0.69rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .tvtime-watch-card__episode strong {
@@ -1493,10 +1546,10 @@
 .tvtime-watch-card__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem 0.65rem;
-  margin-top: 0.5rem;
+  gap: 0.24rem 0.58rem;
+  margin-top: 0.38rem;
   color: var(--muted-foreground);
-  font-size: 0.62rem;
+  font-size: 0.6rem;
 }
 
 .tvtime-watch-card__meta span {
@@ -1511,36 +1564,48 @@
 }
 
 .tvtime-watch-card__ready {
-  margin-top: 0.42rem;
-  color: color-mix(in oklab, var(--primary) 78%, white);
-  font-size: 0.64rem;
-  font-weight: 800;
-}
-
-.tvtime-watch-card__ready span {
-  color: var(--muted-foreground);
-  font-weight: 600;
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 1.45rem;
+  align-items: center;
+  padding: 0.22rem 0.48rem;
+  border: 1px solid color-mix(in oklab, var(--watch-card-accent) 25%, transparent);
+  border-radius: 999px;
+  color: color-mix(in oklab, var(--watch-card-accent) 88%, white);
+  background: color-mix(in oklab, var(--watch-card-accent) 9%, transparent);
+  font-size: 0.58rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .tvtime-watch-card__actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.38rem;
-  margin-top: auto;
-  padding-top: 0.65rem;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.32rem;
+  margin-top: 0.48rem;
 }
 
 .tvtime-watch-card__actions [data-slot="button"] {
   min-width: 0;
-  min-height: 2.1rem;
-  border-radius: 0.65rem;
-  padding-inline: 0.58rem;
-  font-size: 0.66rem;
+  min-height: 2rem;
+  border-radius: 0.62rem;
+  padding-inline: 0.55rem;
+  font-size: 0.63rem;
 }
 
-.tvtime-watch-card__actions [data-slot="button"]:first-child {
-  color: #171006;
-  background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 82%, white), var(--primary));
+.tvtime-watch-card__mark {
+  flex: 0 1 auto;
+  border-color: color-mix(in oklab, var(--watch-card-accent) 32%, var(--border)) !important;
+  color: color-mix(in oklab, var(--watch-card-accent) 88%, white) !important;
+  background: color-mix(in oklab, var(--watch-card-accent) 10%, transparent) !important;
+  box-shadow: inset 0 1px color-mix(in oklab, white 4%, transparent);
+}
+
+.tvtime-watch-card__details {
+  flex: 0 0 auto;
+  color: var(--muted-foreground) !important;
 }
 
 .tvtime-watch-card__actions svg {
@@ -1918,25 +1983,24 @@
   }
 
   .tvtime-app .tvtime-watch-card {
-    grid-template-columns: 86px minmax(0, 1fr) !important;
-    min-height: 13.6rem;
-    border-radius: 0.85rem;
+    grid-template-columns: 5.25rem minmax(0, 1fr) !important;
+    gap: 0.6rem;
+    padding: 0.48rem;
+    border-radius: 0.92rem;
   }
 
   .tvtime-app .tvtime-watch-card > .tvtime-watch-card__poster {
-    min-height: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
   }
 
   .tvtime-app .tvtime-watch-card > .tvtime-watch-card__body {
-    padding: 0.72rem !important;
+    padding: 0.08rem 0.12rem 0.08rem 0 !important;
   }
 
   .tvtime-watch-card__actions {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .tvtime-watch-card__actions [data-slot="button"]:first-child {
-    width: 100%;
+    margin-top: 0.42rem;
   }
 
   .tvtime-watch-section__heading {
@@ -1982,7 +2046,9 @@
 
 @media (max-width: 359px) {
   .tvtime-app .tvtime-watch-card {
-    grid-template-columns: 76px minmax(0, 1fr) !important;
+    grid-template-columns: 4.7rem minmax(0, 1fr) !important;
+    gap: 0.5rem;
+    padding: 0.42rem;
   }
 
   .tvtime-watch-card__meta {
@@ -3282,12 +3348,12 @@ body {
 
 /* Responsive system pass: one predictable layout language on every screen. */
 .tvtime-watch-card-grid {
-  align-items: stretch;
+  align-items: start;
 }
 
 .tvtime-watch-card {
   min-width: 0;
-  height: 100%;
+  height: auto;
 }
 
 .tvtime-app :is([data-slot="button"], [data-slot="tabs-trigger"], [data-slot="select-trigger"]) {
@@ -3338,14 +3404,6 @@ body {
     gap: 0.85rem;
   }
 
-  .tvtime-watch-card {
-    grid-template-columns: 94px minmax(0, 1fr);
-  }
-
-  .tvtime-watch-card > div:last-child {
-    padding: 0.85rem;
-  }
-
   .tvtime-notification-panel {
     max-width: 100vw;
   }
@@ -3356,13 +3414,6 @@ body {
     padding-inline: 0.625rem;
   }
 
-  .tvtime-watch-card {
-    grid-template-columns: 82px minmax(0, 1fr);
-  }
-
-  .tvtime-watch-card h3 {
-    font-size: 0.86rem;
-  }
 }
 
 @media (hover: none), (pointer: coarse) {
@@ -6275,61 +6326,6 @@ body {
   .tvtime-media-menu,
   .tvtime-media-state-rail > span {
     background-color: rgb(6 10 18 / 0.96) !important;
-  }
-}
-
-/* Watch Next cards: prevent portrait aspect-ratio from expanding over the
-   details column on narrow phones. Poster and content always own their cells. */
-.tvtime-app .tvtime-watch-card {
-  display: grid !important;
-  grid-template-columns: 104px minmax(0, 1fr) !important;
-  min-height: 156px;
-}
-
-.tvtime-app .tvtime-watch-card > :first-child {
-  width: 100% !important;
-  min-width: 0 !important;
-  height: 100% !important;
-  min-height: 156px;
-  aspect-ratio: auto !important;
-  overflow: hidden;
-}
-
-.tvtime-app .tvtime-watch-card > :last-child {
-  min-width: 0 !important;
-  overflow: hidden;
-}
-
-.tvtime-app .tvtime-watch-card > :last-child :is(h3, p, span) {
-  max-width: 100%;
-}
-
-@media (max-width: 479px) {
-  .tvtime-app .tvtime-watch-card {
-    grid-template-columns: 88px minmax(0, 1fr) !important;
-    min-height: 160px;
-  }
-
-  .tvtime-app .tvtime-watch-card > :first-child {
-    min-height: 160px;
-  }
-
-  .tvtime-app .tvtime-watch-card > :last-child {
-    padding: 0.75rem !important;
-  }
-
-  .tvtime-app .tvtime-watch-card > :last-child h3 {
-    overflow-wrap: anywhere;
-  }
-}
-
-@media (max-width: 339px) {
-  .tvtime-app .tvtime-watch-card {
-    grid-template-columns: 78px minmax(0, 1fr) !important;
-  }
-
-  .tvtime-app .tvtime-watch-card > :last-child {
-    padding: 0.625rem !important;
   }
 }
 

@@ -25,6 +25,7 @@ const checks = [
   ["Home global statistics cards", ["scripts/verify-home-global-stats.mjs"]],
   ["Anime Hub", ["scripts/verify-anime-hub.mjs"]],
   ["Horizontal shelf containment and dragging", ["scripts/verify-horizontal-shelves.mjs"]],
+  ["Watch Next series cards", ["scripts/verify-watch-next-cards.mjs"]],
   ["Episode watch flow and posters", ["scripts/verify-episode-watch-poster.mjs"]],
   ["Arabic media worlds", ["scripts/verify-arabic-worlds.mjs"]],
   ["Arabic title localization", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-arabic-title-localization.ts"]],

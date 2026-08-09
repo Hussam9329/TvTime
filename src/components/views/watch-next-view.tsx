@@ -488,29 +488,44 @@ function CompactWatchCard({
       transition={{ duration: 0.18 }}
       className="tvtime-watch-card"
       data-tone={tone}
+      aria-busy={pending}
     >
       <button type="button" className="tvtime-watch-card__poster" onClick={onOpen} aria-label={`Open ${item.title}`}>
-        <SafeImage src={item.poster} alt={item.title} fill variant="poster" sizes="96px" />
+        <SafeImage src={item.poster} alt={item.title} fill variant="poster" sizes="(max-width: 479px) 80px, 112px" />
       </button>
       <div className="tvtime-watch-card__body">
-        <PersonalStatus item={item} />
+        <div className="tvtime-watch-card__topline">
+          <PersonalStatus item={item} />
+          <span
+            className="tvtime-watch-card__ready"
+            title={item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}
+          >
+            {item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}
+          </span>
+        </div>
         <button type="button" className="tvtime-watch-card__title" onClick={onOpen}>{item.title}</button>
         <p className="tvtime-watch-card__episode"><strong>{episodeCode(item)}</strong><span>—</span>{episodeName}</p>
         <div className="tvtime-watch-card__meta">
           <span><Clock3 />{runtime}m</span>
           <span><CalendarDays />{releasedLabel(item.episode?.air_date)}</span>
-        </div>
-        <div className="tvtime-watch-card__ready">
-          {item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}
-          {tone === "paused" && <span>• {daysSince(item.lastActivity)}d paused</span>}
+          {tone === "paused" && <span><PauseCircle />{daysSince(item.lastActivity)}d paused</span>}
         </div>
         <ProgressBar item={item} progress={progress} />
         <div className="tvtime-watch-card__actions">
-          <Button type="button" size="sm" onClick={onMark} disabled={disabled}>
+          <Button type="button" size="sm" variant="outline" className="tvtime-watch-card__mark" onClick={onMark} disabled={disabled}>
             <CheckCircle2 className={pending ? "animate-pulse" : ""} />
             {pending ? "Updating…" : "Mark watched"}
           </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={onOpen}><Eye /> View</Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="tvtime-watch-card__details"
+            onClick={onOpen}
+            aria-label={`View ${item.title} details`}
+          >
+            <Eye /> View
+          </Button>
         </div>
       </div>
     </motion.article>
