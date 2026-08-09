@@ -21,6 +21,7 @@ import { SafeImage } from "@/components/media/safe-image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { mediaStateKey, useAnimeHub, useMediaStates, type AnimeHubItem } from "@/hooks/use-tmdb";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import { formatDateOnly } from "@/lib/date-only";
 import { useNav } from "@/lib/store";
 import { getTitle, getYear, img } from "@/lib/tmdb";
@@ -143,6 +144,8 @@ export function AnimeHubOverview({ onBrowse }: { onBrowse: () => void }) {
 
 function AnimeUpcomingEpisodes({ entries }: { entries: NonNullable<ReturnType<typeof useAnimeHub>["data"]>["nextEpisodes"] }) {
   const goTv = useNav((state) => state.goTv);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dragHandlers = useHorizontalDragScroll();
   return (
     <section className="tvtime-anime-next" aria-labelledby="anime-next-episodes-title">
       <div className="tvtime-section-heading">
@@ -157,7 +160,14 @@ function AnimeUpcomingEpisodes({ entries }: { entries: NonNullable<ReturnType<ty
           </div>
         </div>
       </div>
-      <div className="tvtime-anime-next__scroller no-scrollbar">
+      <div
+        ref={scrollRef}
+        {...dragHandlers}
+        className="tvtime-anime-next__scroller no-scrollbar"
+        role="region"
+        aria-label="Upcoming Anime episodes horizontal list"
+        tabIndex={0}
+      >
         {entries.map((entry) => (
           <button
             key={`${entry.item.id}-${entry.seasonNumber ?? 0}-${entry.episodeNumber ?? 0}-${entry.airDate}`}

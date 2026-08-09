@@ -36,6 +36,7 @@ import {
 } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { getTitle, getYear, img } from "@/lib/tmdb";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 
 type HubTab = "overview" | "library" | "discover" | "releases";
 
@@ -207,6 +208,8 @@ function MovieHubOverview({
   query: ReturnType<typeof useMovieHub>;
   onBrowse: () => void;
 }) {
+  const quickPicksRef = useRef<HTMLDivElement>(null);
+  const quickPicksDragHandlers = useHorizontalDragScroll();
   const [tonightMode, setTonightMode] = useState<MovieTonightMode>("smart");
   const isArabic = world === "arabic-movies";
   const data = query.data;
@@ -272,7 +275,13 @@ function MovieHubOverview({
             <p className="tvtime-movie-hub__section-kicker">{isArabic ? "اختيارات ذكية" : "Smart picks"}</p>
             <h2 id={`tonight-${world}`}>{copy.tonight}</h2>
           </div>
-          <div className="tvtime-movie-hub__quick-picks no-scrollbar" aria-label={isArabic ? "فلاتر اختيار الليلة" : "Tonight filters"}>
+          <div
+            ref={quickPicksRef}
+            {...quickPicksDragHandlers}
+            className="tvtime-movie-hub__quick-picks no-scrollbar"
+            aria-label={isArabic ? "فلاتر اختيار الليلة" : "Tonight filters"}
+            tabIndex={0}
+          >
             {(isArabic ? TONIGHT_OPTIONS_AR : TONIGHT_OPTIONS).map((option) => (
               <button
                 key={option.value}

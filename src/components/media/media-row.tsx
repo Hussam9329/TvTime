@@ -6,6 +6,7 @@ import type { MediaItem } from "@/lib/tmdb";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use-tmdb";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 
 interface MediaRowProps {
   title: string;
@@ -21,6 +22,7 @@ interface MediaRowProps {
 
 export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType, libraryStateSource, compactCards = true, hideHeading = false }: MediaRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dragHandlers = useHorizontalDragScroll();
   const isArabic = /[\u0600-\u06FF]/.test(title);
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
@@ -84,7 +86,11 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
       <div className="tvtime-media-row-viewport">
         <div
           ref={scrollRef}
+          {...dragHandlers}
           className="tvtime-media-row-scroller no-scrollbar flex overflow-x-auto scroll-smooth"
+          role="region"
+          aria-label={`${title} horizontal list`}
+          tabIndex={0}
         >
           {loading
             ? Array.from({ length: 8 }).map((_, i) => (

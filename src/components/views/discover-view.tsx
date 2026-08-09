@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNav } from "@/lib/store";
 import { useDiscoverMovies, useFilteredDiscover, useMovieGenres, useTvGenres } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
@@ -35,6 +35,7 @@ import { standardMediaCountryPriority } from "@/lib/standard-media-priority";
 import { applyDiscoverPreset, type DiscoverPresetId } from "@/lib/discover-presets";
 import { updateDiscoverRange } from "@/lib/discover-filter-state";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 
 export type DiscoverWorld = "movies" | "tv" | "anime" | "arabic-movies" | "arabic-tv" | "asian-movies" | "asian-tv";
 type TvFormatFilter = "all" | "miniseries" | "anthology";
@@ -133,6 +134,8 @@ interface DiscoverViewProps {
 }
 
 export function DiscoverView({ world = "movies", embedded = false, title, subtitle, mediaType }: DiscoverViewProps) {
+  const presetRef = useRef<HTMLDivElement>(null);
+  const presetDragHandlers = useHorizontalDragScroll();
   const isTV = world === "tv" || world === "arabic-tv" || world === "asian-tv" || (world === "anime" && mediaType !== "movie");
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";
@@ -510,7 +513,14 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
               </span>
               <h3 id="discover-quick-picks-title">{isArabic ? "اختيارات سريعة" : "Quick picks"}</h3>
             </div>
-            <div className="tvtime-discover-preset-row no-scrollbar">
+            <div
+              ref={presetRef}
+              {...presetDragHandlers}
+              className="tvtime-discover-preset-row no-scrollbar"
+              role="region"
+              aria-label={isArabic ? "قائمة الاختيارات السريعة" : "Quick picks horizontal list"}
+              tabIndex={0}
+            >
               {presets.map((p) => (
                 <Button
                   key={p.id}

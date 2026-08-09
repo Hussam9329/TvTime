@@ -141,6 +141,8 @@
   scroll-padding-inline: 0.1rem;
   scroll-snap-type: inline proximity;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  cursor: grab;
 }
 
 .tvtime-anime-next__card {
@@ -208,7 +210,7 @@
 
 @media (max-width: 639px) {
   .tvtime-anime-next__card {
-    width: min(17.5rem, calc(100vw - 3rem));
+    width: min(17.5rem, calc(100% - 0.5rem));
   }
 }
 
@@ -340,6 +342,15 @@
   display: grid;
   min-width: 0;
   gap: clamp(1.7rem, 3.6vw, 2.7rem);
+}
+
+/* Keep every direct shelf wrapper shrinkable. New nested shelves must never
+   make the page wider than its actual content box. */
+.tvtime-movie-hub__overview > *,
+.tvtime-tv-hub__overview > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tvtime-movie-hub-hero {
@@ -580,8 +591,8 @@
 
 @media (max-width: 767px) {
   .tvtime-movie-hub {
-    width: calc(100dvw - 1.5rem);
-    max-width: calc(100dvw - 1.5rem);
+    width: 100%;
+    max-width: 100%;
     overflow-x: clip;
     gap: 0.75rem;
     padding-bottom: calc(var(--tvtime-mobile-dock-offset, 6rem) + 1rem);
@@ -592,8 +603,8 @@
   .tvtime-movie-hub__overview,
   .tvtime-movie-hub__skeleton,
   .tvtime-movie-hub-hero {
-    width: calc(100dvw - 1.5rem);
-    max-width: calc(100dvw - 1.5rem);
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
   }
 
@@ -655,8 +666,8 @@
   }
 
   .tvtime-movie-hub-hero__content {
-    width: calc(100dvw - 1.5rem);
-    max-width: calc(100dvw - 1.5rem);
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
     justify-content: end;
     padding: 0.9rem;
@@ -669,7 +680,7 @@
   }
 
   .tvtime-movie-hub-hero__content > p {
-    max-width: calc(100dvw - 3.3rem);
+    max-width: 100%;
     font-size: 0.78rem;
     line-height: 1.5;
     white-space: normal;
@@ -4171,12 +4182,28 @@ body {
 
 .tvtime-media-row-scroller,
 .tvtime-recent-scroller {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   gap: 0.95rem;
   padding: 0.25rem 0.15rem 0.65rem;
   scroll-padding-inline: 0.15rem;
   scroll-snap-type: x proximity;
   overscroll-behavior-inline: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  cursor: grab;
+}
+
+.tvtime-media-row-scroller.is-pointer-dragging,
+.tvtime-anime-next__scroller.is-pointer-dragging,
+.tvtime-movie-hub__quick-picks.is-pointer-dragging,
+.tvtime-discover-preset-row.is-pointer-dragging,
+.tvtime-anime-library-type.is-pointer-dragging,
+.tvtime-collection-status-tabs.is-pointer-dragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
+  user-select: none;
 }
 
 .tvtime-media-row-item {

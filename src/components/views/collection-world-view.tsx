@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNav } from "@/lib/store";
 import { useMedia, useMediaUpdate, useLibraryCounts, type MediaItemDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { HOME_MEDIA_CARD_GRID_CLASS, MediaCardSkeleton } from "@/components/media/media-card";
 import { pickArabicTitle } from "@/lib/tmdb";
@@ -91,6 +92,10 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
 };
 
 export function CollectionWorldView({ world, embedded = false, onDiscover }: { world: CollectionWorld; embedded?: boolean; onDiscover?: () => void }) {
+  const animeTypeRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const animeTypeDragHandlers = useHorizontalDragScroll();
+  const statusDragHandlers = useHorizontalDragScroll();
   const config = WORLD_CONFIG[world];
   const WorldIcon = config.icon;
   const setView = useNav((s) => s.setView);
@@ -172,7 +177,14 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
       >
         {world === "anime" && !isNotStartedTab && !isWatchingTab && (
           <FilterSection title="Anime type">
-            <div className="tvtime-anime-library-type" role="group" aria-label="Filter Anime library by media type">
+            <div
+              ref={animeTypeRef}
+              {...animeTypeDragHandlers}
+              className="tvtime-anime-library-type"
+              role="group"
+              aria-label="Filter Anime library by media type"
+              tabIndex={0}
+            >
               {[
                 { value: "all", label: "All", icon: Sparkles },
                 { value: "series", label: "Series", icon: Tv },
@@ -198,7 +210,12 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
 
         <FilterSection title={isArabicWorld ? "حالة المجموعة" : "Collection status"}>
           <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
-            <TabsList className="tvtime-collection-status-tabs h-auto w-full justify-start overflow-x-auto">
+            <TabsList
+              ref={statusRef}
+              {...statusDragHandlers}
+              className="tvtime-collection-status-tabs h-auto w-full justify-start overflow-x-auto"
+              aria-label={isArabicWorld ? "حالة المجموعة" : "Collection status horizontal list"}
+            >
               <TabsTrigger value="watchlist" className="h-10 min-w-36">
                 <WorldIcon className="mr-2 h-4 w-4" />
                 {isArabicWorld ? "قائمة المشاهدة" : "Watchlist"}

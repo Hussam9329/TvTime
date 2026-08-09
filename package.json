@@ -24,6 +24,7 @@
     "db:verify:schema": "node scripts/assert-production-db.mjs && node scripts/verify-migration-history.mjs && prisma generate && node scripts/verify-required-schema.mjs",
     "verify:user-facing": "node scripts/verify-user-facing-integrity.mjs",
     "verify:anime": "node scripts/verify-anime-hub.mjs",
+    "verify:shelves": "node scripts/verify-horizontal-shelves.mjs",
     "verify:all": "node scripts/verify-all.mjs",
     "verify:episode-flow": "node scripts/verify-episode-watch-poster.mjs",
     "db:backfill:arabic": "node scripts/backfill-arabic-media.mjs",
