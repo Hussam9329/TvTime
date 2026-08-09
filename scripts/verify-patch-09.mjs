@@ -70,6 +70,7 @@ for (const path of [
     [/filmween\.net/, "Watch button lost its Filmween destination"],
     [/movie\.vodu\.me/, "Watch button lost its Vodu destination"],
     [/cinemana/, "Watch button lost its Cinemana destinations"],
+    [/kirmzi\.sbs\/search\.php\?keywords=\$\{encodeURIComponent\(displayTitle\)\}&video-id=/, "Watch button lost its Kirmzi title search destination"],
   ]);
 }
 
