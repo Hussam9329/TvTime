@@ -5,6 +5,7 @@ const read = (path) => readFileSync(path, "utf8");
 const page = read("src/components/views/anime-view.tsx");
 const overview = read("src/components/views/anime-hub-overview.tsx");
 const route = read("src/app/api/anime/hub/route.ts");
+const mediaRoute = read("src/app/api/media/route.ts");
 const hooks = read("src/hooks/use-tmdb.ts");
 const collection = read("src/components/views/collection-world-view.tsx");
 const discover = read("src/components/views/discover-view.tsx");
@@ -19,6 +20,8 @@ check(/AnimeHubOverview/.test(page) && /tvtime-movie-hub__titlebar/.test(page) &
 check(/useAnimeHub/.test(hooks) && /\/api\/anime\/hub/.test(hooks) && /queryKey: \["lib", "anime-hub"/.test(hooks), "Anime Hub has a user-aware query that refreshes with library mutations");
 check(/resolveUserId\(req\)/.test(route) && /getOrCreateUser/.test(route), "Anime Hub resolves the canonical request owner");
 check(/genres: \[ANIMATION_GENRE\]/.test(route) && /original_language: "ja"/.test(route) && /matchesDiscoverWorld\(item, mediaType, "anime"\)/.test(route), "Anime catalogue is restricted to Japanese animation instead of Japanese live action");
+check(/original_language: "ja"/.test(route) && /language: "en-US"/.test(route) && /originalLanguage="ja"/.test(page) && /language="en-US"/.test(page) && /isAnime \? "en-US" as const/.test(discover), "Anime keeps Japanese-origin classification while every catalogue title requests English localization");
+check(/englishTitleByTmdbId/.test(route) && /englishAnimeTitleById/.test(mediaRoute) && /tvMetadataCache\.findMany/.test(mediaRoute), "Existing saved Anime series reuse the batched English metadata title without per-card requests or DB rewrites");
 check(/Promise\.allSettled\(Object\.values\(requests\)\)/.test(route) && !/tmdb\.(?:movieSummary|tvSummary|movieDetail|tvDetail)\(item/.test(route), "Anime Hub batches bounded shelves without per-card TMDB detail fan-out");
 check(/item\.watched \|\| item\.userRating != null/.test(route) && /seenKeys/.test(route) && /STARTED_TV_STATUSES/.test(overview), "Anime spotlight excludes watched, rated and started titles on server and client");
 check(/Continue Watching/.test(overview) && /Your Anime Watchlist/.test(overview) && /Next Episodes/.test(overview) && /Airing Today/.test(overview) && /currentSeason/.test(overview) && /New & Noteworthy/.test(overview) && /Hidden Gems/.test(overview) && /Upcoming Anime/.test(overview) && /Recently Watched/.test(overview), "Anime Overview includes every planned professional shelf");

@@ -143,7 +143,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const isAsian = world === "asian-tv" || world === "asian-movies";
   const forcedLang = isAnime ? "ja" : isArabic ? "ar" : undefined;
   const forcedLanguageLabel = forcedLang === "ar" ? "العربية" : forcedLang === "ja" ? "Japanese" : null;
-  const tmdbLanguage = isArabic ? "ar" as const : isAnime ? "ja" as const : undefined;
+  const tmdbLanguage = isArabic ? "ar" as const : isAnime ? "en-US" as const : undefined;
 
   const discoverTab = useNav((s) => s.discoverTab);
   const setDiscoverTab = useNav((s) => s.setDiscoverTab);

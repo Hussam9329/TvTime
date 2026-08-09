@@ -70,7 +70,7 @@ export function AnimeView() {
             mediaType={mediaType}
             genres={ANIMATION_GENRES}
             originalLanguage="ja"
-            language="ja"
+            language="en-US"
             collectionWorld="anime"
             seasonal
             accentClass="text-fuchsia-400"

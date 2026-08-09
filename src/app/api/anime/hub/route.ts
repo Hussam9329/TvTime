@@ -54,12 +54,13 @@ function itemFromRecord(item: {
   rating: string | null;
   originalLanguage: string | null;
   originCountries: string[];
-}): AnimeHubItem | null {
+}, englishTitle?: string | null): AnimeHubItem | null {
   if (!item.tmdbId || !item.poster || (item.type !== "movie" && item.type !== "series")) return null;
   const mediaType = item.type === "series" ? "tv" : "movie";
+  const displayTitle = englishTitle?.trim() || item.title;
   return {
     id: item.tmdbId,
-    ...(mediaType === "movie" ? { title: item.title } : { name: item.title }),
+    ...(mediaType === "movie" ? { title: displayTitle } : { name: displayTitle }),
     ...(mediaType === "movie"
       ? { original_title: item.originalTitle || undefined, release_date: item.year ? `${item.year.slice(0, 4)}-01-01` : undefined }
       : { original_name: item.originalTitle || undefined, first_air_date: item.year ? `${item.year.slice(0, 4)}-01-01` : undefined }),
@@ -108,9 +109,10 @@ export async function GET(req: NextRequest) {
       : [];
     const animeMetadata = animeSeriesIds.length > 0
       ? await db.tvMetadataCache.findMany({
-          where: { tmdbId: { in: animeSeriesIds }, nextEpisodeAirDate: { not: null } },
+          where: { tmdbId: { in: animeSeriesIds } },
           select: {
             tmdbId: true,
+            title: true,
             nextEpisodeAirDate: true,
             nextEpisodeName: true,
             nextEpisodeSeasonNumber: true,
@@ -118,6 +120,9 @@ export async function GET(req: NextRequest) {
           },
         })
       : [];
+    const englishTitleByTmdbId = new Map(animeMetadata.map((metadata) => [metadata.tmdbId, metadata.title]));
+    const itemFromAnimeRecord = (item: Parameters<typeof itemFromRecord>[0]) =>
+      itemFromRecord(item, item.tmdbId ? englishTitleByTmdbId.get(Number(item.tmdbId)) : null);
     const progressByShow = new Map(episodeProgress.map((row) => [row.showId, {
       count: row._count._all,
       lastWatchedAt: row._max.watchedAt,
@@ -145,7 +150,7 @@ export async function GET(req: NextRequest) {
       })
       .sort((left, right) => String(left.metadata.nextEpisodeAirDate).localeCompare(String(right.metadata.nextEpisodeAirDate)))
       .map(({ metadata, record }) => ({
-        item: itemFromRecord(record!),
+        item: itemFromAnimeRecord(record!),
         airDate: metadata.nextEpisodeAirDate!,
         name: metadata.nextEpisodeName,
         seasonNumber: metadata.nextEpisodeSeasonNumber,
@@ -165,7 +170,7 @@ export async function GET(req: NextRequest) {
       }))
       .filter((entry) => entry.watchedAt)
       .sort((left, right) => Number(right.watchedAt) - Number(left.watchedAt))
-      .map(({ item }) => itemFromRecord(item))
+      .map(({ item }) => itemFromAnimeRecord(item))
       .filter((item): item is AnimeHubItem => Boolean(item))
       .slice(0, 18);
 
@@ -174,7 +179,7 @@ export async function GET(req: NextRequest) {
         ...params,
         genres: [ANIMATION_GENRE],
         original_language: "ja",
-        language: "ja",
+        language: "en-US",
         page: 1,
       }).then((response) => animeOnly(response.results, "movie"));
     const tvDiscover = (params: NonNullable<Parameters<typeof tmdb.discoverTv>[0]>) =>
@@ -182,7 +187,7 @@ export async function GET(req: NextRequest) {
         ...params,
         genres: [ANIMATION_GENRE],
         original_language: "ja",
-        language: "ja",
+        language: "en-US",
         page: 1,
       }).then((response) => animeOnly(response.results, "tv"));
 
@@ -236,8 +241,8 @@ export async function GET(req: NextRequest) {
       featured,
       nextEpisodes,
       shelves: {
-        watchlist: watchlistRecords.map(itemFromRecord).filter((item): item is AnimeHubItem => Boolean(item)).slice(0, 18),
-        continueWatching: inProgressRecords.map(itemFromRecord).filter((item): item is AnimeHubItem => Boolean(item)).slice(0, 18),
+        watchlist: watchlistRecords.map(itemFromAnimeRecord).filter((item): item is AnimeHubItem => Boolean(item)).slice(0, 18),
+        continueWatching: inProgressRecords.map(itemFromAnimeRecord).filter((item): item is AnimeHubItem => Boolean(item)).slice(0, 18),
         airingToday: dedupe(values.airingToday, 18),
         thisSeason: dedupe(values.seasonal, 18),
         newNoteworthy: dedupe(sortByPopularity([...values.newTv, ...values.newMovies]), 18),

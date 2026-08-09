@@ -83,9 +83,30 @@ export async function GET(req: NextRequest) {
     const total = prioritizedItems.length;
     const items = prioritizedItems.slice(offset, offset + limit);
 
+    // Anime series may have been saved while the catalogue incorrectly used
+    // Japanese as its display locale. TvMetadataCache is populated from the
+    // canonical en-US TMDB profile, so one batch read repairs presentation for
+    // existing libraries without one network request per card or a DB rewrite.
+    const animeSeriesIds = classificationFilters.isAnime === true
+      ? items
+          .filter((item) => item.type === "series" && item.tmdbId != null)
+          .map((item) => Number(item.tmdbId))
+      : [];
+    const englishAnimeTitles = animeSeriesIds.length > 0
+      ? await db.tvMetadataCache.findMany({
+          where: { tmdbId: { in: animeSeriesIds } },
+          select: { tmdbId: true, title: true },
+        })
+      : [];
+    const englishAnimeTitleById = new Map(englishAnimeTitles.map((item) => [item.tmdbId, item.title]));
+    const displayItems = items.map((item) => {
+      const englishTitle = item.tmdbId ? englishAnimeTitleById.get(Number(item.tmdbId))?.trim() : null;
+      return englishTitle ? { ...item, title: englishTitle } : item;
+    });
+
     // Arabic titles/posters are persisted when a title enters the library.
     // Collection rendering must not issue one localization request per card.
-    return NextResponse.json({ items: normalizeMediaMany(items), total, limit, offset });
+    return NextResponse.json({ items: normalizeMediaMany(displayItems), total, limit, offset });
   } catch (error) {
     console.error("[media:list]", error);
     return NextResponse.json({ error: "Failed to load media library" }, { status: 500 });
