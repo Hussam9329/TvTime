@@ -47,8 +47,11 @@ export function isArabicMediaItem(item: Pick<MediaItem, "original_language" | "o
 
 const GULF_COUNTRY_CODES = new Set(["SA", "AE", "KW", "QA", "BH", "OM"]);
 
-export function arabicMediaCountryPriority(item: Pick<MediaItem, "origin_country">): number {
-  const countries = normalizeCountryCodes(item.origin_country);
+export function arabicMediaCountryPriority(item: {
+  origin_country?: string[] | null;
+  originCountries?: string[] | null;
+}): number {
+  const countries = normalizeCountryCodes(item.origin_country ?? item.originCountries);
   if (countries.includes("EG")) return 0;
   if (countries.includes("SY")) return 1;
   if (countries.includes("LB")) return 2;

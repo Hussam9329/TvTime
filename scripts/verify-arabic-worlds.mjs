@@ -25,6 +25,9 @@ const trackingView = read("src/components/views/tv-tracking-view.tsx");
 const tvReleaseApi = read("src/app/api/tv/calendar/route.ts");
 const releaseSchedule = read("src/components/views/movie-release-schedule.tsx");
 const movieCalendarApi = read("src/app/api/arabic-movies/calendar/route.ts");
+const generalMovieCalendarApi = read("src/app/api/movies/calendar/route.ts");
+const movieHubApi = read("src/app/api/movie-hub/route.ts");
+const arabicDiscover = read("src/lib/arabic-discover.ts");
 const discover = read("src/components/views/discover-view.tsx");
 const home = read("src/components/views/home-view.tsx");
 const search = read("src/components/views/search-view.tsx");
@@ -119,6 +122,10 @@ check(/original_language/.test(tvReleaseApi) && /first_air_date/.test(tvReleaseA
 check(/mediaType="tv"/.test(tvWorldPage) && /releaseLanguage="ar"/.test(arabicTv) && /language=\{releaseLanguage\}/.test(tvWorldPage), "Arabic TV releases use TV details and Arabic localization");
 check(/forcedMediaType=\{mediaType\}/.test(releaseSchedule), "Shared release cards keep the correct media type");
 check(/original_language:\s*"ar"/.test(movieCalendarApi), "Arabic movie release API requests Arabic-language releases");
+check(/ARABIC_COUNTRY_PRIORITY = \[\s*"EG"/.test(arabicDiscover), "Arabic discovery gives Egyptian works the highest country priority");
+check(/discoverArabicShelfByCountryPriority\("movie"/.test(movieHubApi), "Arabic Movies Overview shelves use efficient Egypt-first discovery");
+check(/arabicMediaCountryPriority/.test(movieHubApi) && /arabicMediaCountryPriority/.test(mediaApi), "Arabic Overview and Library put Egyptian saved titles first");
+check(/discoverArabicCatalogueByCountryPriority\("movie"/.test(generalMovieCalendarApi) && /arabicMediaCountryPriority/.test(releaseSchedule), "Arabic Releases retrieve and render Egyptian films first");
 check(/primary_release_date/.test(tmdb), "TMDB discovery supports bounded movie release dates");
 check(/Earlier/.test(releaseSchedule) && /Later/.test(releaseSchedule) && /scheduled releases/.test(releaseSchedule), "Shared release schedule gives Arabic Movies an independently navigable window");
 

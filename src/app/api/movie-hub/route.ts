@@ -4,6 +4,8 @@ import { resolveUserId } from "@/lib/auth";
 import { getOrCreateUser } from "@/lib/user";
 import { classifyMediaWorld } from "@/lib/media-world-classification";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
+import { discoverArabicShelfByCountryPriority } from "@/lib/arabic-discover";
+import { arabicMediaCountryPriority } from "@/lib/arabic-media";
 import { discoverAsianMoviesByPriority } from "@/lib/asian-discover-server";
 import { matchesDiscoverWorld } from "@/lib/discover-world";
 import { tmdb, type MediaItem, type TmdbLanguage } from "@/lib/tmdb";
@@ -80,14 +82,12 @@ export async function GET(req: NextRequest) {
 
     const discover = async (params: NonNullable<Parameters<typeof tmdb.discoverMovies>[0]>) => {
       const base = { ...params, language };
-      const response = world === "asian-movies"
-        ? await discoverAsianMoviesByPriority(base, 1)
-        : await tmdb.discoverMovies({
-            ...base,
-            page: 1,
-            ...(world === "arabic-movies" ? { original_language: "ar" } : {}),
-          });
-      return dedupe(response.results.filter((item) => matchesDiscoverWorld(item, "movie", discoverWorld)), 20);
+      const results = world === "asian-movies"
+        ? (await discoverAsianMoviesByPriority(base, 1)).results
+        : world === "arabic-movies"
+          ? await discoverArabicShelfByCountryPriority("movie", { ...base, original_language: "ar" }, 20)
+          : (await tmdb.discoverMovies({ ...base, page: 1 })).results;
+      return dedupe(results.filter((item) => matchesDiscoverWorld(item, "movie", discoverWorld)), 20);
     };
 
     const stored = await db.media.findMany({
@@ -98,14 +98,18 @@ export async function GET(req: NextRequest) {
     const worldItems = classified.filter((item) => classifyMediaWorld(item).collectionWorld === world);
     const watchlistRecords = worldItems
       .filter((item) => item.status === "planned" && !item.watched)
-      .sort((left, right) => right.addedAt.getTime() - left.addedAt.getTime());
+      .sort((left, right) =>
+        (world === "arabic-movies" ? arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right) : 0)
+        || right.addedAt.getTime() - left.addedAt.getTime());
     const watchlist = watchlistRecords
       .map(movieFromRecord)
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
       .slice(0, 20);
     const recentlyWatched = worldItems
       .filter((item) => item.watched && item.watchedAt)
-      .sort((left, right) => Number(right.watchedAt) - Number(left.watchedAt))
+      .sort((left, right) =>
+        (world === "arabic-movies" ? arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right) : 0)
+        || Number(right.watchedAt) - Number(left.watchedAt))
       .map(movieFromRecord)
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
       .slice(0, 20);

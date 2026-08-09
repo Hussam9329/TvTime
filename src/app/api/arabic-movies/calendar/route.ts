@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { tmdb, type MediaItem } from "@/lib/tmdb";
+import type { MediaItem } from "@/lib/tmdb";
 import { parseDateOnly } from "@/lib/date-only";
+import { discoverArabicCatalogueByCountryPriority } from "@/lib/arabic-discover";
+import { arabicMediaCountryPriority } from "@/lib/arabic-media";
 
 const MAX_RANGE_DAYS = 370;
 const MAX_PAGES = 5;
@@ -23,8 +25,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: `A valid from/to range of 1-${MAX_RANGE_DAYS} days is required.` }, { status: 400 });
     }
 
-    const first = await tmdb.discoverMovies({
-      page: 1,
+    const catalogue = await discoverArabicCatalogueByCountryPriority("movie", {
       sort_by: "primary_release_date.asc",
       original_language: "ar",
       vote_count_gte: 0,
@@ -32,27 +33,16 @@ export async function GET(req: NextRequest) {
       release_date_lte: to,
       // Pass language=ar so TMDB returns Arabic titles + Arabic posters.
       language: "ar",
-    });
-    const pages = Math.min(first.total_pages || 1, MAX_PAGES);
-    const rest = pages > 1
-      ? await Promise.all(Array.from({ length: pages - 1 }, (_, index) => tmdb.discoverMovies({
-          page: index + 2,
-          sort_by: "primary_release_date.asc",
-          original_language: "ar",
-          vote_count_gte: 0,
-          release_date_gte: from,
-          release_date_lte: to,
-          language: "ar",
-        })))
-      : [];
+    }, MAX_PAGES * 20);
 
     const byId = new Map<number, MediaItem>();
-    for (const item of [first, ...rest].flatMap((page) => page.results || [])) {
+    for (const item of catalogue.results || []) {
       if (!item.id || !item.release_date || item.original_language !== "ar") continue;
       byId.set(item.id, { ...item, media_type: "movie" });
     }
     const items = [...byId.values()].sort((left, right) =>
-      String(left.release_date || "").localeCompare(String(right.release_date || ""))
+      arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right)
+      || String(left.release_date || "").localeCompare(String(right.release_date || ""))
       || String(left.title || "").localeCompare(String(right.title || "")));
 
     return NextResponse.json({
@@ -60,8 +50,8 @@ export async function GET(req: NextRequest) {
       to,
       items,
       total: items.length,
-      pagesFetched: pages,
-      truncated: (first.total_pages || 1) > MAX_PAGES,
+      pagesFetched: catalogue.source_pages_fetched,
+      truncated: catalogue.total_results > items.length,
     }, { headers: { "Cache-Control": "private, max-age=900" } });
   } catch (error) {
     console.error("[arabic-movies:calendar]", error);

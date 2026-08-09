@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MediaGrid } from "@/components/media/media-card";
 import { getTitle } from "@/lib/tmdb";
-import { isArabicMediaItem } from "@/lib/arabic-media";
+import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 
@@ -80,7 +80,9 @@ export function ReleaseSchedule({
     if (collectionWorld === "standard-tv") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
     if (collectionWorld === "asian-tv") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
     if (collectionWorld === "movies") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
-    if (collectionWorld === "arabic-movies") filtered = filtered.filter(isArabicMediaItem);
+    if (collectionWorld === "arabic-movies") filtered = filtered
+      .filter(isArabicMediaItem)
+      .sort((left, right) => arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right));
     if (collectionWorld === "asian-movies") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
     return filtered;
   }, [collectionWorld, schedule.data?.items, search]);

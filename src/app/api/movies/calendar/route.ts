@@ -3,7 +3,8 @@ import { tmdb, type MediaItem } from "@/lib/tmdb";
 import { parseDateOnly } from "@/lib/date-only";
 import { ASIAN_COUNTRY_CODES, ASIAN_ORIGIN_COUNTRY_QUERY, isAsianMediaItem } from "@/lib/asian-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { isArabicMediaItem } from "@/lib/arabic-media";
+import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-media";
+import { discoverArabicCatalogueByCountryPriority } from "@/lib/arabic-discover";
 
 const MAX_RANGE_DAYS = 370;
 const MAX_PAGES = 5;
@@ -54,17 +55,22 @@ export async function GET(req: NextRequest) {
       ? ASIAN_COUNTRY_CODES.join("|")
       : originCountry;
 
-    const first = await tmdb.discoverMovies(baseParams);
-    const pages = Math.min(first.total_pages || 1, MAX_PAGES);
-    const rest = pages > 1
-      ? await Promise.all(Array.from({ length: pages - 1 }, (_, index) => tmdb.discoverMovies({
+    const arabicPriorityCatalogue = originalLanguage === "ar" && !originCountry
+      ? await discoverArabicCatalogueByCountryPriority("movie", baseParams, MAX_PAGES * 20)
+      : null;
+    const first = arabicPriorityCatalogue ?? await tmdb.discoverMovies(baseParams);
+    const pages = arabicPriorityCatalogue
+      ? arabicPriorityCatalogue.source_pages_fetched
+      : Math.min(first.total_pages || 1, MAX_PAGES);
+    const rest = arabicPriorityCatalogue || pages <= 1
+      ? []
+      : await Promise.all(Array.from({ length: pages - 1 }, (_, index) => tmdb.discoverMovies({
           ...baseParams,
           page: index + 2,
-        })))
-      : [];
+        })));
 
     const fallbackPosterById = new Map<number, string>();
-    if (language === "ar") {
+    if (language === "ar" && !arabicPriorityCatalogue) {
       const fallbackPages = await Promise.all(Array.from({ length: pages }, (_, index) =>
         tmdb.discoverMovies({ ...baseParams, page: index + 1, language: "en-US" }),
       ));
@@ -89,7 +95,8 @@ export async function GET(req: NextRequest) {
       });
     }
     const items = [...byId.values()].sort((left, right) =>
-      String(left.release_date || "").localeCompare(String(right.release_date || ""))
+      (originalLanguage === "ar" ? arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right) : 0)
+      || String(left.release_date || "").localeCompare(String(right.release_date || ""))
       || String(left.title || "").localeCompare(String(right.title || "")));
 
     return NextResponse.json({
@@ -98,7 +105,9 @@ export async function GET(req: NextRequest) {
       items,
       total: items.length,
       pagesFetched: pages,
-      truncated: (first.total_pages || 1) > MAX_PAGES,
+      truncated: arabicPriorityCatalogue
+        ? arabicPriorityCatalogue.total_results > items.length
+        : (first.total_pages || 1) > MAX_PAGES,
     }, { headers: { "Cache-Control": "private, max-age=900" } });
   } catch (error) {
     console.error("[movies:calendar]", error);
