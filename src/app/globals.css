@@ -3946,38 +3946,6 @@ body {
   transition: color 180ms ease, opacity 180ms ease, transform 180ms ease;
 }
 
-.tvtime-watch-next-cta {
-  display: flex;
-  min-width: min(100%, 17rem);
-  min-height: 3.4rem;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid color-mix(in oklab, var(--primary) 22%, var(--border));
-  border-radius: 1rem;
-  background: color-mix(in oklab, var(--primary) 7%, var(--card));
-  color: var(--foreground);
-  box-shadow: 0 9px 24px color-mix(in oklab, var(--primary) 9%, transparent);
-}
-
-.tvtime-watch-next-cta__icon {
-  display: inline-flex;
-  width: 2.25rem;
-  height: 2.25rem;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.8rem;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  box-shadow: 0 8px 18px color-mix(in oklab, var(--primary) 24%, transparent);
-}
-
-.tvtime-watch-next-cta__icon svg {
-  width: 0.9rem;
-  height: 0.9rem;
-}
-
 /* Shared editorial section headings and horizontal rows.
    The Tonight shelf has one extra grid wrapper; it must be allowed to shrink
    to the page width so its child remains the horizontal scroll container. */
@@ -6021,10 +5989,6 @@ body {
     display: none;
   }
 
-  .tvtime-watch-next-cta {
-    width: 100%;
-  }
-
   .tvtime-section-heading__icon {
     width: 2rem;
     height: 2rem;
@@ -6627,7 +6591,6 @@ body {
 .tvtime-home-hero__carousel-controls,
 .tvtime-row-controls,
 .tvtime-section-heading__icon,
-.tvtime-watch-next-cta,
 .tvtime-quick-stat {
   border-color: var(--cinema-line) !important;
   background: rgb(13 12 9 / 0.75) !important;

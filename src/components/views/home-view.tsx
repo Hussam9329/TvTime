@@ -68,23 +68,6 @@ export function HomeView() {
                 Jump back into a collection or review your viewing history.
               </p>
             </div>
-            <button
-              type="button"
-              className="tvtime-watch-next-cta"
-              onClick={() => setView("watch-next")}
-              aria-label="Open Watch Next"
-            >
-              <span className="tvtime-watch-next-cta__icon" aria-hidden="true">
-                <Play className="fill-current" />
-              </span>
-              <span className="min-w-0 flex-1 text-left">
-                <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
-                  Ready when you are
-                </span>
-                <span className="mt-0.5 block truncate text-sm font-extrabold">Continue watching</span>
-              </span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            </button>
           </div>
 
           <div className="tvtime-stat-grid">

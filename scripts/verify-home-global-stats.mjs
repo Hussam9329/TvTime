@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(path, "utf8");
 const counts = read("src/lib/library-counts.ts");
 const home = read("src/components/views/home-view.tsx");
+const css = read("src/app/globals.css");
 
 const checks = [
   [/const movieWatchlistAll = count\(\(entry\) => entry\.item\.type === "movie" && isPlanned\(entry\)\)/, "All-world movie watchlist counter is missing"],
@@ -25,6 +26,8 @@ const checks = [
 
 const failures = checks.filter(([pattern]) => !pattern.test(pattern.source.includes("label=") ? home : counts));
 if (/useTvTrackingCounts\("standard"\)/.test(home)) failures.push([/./, "Home still sources its TV card from standard-world tracking only"]);
+if (/Ready when you are|Open Watch Next|tvtime-watch-next-cta/.test(home)) failures.push([/./, "Removed Home Continue Watching button still exists in runtime code"]);
+if (/tvtime-watch-next-cta/.test(css)) failures.push([/./, "Removed Home Continue Watching button still has dead CSS"]);
 
 if (failures.length > 0) {
   for (const [, message] of failures) console.error(`FAIL: ${message}`);

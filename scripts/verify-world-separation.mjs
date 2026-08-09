@@ -98,7 +98,15 @@ check(/notStartedAnime/.test(counts) && /item\.status === "not_started"/.test(co
 check(/watchingAnime/.test(counts) && /isWatching\(item\.status\)/.test(counts), "Anime In Progress contains only real progress states");
 
 check(/Go to Movies/.test(shortcuts) && /Go to TV Shows/.test(shortcuts) && /Go to Anime/.test(shortcuts), "Keyboard shortcuts navigate to all three worlds");
-check(/setView\("movies"\)/.test(home) && /setView\("tv-shows"\)/.test(home) && /setView\("anime"\)/.test(home), "Home quick actions route to the separated worlds");
+check(
+  /setView\("stats"\)/.test(home) &&
+    /setView\("anime"\)/.test(home) &&
+    /setView\("asian-movies"\)/.test(home) &&
+    /setView\("asian-tv"\)/.test(home) &&
+    /setView\("arabic-movies"\)/.test(home) &&
+    /setView\("arabic-tv"\)/.test(home),
+  "Home global and world statistics cards route to their matching destinations",
+);
 check(!/Library exported|Your library|library data|Library breakdown/.test(profile + statsView), "Visible settings and stats use Collection terminology instead of the retired Library page name");
 
 function walk(dir) {
