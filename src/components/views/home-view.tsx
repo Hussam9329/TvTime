@@ -1,6 +1,6 @@
 "use client";
 
-import { useHomeFeed, useMediaStates, useRecentlyWatched, useStats } from "@/hooks/use-tmdb";
+import { mediaStateKey, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, type MediaBatchState } from "@/hooks/use-tmdb";
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
@@ -19,6 +19,14 @@ import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { isAsianMediaItem } from "@/lib/asian-media";
 
 const MediaRow = (props: ComponentProps<typeof BaseMediaRow>) => <BaseMediaRow {...props} compactCards={false} />;
+const SEEN_HOME_TV_STATUSES = new Set(["watching", "uptodate", "up_to_date", "finished", "watched", "stopped"]);
+
+function isUnseenHomeHeroState(mediaType: "movie" | "tv", state: MediaBatchState | undefined) {
+  if (!state) return true;
+  if (state.watched || state.userRating != null) return false;
+  if (mediaType === "movie") return true;
+  return !SEEN_HOME_TV_STATUSES.has(String(state.status || "").trim().toLowerCase());
+}
 
 export function HomeView() {
   const homeFeed = useHomeFeed();
@@ -35,10 +43,6 @@ export function HomeView() {
   const topTvItems = (homeFeed.data?.topRatedTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
   const upcomingMovieItems = (homeFeed.data?.upcomingMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
   const heroCandidates = standardTrending.filter((media) => media.backdrop_path);
-  const heroItems = [
-    ...heroCandidates.filter((media) => (media.overview?.length || 0) > 100),
-    ...heroCandidates.filter((media) => (media.overview?.length || 0) <= 100),
-  ].slice(0, 5);
   const homeLibraryStates = useMediaStates([
     ...standardTrending.map((item) => ({ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" as const : "movie" as const })),
     ...popularMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
@@ -48,6 +52,17 @@ export function HomeView() {
     ...topTvItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
     ...upcomingMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
   ]);
+  const unseenHeroCandidates = homeLibraryStates.isSuccess
+    ? heroCandidates.filter((media) => {
+        const mediaType = media.media_type === "tv" ? "tv" as const : "movie" as const;
+        const state = homeLibraryStates.data?.[mediaStateKey(mediaType, Number(media.id))];
+        return isUnseenHomeHeroState(mediaType, state);
+      })
+    : [];
+  const heroItems = [
+    ...unseenHeroCandidates.filter((media) => (media.overview?.length || 0) > 100),
+    ...unseenHeroCandidates.filter((media) => (media.overview?.length || 0) <= 100),
+  ].slice(0, 5);
   const sharedLibraryStateSource = { data: homeLibraryStates.data };
 
   return (

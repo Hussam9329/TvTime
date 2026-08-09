@@ -28,6 +28,8 @@ const failures = checks.filter(([pattern]) => !pattern.test(pattern.source.inclu
 if (/useTvTrackingCounts\("standard"\)/.test(home)) failures.push([/./, "Home still sources its TV card from standard-world tracking only"]);
 if (/Ready when you are|Open Watch Next|tvtime-watch-next-cta/.test(home)) failures.push([/./, "Removed Home Continue Watching button still exists in runtime code"]);
 if (/tvtime-watch-next-cta/.test(css)) failures.push([/./, "Removed Home Continue Watching button still has dead CSS"]);
+if (!/state\.watched \|\| state\.userRating != null/.test(home) || !/SEEN_HOME_TV_STATUSES/.test(home)) failures.push([/./, "Home spotlight does not exclude watched, rated and started titles"]);
+if (!/const unseenHeroCandidates = homeLibraryStates\.isSuccess[\s\S]*?: \[\];/.test(home)) failures.push([/./, "Home spotlight can render before personal media states are verified"]);
 
 if (failures.length > 0) {
   for (const [, message] of failures) console.error(`FAIL: ${message}`);
