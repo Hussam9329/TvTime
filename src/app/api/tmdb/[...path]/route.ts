@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveTmdbKeywordIds, tmdb, type MediaItem, type TmdbLanguage } from "@/lib/tmdb";
-import { isArabicMediaItem } from "@/lib/arabic-media";
+import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import { discoverAsianMoviesByPriority, discoverAsianTvByPriority } from "@/lib/asian-discover-server";
@@ -124,7 +124,10 @@ const handler = async (
         const worldItems = (items: MediaItem[], limit = 20) => {
           const seen = new Set<number>();
           const result: MediaItem[] = [];
-          for (const item of items) {
+          const candidates = world === "arabic"
+            ? filterAndPrioritizeArabicMediaItems(items)
+            : items;
+          for (const item of candidates) {
             if (!item.id || seen.has(item.id) || !item.poster_path || !matchesDiscoverWorld(item, "tv", world)) continue;
             seen.add(item.id);
             result.push({ ...item, media_type: "tv" });

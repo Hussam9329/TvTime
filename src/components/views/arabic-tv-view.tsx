@@ -11,6 +11,7 @@ export function ArabicTvView() {
       discoverSubtitle="ابحث عن إنتاجات عربية جديدة وأضفها إلى مكتبتك"
       releaseOriginalLanguage="ar"
       releaseLanguage="ar"
+      releaseCollectionWorld="arabic-tv"
       releaseAccentClass="text-amber-400"
       releaseTitle="جدول إصدارات المسلسلات العربية"
       releaseSubtitle="جدول لستة أشهر من العروض العربية الجديدة، منفصل عن المسلسلات العالمية والأنمي."

@@ -1,5 +1,9 @@
 import { detectIsAnime } from "@/lib/anime-detect";
-import { detectIsArabic } from "@/lib/arabic-media";
+import {
+  arabicMediaOriginCountries,
+  arabicMediaOriginalLanguage,
+  detectIsArabic,
+} from "@/lib/arabic-media";
 import { isAsianMediaItem } from "@/lib/asian-media";
 
 export type TvWorld = "standard" | "arabic" | "asian";
@@ -17,8 +21,8 @@ export type TvWorldClassificationInput = {
 };
 
 export function classifyTvWorld(show: TvWorldClassificationInput) {
-  const originalLanguage = show.originalLanguage ?? show.original_language ?? null;
-  const originCountries = show.originCountries ?? show.origin_country ?? [];
+  const originalLanguage = arabicMediaOriginalLanguage(show);
+  const originCountries = arabicMediaOriginCountries(show);
   const inferredArabic = detectIsArabic({
     originalLanguage,
     originCountry: originCountries,
@@ -30,11 +34,12 @@ export function classifyTvWorld(show: TvWorldClassificationInput) {
     genres: show.genres,
   });
 
-  // A complete TMDB classification supersedes stale persisted flags. When
-  // authoritative metadata is unavailable, preserve explicit stored flags
-  // and augment them with safe inference for legacy rows.
+  // Original-language metadata is enough to supersede a stale Arabic flag.
+  // Anime keeps its existing stricter complete-metadata boundary because an
+  // explicit Anime classification can legitimately cover non-Japanese works.
   const authoritative = show.classificationComplete === true;
-  const isArabic = authoritative ? inferredArabic : Boolean(show.isArabic) || inferredArabic;
+  const arabicAuthoritative = authoritative || originalLanguage !== null;
+  const isArabic = arabicAuthoritative ? inferredArabic : Boolean(show.isArabic) || inferredArabic;
   const isAnime = !isArabic && (authoritative ? inferredAnime : Boolean(show.isAnime) || inferredAnime);
   const isAsian = !isArabic && !isAnime && isAsianMediaItem({
     originalLanguage,

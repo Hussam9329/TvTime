@@ -3,7 +3,7 @@ import { tmdb, type MediaItem } from "@/lib/tmdb";
 import { parseDateOnly } from "@/lib/date-only";
 import { ASIAN_COUNTRY_CODES, ASIAN_ORIGIN_COUNTRY_QUERY, isAsianMediaItem } from "@/lib/asian-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-media";
+import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
 import { discoverArabicCatalogueByCountryPriority } from "@/lib/arabic-discover";
 
 const MAX_RANGE_DAYS = 370;
@@ -94,10 +94,12 @@ export async function GET(req: NextRequest) {
         media_type: "movie",
       });
     }
-    const items = [...byId.values()].sort((left, right) =>
-      (originalLanguage === "ar" ? arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right) : 0)
-      || String(left.release_date || "").localeCompare(String(right.release_date || ""))
+    const dateOrderedItems = [...byId.values()].sort((left, right) =>
+      String(left.release_date || "").localeCompare(String(right.release_date || ""))
       || String(left.title || "").localeCompare(String(right.title || "")));
+    const items = originalLanguage === "ar"
+      ? filterAndPrioritizeArabicMediaItems(dateOrderedItems)
+      : dateOrderedItems;
 
     return NextResponse.json({
       from,

@@ -28,7 +28,7 @@ import {
   Sparkles, Info,
 } from "lucide-react";
 import { toast } from "sonner";
-import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-media";
+import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 import { standardMediaCountryPriority } from "@/lib/standard-media-priority";
@@ -301,14 +301,9 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       filtered = filtered.filter((media) => isAsianMediaItem(media) && !isAnimeMediaItem(media) && !isArabicMediaItem(media));
       filtered.sort((left, right) => asianMediaCountryPriority(left) - asianMediaCountryPriority(right));
     }
-    if (forcedLang === "ar") {
-      filtered = filtered.filter(isArabicMediaItem);
-    }
+    if (forcedLang === "ar") filtered = filterAndPrioritizeArabicMediaItems(filtered);
     if (forcedLang === "ja" && isAnime) {
       filtered = filtered.filter((m) => m.original_language === "ja");
-    }
-    if (world === "arabic-movies" || world === "arabic-tv") {
-      filtered.sort((left, right) => arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right));
     }
     return filtered;
   }, [allResults, effectiveIsTV, forcedLang, isAnime, isArabic, isAsian, sortBy, world]);

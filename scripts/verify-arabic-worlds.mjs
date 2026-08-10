@@ -94,7 +94,7 @@ check(/world="arabic-movies"/.test(arabicMovies), "Arabic Movies reads its dedic
 check(/<DiscoverView[\s\S]*world=\{world\}/.test(movieHub), "Arabic Movies reuses the full Movies Discover experience");
 check(/originalLanguage=\{world === "arabic-movies" \? "ar" : undefined\}[\s\S]*language=\{world === "arabic-movies" \? "ar" : undefined\}/.test(movieHub), "Arabic Movies reuses the full Movies release schedule with Arabic-only data");
 check(/trackingWorld="arabic"/.test(arabicTv), "Arabic TV reads its dedicated tracking world");
-check(/releaseOriginalLanguage="ar"/.test(arabicTv) && /originalLanguage=\{releaseOriginalLanguage\}/.test(tvWorldPage), "Arabic TV uses the shared Arabic-only release schedule");
+check(/releaseOriginalLanguage="ar"/.test(arabicTv) && /releaseCollectionWorld="arabic-tv"/.test(arabicTv) && /originalLanguage=\{releaseOriginalLanguage\}/.test(tvWorldPage), "Arabic TV uses the shared Arabic-only release schedule and collection world");
 
 check(/"arabic-movies"[\s\S]{0,500}isArabic:\s*"true"/.test(collection), "Arabic Movies queries only Arabic records");
 check(/movies:\s*\{[\s\S]*?isArabic:\s*"false"/.test(collection), "Standard Movies excludes Arabic records");
@@ -122,10 +122,10 @@ check(/original_language/.test(tvReleaseApi) && /first_air_date/.test(tvReleaseA
 check(/mediaType="tv"/.test(tvWorldPage) && /releaseLanguage="ar"/.test(arabicTv) && /language=\{releaseLanguage\}/.test(tvWorldPage), "Arabic TV releases use TV details and Arabic localization");
 check(/forcedMediaType=\{mediaType\}/.test(releaseSchedule), "Shared release cards keep the correct media type");
 check(/original_language:\s*"ar"/.test(movieCalendarApi), "Arabic movie release API requests Arabic-language releases");
-check(/ARABIC_COUNTRY_PRIORITY = \[\s*"EG"/.test(arabicDiscover), "Arabic discovery gives Egyptian works the highest country priority");
+check(/ARABIC_COUNTRY_PRIORITY_GROUPS = \[\s*\["EG"\]/.test(arabicLib) && /ARABIC_COUNTRY_PRIORITY/.test(arabicDiscover), "One shared country order gives Egyptian works the highest discovery priority");
 check(/discoverArabicShelfByCountryPriority\("movie"/.test(movieHubApi), "Arabic Movies Overview shelves use efficient Egypt-first discovery");
-check(/arabicMediaCountryPriority/.test(movieHubApi) && /arabicMediaCountryPriority/.test(mediaApi), "Arabic Overview and Library put Egyptian saved titles first");
-check(/discoverArabicCatalogueByCountryPriority\("movie"/.test(generalMovieCalendarApi) && /arabicMediaCountryPriority/.test(releaseSchedule), "Arabic Releases retrieve and render Egyptian films first");
+check(/prioritizeArabicMediaItems/.test(movieHubApi) && /prioritizeArabicMediaItems/.test(mediaApi), "Arabic Overview and Library use the central Egyptian priority pipeline");
+check(/discoverArabicCatalogueByCountryPriority\("movie"/.test(generalMovieCalendarApi) && /filterAndPrioritizeArabicMediaItems/.test(releaseSchedule), "Arabic Releases retrieve and render Egyptian films first through the central pipeline");
 check(/primary_release_date/.test(tmdb), "TMDB discovery supports bounded movie release dates");
 check(/Earlier/.test(releaseSchedule) && /Later/.test(releaseSchedule) && /scheduled releases/.test(releaseSchedule), "Shared release schedule gives Arabic Movies an independently navigable window");
 
@@ -210,8 +210,8 @@ check(
 );
 check(
   /shouldPromoteArabic\s*=\s*detectIsArabic/.test(importValidation)
-    && /const isArabic = parsed\.isArabic \|\| shouldPromoteArabic/.test(importValidation),
-  "Import conservatively promotes older Arabic records without destructive demotion",
+    && /const isArabic = originalLanguage[\s\S]{0,120}\? shouldPromoteArabic/.test(importValidation),
+  "Import lets canonical metadata supersede stale Arabic flags",
 );
 check(/isArabic/.test(dedup) && /originCountries/.test(dedup), "Media dedup merges Arabic classification metadata");
 
@@ -225,8 +225,8 @@ check(
     && /Media_media_world_exclusive_check/.test(schemaVerifier),
   "Production schema guard verifies Arabic columns and exclusivity",
 );
-check(packageJson.scripts?.["db:backfill:arabic"] === "node scripts/backfill-arabic-media.mjs", "Package exposes the reviewed Arabic backfill command");
-check(packageJson.scripts?.["verify:arabic"] === "node scripts/verify-arabic-worlds.mjs", "Package exposes Arabic-world verification");
+check(packageJson.scripts?.["db:backfill:arabic"] === "node --experimental-strip-types scripts/backfill-arabic-media.mjs", "Package exposes the reviewed Arabic backfill command through the shared classifier");
+check(packageJson.scripts?.["verify:arabic"]?.includes("test-arabic-world-consistency.ts") && packageJson.scripts?.["verify:arabic"]?.includes("verify-arabic-worlds.mjs"), "Package exposes behavioral and structural Arabic-world verification");
 
 check(/process\.env\.TMDB_API_KEY\?\.trim\(\) \|\| ""/.test(tmdb), "TMDB client reads its key only from the environment");
 check(!/(?:api_key|TMDB_API_KEY)\s*[=:]\s*["'][A-Za-z0-9_-]{20,}["']/i.test(tmdb), "TMDB client contains no embedded API key");

@@ -228,7 +228,11 @@ export function normalizeImportRecord(record: LibraryTransferRecord): Normalized
     const originalLanguage = parsed.originalLanguage?.toLowerCase() ?? null;
     const originCountries = normalizeCountryCodes(parsed.originCountries);
     const shouldPromoteArabic = detectIsArabic({ originalLanguage, originCountry: originCountries });
-    const isArabic = parsed.isArabic || shouldPromoteArabic;
+    // Canonical metadata supersedes stale backup flags. A legacy explicit flag
+    // survives only when the backup has no original-language metadata.
+    const isArabic = originalLanguage
+      ? shouldPromoteArabic
+      : parsed.isArabic || shouldPromoteArabic;
     const isAnime = !isArabic && parsed.isAnime;
     const requestedSeriesRating = parsed.type === "series" && parsed.userRating !== null;
     const validWatchedMovie = parsed.type === "movie" && parsed.watched && parsed.userRating !== null;

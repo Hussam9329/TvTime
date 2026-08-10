@@ -19,7 +19,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatReleaseDateParts } from "@/lib/date-only";
-import { detectIsArabic, isArabicMediaItem } from "@/lib/arabic-media";
+import { detectIsArabic, filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 export function MovieDetailView() {
@@ -81,11 +81,17 @@ export function MovieDetailView() {
   const cinemanaSearchTitle = displayTitle;
 
   const cast = (m as any).credits?.cast?.slice(0, 16) ?? [];
-  const recommendations = ((m as any).recommendations?.results ?? [])
-    .filter((result: any) => result.poster_path && isArabicMediaItem(result) === isArabicMovie)
+  const recommendationCandidates = ((m as any).recommendations?.results ?? [])
+    .filter((result: any) => result.poster_path);
+  const similarCandidates = ((m as any).similar?.results ?? [])
+    .filter((result: any) => result.poster_path);
+  const recommendations = (isArabicMovie
+    ? filterAndPrioritizeArabicMediaItems(recommendationCandidates)
+    : recommendationCandidates.filter((result: any) => !isArabicMediaItem(result)))
     .slice(0, 20);
-  const similar = ((m as any).similar?.results ?? [])
-    .filter((result: any) => result.poster_path && isArabicMediaItem(result) === isArabicMovie)
+  const similar = (isArabicMovie
+    ? filterAndPrioritizeArabicMediaItems(similarCandidates)
+    : similarCandidates.filter((result: any) => !isArabicMediaItem(result)))
     .slice(0, 20);
   const videos = ((m as any).videos?.results ?? []).filter((v: any) => v.site === "YouTube");
   const trailer = videos.find((v: any) => v.type === "Trailer") || videos[0];

@@ -28,6 +28,7 @@ import {
 } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { getTitle, img, type MediaItem } from "@/lib/tmdb";
+import { filterAndPrioritizeArabicMediaItems } from "@/lib/arabic-media";
 
 type TvHubCopy = {
   featured: string;
@@ -102,10 +103,11 @@ function trackedToMedia(show: any): MediaItem | null {
   };
 }
 
-function dedupe(items: MediaItem[], limit = 20) {
+function dedupe(items: MediaItem[], limit = 20, arabic = false) {
   const seen = new Set<number>();
   const result: MediaItem[] = [];
-  for (const item of items) {
+  const candidates = arabic ? filterAndPrioritizeArabicMediaItems(items) : items;
+  for (const item of candidates) {
     if (!item.id || seen.has(item.id) || !item.poster_path) continue;
     seen.add(item.id);
     result.push({ ...item, media_type: "tv" });
@@ -126,29 +128,29 @@ export function TvHubOverview({ world, onBrowse }: { world: TvHubWorld; onBrowse
     .map((show: any) => [Number(show.tmdbId), show] as const)
     .filter(([id]) => Number.isFinite(id) && id > 0)), [trackedItems]);
 
-  const popularItems = dedupe(catalogue.data?.popular ?? [], 18);
-  const newItems = dedupe(catalogue.data?.newNoteworthy ?? [], 16);
-  const hiddenItems = dedupe(catalogue.data?.hiddenGems ?? [], 16);
-  const airingItems = dedupe(catalogue.data?.airingToday ?? [], 16);
+  const popularItems = dedupe(catalogue.data?.popular ?? [], 18, isArabic);
+  const newItems = dedupe(catalogue.data?.newNoteworthy ?? [], 16, isArabic);
+  const hiddenItems = dedupe(catalogue.data?.hiddenGems ?? [], 16, isArabic);
+  const airingItems = dedupe(catalogue.data?.airingToday ?? [], 16, isArabic);
 
   const continueItems = dedupe(trackedItems
     .filter((show: any) => show._trackingStatus !== "stopped" && show._trackingStatus !== "finished" && show._hasUnwatchedReleasedEpisode)
     .map(trackedToMedia)
-    .filter((item: MediaItem | null): item is MediaItem => Boolean(item)), 18);
+    .filter((item: MediaItem | null): item is MediaItem => Boolean(item)), 18, isArabic);
   const upToDateItems = dedupe(trackedItems
     .filter((show: any) => show._trackingStatus === "uptodate")
     .map(trackedToMedia)
-    .filter((item: MediaItem | null): item is MediaItem => Boolean(item)), 18);
+    .filter((item: MediaItem | null): item is MediaItem => Boolean(item)), 18, isArabic);
   const returningItems = dedupe([...trackedItems]
     .filter((show: any) => show._trackingStatus !== "stopped" && show._nextEpisodeAirDate && Date.parse(show._nextEpisodeAirDate) > Date.now())
     .sort((left: any, right: any) => Date.parse(left._nextEpisodeAirDate) - Date.parse(right._nextEpisodeAirDate))
     .map(trackedToMedia)
-    .filter((item: MediaItem | null): item is MediaItem => Boolean(item)), 18);
+    .filter((item: MediaItem | null): item is MediaItem => Boolean(item)), 18, isArabic);
   const recentItems = dedupe([...trackedItems]
     .filter((show: any) => show._lastWatchedAt)
     .sort((left: any, right: any) => Date.parse(right._lastWatchedAt) - Date.parse(left._lastWatchedAt))
     .map(trackedToMedia)
-    .filter((item: MediaItem | null): item is MediaItem => Boolean(item)), 18);
+    .filter((item: MediaItem | null): item is MediaItem => Boolean(item)), 18, isArabic);
 
   const allItems = useMemo(() => dedupe([
     ...popularItems,
@@ -159,7 +161,7 @@ export function TvHubOverview({ world, onBrowse }: { world: TvHubWorld; onBrowse
     ...returningItems,
     ...hiddenItems,
     ...recentItems,
-  ], 120), [popularItems, continueItems, airingItems, upToDateItems, newItems, returningItems, hiddenItems, recentItems]);
+  ], 120, isArabic), [popularItems, continueItems, airingItems, upToDateItems, newItems, returningItems, hiddenItems, recentItems, isArabic]);
   const states = useMediaStates(allItems.map((item) => ({ tmdbId: item.id, mediaType: "tv" as const })), {
     enabled: allItems.length > 0,
   });

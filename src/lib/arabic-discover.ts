@@ -1,13 +1,8 @@
 import { tmdb, type MediaItem, type PaginatedResponse, type TmdbLanguage } from "@/lib/tmdb";
-
-export const ARABIC_COUNTRY_PRIORITY = [
-  "EG",
-  "SY",
-  "LB",
-  "IQ",
-  "SA|AE|KW|QA|BH|OM",
-  "DZ|KM|DJ|JO|LY|MR|MA|PS|SO|SD|TN|YE",
-];
+import {
+  ARABIC_COUNTRY_PRIORITY,
+  filterAndPrioritizeArabicMediaItems,
+} from "@/lib/arabic-media";
 
 type MovieDiscoverParams = NonNullable<Parameters<typeof tmdb.discoverMovies>[0]>;
 type TvDiscoverParams = NonNullable<Parameters<typeof tmdb.discoverTv>[0]>;
@@ -29,8 +24,8 @@ export async function discoverArabicShelfByCountryPriority(
   const limit = Math.max(1, Math.min(Math.floor(maxItems), 100));
   const load = (originCountries: string, page: number) =>
     mediaType === "movie"
-      ? tmdb.discoverMovies({ ...(baseParams as MovieDiscoverParams), originCountries, page })
-      : tmdb.discoverTv({ ...(baseParams as TvDiscoverParams), originCountries, page });
+      ? tmdb.discoverMovies({ ...(baseParams as MovieDiscoverParams), original_language: "ar", originCountries, page })
+      : tmdb.discoverTv({ ...(baseParams as TvDiscoverParams), original_language: "ar", originCountries, page });
   const seen = new Set<number>();
   const results: MediaItem[] = [];
 
@@ -40,7 +35,7 @@ export async function discoverArabicShelfByCountryPriority(
     while (page <= totalPages && results.length < limit) {
       const response = await load(countries, page);
       totalPages = Math.min(response.total_pages || 1, 500);
-      for (const item of response.results || []) {
+      for (const item of filterAndPrioritizeArabicMediaItems(response.results || [])) {
         if (!item.id || seen.has(item.id)) continue;
         seen.add(item.id);
         results.push(item);
@@ -68,8 +63,8 @@ export async function discoverArabicCatalogueByCountryPriority(
   const limit = Math.max(1, Math.min(Math.floor(maxItems), 500));
   const load = (originCountries: string, page: number) =>
     mediaType === "movie"
-      ? tmdb.discoverMovies({ ...(baseParams as MovieDiscoverParams), originCountries, page })
-      : tmdb.discoverTv({ ...(baseParams as TvDiscoverParams), originCountries, page });
+      ? tmdb.discoverMovies({ ...(baseParams as MovieDiscoverParams), original_language: "ar", originCountries, page })
+      : tmdb.discoverTv({ ...(baseParams as TvDiscoverParams), original_language: "ar", originCountries, page });
 
   const firstPages = await Promise.all(
     ARABIC_COUNTRY_PRIORITY.map((countries) => load(countries, 1)),
@@ -80,7 +75,7 @@ export async function discoverArabicCatalogueByCountryPriority(
   let sourcePagesFetched = firstPages.length;
 
   const append = (items: MediaItem[]) => {
-    for (const item of items) {
+    for (const item of filterAndPrioritizeArabicMediaItems(items)) {
       if (!item.id || seen.has(item.id)) continue;
       seen.add(item.id);
       results.push(item);
@@ -115,8 +110,8 @@ export async function discoverArabicByCountryPriority(
 ): Promise<PaginatedResponse<MediaItem>> {
   const load = (originCountries: string, page: number, language: TmdbLanguage) =>
     mediaType === "movie"
-      ? tmdb.discoverMovies({ ...(baseParams as MovieDiscoverParams), originCountries, page, language })
-      : tmdb.discoverTv({ ...(baseParams as TvDiscoverParams), originCountries, page, language });
+      ? tmdb.discoverMovies({ ...(baseParams as MovieDiscoverParams), original_language: "ar", originCountries, page, language })
+      : tmdb.discoverTv({ ...(baseParams as TvDiscoverParams), original_language: "ar", originCountries, page, language });
 
   const groupCounts = await Promise.all(
     ARABIC_COUNTRY_PRIORITY.map(async (countries) => {
@@ -141,7 +136,7 @@ export async function discoverArabicByCountryPriority(
       const localPage = Math.floor(offset / pageSize) + 1;
       const localIndex = offset % pageSize;
       const response = await load(ARABIC_COUNTRY_PRIORITY[groupIndex], localPage, baseParams.language);
-      const available = response.results.slice(localIndex, localIndex + remaining);
+      const available = filterAndPrioritizeArabicMediaItems(response.results).slice(localIndex, localIndex + remaining);
       results.push(...available);
       remaining -= available.length;
       offset += available.length;
@@ -152,7 +147,7 @@ export async function discoverArabicByCountryPriority(
 
   return {
     page: requestedPage,
-    results,
+    results: filterAndPrioritizeArabicMediaItems(results),
     total_pages: Math.min(500, Math.ceil(totalResults / pageSize)),
     total_results: totalResults,
   };

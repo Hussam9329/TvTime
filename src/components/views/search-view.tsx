@@ -9,7 +9,7 @@ import { Search as SearchIcon, Loader2, AlertCircle, Users, ChevronDown, Languag
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { img } from "@/lib/tmdb";
-import { isArabicMediaItem } from "@/lib/arabic-media";
+import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { isAsianMediaItem } from "@/lib/asian-media";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
@@ -26,9 +26,9 @@ export function SearchView() {
   const filtered = filter === "all"
     ? allResults
     : filter === "arabic-movies"
-      ? allResults.filter((result) => result.media_type === "movie" && isArabicMediaItem(result))
+      ? filterAndPrioritizeArabicMediaItems(allResults.filter((result) => result.media_type === "movie"))
       : filter === "arabic-tv"
-        ? allResults.filter((result) => result.media_type === "tv" && isArabicMediaItem(result))
+        ? filterAndPrioritizeArabicMediaItems(allResults.filter((result) => result.media_type === "tv"))
         : filter === "anime"
           ? allResults.filter((result) => result.media_type === "tv" && isAnimeMediaItem(result))
         : filter === "asian-tv"

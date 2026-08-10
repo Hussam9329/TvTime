@@ -29,7 +29,7 @@ interface TvWorldPageViewProps {
   releaseOriginalLanguage?: string;
   releaseLanguage?: "ar" | "ja" | "en-US";
   releaseExcludedOriginalLanguage?: string;
-  releaseCollectionWorld?: "standard-tv" | "asian-tv";
+  releaseCollectionWorld?: "standard-tv" | "arabic-tv" | "asian-tv";
   locale?: "en" | "ar";
 }
 

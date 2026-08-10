@@ -5,7 +5,7 @@ import { getOrCreateUser } from "@/lib/user";
 import { classifyMediaWorld } from "@/lib/media-world-classification";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
 import { discoverArabicShelfByCountryPriority } from "@/lib/arabic-discover";
-import { arabicMediaCountryPriority } from "@/lib/arabic-media";
+import { prioritizeArabicMediaItems } from "@/lib/arabic-media";
 import { discoverAsianMoviesByPriority } from "@/lib/asian-discover-server";
 import { matchesDiscoverWorld } from "@/lib/discover-world";
 import { tmdb, type MediaItem, type TmdbLanguage } from "@/lib/tmdb";
@@ -96,20 +96,22 @@ export async function GET(req: NextRequest) {
     });
     const classified = await resolveGeneralMediaClassifications(stored, { allowNetwork: false });
     const worldItems = classified.filter((item) => classifyMediaWorld(item).collectionWorld === world);
-    const watchlistRecords = worldItems
+    const watchlistBase = worldItems
       .filter((item) => item.status === "planned" && !item.watched)
-      .sort((left, right) =>
-        (world === "arabic-movies" ? arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right) : 0)
-        || right.addedAt.getTime() - left.addedAt.getTime());
+      .sort((left, right) => right.addedAt.getTime() - left.addedAt.getTime());
+    const watchlistRecords = world === "arabic-movies"
+      ? prioritizeArabicMediaItems(watchlistBase)
+      : watchlistBase;
     const watchlist = watchlistRecords
       .map(movieFromRecord)
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
       .slice(0, 20);
-    const recentlyWatched = worldItems
+    const recentlyWatchedBase = worldItems
       .filter((item) => item.watched && item.watchedAt)
-      .sort((left, right) =>
-        (world === "arabic-movies" ? arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right) : 0)
-        || Number(right.watchedAt) - Number(left.watchedAt))
+      .sort((left, right) => Number(right.watchedAt) - Number(left.watchedAt));
+    const recentlyWatched = (world === "arabic-movies"
+      ? prioritizeArabicMediaItems(recentlyWatchedBase)
+      : recentlyWatchedBase)
       .map(movieFromRecord)
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
       .slice(0, 20);

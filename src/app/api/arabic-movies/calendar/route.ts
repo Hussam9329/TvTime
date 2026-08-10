@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { MediaItem } from "@/lib/tmdb";
 import { parseDateOnly } from "@/lib/date-only";
 import { discoverArabicCatalogueByCountryPriority } from "@/lib/arabic-discover";
-import { arabicMediaCountryPriority } from "@/lib/arabic-media";
+import { filterAndPrioritizeArabicMediaItems } from "@/lib/arabic-media";
 
 const MAX_RANGE_DAYS = 370;
 const MAX_PAGES = 5;
@@ -40,10 +40,10 @@ export async function GET(req: NextRequest) {
       if (!item.id || !item.release_date || item.original_language !== "ar") continue;
       byId.set(item.id, { ...item, media_type: "movie" });
     }
-    const items = [...byId.values()].sort((left, right) =>
-      arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right)
-      || String(left.release_date || "").localeCompare(String(right.release_date || ""))
+    const dateOrderedItems = [...byId.values()].sort((left, right) =>
+      String(left.release_date || "").localeCompare(String(right.release_date || ""))
       || String(left.title || "").localeCompare(String(right.title || "")));
+    const items = filterAndPrioritizeArabicMediaItems(dateOrderedItems);
 
     return NextResponse.json({
       from,

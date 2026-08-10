@@ -17,6 +17,7 @@ import {
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
 import { recordMatchesTvWorld, type TvWorld } from "@/lib/tv-world-classification";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
+import { prioritizeArabicMediaItems } from "@/lib/arabic-media";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -91,9 +92,9 @@ async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper:
   return results;
 }
 
-function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc") {
+function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc", world: TvWorld) {
   const direction = order === "asc" ? 1 : -1;
-  return [...items].sort((a, b) => {
+  const sorted = [...items].sort((a, b) => {
     const av = a?.[sortBy];
     const bv = b?.[sortBy];
     if (sortBy === "title") return String(av || "").localeCompare(String(bv || "")) * direction;
@@ -111,6 +112,7 @@ function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc"
     }
     return String(av ?? "").localeCompare(String(bv ?? "")) * direction;
   });
+  return world === "arabic" ? prioritizeArabicMediaItems(sorted) : sorted;
 }
 
 // TVM-27: GET handlers must NOT write to the database. This function now
@@ -506,7 +508,7 @@ export async function GET(req: NextRequest) {
       stale: snapshot.predicates.isStaleWatching,
     };
 
-    const matching = sortShows(filteredBySearch.filter(categoryPredicates[category]), sortBy, order);
+    const matching = sortShows(filteredBySearch.filter(categoryPredicates[category]), sortBy, order, world);
     const pageItems = matching.slice(offset, offset + limit).map((show) => {
       const nextEpisode = show._serverTvMeta?.nextEpisode ?? null;
       const {

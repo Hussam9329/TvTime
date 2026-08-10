@@ -5,7 +5,7 @@ import { resolveUserId } from "@/lib/auth";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import type { Prisma } from "@prisma/client";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
-import { arabicMediaCountryPriority } from "@/lib/arabic-media";
+import { prioritizeArabicMediaItems } from "@/lib/arabic-media";
 import {
   recordMatchesMediaClassification,
   type MediaClassificationFilters,
@@ -73,12 +73,12 @@ export async function GET(req: NextRequest) {
     const classifiedCandidates = await resolveGeneralMediaClassifications(candidates, { allowNetwork: false });
     const matchingItems = classifiedCandidates.filter((item) =>
       recordMatchesMediaClassification(item, classificationFilters));
-    // Arabic movie library pagination is Egypt-first across the complete
+    // Every Arabic library pagination path is Egypt-first across the complete
     // result set, then preserves the user's selected order within each group.
     // Sorting before slicing prevents non-Egyptian titles from occupying the
     // first page while Egyptian titles remain on later pages.
-    const prioritizedItems = type === "movie" && classificationFilters.isArabic === true
-      ? [...matchingItems].sort((left, right) => arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right))
+    const prioritizedItems = classificationFilters.isArabic === true
+      ? prioritizeArabicMediaItems(matchingItems)
       : matchingItems;
     const total = prioritizedItems.length;
     const items = prioritizedItems.slice(offset, offset + limit);

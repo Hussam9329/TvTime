@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tmdb, type MediaItem } from "@/lib/tmdb";
 import { parseDateOnly } from "@/lib/date-only";
+import { discoverArabicCatalogueByCountryPriority } from "@/lib/arabic-discover";
+import { filterAndPrioritizeArabicMediaItems } from "@/lib/arabic-media";
 
 const MAX_RANGE_DAYS = 370;
 const MAX_PAGES = 5;
@@ -45,9 +47,14 @@ export async function GET(req: NextRequest) {
       language,
     };
 
-    const first = await tmdb.discoverTv(baseParams);
-    const pages = Math.min(first.total_pages || 1, MAX_PAGES);
-    const rest = pages > 1
+    const arabicPriorityCatalogue = originalLanguage === "ar"
+      ? await discoverArabicCatalogueByCountryPriority("tv", baseParams, MAX_PAGES * 20)
+      : null;
+    const first = arabicPriorityCatalogue ?? await tmdb.discoverTv(baseParams);
+    const pages = arabicPriorityCatalogue
+      ? arabicPriorityCatalogue.source_pages_fetched
+      : Math.min(first.total_pages || 1, MAX_PAGES);
+    const rest = !arabicPriorityCatalogue && pages > 1
       ? await Promise.all(Array.from({ length: pages - 1 }, (_, index) => tmdb.discoverTv({
           ...baseParams,
           page: index + 2,
@@ -55,7 +62,7 @@ export async function GET(req: NextRequest) {
       : [];
 
     const fallbackPosterById = new Map<number, string>();
-    if (language === "ar") {
+    if (language === "ar" && !arabicPriorityCatalogue) {
       const fallbackPages = await Promise.all(Array.from({ length: pages }, (_, index) =>
         tmdb.discoverTv({ ...baseParams, page: index + 1, language: "en-US" }),
       ));
@@ -78,9 +85,12 @@ export async function GET(req: NextRequest) {
         media_type: "tv",
       });
     }
-    const items = [...byId.values()].sort((left, right) =>
+    const dateOrderedItems = [...byId.values()].sort((left, right) =>
       String(left.first_air_date || "").localeCompare(String(right.first_air_date || ""))
       || String(left.name || "").localeCompare(String(right.name || "")));
+    const items = originalLanguage === "ar"
+      ? filterAndPrioritizeArabicMediaItems(dateOrderedItems)
+      : dateOrderedItems;
 
     return NextResponse.json({
       from,
@@ -88,7 +98,9 @@ export async function GET(req: NextRequest) {
       items,
       total: items.length,
       pagesFetched: pages,
-      truncated: (first.total_pages || 1) > MAX_PAGES,
+      truncated: arabicPriorityCatalogue
+        ? arabicPriorityCatalogue.total_results > items.length
+        : (first.total_pages || 1) > MAX_PAGES,
     }, { headers: { "Cache-Control": "private, max-age=900" } });
   } catch (error) {
     console.error("[tv:calendar]", error);

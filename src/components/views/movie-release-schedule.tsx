@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MediaGrid } from "@/components/media/media-card";
 import { getTitle } from "@/lib/tmdb";
-import { arabicMediaCountryPriority, isArabicMediaItem } from "@/lib/arabic-media";
+import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
 import { isAnimeMediaItem } from "@/lib/anime-detect";
 import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
 
@@ -46,7 +46,7 @@ interface ReleaseScheduleProps {
   title?: string;
   /** Header subtitle override. */
   subtitle?: string;
-  collectionWorld?: "movies" | "arabic-movies" | "asian-movies" | "standard-tv" | "asian-tv" | "anime";
+  collectionWorld?: "movies" | "arabic-movies" | "asian-movies" | "standard-tv" | "arabic-tv" | "asian-tv" | "anime";
   /** Align navigation to calendar quarters. Used by Anime for Winter/Spring/Summer/Fall seasons. */
   seasonal?: boolean;
 }
@@ -96,9 +96,9 @@ export function ReleaseSchedule({
     if (collectionWorld === "anime") filtered = filtered.filter(isAnimeMediaItem);
     if (collectionWorld === "asian-tv") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
     if (collectionWorld === "movies") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
-    if (collectionWorld === "arabic-movies") filtered = filtered
-      .filter(isArabicMediaItem)
-      .sort((left, right) => arabicMediaCountryPriority(left) - arabicMediaCountryPriority(right));
+    if (collectionWorld === "arabic-movies" || collectionWorld === "arabic-tv") {
+      filtered = filterAndPrioritizeArabicMediaItems(filtered);
+    }
     if (collectionWorld === "asian-movies") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
     return filtered;
   }, [collectionWorld, schedule.data?.items, search]);

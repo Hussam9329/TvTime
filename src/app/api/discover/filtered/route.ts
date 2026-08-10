@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveTmdbKeywordIds, tmdb, type MediaItem, type PaginatedResponse, type TmdbLanguage } from "@/lib/tmdb";
-import { isArabicMediaItem } from "@/lib/arabic-media";
+import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
 import { resolveUserId } from "@/lib/auth";
 import { buildSeenIdSet } from "@/lib/discover-seen";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
@@ -222,9 +222,11 @@ export async function GET(req: NextRequest) {
       nextCursor = `${parsed.page}:${Math.min(parsed.index, pageSizeObserved)}`;
     }
 
-    const prioritizedResults = mediaType === "movie" && !onlyArabic && world === "standard"
-      ? sortByStandardMediaPriority(results)
-      : results;
+    const prioritizedResults = onlyArabic || world === "arabic"
+      ? filterAndPrioritizeArabicMediaItems(results)
+      : mediaType === "movie" && world === "standard"
+        ? sortByStandardMediaPriority(results)
+        : results;
 
     const response = NextResponse.json({
       results: prioritizedResults,

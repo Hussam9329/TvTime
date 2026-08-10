@@ -14,6 +14,7 @@ import {
 } from "@/hooks/use-tmdb";
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import type { MediaItem } from "@/lib/tmdb";
+import { filterAndPrioritizeArabicMediaItems } from "@/lib/arabic-media";
 
 const MediaRow = (props: ComponentProps<typeof BaseMediaRow>) => <BaseMediaRow {...props} compactCards={false} />;
 
@@ -73,11 +74,11 @@ function CuratedContent() {
   const shortItems = valid(shortMovies.data?.results ?? []);
   const miniItems = valid(miniSeries.data?.results ?? []);
   const completedItems = valid(completed.data?.results ?? []);
-  const arabicTrendingItems = valid([
+  const arabicTrendingItems = valid(filterAndPrioritizeArabicMediaItems([
     ...(arabicMovies.data?.results ?? []).map((item) => ({ ...item, media_type: "movie" as const })),
     ...(arabicTv.data?.results ?? []).map((item) => ({ ...item, media_type: "tv" as const })),
-  ]);
-  const classicItems = valid(arabicClassics.data?.results ?? []);
+  ]));
+  const classicItems = valid(filterAndPrioritizeArabicMediaItems(arabicClassics.data?.results ?? []));
   const forgottenItems = useMemo(() => (watchlist.data?.items ?? [])
     .slice()
     .sort((left: any, right: any) => new Date(left.addedAt || 0).getTime() - new Date(right.addedAt || 0).getTime())
