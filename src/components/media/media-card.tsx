@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Star, Film, Tv, Check, ListPlus, Bell, MoreHorizontal, Play } from "lucide-react";
 import { useNav } from "@/lib/store";
 import { mediaStateKey, useMediaStates, useWatchlistToggle, useWatchedMovieToggle, type MediaBatchState } from "@/hooks/use-tmdb";
-import { motion } from "framer-motion";
 import { SafeImage } from "@/components/media/safe-image";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -15,7 +14,7 @@ import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { mediaCollectionWorldForItem } from "@/lib/media-world-pipeline";
-import { useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 interface MediaCardProps {
@@ -28,6 +27,7 @@ interface MediaCardProps {
   enableNativeLink?: boolean;
   priority?: boolean;
   compactActions?: boolean;
+  imageSizes?: string;
 }
 
 // Single source of truth for card sizing and grid layout.
@@ -35,14 +35,12 @@ interface MediaCardProps {
 export const MEDIA_CARD_ROW_WIDTH_CLASS = "w-[130px] sm:w-[160px]";
 const MEDIA_CARD_GRID_CLASS = "grid grid-cols-2 gap-3 min-[480px]:grid-cols-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7";
 export const HOME_MEDIA_CARD_GRID_CLASS = "tvtime-home-media-grid";
+const MEDIA_CARD_ROW_IMAGE_SIZES = "(max-width: 639px) 130px, 160px";
+const MEDIA_CARD_GRID_IMAGE_SIZES = "(max-width: 479px) 50vw, (max-width: 639px) 33vw, (max-width: 1023px) 25vw, (max-width: 1279px) 20vw, (max-width: 1535px) 17vw, 220px";
 
-export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaType, libraryState, libraryStateReady = false, enableNativeLink = true, priority = false, compactActions = true }: MediaCardProps) {
+export const MediaCard = memo(function MediaCard({ item, showMediaType = true, forcedMediaType, libraryState, libraryStateReady = false, enableNativeLink = true, priority = false, compactActions = true, imageSizes = MEDIA_CARD_ROW_IMAGE_SIZES }: MediaCardProps) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
-  const watchlistToggle = useWatchlistToggle();
-  const watchedToggle = useWatchedMovieToggle();
-  const showWatchUndo = useWatchUndo();
-  const [ratingOpen, setRatingOpen] = useState(false);
 
   // Fix #1: Use forcedMediaType if provided (e.g., TV rows in Home/Discover).
   // Otherwise fall back to item.media_type. Default to "movie" only when
@@ -92,54 +90,9 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
       : collectionWorld === "arabic-movies" || collectionWorld === "arabic-tv"
         ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV")
         : (mediaType === "movie" ? "Movie" : "TV");
-  const actionPayload = { tmdbId: id, title, posterPath: item.poster_path, releaseDate: item.release_date || item.first_air_date, voteAverage: item.vote_average, overview: item.overview, genreIds: item.genre_ids, originalLanguage: item.original_language, originCountry: item.origin_country };
-  const toggleWatchlist = async () => {
-    if (!libraryStateReady) return;
-    try {
-      await watchlistToggle.mutateAsync({ ...actionPayload, mediaType, action: inWatchlist ? "remove" : "add" });
-      toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
-    } catch { toast.error("Failed to update watchlist"); }
-  };
-  const toggleWatched = async () => {
-    if (!libraryStateReady) return;
-    if (!watched) {
-      if (userRating != null) {
-        try {
-          const result = await watchedToggle.mutateAsync({
-            ...actionPayload,
-            action: "add",
-            userRating,
-          });
-          showWatchUndo(`Marked as watched · Your rating ${userRating}/100`, result);
-        } catch {
-          toast.error("Failed to update watched status");
-        }
-        return;
-      }
-      setRatingOpen(true);
-      return;
-    }
-    try {
-      const result = await watchedToggle.mutateAsync({ ...actionPayload, action: "remove" });
-      showWatchUndo("Removed from watched", result);
-    } catch { toast.error("Failed to update watched status"); }
-  };
-  const completeWatchedWithRating = async (rating: number) => {
-    return watchedToggle.mutateAsync({
-      ...actionPayload,
-      action: "add",
-      userRating: rating,
-    });
-  };
 
   return (
-    <>
-      <motion.article
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3) }}
-        className="tvtime-media-card group relative min-w-0"
-      >
+      <article className="tvtime-media-card group relative min-w-0">
         <Card>
         <a
           href={enableNativeLink ? detailHref : undefined}
@@ -162,10 +115,13 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
             <SafeImage
               src={imgOrPlaceholder(item.poster_path, "w342")}
               alt={title}
+              fill
+              variant="poster"
+              sizes={imageSizes}
               loading={priority ? "eager" : "lazy"}
               decoding="async"
               fetchPriority={priority ? "high" : "auto"}
-              className="tvtime-media-poster__image relative h-full w-full object-cover"
+              className="tvtime-media-poster__image object-cover"
             />
             <div className="tvtime-media-poster__veil pointer-events-none absolute inset-0" aria-hidden="true" />
 
@@ -216,35 +172,131 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
         </Card>
 
         {compactActions && (
-          <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="tvtime-media-menu absolute top-2 z-20 h-8 w-8 p-0"
-              aria-label={`More actions for ${title}`}
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{title}</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={handleClick}><Play /> Open details</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => void toggleWatchlist()} disabled={!libraryStateReady || watchlistToggle.isPending}>
-              <ListPlus /> {inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
-            </DropdownMenuItem>
-            {mediaType === "movie" && (
-              <DropdownMenuItem onSelect={() => void toggleWatched()} disabled={!libraryStateReady || watchedToggle.isPending}>
-                <Check /> {watched ? "Remove from watched" : "Mark as watched"}
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-          </DropdownMenu>
+          <MediaCardActions
+            item={item}
+            id={id}
+            title={title}
+            mediaType={mediaType}
+            inWatchlist={inWatchlist}
+            watched={watched}
+            userRating={userRating}
+            libraryStateReady={libraryStateReady}
+            onOpenDetails={handleClick}
+          />
         )}
-      </motion.article>
-      {mediaType === "movie" && (
+      </article>
+  );
+});
+
+interface MediaCardActionsProps {
+  item: MediaItem;
+  id: number;
+  title: string;
+  mediaType: "movie" | "tv";
+  inWatchlist: boolean;
+  watched: boolean;
+  userRating: number | null;
+  libraryStateReady: boolean;
+  onOpenDetails: () => void;
+}
+
+function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, userRating, libraryStateReady, onOpenDetails }: MediaCardActionsProps) {
+  const watchlistToggle = useWatchlistToggle();
+  const watchedToggle = useWatchedMovieToggle();
+  const showWatchUndo = useWatchUndo();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const deferPointerOpen = useRef(false);
+  const actionPayload = { tmdbId: id, title, posterPath: item.poster_path, releaseDate: item.release_date || item.first_air_date, voteAverage: item.vote_average, overview: item.overview, genreIds: item.genre_ids, originalLanguage: item.original_language, originCountry: item.origin_country };
+
+  const toggleWatchlist = async () => {
+    if (!libraryStateReady) return;
+    try {
+      await watchlistToggle.mutateAsync({ ...actionPayload, mediaType, action: inWatchlist ? "remove" : "add" });
+      toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
+    } catch { toast.error("Failed to update watchlist"); }
+  };
+  const toggleWatched = async () => {
+    if (!libraryStateReady) return;
+    if (!watched) {
+      if (userRating != null) {
+        try {
+          const result = await watchedToggle.mutateAsync({
+            ...actionPayload,
+            action: "add",
+            userRating,
+          });
+          showWatchUndo(`Marked as watched · Your rating ${userRating}/100`, result);
+        } catch {
+          toast.error("Failed to update watched status");
+        }
+        return;
+      }
+      setRatingOpen(true);
+      return;
+    }
+    try {
+      const result = await watchedToggle.mutateAsync({ ...actionPayload, action: "remove" });
+      showWatchUndo("Removed from watched", result);
+    } catch { toast.error("Failed to update watched status"); }
+  };
+  const completeWatchedWithRating = async (rating: number) => {
+    return watchedToggle.mutateAsync({
+      ...actionPayload,
+      action: "add",
+      userRating: rating,
+    });
+  };
+
+  return (
+    <>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="tvtime-media-menu absolute top-2 z-20 h-8 w-8 p-0"
+            aria-label={`More actions for ${title}`}
+            onPointerDown={(event) => {
+              // Radix opens on pointerdown, before the shelf's 5px drag
+              // threshold can decide whether this gesture is a click. Defer
+              // mouse/pen opening to click; the shelf suppresses that click
+              // when the pointer actually dragged. Touch stays native.
+              if (event.pointerType === "touch" || event.button !== 0) {
+                deferPointerOpen.current = false;
+                return;
+              }
+              deferPointerOpen.current = true;
+              event.preventDefault();
+            }}
+            onPointerCancel={() => {
+              deferPointerOpen.current = false;
+            }}
+            onClick={(event) => {
+              if (!deferPointerOpen.current || event.detail === 0) return;
+              deferPointerOpen.current = false;
+              setMenuOpen((open) => !open);
+            }}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuLabel className="truncate text-xs text-muted-foreground">{title}</DropdownMenuLabel>
+          <DropdownMenuItem onSelect={onOpenDetails}><Play /> Open details</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => void toggleWatchlist()} disabled={!libraryStateReady || watchlistToggle.isPending}>
+            <ListPlus /> {inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+          </DropdownMenuItem>
+          {mediaType === "movie" && (
+            <DropdownMenuItem onSelect={() => void toggleWatched()} disabled={!libraryStateReady || watchedToggle.isPending}>
+              <Check /> {watched ? "Remove from watched" : "Mark as watched"}
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {mediaType === "movie" && ratingOpen && (
         <RatingDialog
-          open={ratingOpen}
+          open
           onOpenChange={setRatingOpen}
           title={title}
           poster={imgOrPlaceholder(item.poster_path, "w185")}
@@ -295,10 +347,10 @@ export function MediaGrid({
   priorityCount = 4,
 }: MediaGridProps) {
   const usesExternalLibraryStates = libraryStatesReady !== undefined;
-  const stateRequests = items.map((item) => ({
+  const stateRequests = useMemo(() => items.map((item) => ({
     tmdbId: Number(item.id),
     mediaType: forcedMediaType || (item.media_type === "tv" ? "tv" : "movie"),
-  }));
+  })), [forcedMediaType, items]);
   const states = useMediaStates(stateRequests, { enabled: !usesExternalLibraryStates });
   const resolvedStates = usesExternalLibraryStates ? libraryStates : states.data;
   const libraryStateReady = libraryStatesReady ?? states.isSuccess;
@@ -329,6 +381,7 @@ export function MediaGrid({
           libraryStateReady={libraryStateReady}
           enableNativeLink={enableNativeLinks}
           priority={i < priorityCount}
+          imageSizes={MEDIA_CARD_GRID_IMAGE_SIZES}
         />
       ))}
     </div>

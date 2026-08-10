@@ -7,6 +7,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use-tmdb";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
+import { useReducedMotion } from "framer-motion";
+import { useNav } from "@/lib/store";
 
 interface MediaRowProps {
   title: string;
@@ -18,11 +20,42 @@ interface MediaRowProps {
   libraryStateSource?: { data?: Record<string, MediaBatchState> };
   compactCards?: boolean;
   hideHeading?: boolean;
+  priorityCount?: number;
+  scrollKey?: string;
 }
 
-export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaType, libraryStateSource, compactCards = true, hideHeading = false }: MediaRowProps) {
+export function MediaRow({
+  title,
+  items,
+  loading,
+  icon,
+  onSeeAll,
+  forcedMediaType,
+  libraryStateSource,
+  compactCards = true,
+  hideHeading = false,
+  priorityCount = 0,
+  scrollKey,
+}: MediaRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const dragHandlers = useHorizontalDragScroll();
+  const currentRouteKey = useNav((state) => [
+    state.view,
+    state.movieId ?? "",
+    state.tvId ?? "",
+    state.personId ?? "",
+  ].join(":"));
+  const resolvedScrollKey = scrollKey ?? [
+    "media-row",
+    currentRouteKey,
+    forcedMediaType ?? "mixed",
+    title,
+  ].join(":");
+  const dragHandlers = useHorizontalDragScroll({
+    scrollKey: loading ? undefined : resolvedScrollKey,
+    scrollRef,
+    restoreDependency: `${Boolean(loading)}:${items.length}`,
+  });
+  const shouldReduceMotion = useReducedMotion();
   const isArabic = /[\u0600-\u06FF]/.test(title);
   const stateRequests = items.map((item) => ({
     tmdbId: Number(item.id),
@@ -37,7 +70,10 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
   const scroll = (dir: "left" | "right") => {
     if (!scrollRef.current) return;
     const amount = scrollRef.current.clientWidth * 0.8;
-    scrollRef.current.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+    scrollRef.current.scrollBy({
+      left: dir === "left" ? -amount : amount,
+      behavior: shouldReduceMotion ? "auto" : "smooth",
+    });
   };
 
   return (
@@ -67,7 +103,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
               size="icon"
               className="h-8 w-8"
               onClick={() => scroll("left")}
-              aria-label={isArabic ? `مرّر ${title} إلى اليمين` : `Scroll ${title} left`}
+              aria-label={isArabic ? `مرّر ${title} إلى اليسار` : `Scroll ${title} left`}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -76,7 +112,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
               size="icon"
               className="h-8 w-8"
               onClick={() => scroll("right")}
-              aria-label={isArabic ? `مرّر ${title} إلى اليسار` : `Scroll ${title} right`}
+              aria-label={isArabic ? `مرّر ${title} إلى اليمين` : `Scroll ${title} right`}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -109,7 +145,7 @@ export function MediaRow({ title, items, loading, icon, onSeeAll, forcedMediaTyp
                       Number(item.id),
                     )] ?? null}
                     libraryStateReady={libraryStateReady}
-                    priority={i < 2}
+                    priority={i < priorityCount}
                     compactActions={compactCards}
                   />
                 </div>

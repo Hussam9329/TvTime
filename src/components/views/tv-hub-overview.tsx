@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   CalendarDays,
@@ -27,6 +27,7 @@ import {
   type TvHubWorld,
 } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
+import { useHeroCarousel } from "@/hooks/use-hero-carousel";
 import { getTitle, img, type MediaItem } from "@/lib/tmdb";
 import {
   collectionWorldForCatalogue,
@@ -253,35 +254,28 @@ function TvHubHero({
 }) {
   const goTv = useNav((state) => state.goTv);
   const reduceMotion = useReducedMotion();
-  const [active, setActive] = useState(0);
-  const pointerStart = useRef<number | null>(null);
+  const carousel = useHeroCarousel({
+    itemCount: items.length,
+    reducedMotion: reduceMotion,
+    direction: isArabic ? "rtl" : "ltr",
+  });
+  const active = carousel.activeIndex;
   const item = items[active % items.length];
   const tracked = trackingById.get(item.id);
   const watched = Number(tracked?._watchedAiredEpisodeCount ?? tracked?._watchedEpisodeCount ?? 0);
   const aired = Number(tracked?._airedEpisodeCount ?? 0);
 
-  useEffect(() => {
-    if (items.length < 2) return;
-    const timer = window.setTimeout(() => setActive((value) => (value + 1) % items.length), 8000);
-    return () => window.clearTimeout(timer);
-  }, [active, items.length]);
-
-  const move = (direction: -1 | 1) => setActive((value) => (value + direction + items.length) % items.length);
-
   return (
     <motion.section
+      {...carousel.rootProps}
       className="tvtime-movie-hub-hero tvtime-tv-hub-hero"
+      data-carousel-paused={carousel.isPaused ? "true" : "false"}
+      style={carousel.progressStyle}
       aria-roledescription="carousel"
       aria-label={`${copy.featured}: ${mediaTitle(item)}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      onPointerDown={(event) => { if (event.pointerType === "touch") pointerStart.current = event.clientX; }}
-      onPointerUp={(event) => {
-        if (pointerStart.current == null || event.pointerType !== "touch") return;
-        const distance = event.clientX - pointerStart.current;
-        pointerStart.current = null;
-        if (Math.abs(distance) > 48) move(distance > 0 ? -1 : 1);
-      }}
+      transition={{ duration: reduceMotion ? 0 : 0.4 }}
     >
       <AnimatePresence initial={false}>
         <motion.div
@@ -290,6 +284,7 @@ function TvHubHero({
           initial={{ opacity: 0, scale: reduceMotion ? 1 : 1.02 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.65, ease: "easeOut" }}
         >
           <SafeImage src={img(item.backdrop_path, "original")} alt="" fill variant="backdrop" priority sizes="100vw" />
         </motion.div>
@@ -302,6 +297,7 @@ function TvHubHero({
           initial={{ opacity: 0, y: reduceMotion ? 0 : 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+          transition={{ duration: reduceMotion ? 0 : 0.32, ease: "easeOut" }}
         >
           <div className="tvtime-movie-hub-hero__meta">
             <span><Sparkles /> {copy.featured}</span>
@@ -320,22 +316,22 @@ function TvHubHero({
       </AnimatePresence>
 
       {items.length > 1 && (
-        <div className="tvtime-home-hero__carousel-controls relative z-20" aria-label={isArabic ? "شرائح المسلسلات المميزة" : "Featured TV slides"}>
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => move(-1)} aria-label={isArabic ? "السابق" : "Previous featured series"}><ChevronLeft /></button>
+        <div data-carousel-controls className="tvtime-home-hero__carousel-controls relative z-20" aria-label={isArabic ? "شرائح المسلسلات المميزة" : "Featured TV slides"}>
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(-1)} aria-label={isArabic ? "السابق" : "Previous featured series"}><ChevronLeft /></button>
           <div className="tvtime-home-hero__carousel-dots">
             {items.map((candidate, index) => (
               <button
-                key={candidate.id}
+                key={`${candidate.id}-${index === active ? carousel.cycleVersion : 0}`}
                 type="button"
                 className="tvtime-home-hero__carousel-dot"
                 data-active={index === active ? "true" : "false"}
-                onClick={() => setActive(index)}
+                onClick={() => carousel.selectSlide(index)}
                 aria-label={`${isArabic ? "عرض" : "Show"} ${mediaTitle(candidate)}`}
                 aria-current={index === active ? "true" : undefined}
               />
             ))}
           </div>
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => move(1)} aria-label={isArabic ? "التالي" : "Next featured series"}><ChevronRight /></button>
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(1)} aria-label={isArabic ? "التالي" : "Next featured series"}><ChevronRight /></button>
         </div>
       )}
     </motion.section>

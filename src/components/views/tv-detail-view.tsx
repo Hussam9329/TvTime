@@ -560,7 +560,7 @@ export function TvDetailView() {
       </section>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="tvtime-tv-detail-tabs flex h-14 w-full justify-stretch overflow-x-auto rounded-2xl border border-white/10 bg-[#0a1220]/90 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:flex-1 [&>*]:rounded-xl">
+        <TabsList aria-label={isArabicShow ? "أقسام المسلسل" : "TV show sections"} className="tvtime-tv-detail-tabs flex h-14 w-full snap-x snap-proximity justify-start overflow-x-auto rounded-2xl border border-white/10 bg-[#0a1220]/90 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:shrink-0 [&>*]:snap-start [&>*]:flex-none [&>*]:rounded-xl">
           <TabsTrigger value="seasons">{isArabicShow ? "المواسم والحلقات" : "Seasons & Episodes"}</TabsTrigger>
           <TabsTrigger value="overview">{isArabicShow ? "نظرة عامة" : "Overview"}</TabsTrigger>
           <TabsTrigger value="cast">{isArabicShow ? "طاقم العمل" : "Cast"}</TabsTrigger>

@@ -81,6 +81,9 @@ export function ReleaseSchedule({
   const mediaLabel = isRTL ? (isTV ? "المسلسلات" : "الأفلام") : (isTV ? "TV show" : "movie");
   const resolvedTitle = title || (isTV ? "TV Release Schedule" : "Movie Release Schedule");
   const resolvedSubtitle = subtitle || `A six-month release agenda for upcoming ${isTV ? "shows" : "films"}. Dates are handled as date-only values and never shift with timezone conversion.`;
+  const previousWindowLabel = isRTL ? "أقدم" : seasonal ? "Previous season" : "Earlier";
+  const currentWindowLabel = isRTL ? "الفترة الحالية" : seasonal ? "Current season" : "Current window";
+  const nextWindowLabel = isRTL ? "أحدث" : seasonal ? "Next season" : "Later";
   const schedule = useReleaseSchedule(mediaType, range.from, range.to, {
     collectionWorld,
     language,
@@ -132,12 +135,19 @@ export function ReleaseSchedule({
             <p className="mt-1 text-sm text-muted-foreground">{resolvedSubtitle}</p>
           </div>
           <div className="tvtime-release-schedule__window-controls flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setOffset((value) => value - 1)}>
-              <ChevronLeft className="mr-1 h-4 w-4" /> {isRTL ? "أقدم" : seasonal ? "Previous season" : "Earlier"}
+            <Button className="tvtime-release-schedule__window-button" variant="outline" size="sm" aria-label={previousWindowLabel} onClick={() => setOffset((value) => value - 1)}>
+              <ChevronLeft className="tvtime-release-schedule__window-icon h-4 w-4" aria-hidden="true" />
+              <span className="tvtime-release-schedule__window-label tvtime-release-schedule__window-label--full">{previousWindowLabel}</span>
+              <span className="tvtime-release-schedule__window-label tvtime-release-schedule__window-label--compact" aria-hidden="true">{isRTL ? "سابق" : "Prev"}</span>
             </Button>
-            <Button variant="outline" size="sm" disabled={offset === 0} onClick={() => setOffset(0)}>{isRTL ? "الفترة الحالية" : seasonal ? "Current season" : "Current window"}</Button>
-            <Button variant="outline" size="sm" onClick={() => setOffset((value) => value + 1)}>
-              {isRTL ? "أحدث" : seasonal ? "Next season" : "Later"} <ChevronRight className="ml-1 h-4 w-4" />
+            <Button className="tvtime-release-schedule__window-button" variant="outline" size="sm" aria-label={currentWindowLabel} disabled={offset === 0} onClick={() => setOffset(0)}>
+              <span className="tvtime-release-schedule__window-label tvtime-release-schedule__window-label--full">{currentWindowLabel}</span>
+              <span className="tvtime-release-schedule__window-label tvtime-release-schedule__window-label--compact" aria-hidden="true">{isRTL ? "الآن" : "Now"}</span>
+            </Button>
+            <Button className="tvtime-release-schedule__window-button" variant="outline" size="sm" aria-label={nextWindowLabel} onClick={() => setOffset((value) => value + 1)}>
+              <span className="tvtime-release-schedule__window-label tvtime-release-schedule__window-label--full">{nextWindowLabel}</span>
+              <span className="tvtime-release-schedule__window-label tvtime-release-schedule__window-label--compact" aria-hidden="true">{isRTL ? "تالي" : "Next"}</span>
+              <ChevronRight className="tvtime-release-schedule__window-icon h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -176,7 +186,7 @@ export function ReleaseSchedule({
           </div>
           {groups.map(([date, releases]) => (
             <section key={date} className="space-y-2">
-              <div className="sticky top-16 z-10 flex items-center gap-2 bg-background/90 py-2 backdrop-blur">
+              <div className="tvtime-release-schedule__date-heading sticky top-16 z-10 flex items-center gap-2 bg-background/90 py-2 backdrop-blur">
                 <CalendarDays className={`h-4 w-4 ${accentClass}`} />
                 <h3 className="font-bold">{formatDateOnly(date, undefined, isRTL ? "ar-IQ" : "en-US") || (isRTL ? "تاريخ الإصدار غير متاح" : "Release date unavailable")}</h3>
                 <Badge variant="secondary">{releases.length}</Badge>

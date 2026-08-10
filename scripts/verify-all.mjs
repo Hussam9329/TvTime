@@ -24,6 +24,8 @@ const checks = [
   ["User-facing integrity", ["scripts/verify-user-facing-integrity.mjs"]],
   ["Home global statistics cards", ["scripts/verify-home-global-stats.mjs"]],
   ["Anime Hub", ["scripts/verify-anime-hub.mjs"]],
+  ["Motion and loading performance", ["--experimental-strip-types", "scripts/test-performance-regressions.ts"]],
+  ["Responsive layout and safe areas", ["--experimental-strip-types", "scripts/test-responsive-layout.ts"]],
   ["Horizontal shelf containment and dragging", ["scripts/verify-horizontal-shelves.mjs"]],
   ["Watch Next series cards", ["scripts/verify-watch-next-cards.mjs"]],
   ["Episode watch flow and posters", ["scripts/verify-episode-watch-poster.mjs"]],

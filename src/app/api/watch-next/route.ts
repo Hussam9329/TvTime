@@ -5,6 +5,10 @@ import { resolveUserId } from "@/lib/auth";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
 import { classifyMediaWorld } from "@/lib/media-world-classification";
 import { shouldExcludeFromWatchNext } from "@/lib/watch-next-state";
+import { getTvSeasonDetail } from "@/lib/tv-status-server";
+
+const WATCH_NEXT_SEASON_ENRICHMENT_LIMIT = 8;
+const WATCH_NEXT_SEASON_TIMEOUT_MS = 1_200;
 
 function episodeParts(key: string) {
   const [season, episode] = key.split("-").map(Number);
@@ -166,7 +170,42 @@ export async function GET(req: NextRequest) {
       readyEpisodes: result.readyEpisodes + item.readyEpisodes,
       estimatedMinutes: result.estimatedMinutes + item.readyEpisodes * item.estimatedRuntime,
     }), { readyEpisodes: 0, estimatedMinutes: 0 });
-    return NextResponse.json({ items: allReadyItems.slice(0, 20), upcoming, upToDate: upToDate.slice(0, 20), summary });
+
+    // Resolve the visible queue's episode metadata once on the server. The old
+    // client flow issued one season request per card after this response,
+    // causing an N+1 waterfall and repeatedly re-sorting the page as each
+    // request settled. A failed TMDB season lookup is intentionally non-fatal:
+    // the queue still renders immediately with its cached title/runtime data.
+    const visibleItems = allReadyItems.slice(0, 20);
+    const seasonKeys = [...new Map(visibleItems.map((item) => [
+      `${item.tmdbId}:${item.seasonNumber}`,
+      { tmdbId: item.tmdbId, seasonNumber: item.seasonNumber },
+    ])).values()].slice(0, WATCH_NEXT_SEASON_ENRICHMENT_LIMIT);
+    const seasonResults = await Promise.allSettled(
+      seasonKeys.map(({ tmdbId, seasonNumber }) => getTvSeasonDetail(
+        tmdbId,
+        seasonNumber,
+        { timeoutMs: WATCH_NEXT_SEASON_TIMEOUT_MS },
+      )),
+    );
+    const seasonsByKey = new Map(seasonResults.flatMap((result, index) =>
+      result.status === "fulfilled"
+        ? [[`${seasonKeys[index].tmdbId}:${seasonKeys[index].seasonNumber}`, result.value] as const]
+        : []));
+    const items = visibleItems.map((item) => {
+      const season = seasonsByKey.get(`${item.tmdbId}:${item.seasonNumber}`);
+      const episode = season?.episodes?.find((candidate) =>
+        candidate.season_number === item.seasonNumber
+        && candidate.episode_number === item.episodeNumber);
+      return {
+        ...item,
+        episodeName: episode?.name || null,
+        episodeAirDate: episode?.air_date || null,
+        episodeRuntime: episode?.runtime ?? null,
+      };
+    });
+
+    return NextResponse.json({ items, upcoming, upToDate: upToDate.slice(0, 20), summary });
   } catch (error) {
     console.error("[watch-next]", error);
     return NextResponse.json({ error: "Failed to build Watch Next" }, { status: 500 });

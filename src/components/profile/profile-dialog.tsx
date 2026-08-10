@@ -82,7 +82,8 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       toast.success("Signed out");
       onOpenChange(false);
       // Hard reload so client-side caches (Zustand, React Query) are dropped.
-      window.location.href = "/login";
+      window.history.replaceState(null, "", "/login");
+      window.location.reload();
     } catch {
       toast.error("Failed to sign out");
     } finally {

@@ -29,7 +29,7 @@ if (/useTvTrackingCounts\("standard"\)/.test(home)) failures.push([/./, "Home st
 if (/Ready when you are|Open Watch Next|tvtime-watch-next-cta/.test(home)) failures.push([/./, "Removed Home Continue Watching button still exists in runtime code"]);
 if (/tvtime-watch-next-cta/.test(css)) failures.push([/./, "Removed Home Continue Watching button still has dead CSS"]);
 if (!/state\.watched \|\| state\.userRating != null/.test(home) || !/SEEN_HOME_TV_STATUSES/.test(home)) failures.push([/./, "Home spotlight does not exclude watched, rated and started titles"]);
-if (!/const unseenHeroCandidates = homeLibraryStates\.isSuccess[\s\S]*?: \[\];/.test(home)) failures.push([/./, "Home spotlight can render before personal media states are verified"]);
+if (!/const unseenHeroCandidates = homeLibraryStates\.isSuccess[\s\S]*?: heroCandidates;/.test(home)) failures.push([/./, "Home spotlight does not keep a stable feed fallback while personal media states load"]);
 
 if (failures.length > 0) {
   for (const [, message] of failures) console.error(`FAIL: ${message}`);

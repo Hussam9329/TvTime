@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bookmark,
@@ -37,6 +37,7 @@ import {
 import { useNav } from "@/lib/store";
 import { getTitle, getYear, img } from "@/lib/tmdb";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
+import { useHeroCarousel } from "@/hooks/use-hero-carousel";
 
 type HubTab = "overview" | "library" | "discover" | "releases";
 
@@ -209,7 +210,11 @@ function MovieHubOverview({
   onBrowse: () => void;
 }) {
   const quickPicksRef = useRef<HTMLDivElement>(null);
-  const quickPicksDragHandlers = useHorizontalDragScroll();
+  const quickPicksDragHandlers = useHorizontalDragScroll({
+    scrollKey: query.isLoading ? undefined : `movie-hub:${world}:tonight-filters`,
+    scrollRef: quickPicksRef,
+    restoreDependency: query.isLoading,
+  });
   const [tonightMode, setTonightMode] = useState<MovieTonightMode>("smart");
   const isArabic = world === "arabic-movies";
   const data = query.data;
@@ -255,6 +260,7 @@ function MovieHubOverview({
         <MovieHubHero
           items={featuredItems}
           copy={copy}
+          isArabic={isArabic}
         />
       )}
 
@@ -353,41 +359,34 @@ function HubRowOrEmpty({
 function MovieHubHero({
   items,
   copy,
+  isArabic,
 }: {
   items: MovieHubItem[];
   copy: WorldCopy;
+  isArabic: boolean;
 }) {
   const goMovie = useNav((state) => state.goMovie);
   const reduceMotion = useReducedMotion();
-  const [active, setActive] = useState(0);
-  const pointerStart = useRef<number | null>(null);
+  const carousel = useHeroCarousel({
+    itemCount: items.length,
+    reducedMotion: reduceMotion,
+    direction: isArabic ? "rtl" : "ltr",
+  });
+  const active = carousel.activeIndex;
   const item = items[active % items.length];
   const title = getTitle(item);
 
-  useEffect(() => {
-    if (items.length < 2) return;
-    const timer = window.setTimeout(() => setActive((value) => (value + 1) % items.length), 8000);
-    return () => window.clearTimeout(timer);
-  }, [active, items.length]);
-
-  const move = (direction: -1 | 1) => {
-    setActive((value) => (value + direction + items.length) % items.length);
-  };
-
   return (
     <motion.section
+      {...carousel.rootProps}
       className="tvtime-movie-hub-hero"
+      data-carousel-paused={carousel.isPaused ? "true" : "false"}
+      style={carousel.progressStyle}
       aria-roledescription="carousel"
       aria-label={`${copy.featured}: ${title}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      onPointerDown={(event) => { if (event.pointerType === "touch") pointerStart.current = event.clientX; }}
-      onPointerUp={(event) => {
-        if (pointerStart.current == null || event.pointerType !== "touch") return;
-        const distance = event.clientX - pointerStart.current;
-        pointerStart.current = null;
-        if (Math.abs(distance) > 48) move(distance > 0 ? -1 : 1);
-      }}
+      transition={{ duration: reduceMotion ? 0 : 0.4 }}
     >
       <AnimatePresence initial={false}>
         <motion.div
@@ -396,6 +395,7 @@ function MovieHubHero({
           initial={{ opacity: 0, scale: reduceMotion ? 1 : 1.02 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.65, ease: "easeOut" }}
         >
           <SafeImage src={img(item.backdrop_path, "original")} alt="" fill variant="backdrop" priority sizes="100vw" />
         </motion.div>
@@ -408,6 +408,7 @@ function MovieHubHero({
           initial={{ opacity: 0, y: reduceMotion ? 0 : 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+          transition={{ duration: reduceMotion ? 0 : 0.32, ease: "easeOut" }}
         >
           <div className="tvtime-movie-hub-hero__meta">
             <span><Sparkles /> {copy.featured}</span>
@@ -424,22 +425,40 @@ function MovieHubHero({
       </AnimatePresence>
 
       {items.length > 1 && (
-        <div className="tvtime-home-hero__carousel-controls relative z-20" aria-label="Featured movie slides">
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => move(-1)} aria-label="Previous featured movie"><ChevronLeft /></button>
+        <div
+          data-carousel-controls
+          className="tvtime-home-hero__carousel-controls relative z-20"
+          aria-label={isArabic ? "شرائح الأفلام المميزة" : "Featured movie slides"}
+        >
+          <button
+            type="button"
+            className="tvtime-home-hero__carousel-arrow"
+            onClick={() => carousel.moveSlide(-1)}
+            aria-label={isArabic ? "الفيلم المميز السابق" : "Previous featured movie"}
+          >
+            <ChevronLeft aria-hidden="true" />
+          </button>
           <div className="tvtime-home-hero__carousel-dots">
             {items.map((candidate, index) => (
               <button
-                key={candidate.id}
+                key={`${candidate.id}-${index === active ? carousel.cycleVersion : 0}`}
                 type="button"
                 className="tvtime-home-hero__carousel-dot"
                 data-active={index === active ? "true" : "false"}
-                onClick={() => setActive(index)}
-                aria-label={`Show ${getTitle(candidate)}`}
+                onClick={() => carousel.selectSlide(index)}
+                aria-label={isArabic ? `عرض ${getTitle(candidate)}` : `Show ${getTitle(candidate)}`}
                 aria-current={index === active ? "true" : undefined}
               />
             ))}
           </div>
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => move(1)} aria-label="Next featured movie"><ChevronRight /></button>
+          <button
+            type="button"
+            className="tvtime-home-hero__carousel-arrow"
+            onClick={() => carousel.moveSlide(1)}
+            aria-label={isArabic ? "الفيلم المميز التالي" : "Next featured movie"}
+          >
+            <ChevronRight aria-hidden="true" />
+          </button>
         </div>
       )}
     </motion.section>

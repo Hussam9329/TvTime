@@ -15,23 +15,23 @@ export function Footer() {
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-12 left-1/4 h-24 w-48 rounded-full bg-primary/10 blur-3xl"
+        className="tvtime-footer-glow pointer-events-none absolute -top-12 left-1/4 h-24 w-48 rounded-full bg-primary/10 blur-3xl"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-12 right-1/4 h-24 w-48 rounded-full bg-secondary/45 blur-3xl"
+        className="tvtime-footer-glow pointer-events-none absolute -top-12 right-1/4 h-24 w-48 rounded-full bg-secondary/45 blur-3xl"
       />
 
-      <div className="tvtime-footer-inner relative mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
-        <div className="flex flex-col items-center justify-between gap-4 text-sm sm:flex-row">
-          <div className="flex items-center gap-2.5">
+      <div className="tvtime-footer-inner relative mx-auto px-4 py-6 sm:px-6">
+        <div className="tvtime-footer-row flex flex-col items-center justify-between gap-4 text-sm sm:flex-row sm:flex-wrap lg:flex-nowrap">
+          <div className="tvtime-footer-brand flex min-w-0 items-center gap-2.5">
             <BrandMark className="tvtime-footer-mark h-8 w-8 rounded-lg sm:h-8 sm:w-8" />
-            <span className="flex items-baseline gap-2">
+            <span className="flex min-w-0 items-baseline gap-2">
               <BrandWordmark className="text-base" />
-              <span className="hidden text-muted-foreground/40 sm:inline" aria-hidden="true">
+              <span className="hidden text-muted-foreground/40 lg:inline" aria-hidden="true">
                 ·
               </span>
-              <span className="hidden text-muted-foreground sm:inline">{APP_TAGLINE}</span>
+              <span className="hidden text-muted-foreground lg:inline">{APP_TAGLINE}</span>
             </span>
           </div>
 
@@ -67,7 +67,7 @@ export function Footer() {
             </dl>
           )}
 
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="tvtime-footer-attribution flex items-center gap-3 text-xs text-muted-foreground">
             <span>
               Data by <span className="font-semibold text-foreground">TMDB</span>
             </span>

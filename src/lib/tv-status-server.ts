@@ -1,4 +1,4 @@
-import { tmdb, type Episode, type SeasonDetail, type TvDetail } from "@/lib/tmdb";
+import { tmdb, type Episode, type SeasonDetail, type TmdbRequestOptions, type TvDetail } from "@/lib/tmdb";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
@@ -508,12 +508,16 @@ export async function getTvStatusMetadata(
   return metadata;
 }
 
-export async function getTvSeasonDetail(tmdbId: number, seasonNumber: number): Promise<SeasonDetail> {
+export async function getTvSeasonDetail(
+  tmdbId: number,
+  seasonNumber: number,
+  options?: TmdbRequestOptions,
+): Promise<SeasonDetail> {
   const key = `${Number(tmdbId)}:${Number(seasonNumber)}`;
   const cached = readFresh(seasonCache.get(key), SEASON_TTL_MS);
   if (cached) return cached;
 
-  const detail = await tmdb.seasonDetail(Number(tmdbId), Number(seasonNumber));
+  const detail = await tmdb.seasonDetail(Number(tmdbId), Number(seasonNumber), options);
   seasonCache.set(key, { value: detail, fetchedAt: Date.now() });
   return detail;
 }

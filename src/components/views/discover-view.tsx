@@ -136,7 +136,10 @@ interface DiscoverViewProps {
 
 export function DiscoverView({ world = "movies", embedded = false, title, subtitle, mediaType }: DiscoverViewProps) {
   const presetRef = useRef<HTMLDivElement>(null);
-  const presetDragHandlers = useHorizontalDragScroll();
+  const presetDragHandlers = useHorizontalDragScroll({
+    scrollKey: `discover:${embedded ? "embedded" : "standalone"}:${world}:${mediaType ?? "auto"}:presets`,
+    scrollRef: presetRef,
+  });
   const isTV = world === "tv" || world === "arabic-tv" || world === "asian-tv" || (world === "anime" && mediaType !== "movie");
   const isAnime = world === "anime";
   const isArabic = world === "arabic-movies" || world === "arabic-tv";

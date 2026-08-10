@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bookmark,
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { mediaStateKey, useAnimeHub, useMediaStates, type AnimeHubItem } from "@/hooks/use-tmdb";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
+import { useHeroCarousel } from "@/hooks/use-hero-carousel";
 import { formatDateOnly } from "@/lib/date-only";
 import { useNav } from "@/lib/store";
 import { getTitle, getYear, img } from "@/lib/tmdb";
@@ -145,7 +146,11 @@ export function AnimeHubOverview({ onBrowse }: { onBrowse: () => void }) {
 function AnimeUpcomingEpisodes({ entries }: { entries: NonNullable<ReturnType<typeof useAnimeHub>["data"]>["nextEpisodes"] }) {
   const goTv = useNav((state) => state.goTv);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const dragHandlers = useHorizontalDragScroll();
+  const dragHandlers = useHorizontalDragScroll({
+    scrollKey: "anime-hub:next-episodes",
+    scrollRef,
+    restoreDependency: entries.length,
+  });
   return (
     <section className="tvtime-anime-next" aria-labelledby="anime-next-episodes-title">
       <div className="tvtime-section-heading">
@@ -220,39 +225,23 @@ function AnimeHubHero({ items }: { items: AnimeHubItem[] }) {
   const goMovie = useNav((state) => state.goMovie);
   const goTv = useNav((state) => state.goTv);
   const reduceMotion = useReducedMotion();
-  const [active, setActive] = useState(0);
-  const pointerStart = useRef<number | null>(null);
+  const carousel = useHeroCarousel({ itemCount: items.length, reducedMotion: reduceMotion });
+  const active = carousel.activeIndex;
   const item = items[active % items.length];
   const mediaType = itemType(item);
-
-  useEffect(() => {
-    setActive((value) => Math.min(value, Math.max(items.length - 1, 0)));
-  }, [items.length]);
-
-  useEffect(() => {
-    if (items.length < 2) return;
-    const timer = window.setTimeout(() => setActive((value) => (value + 1) % items.length), 8000);
-    return () => window.clearTimeout(timer);
-  }, [active, items.length]);
-
-  const move = (direction: -1 | 1) => setActive((value) => (value + direction + items.length) % items.length);
   const openDetails = () => mediaType === "movie" ? goMovie(item.id) : goTv(item.id);
 
   return (
     <motion.section
+      {...carousel.rootProps}
       className="tvtime-movie-hub-hero tvtime-anime-hub-hero"
+      data-carousel-paused={carousel.isPaused ? "true" : "false"}
+      style={carousel.progressStyle}
       aria-roledescription="carousel"
       aria-label={`Featured Anime ${mediaType === "movie" ? "movie" : "series"}: ${getTitle(item)}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      onPointerDown={(event) => { if (event.pointerType === "touch") pointerStart.current = event.clientX; }}
-      onPointerUp={(event) => {
-        if (pointerStart.current == null || event.pointerType !== "touch") return;
-        const distance = event.clientX - pointerStart.current;
-        pointerStart.current = null;
-        if (Math.abs(distance) > 48) move(distance > 0 ? -1 : 1);
-      }}
-      onPointerCancel={() => { pointerStart.current = null; }}
+      transition={{ duration: reduceMotion ? 0 : 0.4 }}
     >
       <AnimatePresence initial={false}>
         <motion.div
@@ -261,6 +250,7 @@ function AnimeHubHero({ items }: { items: AnimeHubItem[] }) {
           initial={{ opacity: 0, scale: reduceMotion ? 1 : 1.02 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.65, ease: "easeOut" }}
         >
           <SafeImage src={img(item.backdrop_path, "original")} alt="" fill variant="backdrop" priority sizes="100vw" />
         </motion.div>
@@ -273,6 +263,7 @@ function AnimeHubHero({ items }: { items: AnimeHubItem[] }) {
           initial={{ opacity: 0, y: reduceMotion ? 0 : 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+          transition={{ duration: reduceMotion ? 0 : 0.32, ease: "easeOut" }}
         >
           <div className="tvtime-movie-hub-hero__meta">
             <span><Sparkles /> Unwatched spotlight</span>
@@ -289,22 +280,22 @@ function AnimeHubHero({ items }: { items: AnimeHubItem[] }) {
       </AnimatePresence>
 
       {items.length > 1 && (
-        <div className="tvtime-home-hero__carousel-controls relative z-20" aria-label="Featured unseen Anime slides">
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => move(-1)} aria-label="Previous Anime spotlight"><ChevronLeft /></button>
+        <div data-carousel-controls className="tvtime-home-hero__carousel-controls relative z-20" aria-label="Featured unseen Anime slides">
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(-1)} aria-label="Previous Anime spotlight"><ChevronLeft /></button>
           <div className="tvtime-home-hero__carousel-dots">
             {items.map((candidate, index) => (
               <button
-                key={`${candidate.media_type}-${candidate.id}`}
+                key={`${candidate.media_type}-${candidate.id}-${index === active ? carousel.cycleVersion : 0}`}
                 type="button"
                 className="tvtime-home-hero__carousel-dot"
                 data-active={index === active ? "true" : "false"}
-                onClick={() => setActive(index)}
+                onClick={() => carousel.selectSlide(index)}
                 aria-label={`Show ${getTitle(candidate)}`}
                 aria-current={index === active ? "true" : undefined}
               />
             ))}
           </div>
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => move(1)} aria-label="Next Anime spotlight"><ChevronRight /></button>
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(1)} aria-label="Next Anime spotlight"><ChevronRight /></button>
         </div>
       )}
     </motion.section>

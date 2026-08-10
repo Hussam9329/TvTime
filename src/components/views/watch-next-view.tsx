@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion, Reorder, useDragControls } from "framer-motion";
 import {
   CalendarClock,
@@ -28,11 +28,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SafeImage } from "@/components/media/safe-image";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
-import { useEpisodeToggle, useTvDetail } from "@/hooks/use-tmdb";
+import { useEpisodeToggle } from "@/hooks/use-tmdb";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 import { useNav } from "@/lib/store";
 import { userHeaders, withUserId } from "@/lib/client-user";
-import type { Episode, SeasonDetail } from "@/lib/tmdb";
 import { toast } from "sonner";
 
 const CUSTOM_ORDER_KEY = "trakora:watch-next-order:v1";
@@ -53,9 +52,12 @@ type WatchNextItem = {
   status: string | null;
   isAnime: boolean;
   isArabic: boolean;
+  episodeName: string | null;
+  episodeAirDate: string | null;
+  episodeRuntime: number | null;
 };
 
-type EnrichedWatchNextItem = WatchNextItem & { episode: Episode | null };
+type EnrichedWatchNextItem = WatchNextItem;
 
 type UpcomingItem = {
   tmdbId: number;
@@ -110,46 +112,25 @@ export function WatchNextView() {
     }
   }, []);
 
-  const query = useQueries({
-    queries: [{
-      queryKey: ["watch-next"],
-      queryFn: async () => {
-        const response = await fetch(withUserId(new URL("/api/watch-next", window.location.origin)), { headers: userHeaders() });
-        if (!response.ok) throw new Error("Failed to build Watch Next");
-        return response.json() as Promise<WatchNextResponse>;
-      },
-      staleTime: 60_000,
-    }],
-  })[0];
-
-  const items = query.data?.items ?? [];
-  const seasonQueries = useQueries({
-    queries: items.map((item) => ({
-      queryKey: ["tmdb", "tv", item.tmdbId, "season", item.seasonNumber],
-      queryFn: async () => {
-        const response = await fetch(`/api/tmdb/tv/${item.tmdbId}/season/${item.seasonNumber}`);
-        if (!response.ok) throw new Error("Episode details unavailable");
-        return response.json() as Promise<SeasonDetail>;
-      },
-      staleTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-    })),
+  const query = useQuery({
+    queryKey: ["watch-next"],
+    queryFn: async () => {
+      const response = await fetch(withUserId(new URL("/api/watch-next", window.location.origin)), { headers: userHeaders() });
+      if (!response.ok) throw new Error("Failed to build Watch Next");
+      return response.json() as Promise<WatchNextResponse>;
+    },
+    staleTime: 60_000,
   });
 
-  const enrichedItems: EnrichedWatchNextItem[] = items.map((item, index) => ({
-    ...item,
-    episode: seasonQueries[index]?.data?.episodes?.find((episode) =>
-      episode.season_number === item.seasonNumber && episode.episode_number === item.episodeNumber) ?? null,
-  }));
-  const episodeDetailsSettled = seasonQueries.every((seasonQuery) => !seasonQuery.isPending);
-  const smartItems = [...enrichedItems].sort((left, right) =>
-    smartPriority(right, episodeDetailsSettled) - smartPriority(left, episodeDetailsSettled)
+  const items = query.data?.items ?? [];
+  const smartItems = [...items].sort((left, right) =>
+    smartPriority(right) - smartPriority(left)
     || Date.parse(right.lastActivity) - Date.parse(left.lastActivity));
   const orderIndex = new Map((manualOrder ?? []).map((id, index) => [id, index]));
   const baseOrderedItems = manualOrder
     ? [...smartItems].sort((left, right) =>
         (orderIndex.get(left.tmdbId) ?? Number.MAX_SAFE_INTEGER) - (orderIndex.get(right.tmdbId) ?? Number.MAX_SAFE_INTEGER)
-        || smartPriority(right, episodeDetailsSettled) - smartPriority(left, episodeDetailsSettled))
+        || smartPriority(right) - smartPriority(left))
     : smartItems;
   const deferred = new Set(deferredIds);
   const orderedItems = [
@@ -158,7 +139,7 @@ export function WatchNextView() {
   ];
   const featured = orderedItems[0] ?? null;
   const remainingItems = orderedItems.slice(1);
-  const sections = categorizeItems(remainingItems, episodeDetailsSettled);
+  const sections = categorizeItems(remainingItems);
 
   const markWatched = async (item: EnrichedWatchNextItem) => {
     try {
@@ -167,7 +148,7 @@ export function WatchNextView() {
         showId: item.tmdbId,
         seasonNumber: item.seasonNumber,
         episodeNumber: item.episodeNumber,
-        episodeName: item.episode?.name || undefined,
+        episodeName: item.episodeName || undefined,
       });
       showWatchUndo(`${episodeCode(item)} watched — your queue is updated`, result);
     } catch (error) {
@@ -363,11 +344,10 @@ function FeaturedWatchCard({
   onOpen: () => void;
   onNotNow: () => void;
 }) {
-  const detail = useTvDetail(item.tmdbId);
-  const backdrop = tmdbImage(detail.data?.backdrop_path, "w1280") || item.poster;
+  const backdrop = item.poster;
   const progress = progressPercent(item);
-  const episodeName = item.episode?.name || `Episode ${item.episodeNumber}`;
-  const runtime = item.episode?.runtime || item.estimatedRuntime;
+  const episodeName = item.episodeName || `Episode ${item.episodeNumber}`;
+  const runtime = item.episodeRuntime || item.estimatedRuntime;
 
   return (
     <motion.section
@@ -396,7 +376,7 @@ function FeaturedWatchCard({
         </p>
         <div className="tvtime-watch-featured__meta">
           <span><Clock3 className="h-3.5 w-3.5" />{runtime}m</span>
-          <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(item.episode?.air_date)}</span>
+          <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(item.episodeAirDate)}</span>
           <span>{item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}</span>
         </div>
         <ProgressBar item={item} progress={progress} featured />
@@ -477,8 +457,8 @@ function CompactWatchCard({
   tone: "default" | "new" | "behind" | "paused";
 }) {
   const progress = progressPercent(item);
-  const episodeName = item.episode?.name || `Episode ${item.episodeNumber}`;
-  const runtime = item.episode?.runtime || item.estimatedRuntime;
+  const episodeName = item.episodeName || `Episode ${item.episodeNumber}`;
+  const runtime = item.episodeRuntime || item.estimatedRuntime;
   return (
     <motion.article
       layout
@@ -507,7 +487,7 @@ function CompactWatchCard({
         <p className="tvtime-watch-card__episode"><strong>{episodeCode(item)}</strong><span>—</span>{episodeName}</p>
         <div className="tvtime-watch-card__meta">
           <span><Clock3 />{runtime}m</span>
-          <span><CalendarDays />{releasedLabel(item.episode?.air_date)}</span>
+          <span><CalendarDays />{releasedLabel(item.episodeAirDate)}</span>
           {tone === "paused" && <span><PauseCircle />{daysSince(item.lastActivity)}d paused</span>}
         </div>
         <ProgressBar item={item} progress={progress} />
@@ -707,7 +687,7 @@ function WatchNextSkeleton() {
   );
 }
 
-function categorizeItems(items: EnrichedWatchNextItem[], episodeDetailsSettled: boolean) {
+function categorizeItems(items: EnrichedWatchNextItem[]) {
   const result = {
     continueWatching: [] as EnrichedWatchNextItem[],
     newEpisodes: [] as EnrichedWatchNextItem[],
@@ -719,7 +699,7 @@ function categorizeItems(items: EnrichedWatchNextItem[], episodeDetailsSettled: 
       result.paused.push(item);
     } else if (item.readyEpisodes >= 3 || item.watchedEpisodes === 0) {
       result.fallingBehind.push(item);
-    } else if (episodeDetailsSettled && releasedWithin(item.episode?.air_date, RECENT_EPISODE_DAYS)) {
+    } else if (releasedWithin(item.episodeAirDate, RECENT_EPISODE_DAYS)) {
       result.newEpisodes.push(item);
     } else {
       result.continueWatching.push(item);
@@ -728,12 +708,12 @@ function categorizeItems(items: EnrichedWatchNextItem[], episodeDetailsSettled: 
   return result;
 }
 
-function smartPriority(item: EnrichedWatchNextItem, episodeDetailsSettled: boolean) {
+function smartPriority(item: EnrichedWatchNextItem) {
   const activityAge = daysSince(item.lastActivity);
-  const releaseAge = item.episode?.air_date ? daysSince(`${item.episode.air_date}T00:00:00Z`) : Number.MAX_SAFE_INTEGER;
+  const releaseAge = item.episodeAirDate ? daysSince(`${item.episodeAirDate}T00:00:00Z`) : Number.MAX_SAFE_INTEGER;
   const recentActivity = item.watchedEpisodes > 0 ? Math.max(0, 45 - activityAge) * 30 : 0;
   const oneReady = item.readyEpisodes === 1 ? 650 : 0;
-  const newRelease = episodeDetailsSettled && releaseAge <= 14 ? Math.max(0, 14 - releaseAge) * 28 : 0;
+  const newRelease = releaseAge <= 14 ? Math.max(0, 14 - releaseAge) * 28 : 0;
   const nearCompletion = progressPercent(item) * 3;
   const backlogPenalty = Math.max(0, item.readyEpisodes - 2) * 45;
   const stalePenalty = Math.max(0, activityAge - PAUSED_DAYS) * 5;
@@ -782,12 +762,6 @@ function countdownLabel(value: string) {
   if (remaining === 0) return "Today";
   if (remaining === 1) return "Tomorrow";
   return `In ${remaining} days`;
-}
-
-function tmdbImage(path: string | null | undefined, size: string) {
-  if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return path.startsWith("/") ? `https://image.tmdb.org/t/p/${size}${path}` : null;
 }
 
 function daysSince(value: string) {

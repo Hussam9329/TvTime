@@ -133,7 +133,7 @@ export function RatingDialog({
                 max={100}
                 step={1}
                 aria-label="Personal rating out of 100"
-                className="w-full [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
+                className="w-full [--tvtime-slider-thumb-visual-size:1.25rem] [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
               />
               <div className="mt-2 flex justify-between text-[11px] font-medium tabular-nums text-muted-foreground">
                 <span>0</span>

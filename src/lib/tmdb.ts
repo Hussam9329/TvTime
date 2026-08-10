@@ -38,6 +38,20 @@ export function imgOrPlaceholder(path: string | null | undefined, size: string =
  * instead of a 502 from Vercel.
  */
 const TMDB_TIMEOUT_MS = 8_000;
+const TMDB_MIN_TIMEOUT_MS = 250;
+
+export type TmdbRequestOptions = {
+  /**
+   * A per-request deadline. Callers may shorten the default timeout for
+   * optional enrichment, but cannot extend it past the global safety limit.
+   */
+  timeoutMs?: number;
+};
+
+function resolveTmdbTimeoutMs(requestedTimeoutMs: number | undefined): number {
+  if (requestedTimeoutMs == null || !Number.isFinite(requestedTimeoutMs)) return TMDB_TIMEOUT_MS;
+  return Math.min(TMDB_TIMEOUT_MS, Math.max(TMDB_MIN_TIMEOUT_MS, Math.round(requestedTimeoutMs)));
+}
 
 /**
  * TMDB language hint. Most routes use en-US. Arabic-specific routes pass 'ar'
@@ -47,7 +61,12 @@ const TMDB_TIMEOUT_MS = 8_000;
  */
 export type TmdbLanguage = "en-US" | "ar" | "ja" | undefined;
 
-async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number | boolean> = {}, language: TmdbLanguage = "en-US"): Promise<T> {
+async function tmdbFetch<T>(
+  endpoint: string,
+  params: Record<string, string | number | boolean> = {},
+  language: TmdbLanguage = "en-US",
+  options: TmdbRequestOptions = {},
+): Promise<T> {
   const apiKey = requireTmdbKey();
   const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
   url.searchParams.set("api_key", apiKey);
@@ -68,7 +87,8 @@ async function tmdbFetch<T>(endpoint: string, params: Record<string, string | nu
   // response can hang the request until Vercel's function timeout,
   // producing a confusing 502 instead of a clear "TMDB timed out" error.
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TMDB_TIMEOUT_MS);
+  const timeoutMs = resolveTmdbTimeoutMs(options.timeoutMs);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(url, {
@@ -87,7 +107,7 @@ async function tmdbFetch<T>(endpoint: string, params: Record<string, string | nu
     // Distinguish timeout from other network errors so callers can show
     // a "TMDB is slow right now" message instead of a generic failure.
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`TMDB timed out after ${TMDB_TIMEOUT_MS / 1000}s for ${endpoint}`);
+      throw new Error(`TMDB timed out after ${timeoutMs / 1000}s for ${endpoint}`);
     }
     throw error;
   } finally {
@@ -305,8 +325,8 @@ export const tmdb = {
     tmdbFetch<any>(`/movie/${id}`, { append_to_response: "images" }, language),
   localizedTvProfile: (id: number, language: TmdbLanguage = "ar") =>
     tmdbFetch<any>(`/tv/${id}`, { append_to_response: "images" }, language),
-  seasonDetail: (tvId: number, seasonNumber: number) =>
-    tmdbFetch<SeasonDetail>(`/tv/${tvId}/season/${seasonNumber}`),
+  seasonDetail: (tvId: number, seasonNumber: number, options?: TmdbRequestOptions) =>
+    tmdbFetch<SeasonDetail>(`/tv/${tvId}/season/${seasonNumber}`, {}, "en-US", options),
 
   // Search
   searchMulti: (query: string, page = 1) =>

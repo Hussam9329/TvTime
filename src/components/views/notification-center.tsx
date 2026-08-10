@@ -158,12 +158,12 @@ export function NotificationCenter({
       <div
         data-ui-surface="dialog"
         onClick={(e) => e.stopPropagation()}
-        className="tvtime-notification-panel relative w-full max-w-md h-full bg-card border-l border-border flex flex-col shadow-2xl"
+        className="tvtime-notification-panel relative flex h-full min-h-0 w-full max-w-md flex-col border-l border-border bg-card shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="tvtime-notification-title"
       >
-        <div className="tvtime-notification-header p-4 border-b border-border flex items-center justify-between">
+        <div className="tvtime-notification-header flex shrink-0 items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
             <div className="relative">
               <Bell size={20} />
@@ -185,7 +185,7 @@ export function NotificationCenter({
           </button>
         </div>
 
-        <div className="tvtime-notification-tabs px-4 py-2 border-b border-border flex items-center gap-1">
+        <div className="tvtime-notification-tabs flex shrink-0 items-center gap-1 border-b border-border px-4 py-2">
           {[
             { key: "all" as const, label: "الكل", count: notifications.length },
             { key: "unread" as const, label: "غير مقروء", count: unreadCount },
@@ -205,7 +205,7 @@ export function NotificationCenter({
         </div>
 
         {notifications.length > 0 && (
-          <div className="tvtime-notification-actions px-4 py-2 border-b border-border flex items-center gap-2">
+          <div className="tvtime-notification-actions flex shrink-0 items-center gap-2 border-b border-border px-4 py-2">
             <button type="button" data-ui-action="link" onClick={handleMarkAllRead} disabled={unreadCount === 0} className="text-xs text-primary hover:underline disabled:text-muted-foreground/50 disabled:no-underline flex items-center gap-1">
               <CheckCheck size={12} /> تعليم الكل كمقروء
             </button>
@@ -216,7 +216,7 @@ export function NotificationCenter({
           </div>
         )}
 
-        <div className="tvtime-notification-list flex-1 overflow-y-auto">
+        <div className="tvtime-notification-list min-h-0 flex-1 overflow-y-auto">
           {loading ? (
             <div className="feedback-state feedback-state--loading feedback-state--compact m-3 p-8 text-center text-muted-foreground" role="status" aria-busy="true">جاري التحميل...</div>
           ) : filtered.length === 0 ? (

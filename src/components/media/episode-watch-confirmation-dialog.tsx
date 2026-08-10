@@ -45,10 +45,10 @@ export function EpisodeWatchConfirmationDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={pending ? undefined : onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="tvtime-episode-watch-dialog">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-400" />
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
             Earlier episodes are not watched
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-3 text-left">
@@ -60,13 +60,13 @@ export function EpisodeWatchConfirmationDialog({
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="sm:grid sm:grid-cols-3">
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <Button variant="outline" disabled={pending} onClick={() => void onSelectedOnly()}>
-            <ListChecks className="mr-2 h-4 w-4" /> {selectedLabel}
+        <AlertDialogFooter className="tvtime-episode-watch-dialog__footer sm:grid sm:grid-cols-2">
+          <AlertDialogCancel className="tvtime-episode-watch-dialog__choice" disabled={pending}>Cancel</AlertDialogCancel>
+          <Button className="tvtime-episode-watch-dialog__choice" variant="outline" disabled={pending} onClick={() => void onSelectedOnly()}>
+            <ListChecks className="h-4 w-4 shrink-0" /> <span>{selectedLabel}</span>
           </Button>
-          <Button disabled={pending} onClick={() => void onWithPrevious()}>
-            <CheckCheck className="mr-2 h-4 w-4" /> {allLabel}
+          <Button className="tvtime-episode-watch-dialog__choice sm:col-span-2" disabled={pending} onClick={() => void onWithPrevious()}>
+            <CheckCheck className="h-4 w-4 shrink-0" /> <span>{allLabel}</span>
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

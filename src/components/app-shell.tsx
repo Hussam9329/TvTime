@@ -17,6 +17,9 @@ import { Footer } from "@/components/layout/footer";
 import { HomeView } from "@/components/views/home-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { MotionConfig } from "framer-motion";
+
+const MAX_SAVED_SCROLL_ENTRIES = 50;
 
 // Lazy-load secondary views so the initial bundle only contains HomeView +
 // shared layout. Each view is fetched on first navigation, then cached by
@@ -94,15 +97,28 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
     () => normalizeNavigationEntry(initialRoute),
     [initialRoute.view, initialRoute.movieId, initialRoute.tvId, initialRoute.personId],
   );
-  const view = useNav((state) => state.view);
-  const movieId = useNav((state) => state.movieId);
-  const tvId = useNav((state) => state.tvId);
-  const personId = useNav((state) => state.personId);
+  const storedView = useNav((state) => state.view);
+  const storedMovieId = useNav((state) => state.movieId);
+  const storedTvId = useNav((state) => state.tvId);
+  const storedPersonId = useNav((state) => state.personId);
   const syncRoute = useNav((state) => state.syncRoute);
   const routeReady = useNav((state) => state.routeReady);
+  const navigationIndex = useNav((state) => state.navigationIndex);
   const mainRef = useRef<HTMLElement>(null);
   const hasMountedRoute = useRef(false);
+  const activeNavigationIndex = useRef(navigationIndex);
+  const pendingPopIndex = useRef<number | null>(null);
+  const scrollPositions = useRef(new Map<number, number>());
   const [routeAnnouncement, setRouteAnnouncement] = useState("");
+
+  // The server and the first client render use the route parsed by the page.
+  // Zustand is synchronized in the layout effect below, before the browser
+  // paints. This keeps hydration deterministic without withholding the whole
+  // application behind an empty routeReady screen.
+  const view = routeReady ? storedView : normalizedInitialRoute.view;
+  const movieId = routeReady ? storedMovieId : normalizedInitialRoute.movieId;
+  const tvId = routeReady ? storedTvId : normalizedInitialRoute.tvId;
+  const personId = routeReady ? storedPersonId : normalizedInitialRoute.personId;
 
   const viewMetadata = getViewMetadata(view);
   const routeKey = `${view}-${movieId ?? ""}-${tvId ?? ""}-${personId ?? ""}`;
@@ -112,74 +128,127 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
     syncRoute(normalizedInitialRoute, "reset", navigationIndex);
   }, [normalizedInitialRoute, syncRoute]);
 
+  useLayoutEffect(() => {
+    activeNavigationIndex.current = navigationIndex;
+  }, [navigationIndex]);
+
   useEffect(() => {
     const onPopState = () => {
       const route = navigationEntryFromPath(window.location.pathname, window.location.search);
-      syncRoute(route, "pop", getBrowserNavigationIndex());
+      const browserIndex = getBrowserNavigationIndex();
+      pendingPopIndex.current = browserIndex ?? navigationIndex;
+      syncRoute(route, "pop", browserIndex);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [syncRoute]);
+  }, [navigationIndex, syncRoute]);
+
+  useEffect(() => {
+    let scrollFrame: number | null = null;
+    const previousScrollRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    const saveScrollPosition = () => {
+      scrollFrame = null;
+      const index = activeNavigationIndex.current;
+      scrollPositions.current.delete(index);
+      scrollPositions.current.set(index, window.scrollY);
+      while (scrollPositions.current.size > MAX_SAVED_SCROLL_ENTRIES) {
+        const oldestIndex = scrollPositions.current.keys().next().value;
+        if (oldestIndex == null) break;
+        scrollPositions.current.delete(oldestIndex);
+      }
+    };
+    const onScroll = () => {
+      if (scrollFrame == null) scrollFrame = window.requestAnimationFrame(saveScrollPosition);
+    };
+
+    saveScrollPosition();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.history.scrollRestoration = previousScrollRestoration;
+      if (scrollFrame != null) window.cancelAnimationFrame(scrollFrame);
+      saveScrollPosition();
+    };
+  }, []);
 
   useEffect(() => {
     if (!routeReady) return;
 
-    window.scrollTo({ top: 0, behavior: "auto" });
-
     // Do not move focus during the initial hydration. After an in-app route
     // change, focus the new main region and announce it like a real page load.
+    // Initial browser restoration is also left untouched.
     if (!hasMountedRoute.current) {
       hasMountedRoute.current = true;
       return;
     }
 
+    let restoreFrame: number | null = null;
+    const popIndex = pendingPopIndex.current;
+    pendingPopIndex.current = null;
+
+    if (popIndex === navigationIndex) {
+      const savedTop = scrollPositions.current.get(navigationIndex);
+      if (savedTop != null) {
+        let attempts = 0;
+        const restore = () => {
+          attempts += 1;
+          window.scrollTo({ top: savedTop, behavior: "auto" });
+          const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+          const targetIsAvailable = maxScroll >= savedTop - 1;
+          const targetWasRestored = Math.abs(window.scrollY - savedTop) <= 1;
+          if ((!targetIsAvailable || !targetWasRestored) && attempts < 60) {
+            restoreFrame = window.requestAnimationFrame(restore);
+          }
+        };
+        restoreFrame = window.requestAnimationFrame(restore);
+      } else {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+
     setRouteAnnouncement(viewMetadata.announcement);
-    const frame = window.requestAnimationFrame(() => {
+    const focusFrame = window.requestAnimationFrame(() => {
       mainRef.current?.focus({ preventScroll: true });
     });
-    return () => window.cancelAnimationFrame(frame);
-  }, [routeKey, routeReady, viewMetadata.announcement]);
-
-  if (!routeReady) {
-    return (
-      <div
-        className="min-h-dvh bg-background"
-        aria-busy="true"
-        aria-label="Loading application"
-        role="status"
-      />
-    );
-  }
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      if (restoreFrame != null) window.cancelAnimationFrame(restoreFrame);
+    };
+  }, [navigationIndex, routeKey, routeReady, viewMetadata.announcement]);
 
   return (
-    <div className="tvtime-app min-h-dvh flex flex-col">
-      <a href="#tvtime-main-content" className="tvtime-skip-link">
-        Skip to main content
-      </a>
+    <MotionConfig reducedMotion="user">
+      <div className="tvtime-app min-h-dvh flex flex-col">
+        <a href="#tvtime-main-content" className="tvtime-skip-link">
+          Skip to main content
+        </a>
 
-      <div
-        className="sr-only"
-        aria-atomic="true"
-        aria-live="polite"
-        dir={viewMetadata.direction}
-        lang={viewMetadata.language}
-      >
-        {routeAnnouncement}
-      </div>
+        <div
+          className="sr-only"
+          aria-atomic="true"
+          aria-live="polite"
+          dir={viewMetadata.direction}
+          lang={viewMetadata.language}
+        >
+          {routeAnnouncement}
+        </div>
 
-      <Header />
-      <KeyboardShortcuts />
+        <Header />
+        <KeyboardShortcuts />
 
-      <main
-        ref={mainRef}
-        id="tvtime-main-content"
-        tabIndex={-1}
-        lang={viewMetadata.language}
-        dir={viewMetadata.direction}
-        aria-label={viewMetadata.accessibleLabel}
-        className="tvtime-main-content flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6"
-      >
-        <div key={routeKey} className="tvtime-view-transition animate-fade-in-up">
+        <main
+          ref={mainRef}
+          id="tvtime-main-content"
+          tabIndex={-1}
+          lang={viewMetadata.language}
+          dir={viewMetadata.direction}
+          aria-label={viewMetadata.accessibleLabel}
+          className="tvtime-main-content flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6"
+        >
+          <div key={routeKey} className="tvtime-view-transition animate-fade-in-up">
           {/* HomeView stays eager — it is the landing page and the first thing
               the user sees after login. */}
           {view === "home" && (
@@ -212,10 +281,11 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
               </Suspense>
             </ErrorBoundary>
           )}
-        </div>
-      </main>
+          </div>
+        </main>
 
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </MotionConfig>
   );
 }

@@ -25,6 +25,7 @@
     "verify:user-facing": "node scripts/verify-user-facing-integrity.mjs",
     "verify:anime": "node scripts/verify-anime-hub.mjs",
     "verify:shelves": "node scripts/verify-horizontal-shelves.mjs",
+    "verify:interaction-polish": "node --experimental-strip-types scripts/test-performance-regressions.ts && node --experimental-strip-types scripts/test-responsive-layout.ts && node scripts/verify-horizontal-shelves.mjs",
     "verify:watch-next-cards": "node scripts/verify-watch-next-cards.mjs",
     "verify:all": "node scripts/verify-all.mjs",
     "verify:episode-flow": "node scripts/verify-episode-watch-poster.mjs",

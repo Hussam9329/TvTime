@@ -12,15 +12,20 @@ import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useState, useEffect, useRef, type ComponentProps } from "react";
+import { useRef, type ComponentProps } from "react";
 import { toast } from "sonner";
+import { useHeroCarousel } from "@/hooks/use-hero-carousel";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import {
   filterAndPrioritizeMediaCollectionWorldItems,
   filterAndPrioritizeMediaCollectionWorldItemsBy,
 } from "@/lib/media-world-pipeline";
 import type { MediaCollectionWorld } from "@/lib/media-world-classification";
 
-const MediaRow = (props: ComponentProps<typeof BaseMediaRow>) => <BaseMediaRow {...props} compactCards={false} />;
+const HOME_ROW_ITEM_LIMIT = 12;
+const MediaRow = ({ items, ...props }: ComponentProps<typeof BaseMediaRow>) => (
+  <BaseMediaRow {...props} items={items.slice(0, HOME_ROW_ITEM_LIMIT)} compactCards={false} />
+);
 const SEEN_HOME_TV_STATUSES = new Set(["watching", "uptodate", "up_to_date", "finished", "watched", "stopped"]);
 
 function standardCollectionWorldForHomeItem(item: MediaItem): MediaCollectionWorld | null {
@@ -75,12 +80,12 @@ export function HomeView() {
   const heroCandidates = standardTrending.filter((media) => media.backdrop_path);
   const homeLibraryStates = useMediaStates([
     ...standardTrending.map((item) => ({ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" as const : "movie" as const })),
-    ...popularMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
-    ...onAirTvItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
-    ...popularTvItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
-    ...topMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
-    ...topTvItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
-    ...upcomingMovieItems.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
+    ...popularMovieItems.slice(0, HOME_ROW_ITEM_LIMIT).map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
+    ...onAirTvItems.slice(0, HOME_ROW_ITEM_LIMIT).map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
+    ...popularTvItems.slice(0, HOME_ROW_ITEM_LIMIT).map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
+    ...topMovieItems.slice(0, HOME_ROW_ITEM_LIMIT).map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
+    ...topTvItems.slice(0, HOME_ROW_ITEM_LIMIT).map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
+    ...upcomingMovieItems.slice(0, HOME_ROW_ITEM_LIMIT).map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
   ]);
   const unseenHeroCandidates = homeLibraryStates.isSuccess
     ? heroCandidates.filter((media) => {
@@ -88,7 +93,7 @@ export function HomeView() {
         const state = homeLibraryStates.data?.[mediaStateKey(mediaType, Number(media.id))];
         return isUnseenHomeHeroState(mediaType, state);
       })
-    : [];
+    : heroCandidates;
   const heroItems = filterAndPrioritizeStandardHomeItems([
     ...unseenHeroCandidates.filter((media) => (media.overview?.length || 0) > 100),
     ...unseenHeroCandidates.filter((media) => (media.overview?.length || 0) <= 100),
@@ -98,7 +103,11 @@ export function HomeView() {
   return (
     <div className="tvtime-home-view">
       {/* Hero featured */}
-      {heroItems.length > 0 && <Hero items={heroItems} />}
+      {homeFeed.isLoading
+        ? <HomeHeroSkeleton />
+        : heroItems.length > 0
+          ? <Hero items={heroItems} />
+          : null}
 
       {/* Library overview */}
       {stats.data && (
@@ -246,6 +255,20 @@ export function HomeView() {
   );
 }
 
+function HomeHeroSkeleton() {
+  return (
+    <section
+      data-ui-surface="hero"
+      className="tvtime-home-hero relative overflow-hidden shimmer"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading featured title"
+    >
+      <span className="sr-only">Loading featured title…</span>
+    </section>
+  );
+}
+
 function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactNode; label: string; value: number | string; suffix?: string; onClick?: () => void }) {
   return (
     <button
@@ -271,71 +294,25 @@ function Hero({ items }: { items: MediaItem[] }) {
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
   const shouldReduceMotion = useReducedMotion();
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [cycleVersion, setCycleVersion] = useState(0);
-  const pointerStartX = useRef<number | null>(null);
+  const carousel = useHeroCarousel({ itemCount: items.length, reducedMotion: shouldReduceMotion });
+  const activeIndex = carousel.activeIndex;
   const item = items[activeIndex] ?? items[0];
   const mediaType = item.media_type === "tv" || !item.title ? "tv" : "movie";
   const title = getTitle(item);
   const slideKey = `${mediaType}-${item.id}`;
 
-  useEffect(() => {
-    setActiveIndex((current) => Math.min(current, Math.max(items.length - 1, 0)));
-  }, [items.length]);
-
-  useEffect(() => {
-    if (items.length < 2) return;
-
-    const timer = window.setTimeout(() => {
-      setActiveIndex((current) => (current + 1) % items.length);
-    }, 7000);
-
-    return () => window.clearTimeout(timer);
-  }, [activeIndex, cycleVersion, items.length]);
-
-  useEffect(() => {
-    if (items.length < 2) return;
-    const nextItem = items[(activeIndex + 1) % items.length];
-    if (!nextItem?.backdrop_path) return;
-
-    const preload = new Image();
-    // The hero can span wide/high-density displays. Preload the original TMDB
-    // backdrop so next/image is never forced to upscale a 1280px source.
-    preload.src = img(nextItem.backdrop_path, "original");
-  }, [activeIndex, items]);
-
-  const moveSlide = (direction: -1 | 1) => {
-    setActiveIndex((current) => (current + direction + items.length) % items.length);
-    setCycleVersion((current) => current + 1);
-  };
-
-  const selectSlide = (index: number) => {
-    setActiveIndex(index);
-    setCycleVersion((current) => current + 1);
-  };
-
   return (
     <motion.section
+      {...carousel.rootProps}
       data-ui-surface="hero"
+      data-carousel-paused={carousel.isPaused ? "true" : "false"}
+      style={carousel.progressStyle}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.6 }}
       className="tvtime-home-hero relative overflow-hidden"
       aria-label={`Featured ${mediaType === "movie" ? "movie" : "TV show"}: ${title}`}
       aria-roledescription="carousel"
-      onPointerDown={(event) => {
-        if (event.pointerType !== "touch") return;
-        pointerStartX.current = event.clientX;
-      }}
-      onPointerUp={(event) => {
-        if (event.pointerType !== "touch" || pointerStartX.current === null) return;
-        const distance = event.clientX - pointerStartX.current;
-        pointerStartX.current = null;
-        if (Math.abs(distance) >= 48) moveSlide(distance > 0 ? -1 : 1);
-      }}
-      onPointerCancel={() => {
-        pointerStartX.current = null;
-      }}
     >
       <AnimatePresence initial={false}>
         <motion.div
@@ -416,11 +393,11 @@ function Hero({ items }: { items: MediaItem[] }) {
       </AnimatePresence>
 
       {items.length > 1 && (
-        <div className="tvtime-home-hero__carousel-controls relative z-20" aria-label="Trending spotlight slides">
+        <div data-carousel-controls className="tvtime-home-hero__carousel-controls relative z-20" aria-label="Trending spotlight slides">
           <button
             type="button"
             className="tvtime-home-hero__carousel-arrow"
-            onClick={() => moveSlide(-1)}
+            onClick={() => carousel.moveSlide(-1)}
             aria-label="Previous spotlight"
           >
             <ChevronLeft aria-hidden="true" />
@@ -428,11 +405,11 @@ function Hero({ items }: { items: MediaItem[] }) {
           <div className="tvtime-home-hero__carousel-dots">
             {items.map((slide, index) => (
               <button
-                key={`${slide.media_type ?? "media"}-${slide.id}-${index === activeIndex ? cycleVersion : 0}`}
+                key={`${slide.media_type ?? "media"}-${slide.id}-${index === activeIndex ? carousel.cycleVersion : 0}`}
                 type="button"
                 className="tvtime-home-hero__carousel-dot"
                 data-active={index === activeIndex ? "true" : "false"}
-                onClick={() => selectSlide(index)}
+                onClick={() => carousel.selectSlide(index)}
                 aria-label={`Show spotlight ${index + 1}: ${getTitle(slide)}`}
                 aria-current={index === activeIndex ? "true" : undefined}
               />
@@ -441,7 +418,7 @@ function Hero({ items }: { items: MediaItem[] }) {
           <button
             type="button"
             className="tvtime-home-hero__carousel-arrow"
-            onClick={() => moveSlide(1)}
+            onClick={() => carousel.moveSlide(1)}
             aria-label="Next spotlight"
           >
             <ChevronRight aria-hidden="true" />
@@ -456,7 +433,13 @@ function RecentlyWatched() {
   const recently = useRecentlyWatched(12);
   const goMovie = useNav((state) => state.goMovie);
   const goTv = useNav((state) => state.goTv);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const items = recently.data?.items ?? [];
+  const dragHandlers = useHorizontalDragScroll({
+    scrollKey: recently.isLoading ? undefined : "home:recently-watched",
+    scrollRef,
+    restoreDependency: `${recently.isLoading}:${items.length}`,
+  });
 
   const handleGo = (item: any) => {
     const tmdbId = Number(item.tmdbId);
@@ -506,7 +489,14 @@ function RecentlyWatched() {
           </div>
         </div>
       </div>
-      <div className="tvtime-recent-scroller no-scrollbar flex overflow-x-auto">
+      <div
+        ref={scrollRef}
+        {...dragHandlers}
+        className="tvtime-recent-scroller no-scrollbar flex overflow-x-auto"
+        role="region"
+        aria-label="Recently watched horizontal list"
+        tabIndex={0}
+      >
         {items.map((item, index) => (
           <RecentlyWatchedCard key={`${item.kind}-${item.tmdbId ?? item.id}-${item.watchedAt}`} item={item} index={index} onGo={() => handleGo(item)} />
         ))}

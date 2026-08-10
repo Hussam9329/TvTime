@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useDiscoverMovies, useDiscoverTv, useMovieGenres, useTvGenres, useMedia, useMediaStates } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { Sparkles, Star } from "lucide-react";
 import { filterAndPrioritizeMediaCollectionWorldItems } from "@/lib/media-world-pipeline";
+
+const GENRE_ITEM_LIMIT = 12;
+const RATED_SAMPLE_LIMIT = 120;
+const OFFSCREEN_RECOMMENDATION_STYLE: CSSProperties = {
+  contentVisibility: "auto",
+  containIntrinsicSize: "auto 280px",
+};
 
 /**
  * TVM-42: Personalized recommendations.
@@ -35,15 +42,22 @@ export function GenreRecommendations() {
         setEnabled(true);
         observer.disconnect();
       },
-      { rootMargin: "700px 0px" },
+      { rootMargin: "350px 0px" },
     );
     observer.observe(anchor);
     return () => observer.disconnect();
   }, [enabled]);
 
   return (
-    <div ref={anchorRef} className="min-h-24">
-      {enabled ? <GenreRecommendationContent /> : <RecommendationPlaceholder />}
+    <div
+      ref={anchorRef}
+      style={{
+        contentVisibility: "auto",
+        containIntrinsicSize: "auto 840px",
+        minHeight: enabled ? undefined : "840px",
+      }}
+    >
+      {enabled ? <GenreRecommendationContent /> : <RecommendationRowsPlaceholder rows={3} />}
     </div>
   );
 }
@@ -52,15 +66,15 @@ function GenreRecommendationContent() {
   const movieGenres = useMovieGenres();
   const tvGenres = useTvGenres();
 
-  // TVM-42: Fetch the user's highly-rated media to derive personal genres
-  const ratedMovies = useMedia({ collectionWorld: "movies", type: "movie", rated: "true", limit: 500 });
-  const ratedTv = useMedia({ collectionWorld: "standard-tv", type: "series", rated: "true", limit: 500 });
+  // A bounded sample is enough to identify recurring high-rated genres while
+  // avoiding two 500-row payloads on mobile.
+  const ratedMovies = useMedia({ collectionWorld: "movies", type: "movie", rated: "true", limit: RATED_SAMPLE_LIMIT });
+  const ratedTv = useMedia({ collectionWorld: "standard-tv", type: "series", rated: "true", limit: RATED_SAMPLE_LIMIT });
 
-  // Derive top genres from user's highest-rated items (rating >= 70)
   const userMovieGenres = deriveTopGenres(ratedMovies.data?.items ?? [], movieGenres.data ?? [], 2);
   const userTvGenres = deriveTopGenres(ratedTv.data?.items ?? [], tvGenres.data ?? [], 1);
 
-  // Fallback to daily rotation if user has no ratings
+  // Fallback to daily rotation if user has no ratings.
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
   const movieGenreList = movieGenres.data ?? [];
   const tvGenreList = tvGenres.data ?? [];
@@ -72,73 +86,168 @@ function GenreRecommendationContent() {
   const movieGenre1 = userMovieGenres[0] || fallbackMovieGenre1;
   const movieGenre2 = userMovieGenres[1] || fallbackMovieGenre2;
   const tvGenre1 = userTvGenres[0] || fallbackTvGenre;
-
   const isPersonalized = userMovieGenres.length > 0 || userTvGenres.length > 0;
-
-  const rec1 = useDiscoverMovies({ genres: movieGenre1 ? [movieGenre1.id] : undefined, sort_by: "vote_average.desc", page: 1, rating: 7, enabled: Boolean(movieGenre1) });
-  const rec2 = useDiscoverMovies({ genres: movieGenre2 ? [movieGenre2.id] : undefined, sort_by: "popularity.desc", page: 1, enabled: Boolean(movieGenre2) });
-  const rec3 = useDiscoverTv({ genres: tvGenre1 ? [tvGenre1.id] : undefined, sort_by: "popularity.desc", page: 1, enabled: Boolean(tvGenre1) });
-
-  const rec1Items = filterAndPrioritizeMediaCollectionWorldItems(
-    (rec1.data?.results ?? []).filter((media) => media.poster_path),
-    "movies",
-  ).slice(0, 20);
-  const rec2Items = filterAndPrioritizeMediaCollectionWorldItems(
-    (rec2.data?.results ?? []).filter((media) => media.poster_path),
-    "movies",
-  ).slice(0, 20);
-  const rec3Items = filterAndPrioritizeMediaCollectionWorldItems(
-    (rec3.data?.results ?? []).filter((media) => media.poster_path),
-    "standard-tv",
-  ).slice(0, 20);
-  const recommendationStates = useMediaStates([
-    ...rec1Items.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
-    ...rec2Items.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
-    ...rec3Items.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })),
-  ]);
-  const libraryStateSource = { data: recommendationStates.data };
 
   return (
     <>
-      {movieGenre1 && rec1Items.length > 0 && (
-        <MediaRow
-          title={isPersonalized ? `Top ${movieGenre1.name} Movies • For You` : `Top ${movieGenre1.name} Movies`}
-          icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
-          items={rec1Items}
-          loading={rec1.isLoading}
-          libraryStateSource={libraryStateSource}
-        />
-      )}
-      {tvGenre1 && rec3Items.length > 0 && (
-        <MediaRow
-          title={isPersonalized ? `Popular ${tvGenre1.name} Shows • For You` : `Popular ${tvGenre1.name} Shows`}
-          icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
-          items={rec3Items}
-          loading={rec3.isLoading}
-          forcedMediaType="tv"
-          libraryStateSource={libraryStateSource}
-        />
-      )}
-      {movieGenre2 && rec2Items.length > 0 && (
-        <MediaRow
-          title={isPersonalized ? `Trending ${movieGenre2.name} Movies • For You` : `Trending ${movieGenre2.name} Movies`}
-          icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
-          items={rec2Items}
-          loading={rec2.isLoading}
-          libraryStateSource={libraryStateSource}
-        />
-      )}
+      <DeferredRecommendationRow ready={Boolean(movieGenre1)}>
+        {movieGenre1 && (
+          <MovieGenreRow
+            genre={movieGenre1}
+            sortBy="vote_average.desc"
+            rating={7}
+            title={isPersonalized ? `Top ${movieGenre1.name} Movies • For You` : `Top ${movieGenre1.name} Movies`}
+            personalized={isPersonalized}
+          />
+        )}
+      </DeferredRecommendationRow>
+      <DeferredRecommendationRow ready={Boolean(tvGenre1)}>
+        {tvGenre1 && (
+          <TvGenreRow
+            genre={tvGenre1}
+            title={isPersonalized ? `Popular ${tvGenre1.name} Shows • For You` : `Popular ${tvGenre1.name} Shows`}
+            personalized={isPersonalized}
+          />
+        )}
+      </DeferredRecommendationRow>
+      <DeferredRecommendationRow ready={Boolean(movieGenre2)}>
+        {movieGenre2 && (
+          <MovieGenreRow
+            genre={movieGenre2}
+            sortBy="popularity.desc"
+            title={isPersonalized ? `Trending ${movieGenre2.name} Movies • For You` : `Trending ${movieGenre2.name} Movies`}
+            personalized={isPersonalized}
+          />
+        )}
+      </DeferredRecommendationRow>
     </>
   );
 }
 
-function RecommendationPlaceholder() {
+function DeferredRecommendationRow({ children, ready }: { children: ReactNode; ready: boolean }) {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor || enabled) return;
+    if (!("IntersectionObserver" in window)) {
+      setEnabled(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      setEnabled(true);
+      observer.disconnect();
+    }, { rootMargin: "250px 0px" });
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  }, [enabled]);
+
   return (
-    <div className="space-y-3 py-2" aria-hidden="true">
-      <div className="h-5 w-48 rounded-md bg-muted/35" />
-      <div className="h-16 rounded-xl border border-dashed border-border/45 bg-muted/10" />
+    <div
+      ref={anchorRef}
+      style={{
+        ...OFFSCREEN_RECOMMENDATION_STYLE,
+        minHeight: enabled && ready ? undefined : "280px",
+      }}
+      aria-hidden={enabled && ready ? undefined : true}
+    >
+      {enabled && ready ? children : <RecommendationPlaceholder />}
     </div>
   );
+}
+
+function MovieGenreRow({ genre, sortBy, rating, title, personalized }: {
+  genre: { id: number; name: string };
+  sortBy: string;
+  rating?: number;
+  title: string;
+  personalized: boolean;
+}) {
+  const recommendation = useDiscoverMovies({
+    genres: [genre.id],
+    sort_by: sortBy,
+    page: 1,
+    rating,
+  });
+  const items = filterAndPrioritizeMediaCollectionWorldItems(
+    (recommendation.data?.results ?? []).filter((media) => media.poster_path),
+    "movies",
+  ).slice(0, GENRE_ITEM_LIMIT);
+  const states = useMediaStates(items.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })));
+  const libraryStateSource = useMemo(() => ({ data: states.data }), [states.data]);
+
+  if (!recommendation.isLoading && items.length === 0) return null;
+  return (
+    <MediaRow
+      title={title}
+      icon={<RecommendationIcon personalized={personalized} />}
+      items={items}
+      loading={recommendation.isLoading}
+      libraryStateSource={libraryStateSource}
+      compactCards={false}
+    />
+  );
+}
+
+function TvGenreRow({ genre, title, personalized }: {
+  genre: { id: number; name: string };
+  title: string;
+  personalized: boolean;
+}) {
+  const recommendation = useDiscoverTv({
+    genres: [genre.id],
+    sort_by: "popularity.desc",
+    page: 1,
+  });
+  const items = filterAndPrioritizeMediaCollectionWorldItems(
+    (recommendation.data?.results ?? []).filter((media) => media.poster_path),
+    "standard-tv",
+  ).slice(0, GENRE_ITEM_LIMIT);
+  const states = useMediaStates(items.map((item) => ({ tmdbId: Number(item.id), mediaType: "tv" as const })));
+  const libraryStateSource = useMemo(() => ({ data: states.data }), [states.data]);
+
+  if (!recommendation.isLoading && items.length === 0) return null;
+  return (
+    <MediaRow
+      title={title}
+      icon={<RecommendationIcon personalized={personalized} />}
+      items={items}
+      loading={recommendation.isLoading}
+      forcedMediaType="tv"
+      libraryStateSource={libraryStateSource}
+      compactCards={false}
+    />
+  );
+}
+
+function RecommendationIcon({ personalized }: { personalized: boolean }) {
+  return personalized
+    ? <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+    : <Sparkles className="h-5 w-5" />;
+}
+
+function RecommendationPlaceholder() {
+  return (
+    <div className="py-2" aria-hidden="true">
+      <div className="h-5 w-48 rounded-md shimmer" />
+      <div className="mt-4 flex gap-3 overflow-hidden">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-44 w-[116px] shrink-0 rounded-xl shimmer sm:w-[142px]" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecommendationRowsPlaceholder({ rows }: { rows: number }) {
+  return Array.from({ length: rows }).map((_, index) => (
+    <div key={index} style={{ minHeight: "280px" }}>
+      <RecommendationPlaceholder />
+    </div>
+  ));
 }
 
 /**
@@ -154,25 +263,20 @@ function deriveTopGenres(
   const genreCounts = new Map<number, number>();
 
   for (const item of items) {
-    // Only consider highly-rated items (>= 70/100)
     if (item.userRating == null || item.userRating < 70) continue;
 
-    // genres is stored as string[] on Media rows
     const genres: string[] = Array.isArray(item.genres) ? item.genres : [];
     for (const genreName of genres) {
-      // Match genre name to official TMDB genre ID
-      const official = officialGenres.find((g) => g.name.toLowerCase() === String(genreName).toLowerCase());
-      if (official) {
-        genreCounts.set(official.id, (genreCounts.get(official.id) || 0) + 1);
-      }
+      const official = officialGenres.find((genre) => genre.name.toLowerCase() === String(genreName).toLowerCase());
+      if (official) genreCounts.set(official.id, (genreCounts.get(official.id) || 0) + 1);
     }
   }
 
-  // Sort by frequency descending, take top N
-  const sorted = [...genreCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, count);
-
-  return sorted.map(([id]) => {
-    const g = officialGenres.find((og) => og.id === id);
-    return g ? { id: g.id, name: g.name } : { id, name: String(id) };
-  });
+  return [...genreCounts.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, count)
+    .map(([id]) => {
+      const genre = officialGenres.find((candidate) => candidate.id === id);
+      return genre ? { id: genre.id, name: genre.name } : { id, name: String(id) };
+    });
 }

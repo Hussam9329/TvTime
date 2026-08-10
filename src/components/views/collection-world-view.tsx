@@ -94,8 +94,6 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
 export function CollectionWorldView({ world, embedded = false, onDiscover }: { world: CollectionWorld; embedded?: boolean; onDiscover?: () => void }) {
   const animeTypeRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
-  const animeTypeDragHandlers = useHorizontalDragScroll();
-  const statusDragHandlers = useHorizontalDragScroll();
   const config = WORLD_CONFIG[world];
   const WorldIcon = config.icon;
   const setView = useNav((s) => s.setView);
@@ -110,6 +108,17 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   const isArabicWorld = world === "arabic-movies";
   const isNotStartedTab = tab === "not-started";
   const isWatchingTab = tab === "watching";
+  const animeTypeVisible = world === "anime" && !isNotStartedTab && !isWatchingTab;
+  const collectionRailKey = `collection:${embedded ? "embedded" : "standalone"}:${world}`;
+  const animeTypeDragHandlers = useHorizontalDragScroll({
+    scrollKey: animeTypeVisible ? `${collectionRailKey}:anime-type` : undefined,
+    scrollRef: animeTypeRef,
+    restoreDependency: animeTypeVisible,
+  });
+  const statusDragHandlers = useHorizontalDragScroll({
+    scrollKey: `${collectionRailKey}:status`,
+    scrollRef: statusRef,
+  });
   const debouncedSearch = useDebounce(search, 400);
   const layoutStorageKey = world === "anime" ? "trakora:anime-library-layout" : "trakora:movie-library-layout";
 

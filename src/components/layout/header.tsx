@@ -209,6 +209,7 @@ export function Header() {
         key={item.view}
         type="button"
         onClick={() => goTo(item.view)}
+        onPointerDown={() => prefetchViewModule(item.view)}
         onPointerEnter={() => prefetchViewModule(item.view)}
         onFocus={() => prefetchViewModule(item.view)}
         aria-current={active ? "page" : undefined}
@@ -537,6 +538,7 @@ export function Header() {
                 type="button"
                 className={cn("tvtime-mobile-dock__item", active && "is-active")}
                 onClick={() => goTo(item.view)}
+                onPointerDown={() => prefetchViewModule(item.view)}
                 onPointerEnter={() => prefetchViewModule(item.view)}
                 aria-current={active ? "page" : undefined}
               >
