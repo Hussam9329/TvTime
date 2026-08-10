@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveTmdbKeywordIds, tmdb, type MediaItem, type PaginatedResponse, type TmdbLanguage } from "@/lib/tmdb";
-import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
 import { resolveUserId } from "@/lib/auth";
 import { buildSeenIdSet } from "@/lib/discover-seen";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import { discoverAsianMoviesByPriority, discoverAsianTvByPriority } from "@/lib/asian-discover-server";
-import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
-import { matchesDiscoverWorld, type DiscoverWorld } from "@/lib/discover-world";
+import type { DiscoverWorld } from "@/lib/discover-world";
+import {
+  collectionWorldForCatalogue,
+  filterAndPrioritizeMediaCollectionWorldItems,
+  matchesMediaCollectionWorld,
+} from "@/lib/media-world-pipeline";
 import { filterStrictMiniSeriesResults } from "@/lib/tv-format";
 import {
   DISCOVER_PAGE_SIZE,
@@ -44,6 +47,7 @@ export async function GET(req: NextRequest) {
       ? requestedTvFormat
       : "all";
     const start = parseDiscoverCursor(search.get("cursor"));
+    const collectionWorld = collectionWorldForCatalogue(world, mediaType);
 
     let seenIds = new Set<number>();
     if (showMe !== "all") {
@@ -122,7 +126,6 @@ export async function GET(req: NextRequest) {
     const keywordGroups = [keywordIds, anthologyKeywordIds].filter((group): group is number[] => Boolean(group?.length));
 
     const certification = search.get("certification") || undefined;
-    const excludeArabic = search.get("exclude_arabic") === "true";
     const onlyArabic = search.get("only_arabic") === "true";
 
     const loadPage = async (page: number): Promise<PaginatedResponse<MediaItem>> => {
@@ -157,9 +160,7 @@ export async function GET(req: NextRequest) {
       return showMe === "seen" ? isSeen : !isSeen;
     };
     const matchesCatalogue = (item: MediaItem) => {
-      const isArabic = isArabicMediaItem(item);
-      if ((excludeArabic && isArabic) || (onlyArabic && !isArabic)) return false;
-      return matchesDiscoverWorld(item, mediaType, world);
+      return matchesMediaCollectionWorld(item, collectionWorld);
     };
 
     const results: MediaItem[] = [];
@@ -222,11 +223,7 @@ export async function GET(req: NextRequest) {
       nextCursor = `${parsed.page}:${Math.min(parsed.index, pageSizeObserved)}`;
     }
 
-    const prioritizedResults = onlyArabic || world === "arabic"
-      ? filterAndPrioritizeArabicMediaItems(results)
-      : mediaType === "movie" && world === "standard"
-        ? sortByStandardMediaPriority(results)
-        : results;
+    const prioritizedResults = filterAndPrioritizeMediaCollectionWorldItems(results, collectionWorld);
 
     const response = NextResponse.json({
       results: prioritizedResults,

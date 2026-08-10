@@ -110,7 +110,8 @@ check(
     && /if \(classification\.isAnime\) return false/.test(tvWorldClassification)
     && /return classification\.world === world/.test(tvWorldClassification)
     && /resolveGeneralMediaClassifications/.test(trackingApi)
-    && (trackingApi.match(/recordMatchesTvWorld/g) || []).length >= 3,
+    && (trackingApi.match(/filterAndPrioritizeMediaCollectionWorldItems/g) || []).length >= 3
+    && /collectionWorldForCatalogue\(world, "tv"\)/.test(trackingApi),
   "TV Tracking API separates standard, Arabic and Asian shows through the canonical classifier",
 );
 check(/worldParam !== "standard" && worldParam !== "arabic" && worldParam !== "asian"/.test(trackingApi), "TV Tracking rejects unsupported world values");
@@ -124,18 +125,18 @@ check(/forcedMediaType=\{mediaType\}/.test(releaseSchedule), "Shared release car
 check(/original_language:\s*"ar"/.test(movieCalendarApi), "Arabic movie release API requests Arabic-language releases");
 check(/ARABIC_COUNTRY_PRIORITY_GROUPS = \[\s*\["EG"\]/.test(arabicLib) && /ARABIC_COUNTRY_PRIORITY/.test(arabicDiscover), "One shared country order gives Egyptian works the highest discovery priority");
 check(/discoverArabicShelfByCountryPriority\("movie"/.test(movieHubApi), "Arabic Movies Overview shelves use efficient Egypt-first discovery");
-check(/prioritizeArabicMediaItems/.test(movieHubApi) && /prioritizeArabicMediaItems/.test(mediaApi), "Arabic Overview and Library use the central Egyptian priority pipeline");
-check(/discoverArabicCatalogueByCountryPriority\("movie"/.test(generalMovieCalendarApi) && /filterAndPrioritizeArabicMediaItems/.test(releaseSchedule), "Arabic Releases retrieve and render Egyptian films first through the central pipeline");
+check(/prioritizeMediaCollectionWorldItems/.test(movieHubApi) && /prioritizeMediaCollectionWorldItems/.test(mediaApi), "Arabic Overview and Library use the central world priority pipeline that contains Egyptian priority");
+check(/discoverArabicCatalogueByCountryPriority\("movie"/.test(generalMovieCalendarApi) && /filterAndPrioritizeMediaCollectionWorldItems/.test(releaseSchedule), "Arabic Releases retrieve and render Egyptian films first through the central world pipeline");
 check(/primary_release_date/.test(tmdb), "TMDB discovery supports bounded movie release dates");
 check(/Earlier/.test(releaseSchedule) && /Later/.test(releaseSchedule) && /scheduled releases/.test(releaseSchedule), "Shared release schedule gives Arabic Movies an independently navigable window");
 
 check(/const forcedLang = isAnime \? "ja" : isArabic \? "ar"/.test(discover), "Shared Arabic discovery fixes the original language to Arabic");
 check(/const effectiveVoteCount = voteCount/.test(discover), "Discovery applies no implicit vote floor to Arabic or Asian titles");
 check(/mediaType: resultMediaType/.test(discover) && /world === "arabic-movies"/.test(discover) && /world === "arabic-tv"/.test(discover), "Shared Arabic discovery selects only the active movie or TV media type");
-check(/!isArabicMediaItem\(media\)/.test(discover), "Standard Discover excludes Arabic titles");
+check(/filterAndPrioritizeMediaCollectionWorldItems\(allResults, resultCollectionWorld\)/.test(discover), "Standard Discover excludes Arabic titles through the exact collection-world pipeline");
 check(/onlyArabic:\s*isArabic/.test(discover), "Arabic Seen/Haven't Seen filtering is enforced at the API boundary");
 check(/disabled=\{Boolean\(forcedLang\)\}/.test(discover), "Arabic and Anime discovery cannot escape their fixed language world");
-check((home.match(/!isArabicMediaItem/g) || []).length >= 3, "Standard Home rows exclude Arabic titles");
+check(/filterAndPrioritizeMediaCollectionWorldItems/.test(home) && /"standard-tv"/.test(home) && /"movies"/.test(home), "Standard Home rows exclude Arabic titles through exact collection worlds");
 check(
   /resolveGeneralMediaClassifications\(mediaMovies, \{ allowNetwork: false \}\)/.test(recently)
     && /!classifyMediaWorld\(item\)\.isArabic/.test(recently),
@@ -150,9 +151,9 @@ check(
 
 check(/"arabic-movies"/.test(search) && /"arabic-tv"/.test(search), "Global search offers Arabic Movies and Arabic TV filters");
 check(/filter === "all"\s*\?\s*allResults/.test(search), "Global search All remains inclusive");
-check(/filter === "movie"[\s\S]{0,180}!isArabicMediaItem\(result\)/.test(search), "Standard movie search filter excludes Arabic Movies");
-check(/filter === "tv"[\s\S]{0,180}!isArabicMediaItem\(result\)/.test(search), "Standard TV search filter excludes Arabic TV");
-check(/isArabicMediaItem\(result\)/.test(search), "Arabic search filters use shared classification logic");
+check(/filter === "movie"[\s\S]{0,80}"movies"/.test(search), "Standard movie search maps to the exclusive Movies collection world");
+check(/filter === "tv"[\s\S]{0,80}"standard-tv"/.test(search), "Standard TV search maps to the exclusive Standard TV collection world");
+check(/filterAndPrioritizeMediaCollectionWorldItems\(allResults, world\)/.test(search), "Arabic search filters use shared collection-world classification logic");
 check(/overflow-x-auto/.test(search), "Search filters remain usable on mobile widths");
 check(/Arabic Movie/.test(mediaCard) && /Arabic TV/.test(mediaCard), "Search and discovery cards identify the Arabic world visibly");
 

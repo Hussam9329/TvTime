@@ -15,9 +15,12 @@ import {
   type TvStatusMetadata,
 } from "@/lib/tv-status-server";
 import { buildFastTvTrackingSummary, type FastTvTrackingRow } from "@/lib/tv-tracking-counts";
-import { recordMatchesTvWorld, type TvWorld } from "@/lib/tv-world-classification";
+import { type TvWorld } from "@/lib/tv-world-classification";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
-import { prioritizeArabicMediaItems } from "@/lib/arabic-media";
+import {
+  collectionWorldForCatalogue,
+  filterAndPrioritizeMediaCollectionWorldItems,
+} from "@/lib/media-world-pipeline";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -112,7 +115,10 @@ function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc"
     }
     return String(av ?? "").localeCompare(String(bv ?? "")) * direction;
   });
-  return world === "arabic" ? prioritizeArabicMediaItems(sorted) : sorted;
+  return filterAndPrioritizeMediaCollectionWorldItems(
+    sorted,
+    collectionWorldForCatalogue(world, "tv"),
+  );
 }
 
 // TVM-27: GET handlers must NOT write to the database. This function now
@@ -222,7 +228,11 @@ async function buildTrackingCounts(userId: string, world: TvWorld, now = new Dat
   `;
 
   const classifiedRows = await resolveGeneralMediaClassifications(rows, { allowNetwork: false });
-  return buildFastTvTrackingSummary(classifiedRows.filter((row) => recordMatchesTvWorld(row, world)).map((row): FastTvTrackingRow => ({
+  const worldRows = filterAndPrioritizeMediaCollectionWorldItems(
+    classifiedRows,
+    collectionWorldForCatalogue(world, "tv"),
+  );
+  return buildFastTvTrackingSummary(worldRows.map((row): FastTvTrackingRow => ({
     ...row,
     episodeCount: Number(row.episodeCount),
   })), now);
@@ -280,7 +290,10 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
   // title. Stored fields plus any cached classification are sufficient here;
   // detail and mutation flows continue to refresh authoritative metadata.
   const classifiedCandidates = await resolveGeneralMediaClassifications(seriesCandidates, { allowNetwork: false });
-  const series = classifiedCandidates.filter((show) => recordMatchesTvWorld(show, world));
+  const series = filterAndPrioritizeMediaCollectionWorldItems(
+    classifiedCandidates,
+    collectionWorldForCatalogue(world, "tv"),
+  );
 
   // ── BATCH METADATA READ ───────────────────────────────────────────────
   // Pre-fetch ALL TV metadata for ALL tracked shows in a single DB round-trip.
@@ -408,9 +421,9 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
   // Re-apply the canonical world after status metadata has been resolved.
   // This prevents a stale Media row from surviving in the wrong My Media
   // collection merely because it passed an earlier incomplete classification.
-  const canonicalDecorated = decorated.filter((show) => {
+  const canonicalDecorated = filterAndPrioritizeMediaCollectionWorldItems(decorated.map((show) => {
     const metadata = show._serverTvMeta;
-    return recordMatchesTvWorld(metadata
+    return metadata
       ? {
           ...show,
           originalLanguage: metadata.originalLanguage,
@@ -418,8 +431,8 @@ async function buildTrackingSnapshot(userId: string, world: TvWorld) {
           genres: metadata.genres.map((genre) => genre.name),
           classificationComplete: metadata.classificationComplete,
         }
-      : show, world);
-  });
+      : show;
+  }), collectionWorldForCatalogue(world, "tv"));
 
   const counts = {
     all: canonicalDecorated.length,

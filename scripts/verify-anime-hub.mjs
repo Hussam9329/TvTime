@@ -19,7 +19,7 @@ check(/value="overview"/.test(page) && /value="library"/.test(page) && /value="d
 check(/AnimeHubOverview/.test(page) && /tvtime-movie-hub__titlebar/.test(page) && /tvtime-movie-hub__summary/.test(page), "Anime uses the professional shared world shell and Overview");
 check(/useAnimeHub/.test(hooks) && /\/api\/anime\/hub/.test(hooks) && /queryKey: \["lib", "anime-hub"/.test(hooks), "Anime Hub has a user-aware query that refreshes with library mutations");
 check(/resolveUserId\(req\)/.test(route) && /getOrCreateUser/.test(route), "Anime Hub resolves the canonical request owner");
-check(/genres: \[ANIMATION_GENRE\]/.test(route) && /original_language: "ja"/.test(route) && /matchesDiscoverWorld\(item, mediaType, "anime"\)/.test(route), "Anime catalogue is restricted to Japanese animation instead of Japanese live action");
+check(/genres: \[ANIMATION_GENRE\]/.test(route) && /original_language: "ja"/.test(route) && /filterAndPrioritizeMediaCollectionWorldItems[\s\S]*"anime"/.test(route), "Anime catalogue is restricted through the central world pipeline instead of admitting Japanese live action");
 check(/original_language: "ja"/.test(route) && /language: "en-US"/.test(route) && /originalLanguage="ja"/.test(page) && /language="en-US"/.test(page) && /isAnime \? "en-US" as const/.test(discover), "Anime keeps Japanese-origin classification while every catalogue title requests English localization");
 check(/englishTitleByTmdbId/.test(route) && /englishAnimeTitleById/.test(mediaRoute) && /tvMetadataCache\.findMany/.test(mediaRoute), "Existing saved Anime series reuse the batched English metadata title without per-card requests or DB rewrites");
 check(/Promise\.allSettled\(Object\.values\(requests\)\)/.test(route) && !/tmdb\.(?:movieSummary|tvSummary|movieDetail|tvDetail)\(item/.test(route), "Anime Hub batches bounded shelves without per-card TMDB detail fan-out");
@@ -31,7 +31,7 @@ check(/onDiscover \? onDiscover\(\) : setView\("discover"\)/.test(collection) &&
 check(/No matching results/.test(collection) && /Your watchlist is empty/.test(collection) && /No Anime series are in progress/.test(collection), "Anime Library empty states use coherent English copy");
 check(/world === "anime" \? "trakora:anime-library-layout" : "trakora:movie-library-layout"/.test(collection), "Anime keeps a Grid/List preference independent from the established movie worlds");
 check(/Trending Anime/.test(discover) && /Hidden Anime Gems/.test(discover) && /Anime Classics/.test(discover), "Anime Discover exposes Anime-specific quick-pick labels");
-check(/collectionWorld\?:[\s\S]*"anime"/.test(releases) && /collectionWorld === "anime"[\s\S]*filter\(isAnimeMediaItem\)/.test(releases), "Anime Releases applies a defensive Anime-only classification filter");
+check(/collectionWorld\?: MediaCollectionWorld/.test(releases) && /filterAndPrioritizeMediaCollectionWorldItems\(matchingSearch, collectionWorld\)/.test(releases), "Anime Releases uses the same defensive central classification pipeline as every world");
 check(/seasonal\?: boolean/.test(releases) && /offset \* 3/.test(releases) && /seasonal/.test(page), "Anime Releases uses true Winter, Spring, Summer and Fall calendar windows");
 check(/\.tvtime-movie-hub\[data-world="anime"\]/.test(styles) && /\.tvtime-anime-library-type/.test(styles) && /\.tvtime-anime-next__scroller/.test(styles), "Anime has its own accent and responsive library and next-episode controls");
 

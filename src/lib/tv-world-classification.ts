@@ -16,7 +16,7 @@ export type TvWorldClassificationInput = {
   original_language?: string | null;
   originCountries?: string[] | null;
   origin_country?: string[] | null;
-  genres?: string[] | null;
+  genres?: Array<string | number | { id?: number; name: string }> | null;
   classificationComplete?: boolean | null;
 };
 
@@ -35,9 +35,10 @@ export function classifyTvWorld(show: TvWorldClassificationInput) {
   });
 
   // Original-language metadata is enough to supersede a stale Arabic flag.
-  // Anime keeps its existing stricter complete-metadata boundary because an
-  // explicit Anime classification can legitimately cover non-Japanese works.
-  const authoritative = show.classificationComplete === true;
+  // Anime needs either the explicit completeness marker or a usable language
+  // + genre pair. Sparse legacy rows may still use their persisted flags.
+  const authoritative = show.classificationComplete === true
+    || Boolean(originalLanguage && Array.isArray(show.genres) && show.genres.length > 0);
   const arabicAuthoritative = authoritative || originalLanguage !== null;
   const isArabic = arabicAuthoritative ? inferredArabic : Boolean(show.isArabic) || inferredArabic;
   const isAnime = !isArabic && (authoritative ? inferredAnime : Boolean(show.isAnime) || inferredAnime);

@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveUserId } from "@/lib/auth";
 import { getOrCreateUser } from "@/lib/user";
-import { classifyMediaWorld } from "@/lib/media-world-classification";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
 import { discoverArabicShelfByCountryPriority } from "@/lib/arabic-discover";
-import { prioritizeArabicMediaItems } from "@/lib/arabic-media";
 import { discoverAsianMoviesByPriority } from "@/lib/asian-discover-server";
-import { matchesDiscoverWorld } from "@/lib/discover-world";
+import {
+  filterAndPrioritizeMediaCollectionWorldItems,
+  prioritizeMediaCollectionWorldItems,
+} from "@/lib/media-world-pipeline";
 import { tmdb, type MediaItem, type TmdbLanguage } from "@/lib/tmdb";
 
 type MovieHubWorld = "movies" | "arabic-movies" | "asian-movies";
@@ -77,7 +78,6 @@ export async function GET(req: NextRequest) {
     oneYearAgo.setFullYear(now.getFullYear() - 1);
     const sixMonthsAhead = new Date(now);
     sixMonthsAhead.setMonth(now.getMonth() + 6);
-    const discoverWorld = world === "arabic-movies" ? "arabic" : world === "asian-movies" ? "asian" : "standard";
     const language: TmdbLanguage = world === "arabic-movies" ? "ar" : "en-US";
 
     const discover = async (params: NonNullable<Parameters<typeof tmdb.discoverMovies>[0]>) => {
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
         : world === "arabic-movies"
           ? await discoverArabicShelfByCountryPriority("movie", { ...base, original_language: "ar" }, 20)
           : (await tmdb.discoverMovies({ ...base, page: 1 })).results;
-      return dedupe(results.filter((item) => matchesDiscoverWorld(item, "movie", discoverWorld)), 20);
+      return dedupe(filterAndPrioritizeMediaCollectionWorldItems(results, world), 20);
     };
 
     const stored = await db.media.findMany({
@@ -95,13 +95,11 @@ export async function GET(req: NextRequest) {
       orderBy: { updatedAt: "desc" },
     });
     const classified = await resolveGeneralMediaClassifications(stored, { allowNetwork: false });
-    const worldItems = classified.filter((item) => classifyMediaWorld(item).collectionWorld === world);
+    const worldItems = filterAndPrioritizeMediaCollectionWorldItems(classified, world);
     const watchlistBase = worldItems
       .filter((item) => item.status === "planned" && !item.watched)
       .sort((left, right) => right.addedAt.getTime() - left.addedAt.getTime());
-    const watchlistRecords = world === "arabic-movies"
-      ? prioritizeArabicMediaItems(watchlistBase)
-      : watchlistBase;
+    const watchlistRecords = prioritizeMediaCollectionWorldItems(watchlistBase, world);
     const watchlist = watchlistRecords
       .map(movieFromRecord)
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
@@ -109,9 +107,7 @@ export async function GET(req: NextRequest) {
     const recentlyWatchedBase = worldItems
       .filter((item) => item.watched && item.watchedAt)
       .sort((left, right) => Number(right.watchedAt) - Number(left.watchedAt));
-    const recentlyWatched = (world === "arabic-movies"
-      ? prioritizeArabicMediaItems(recentlyWatchedBase)
-      : recentlyWatchedBase)
+    const recentlyWatched = prioritizeMediaCollectionWorldItems(recentlyWatchedBase, world)
       .map(movieFromRecord)
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
       .slice(0, 20);

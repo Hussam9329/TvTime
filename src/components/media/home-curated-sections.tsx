@@ -14,9 +14,30 @@ import {
 } from "@/hooks/use-tmdb";
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import type { MediaItem } from "@/lib/tmdb";
-import { filterAndPrioritizeArabicMediaItems } from "@/lib/arabic-media";
+import {
+  filterAndPrioritizeMediaCollectionWorldItems,
+  filterAndPrioritizeMediaCollectionWorldItemsBy,
+  mediaCollectionWorldForItem,
+  type MediaWorldPipelineItem,
+} from "@/lib/media-world-pipeline";
+import type { MediaCollectionWorld } from "@/lib/media-world-classification";
 
 const MediaRow = (props: ComponentProps<typeof BaseMediaRow>) => <BaseMediaRow {...props} compactCards={false} />;
+
+function detailCollectionWorld(detail: any, isTv: boolean): MediaCollectionWorld | null {
+  if (!detail?.id) return null;
+  const candidate: MediaWorldPipelineItem = {
+    ...detail,
+    type: isTv ? "series" : "movie",
+    media_type: isTv ? "tv" : "movie",
+    originalLanguage: detail.original_language || null,
+    originCountries: isTv
+      ? detail.origin_country ?? []
+      : (detail.production_countries ?? []).map((country: any) => country?.iso_3166_1).filter(Boolean),
+    genres: detail.genres ?? detail.genre_ids ?? [],
+  };
+  return mediaCollectionWorldForItem(candidate, isTv ? "tv" : "movie");
+}
 
 export function HomeCuratedSections() {
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -63,22 +84,52 @@ function CuratedContent() {
     releaseDateTo: `${new Date().getFullYear() - 20}-12-31`,
   });
 
-  const valid = (items: MediaItem[]) => items.filter((item) => item.id && item.poster_path).slice(0, 20);
-  const becauseItems = valid((latestIsTv
+  const valid = <T extends MediaItem,>(items: readonly T[]) => items.filter((item) => item.id && item.poster_path);
+  const latestDetail = latestIsTv ? tvDetail.data : movieDetail.data;
+  const becauseWorld = detailCollectionWorld(latestDetail, latestIsTv);
+  const becauseCandidates = ((latestIsTv
     ? (tvDetail.data as any)?.recommendations?.results
-    : (movieDetail.data as any)?.recommendations?.results) ?? []);
-  const episodeItems = valid(newEpisodes.data?.results ?? []);
-  const hiddenItems = valid((hiddenGems.data?.results ?? []).filter((item) => Number(item.vote_count || 0) < 2500));
-  const acclaimedItems = valid(acclaimed.data?.results ?? []);
-  const awardItems = valid(awards.data?.results ?? []);
-  const shortItems = valid(shortMovies.data?.results ?? []);
-  const miniItems = valid(miniSeries.data?.results ?? []);
-  const completedItems = valid(completed.data?.results ?? []);
-  const arabicTrendingItems = valid(filterAndPrioritizeArabicMediaItems([
+    : (movieDetail.data as any)?.recommendations?.results) ?? [])
+    .map((item: MediaItem) => ({ ...item, media_type: latestIsTv ? "tv" as const : "movie" as const }));
+  const becauseItems = becauseWorld
+    ? filterAndPrioritizeMediaCollectionWorldItems(valid(becauseCandidates), becauseWorld).slice(0, 20)
+    : [];
+  const episodeItems = filterAndPrioritizeMediaCollectionWorldItems(
+    valid(newEpisodes.data?.results ?? []),
+    "standard-tv",
+  ).slice(0, 20);
+  const hiddenItems = filterAndPrioritizeMediaCollectionWorldItems(
+    valid((hiddenGems.data?.results ?? []).filter((item) => Number(item.vote_count || 0) < 2500)),
+    "movies",
+  ).slice(0, 20);
+  const acclaimedItems = filterAndPrioritizeMediaCollectionWorldItems(
+    valid(acclaimed.data?.results ?? []),
+    "movies",
+  ).slice(0, 20);
+  const awardItems = filterAndPrioritizeMediaCollectionWorldItems(
+    valid(awards.data?.results ?? []),
+    "movies",
+  ).slice(0, 20);
+  const shortItems = filterAndPrioritizeMediaCollectionWorldItems(
+    valid(shortMovies.data?.results ?? []),
+    "movies",
+  ).slice(0, 20);
+  const miniItems = filterAndPrioritizeMediaCollectionWorldItems(
+    valid(miniSeries.data?.results ?? []),
+    "standard-tv",
+  ).slice(0, 20);
+  const completedItems = filterAndPrioritizeMediaCollectionWorldItems(
+    valid(completed.data?.results ?? []),
+    "standard-tv",
+  ).slice(0, 20);
+  const arabicTrendingItems = filterAndPrioritizeMediaCollectionWorldItemsBy(valid([
     ...(arabicMovies.data?.results ?? []).map((item) => ({ ...item, media_type: "movie" as const })),
     ...(arabicTv.data?.results ?? []).map((item) => ({ ...item, media_type: "tv" as const })),
-  ]));
-  const classicItems = valid(filterAndPrioritizeArabicMediaItems(arabicClassics.data?.results ?? []));
+  ]), (item) => item.media_type === "tv" ? "arabic-tv" : "arabic-movies").slice(0, 20);
+  const classicItems = filterAndPrioritizeMediaCollectionWorldItems(
+    valid(arabicClassics.data?.results ?? []),
+    "arabic-movies",
+  ).slice(0, 20);
   const forgottenItems = useMemo(() => (watchlist.data?.items ?? [])
     .slice()
     .sort((left: any, right: any) => new Date(left.addedAt || 0).getTime() - new Date(right.addedAt || 0).getTime())

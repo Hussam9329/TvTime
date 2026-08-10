@@ -2,7 +2,7 @@
 
 import { useNav } from "@/lib/store";
 import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, useBulkEpisodeToggle, useWatchlistToggle, useFollowingToggle, useMediaState, useRatingMutate, useShowProgress, useEpisodeRatings, useEpisodeRatingMutate, type EpisodeCompletion } from "@/hooks/use-tmdb";
-import { getTitle, img, imgOrPlaceholder } from "@/lib/tmdb";
+import { getTitle, img, imgOrPlaceholder, type MediaItem } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -29,7 +29,11 @@ import {
   type EpisodeWatchPlan,
   type WatchEpisodeRef,
 } from "@/lib/episode-watch-plan";
-import { detectIsArabic, filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
+import { detectIsArabic } from "@/lib/arabic-media";
+import {
+  filterAndPrioritizeMediaCollectionWorldItems,
+  mediaCollectionWorldForItem,
+} from "@/lib/media-world-pipeline";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 export function TvDetailView() {
@@ -125,23 +129,34 @@ export function TvDetailView() {
 
   const year = t.first_air_date?.slice(0, 4);
   const runtime = t.episode_run_time?.[0] ? `${t.episode_run_time[0]}m` : null;
+  const genreNames = (t.genres ?? []).map((genre) => genre.name);
   const isArabicShow = detectIsArabic({ originalLanguage: t.original_language, originCountry: t.origin_country });
+  const collectionWorld = mediaCollectionWorldForItem({
+    type: "series",
+    title: displayTitle,
+    originalLanguage: t.original_language,
+    originCountries: t.origin_country,
+    genres: genreNames,
+    classificationComplete: true,
+  }, "tv");
   const filmweenSearchTitle = isArabicShow ? ((t as any).english_name || displayTitle) : displayTitle;
   const voduSearchTitle = displayTitle;
   const cinemanaSearchTitle = displayTitle;
 
   const cast = (t as any).credits?.cast?.slice(0, 16) ?? [];
-  const recommendationCandidates = ((t as any).recommendations?.results ?? [])
+  const recommendationCandidates = (((t as any).recommendations?.results ?? []) as MediaItem[])
     .filter((result: any) => result.poster_path);
-  const similarCandidates = ((t as any).similar?.results ?? [])
+  const similarCandidates = (((t as any).similar?.results ?? []) as MediaItem[])
     .filter((result: any) => result.poster_path);
-  const recommendations = (isArabicShow
-    ? filterAndPrioritizeArabicMediaItems(recommendationCandidates)
-    : recommendationCandidates.filter((result: any) => !isArabicMediaItem(result)))
+  const recommendations = filterAndPrioritizeMediaCollectionWorldItems(
+    recommendationCandidates,
+    collectionWorld,
+  )
     .slice(0, 20);
-  const similar = (isArabicShow
-    ? filterAndPrioritizeArabicMediaItems(similarCandidates)
-    : similarCandidates.filter((result: any) => !isArabicMediaItem(result)))
+  const similar = filterAndPrioritizeMediaCollectionWorldItems(
+    similarCandidates,
+    collectionWorld,
+  )
     .slice(0, 20);
   const videos = ((t as any).videos?.results ?? []).filter((v: any) => v.site === "YouTube");
   const trailer = videos.find((v: any) => v.type === "Trailer") || videos[0];

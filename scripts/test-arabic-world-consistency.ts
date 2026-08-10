@@ -88,7 +88,7 @@ const centralPipelineConsumers = [
 for (const path of centralPipelineConsumers) {
   assert.match(
     read(path),
-    /(?:filterAndPrioritizeArabicMediaItems|prioritizeArabicMediaItems)/,
+    /(?:(?:filterAndPrioritize|prioritize)ArabicMediaItems|(?:filterAndPrioritize|prioritize)MediaCollectionWorldItems)/,
     `${path} must consume the central Arabic priority pipeline`,
   );
 }
@@ -100,8 +100,8 @@ assert.match(
 );
 assert.match(
   read("src/components/views/movie-release-schedule.tsx"),
-  /collectionWorld === "arabic-movies" \|\| collectionWorld === "arabic-tv"/,
-  "movie and TV releases must share the same Arabic filtering and priority branch",
+  /filterAndPrioritizeMediaCollectionWorldItems\(matchingSearch, collectionWorld\)/,
+  "movie and TV releases must share the exact same collection-world pipeline",
 );
 assert.match(
   read("src/lib/arabic-discover.ts"),

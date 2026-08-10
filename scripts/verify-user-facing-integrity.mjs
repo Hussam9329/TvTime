@@ -355,7 +355,7 @@ check(
     && !/useFilteredDiscover/.test(tvHubOverview)
     && /case "tv\/hub"/.test(tmdbProxyRoute)
     && /Promise\.allSettled\(requests\)/.test(tmdbProxyRoute)
-    && /matchesDiscoverWorld\(item, "tv", world\)/.test(tmdbProxyRoute)
+    && /filterAndPrioritizeMediaCollectionWorldItems\(items, collectionWorld\)/.test(tmdbProxyRoute)
     && /<MediaRow/.test(tvHubOverview)
     && !/useWatchlistToggle|useWatchedMovieToggle|useFollowShow|useMutation|db\./.test(tvHubOverview)
     && /tvtime-tv-hub\[data-tv-world="arabic"\]/.test(globalStyles)

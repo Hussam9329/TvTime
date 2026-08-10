@@ -81,7 +81,8 @@ check(!/To TV Shows|To Movies/.test(collection), "Anime keeps obsolete manual cr
 
 check(
   /resolveGeneralMediaClassifications/.test(tvApi)
-    && (tvApi.match(/recordMatchesTvWorld/g) || []).length >= 3
+    && (tvApi.match(/filterAndPrioritizeMediaCollectionWorldItems/g) || []).length >= 3
+    && /collectionWorldForCatalogue\(world, "tv"\)/.test(tvApi)
     && /if \(classification\.isAnime\) return false/.test(tvWorldClassification)
     && /return classification\.world === world/.test(tvWorldClassification)
     && /batchReadDbClassifications/.test(classificationResolver),

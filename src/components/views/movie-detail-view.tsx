@@ -2,7 +2,7 @@
 
 import { useNav } from "@/lib/store";
 import { useMovieDetail, useWatchlistToggle, useWatchedMovieToggle, useRatingMutate, useMediaState } from "@/hooks/use-tmdb";
-import { getTitle, img, imgOrPlaceholder } from "@/lib/tmdb";
+import { getTitle, img, imgOrPlaceholder, type MediaItem } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -19,7 +19,11 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatReleaseDateParts } from "@/lib/date-only";
-import { detectIsArabic, filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
+import { detectIsArabic } from "@/lib/arabic-media";
+import {
+  filterAndPrioritizeMediaCollectionWorldItems,
+  mediaCollectionWorldForItem,
+} from "@/lib/media-world-pipeline";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 
 export function MovieDetailView() {
@@ -76,22 +80,32 @@ export function MovieDetailView() {
   const originCountries = (m.production_countries ?? []).map((country) => country.iso_3166_1);
   const genreNames = (m.genres ?? []).map((genre) => genre.name);
   const isArabicMovie = detectIsArabic({ originalLanguage: m.original_language, originCountry: originCountries });
+  const collectionWorld = mediaCollectionWorldForItem({
+    type: "movie",
+    title: displayTitle,
+    originalLanguage: m.original_language,
+    originCountries,
+    genres: genreNames,
+    classificationComplete: true,
+  }, "movie");
   const filmweenSearchTitle = isArabicMovie ? ((m as any).english_title || displayTitle) : displayTitle;
   const voduSearchTitle = displayTitle;
   const cinemanaSearchTitle = displayTitle;
 
   const cast = (m as any).credits?.cast?.slice(0, 16) ?? [];
-  const recommendationCandidates = ((m as any).recommendations?.results ?? [])
+  const recommendationCandidates = (((m as any).recommendations?.results ?? []) as MediaItem[])
     .filter((result: any) => result.poster_path);
-  const similarCandidates = ((m as any).similar?.results ?? [])
+  const similarCandidates = (((m as any).similar?.results ?? []) as MediaItem[])
     .filter((result: any) => result.poster_path);
-  const recommendations = (isArabicMovie
-    ? filterAndPrioritizeArabicMediaItems(recommendationCandidates)
-    : recommendationCandidates.filter((result: any) => !isArabicMediaItem(result)))
+  const recommendations = filterAndPrioritizeMediaCollectionWorldItems(
+    recommendationCandidates,
+    collectionWorld,
+  )
     .slice(0, 20);
-  const similar = (isArabicMovie
-    ? filterAndPrioritizeArabicMediaItems(similarCandidates)
-    : similarCandidates.filter((result: any) => !isArabicMediaItem(result)))
+  const similar = filterAndPrioritizeMediaCollectionWorldItems(
+    similarCandidates,
+    collectionWorld,
+  )
     .slice(0, 20);
   const videos = ((m as any).videos?.results ?? []).filter((v: any) => v.site === "YouTube");
   const trailer = videos.find((v: any) => v.type === "Trailer") || videos[0];

@@ -124,6 +124,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   };
 
   const media = useMedia({
+    collectionWorld: world,
     type: isWatchingTab || isNotStartedTab
       ? "series"
       : world === "anime" && animeMediaKind !== "all"

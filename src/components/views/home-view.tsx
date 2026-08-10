@@ -14,12 +14,24 @@ import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useState, useEffect, useRef, type ComponentProps } from "react";
 import { toast } from "sonner";
-import { isArabicMediaItem } from "@/lib/arabic-media";
-import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { isAsianMediaItem } from "@/lib/asian-media";
+import {
+  filterAndPrioritizeMediaCollectionWorldItems,
+  filterAndPrioritizeMediaCollectionWorldItemsBy,
+} from "@/lib/media-world-pipeline";
+import type { MediaCollectionWorld } from "@/lib/media-world-classification";
 
 const MediaRow = (props: ComponentProps<typeof BaseMediaRow>) => <BaseMediaRow {...props} compactCards={false} />;
 const SEEN_HOME_TV_STATUSES = new Set(["watching", "uptodate", "up_to_date", "finished", "watched", "stopped"]);
+
+function standardCollectionWorldForHomeItem(item: MediaItem): MediaCollectionWorld | null {
+  if (item.media_type === "tv") return "standard-tv";
+  if (item.media_type === "movie") return "movies";
+  return null;
+}
+
+function filterAndPrioritizeStandardHomeItems(items: readonly MediaItem[]) {
+  return filterAndPrioritizeMediaCollectionWorldItemsBy(items, standardCollectionWorldForHomeItem);
+}
 
 function isUnseenHomeHeroState(mediaType: "movie" | "tv", state: MediaBatchState | undefined) {
   if (!state) return true;
@@ -35,13 +47,31 @@ export function HomeView() {
 
   const setView = useNav((s) => s.setView);
 
-  const standardTrending = (homeFeed.data?.trending.results ?? []).filter((media) => !isArabicMediaItem(media));
-  const popularMovieItems = (homeFeed.data?.popularMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
-  const onAirTvItems = (homeFeed.data?.onTheAirTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media) && !isAnimeMediaItem(media) && !isAsianMediaItem(media));
-  const popularTvItems = (homeFeed.data?.popularTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media) && !isAnimeMediaItem(media) && !isAsianMediaItem(media));
-  const topMovieItems = (homeFeed.data?.topRatedMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
-  const topTvItems = (homeFeed.data?.topRatedTv.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
-  const upcomingMovieItems = (homeFeed.data?.upcomingMovies.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media));
+  const standardTrending = filterAndPrioritizeStandardHomeItems(homeFeed.data?.trending.results ?? []);
+  const popularMovieItems = filterAndPrioritizeMediaCollectionWorldItems(
+    (homeFeed.data?.popularMovies.results ?? []).filter((media) => media.poster_path),
+    "movies",
+  );
+  const onAirTvItems = filterAndPrioritizeMediaCollectionWorldItems(
+    (homeFeed.data?.onTheAirTv.results ?? []).filter((media) => media.poster_path),
+    "standard-tv",
+  );
+  const popularTvItems = filterAndPrioritizeMediaCollectionWorldItems(
+    (homeFeed.data?.popularTv.results ?? []).filter((media) => media.poster_path),
+    "standard-tv",
+  );
+  const topMovieItems = filterAndPrioritizeMediaCollectionWorldItems(
+    (homeFeed.data?.topRatedMovies.results ?? []).filter((media) => media.poster_path),
+    "movies",
+  );
+  const topTvItems = filterAndPrioritizeMediaCollectionWorldItems(
+    (homeFeed.data?.topRatedTv.results ?? []).filter((media) => media.poster_path),
+    "standard-tv",
+  );
+  const upcomingMovieItems = filterAndPrioritizeMediaCollectionWorldItems(
+    (homeFeed.data?.upcomingMovies.results ?? []).filter((media) => media.poster_path),
+    "movies",
+  );
   const heroCandidates = standardTrending.filter((media) => media.backdrop_path);
   const homeLibraryStates = useMediaStates([
     ...standardTrending.map((item) => ({ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" as const : "movie" as const })),
@@ -59,10 +89,10 @@ export function HomeView() {
         return isUnseenHomeHeroState(mediaType, state);
       })
     : [];
-  const heroItems = [
+  const heroItems = filterAndPrioritizeStandardHomeItems([
     ...unseenHeroCandidates.filter((media) => (media.overview?.length || 0) > 100),
     ...unseenHeroCandidates.filter((media) => (media.overview?.length || 0) <= 100),
-  ].slice(0, 5);
+  ]).slice(0, 5);
   const sharedLibraryStateSource = { data: homeLibraryStates.data };
 
   return (

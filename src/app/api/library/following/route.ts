@@ -4,7 +4,7 @@ import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
 import { canonicalMediaPoster } from "@/lib/media-poster";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
-import { classifyMediaWorld } from "@/lib/media-world-classification";
+import { filterAndPrioritizeMediaCollectionWorldItems } from "@/lib/media-world-pipeline";
 
 function toCompat(item: any) {
   return { ...item, posterPath: item.poster, followedAt: item.addedAt };
@@ -19,8 +19,7 @@ export async function GET(req: NextRequest) {
       orderBy: { addedAt: "desc" },
     });
     const classified = await resolveGeneralMediaClassifications(candidates, { allowNetwork: false });
-    const items = classified.filter((item) =>
-      classifyMediaWorld(item).collectionWorld === "standard-tv");
+    const items = filterAndPrioritizeMediaCollectionWorldItems(classified, "standard-tv");
     return NextResponse.json({ items: items.map(toCompat), source: "Media" });
   } catch (error) {
     console.error("[following:GET]", error);

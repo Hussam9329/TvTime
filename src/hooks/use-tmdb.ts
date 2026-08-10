@@ -168,7 +168,7 @@ export function useTvGenres(language?: "ar" | "ja" | "en-US") {
   });
 }
 
-export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; maxRating?: number; originalLanguage?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; certification?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
+export function useDiscoverMovies(params: { genres?: number[]; year?: number; sort_by?: string; page?: number; rating?: number; maxRating?: number; originalLanguage?: string; originCountries?: string; voteCount?: number; releaseDateFrom?: string; releaseDateTo?: string; certification?: string; runtimeGte?: number; runtimeLte?: number; keywordQuery?: string; language?: "ar" | "ja" | "en-US"; enabled?: boolean }) {
   return useQuery({
     queryKey: ["tmdb", "movies", "discover", params],
     queryFn: () =>
@@ -180,6 +180,7 @@ export function useDiscoverMovies(params: { genres?: number[]; year?: number; so
         ...(params.rating ? { rating: params.rating } : {}),
         ...(params.maxRating != null ? { rating_max: params.maxRating } : {}),
         ...(params.originalLanguage ? { original_language: params.originalLanguage } : {}),
+        ...(params.originCountries ? { origin_country: params.originCountries } : {}),
         ...(params.voteCount != null ? { vote_count: params.voteCount } : {}),
         ...(params.releaseDateFrom ? { release_date_gte: params.releaseDateFrom } : {}),
         ...(params.releaseDateTo ? { release_date_lte: params.releaseDateTo } : {}),
@@ -410,6 +411,7 @@ async function findOrCreateMedia(args: {
   rating?: number;
   runtime?: number | null;
   genres?: string[];
+  genreIds?: number[];
   originCountry?: string[] | null;
   originalLanguage?: string | null;
   seasons?: number | null;
@@ -433,6 +435,7 @@ async function findOrCreateMedia(args: {
       rating: args.rating,
       runtime: args.runtime,
       genres: args.genres,
+      genreIds: args.genreIds,
       originCountry: args.originCountry,
       originalLanguage: args.originalLanguage,
       seasons: args.seasons,
@@ -606,6 +609,7 @@ export function useWatchlistToggle() {
       voteAverage?: number;
       runtime?: number | null;
       genres?: string[];
+      genreIds?: number[];
       originCountry?: string[] | null;
       originalLanguage?: string | null;
       seasons?: number | null;
@@ -623,6 +627,7 @@ export function useWatchlistToggle() {
           rating: args.voteAverage,
           runtime: args.runtime,
           genres: args.genres,
+          genreIds: args.genreIds,
           originCountry: args.originCountry,
           originalLanguage: args.originalLanguage,
           seasons: args.seasons,
@@ -711,6 +716,7 @@ export function useWatchedMovieToggle() {
       voteAverage?: number;
       overview?: string;
       genres?: string[];
+      genreIds?: number[];
       originCountry?: string[] | null;
       originalLanguage?: string | null;
       seasons?: number | null;
@@ -735,6 +741,7 @@ export function useWatchedMovieToggle() {
           rating: args.voteAverage,
           runtime: args.runtime,
           genres: args.genres,
+          genreIds: args.genreIds,
           originCountry: args.originCountry,
           originalLanguage: args.originalLanguage,
           seasons: args.seasons,
@@ -913,6 +920,7 @@ type ArabicMovieScheduleResponse = {
 type MovieScheduleResponse = ArabicMovieScheduleResponse;
 
 type ReleaseScheduleOptions = {
+  collectionWorld?: "movies" | "asian-movies" | "anime" | "arabic-movies" | "standard-tv" | "arabic-tv" | "asian-tv";
   language?: "ar" | "ja" | "en-US";
   originalLanguage?: string;
   excludedOriginalLanguage?: string;
@@ -933,6 +941,7 @@ export function useReleaseSchedule(
       const url = new URL(mediaType === "tv" ? "/api/tv/calendar" : "/api/movies/calendar", window.location.origin);
       url.searchParams.set("from", from);
       url.searchParams.set("to", to);
+      if (opts?.collectionWorld) url.searchParams.set("collection_world", opts.collectionWorld);
       if (opts?.language) url.searchParams.set("language", opts.language);
       if (opts?.originalLanguage) url.searchParams.set("original_language", opts.originalLanguage);
       if (opts?.excludedOriginalLanguage) url.searchParams.set("exclude_original_language", opts.excludedOriginalLanguage);
@@ -1559,6 +1568,7 @@ async function mediaGet<T>(path: string, params?: Record<string, string | number
 }
 
 export function useMedia(params: {
+  collectionWorld?: "movies" | "asian-movies" | "anime" | "arabic-movies" | "standard-tv" | "arabic-tv" | "asian-tv";
   type?: string;
   status?: string;
   watched?: string;

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveTmdbKeywordIds, tmdb, type MediaItem, type TmdbLanguage } from "@/lib/tmdb";
-import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
+import { isArabicMediaItem } from "@/lib/arabic-media";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import { discoverAsianMoviesByPriority, discoverAsianTvByPriority } from "@/lib/asian-discover-server";
-import { matchesDiscoverWorld, type DiscoverWorld } from "@/lib/discover-world";
-import { sortByStandardMediaPriority } from "@/lib/standard-media-priority";
+import type { DiscoverWorld } from "@/lib/discover-world";
+import {
+  collectionWorldForCatalogue,
+  filterAndPrioritizeMediaCollectionWorldItems,
+} from "@/lib/media-world-pipeline";
 
 const handler = async (
   req: NextRequest,
@@ -90,12 +93,17 @@ const handler = async (
           language,
         };
         if (queryParams.origin_country === ASIAN_ORIGIN_COUNTRY_QUERY) {
-          data = await discoverAsianMoviesByPriority(discoverParams, page);
+          const discovered = await discoverAsianMoviesByPriority(discoverParams, page);
+          data = { ...discovered, results: filterAndPrioritizeMediaCollectionWorldItems(discovered.results, "asian-movies") };
         } else if (queryParams.original_language === "ar") {
-          data = await discoverArabicByCountryPriority("movie", discoverParams, page);
+          const discovered = await discoverArabicByCountryPriority("movie", discoverParams, page);
+          data = { ...discovered, results: filterAndPrioritizeMediaCollectionWorldItems(discovered.results, "arabic-movies") };
         } else {
           const discovered = await tmdb.discoverMovies(discoverParams);
-          data = { ...discovered, results: sortByStandardMediaPriority(discovered.results) };
+          const collectionWorld = queryParams.original_language === "ja" && discoverParams.genres?.includes(16)
+            ? "anime"
+            : "movies";
+          data = { ...discovered, results: filterAndPrioritizeMediaCollectionWorldItems(discovered.results, collectionWorld) };
         }
         break;
       }
@@ -116,6 +124,7 @@ const handler = async (
           ? queryParams.world
           : "standard";
         const language: TmdbLanguage = world === "arabic" ? "ar" : "en-US";
+        const collectionWorld = collectionWorldForCatalogue(world, "tv");
         const now = new Date();
         const today = now.toISOString().slice(0, 10);
         const oneYearAgo = new Date(now);
@@ -124,11 +133,9 @@ const handler = async (
         const worldItems = (items: MediaItem[], limit = 20) => {
           const seen = new Set<number>();
           const result: MediaItem[] = [];
-          const candidates = world === "arabic"
-            ? filterAndPrioritizeArabicMediaItems(items)
-            : items;
+          const candidates = filterAndPrioritizeMediaCollectionWorldItems(items, collectionWorld);
           for (const item of candidates) {
-            if (!item.id || seen.has(item.id) || !item.poster_path || !matchesDiscoverWorld(item, "tv", world)) continue;
+            if (!item.id || seen.has(item.id) || !item.poster_path) continue;
             seen.add(item.id);
             result.push({ ...item, media_type: "tv" });
             if (result.length >= limit) break;
@@ -197,11 +204,25 @@ const handler = async (
           keyword_ids: keywordIds,
           language,
         };
-        data = queryParams.origin_country === ASIAN_ORIGIN_COUNTRY_QUERY
-          ? await discoverAsianTvByPriority(discoverParams, page)
+        const world: DiscoverWorld = queryParams.origin_country === ASIAN_ORIGIN_COUNTRY_QUERY
+          ? "asian"
           : queryParams.original_language === "ar"
-          ? await discoverArabicByCountryPriority("tv", discoverParams, page)
-          : await tmdb.discoverTv(discoverParams);
+            ? "arabic"
+            : queryParams.original_language === "ja" && discoverParams.genres?.includes(16)
+              ? "anime"
+              : "standard";
+        const discovered = world === "asian"
+          ? await discoverAsianTvByPriority(discoverParams, page)
+          : world === "arabic"
+            ? await discoverArabicByCountryPriority("tv", discoverParams, page)
+            : await tmdb.discoverTv(discoverParams);
+        data = {
+          ...discovered,
+          results: filterAndPrioritizeMediaCollectionWorldItems(
+            discovered.results,
+            collectionWorldForCatalogue(world, "tv"),
+          ),
+        };
         break;
       }
       case "search":

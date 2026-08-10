@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveUserId } from "@/lib/auth";
 import { getOrCreateUser } from "@/lib/user";
-import { classifyMediaWorld } from "@/lib/media-world-classification";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
-import { matchesDiscoverWorld } from "@/lib/discover-world";
+import { filterAndPrioritizeMediaCollectionWorldItems } from "@/lib/media-world-pipeline";
 import { tmdb, type MediaItem } from "@/lib/tmdb";
 
 const ANIMATION_GENRE = 16;
@@ -20,15 +19,18 @@ function mediaTypeOf(item: MediaItem): "movie" | "tv" {
 }
 
 function animeOnly(items: MediaItem[], mediaType: "movie" | "tv") {
-  return items
-    .filter((item) => item.poster_path && matchesDiscoverWorld(item, mediaType, "anime"))
-    .map((item) => ({ ...item, media_type: mediaType } as AnimeHubItem));
+  return filterAndPrioritizeMediaCollectionWorldItems(
+    items
+      .filter((item) => item.poster_path)
+      .map((item) => ({ ...item, media_type: mediaType } as AnimeHubItem)),
+    "anime",
+  );
 }
 
 function dedupe(items: AnimeHubItem[], limit = 20) {
   const seen = new Set<string>();
   const result: AnimeHubItem[] = [];
-  for (const item of items) {
+  for (const item of filterAndPrioritizeMediaCollectionWorldItems(items, "anime")) {
     const mediaType = mediaTypeOf(item);
     const key = `${mediaType}:${item.id}`;
     if (!item.id || seen.has(key) || !item.poster_path) continue;
@@ -41,6 +43,31 @@ function dedupe(items: AnimeHubItem[], limit = 20) {
 
 function sortByPopularity(items: AnimeHubItem[]) {
   return [...items].sort((left, right) => Number(right.popularity || 0) - Number(left.popularity || 0));
+}
+
+function releaseDateOf(item: AnimeHubItem) {
+  return item.media_type === "movie"
+    ? String(item.release_date || "")
+    : String(item.first_air_date || "");
+}
+
+function sortByReleaseDate(items: AnimeHubItem[], order: "asc" | "desc") {
+  const direction = order === "asc" ? 1 : -1;
+  return [...items].sort((left, right) => {
+    const leftDate = releaseDateOf(left);
+    const rightDate = releaseDateOf(right);
+    if (leftDate && rightDate && leftDate !== rightDate) {
+      return leftDate.localeCompare(rightDate) * direction;
+    }
+    if (leftDate && !rightDate) return -1;
+    if (!leftDate && rightDate) return 1;
+    return 0;
+  });
+}
+
+function sortByRating(items: AnimeHubItem[]) {
+  return [...items].sort((left, right) =>
+    Number(right.vote_average || 0) - Number(left.vote_average || 0));
 }
 
 function itemFromRecord(item: {
@@ -95,7 +122,7 @@ export async function GET(req: NextRequest) {
       orderBy: { updatedAt: "desc" },
     });
     const classified = await resolveGeneralMediaClassifications(stored, { allowNetwork: false });
-    const animeRecords = classified.filter((item) => classifyMediaWorld(item).collectionWorld === "anime");
+    const animeRecords = filterAndPrioritizeMediaCollectionWorldItems(classified, "anime");
     const animeSeriesIds = animeRecords
       .filter((item) => item.type === "series" && item.tmdbId != null)
       .map((item) => Number(item.tmdbId));
@@ -245,9 +272,9 @@ export async function GET(req: NextRequest) {
         continueWatching: inProgressRecords.map(itemFromAnimeRecord).filter((item): item is AnimeHubItem => Boolean(item)).slice(0, 18),
         airingToday: dedupe(values.airingToday, 18),
         thisSeason: dedupe(values.seasonal, 18),
-        newNoteworthy: dedupe(sortByPopularity([...values.newTv, ...values.newMovies]), 18),
-        hiddenGems: dedupe(sortByPopularity([...values.hiddenTv, ...values.hiddenMovies]), 18),
-        upcoming: dedupe(sortByPopularity([...values.upcomingTv, ...values.upcomingMovies]), 18),
+        newNoteworthy: dedupe(sortByReleaseDate([...values.newTv, ...values.newMovies], "desc"), 18),
+        hiddenGems: dedupe(sortByRating([...values.hiddenTv, ...values.hiddenMovies]), 18),
+        upcoming: dedupe(sortByReleaseDate([...values.upcomingTv, ...values.upcomingMovies], "asc"), 18),
         recentlyWatched,
       },
       partial: settled.some((result) => result.status === "rejected"),

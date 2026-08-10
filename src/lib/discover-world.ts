@@ -1,6 +1,7 @@
-import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { isArabicMediaItem } from "@/lib/arabic-media";
-import { isAsianMediaItem } from "@/lib/asian-media";
+import {
+  collectionWorldForCatalogue,
+  matchesMediaCollectionWorld,
+} from "@/lib/media-world-pipeline";
 import type { MediaItem } from "@/lib/tmdb";
 
 export type DiscoverWorld = "standard" | "arabic" | "asian" | "anime";
@@ -10,19 +11,5 @@ export function matchesDiscoverWorld(
   mediaType: "movie" | "tv",
   world: DiscoverWorld,
 ) {
-  const isArabic = isArabicMediaItem(item);
-  const isAnime = isAnimeMediaItem(item);
-  if (mediaType !== "tv") {
-    const isAsian = !isArabic && !isAnime && isAsianMediaItem(item);
-    if (world === "arabic") return isArabic;
-    if (world === "anime") return isAnime;
-    if (world === "asian") return isAsian;
-    return !isArabic && !isAnime && !isAsian;
-  }
-
-  const isAsian = !isArabic && !isAnime && isAsianMediaItem(item);
-  if (world === "arabic") return isArabic;
-  if (world === "anime") return isAnime;
-  if (world === "asian") return isAsian;
-  return !isArabic && !isAnime && !isAsian;
+  return matchesMediaCollectionWorld(item, collectionWorldForCatalogue(world, mediaType));
 }

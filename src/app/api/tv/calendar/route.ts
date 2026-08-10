@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { tmdb, type MediaItem } from "@/lib/tmdb";
 import { parseDateOnly } from "@/lib/date-only";
 import { discoverArabicCatalogueByCountryPriority } from "@/lib/arabic-discover";
-import { filterAndPrioritizeArabicMediaItems } from "@/lib/arabic-media";
+import { ASIAN_COUNTRY_CODES, ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
+import { filterAndPrioritizeMediaCollectionWorldItems } from "@/lib/media-world-pipeline";
+import type { MediaCollectionWorld } from "@/lib/media-world-classification";
 
 const MAX_RANGE_DAYS = 370;
 const MAX_PAGES = 5;
 const ARABIC_TEXT = /[\u0600-\u06FF]/;
+type TvCollectionWorld = Extract<MediaCollectionWorld, "standard-tv" | "arabic-tv" | "asian-tv" | "anime">;
 
 function dayNumber(value: string) {
   const parts = parseDateOnly(value);
@@ -17,6 +20,10 @@ function genreIds(value: string | null) {
   return value?.split(",").map(Number).filter((id) => Number.isInteger(id) && id > 0) || [];
 }
 
+function isTvCollectionWorld(value: string | null): value is TvCollectionWorld {
+  return value === "standard-tv" || value === "arabic-tv" || value === "asian-tv" || value === "anime";
+}
+
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -25,8 +32,25 @@ export async function GET(req: NextRequest) {
     const language = (url.searchParams.get("language") as "ar" | "ja" | "en-US" | null) || undefined;
     const originalLanguage = url.searchParams.get("original_language") || undefined;
     const excludedOriginalLanguage = url.searchParams.get("exclude_original_language") || undefined;
+    const requestedOriginCountry = url.searchParams.get("origin_country") || undefined;
     const genres = genreIds(url.searchParams.get("genre"));
     const withoutGenres = genreIds(url.searchParams.get("without_genre"));
+    const requestedCollectionWorld = url.searchParams.get("collection_world");
+    if (requestedCollectionWorld && !isTvCollectionWorld(requestedCollectionWorld)) {
+      return NextResponse.json({ error: "Unsupported TV collection world." }, { status: 400 });
+    }
+    const collectionWorld: TvCollectionWorld = isTvCollectionWorld(requestedCollectionWorld)
+      ? requestedCollectionWorld
+      : (originalLanguage === "ar"
+        ? "arabic-tv"
+        : requestedOriginCountry === ASIAN_ORIGIN_COUNTRY_QUERY
+          ? "asian-tv"
+          : originalLanguage === "ja" && genres.includes(16)
+            ? "anime"
+            : "standard-tv");
+    const originCountries = requestedOriginCountry === ASIAN_ORIGIN_COUNTRY_QUERY
+      ? ASIAN_COUNTRY_CODES.join("|")
+      : requestedOriginCountry;
     const fromDay = dayNumber(from);
     const toDay = dayNumber(to);
     const days = fromDay == null || toDay == null ? null : toDay - fromDay + 1;
@@ -43,11 +67,12 @@ export async function GET(req: NextRequest) {
       release_date_lte: to,
       genres: genres.length ? genres : undefined,
       without_genres: withoutGenres.length ? withoutGenres : undefined,
-      original_language: originalLanguage,
+      original_language: collectionWorld === "arabic-tv" ? "ar" : originalLanguage,
+      originCountries,
       language,
     };
 
-    const arabicPriorityCatalogue = originalLanguage === "ar"
+    const arabicPriorityCatalogue = collectionWorld === "arabic-tv"
       ? await discoverArabicCatalogueByCountryPriority("tv", baseParams, MAX_PAGES * 20)
       : null;
     const first = arabicPriorityCatalogue ?? await tmdb.discoverTv(baseParams);
@@ -88,13 +113,12 @@ export async function GET(req: NextRequest) {
     const dateOrderedItems = [...byId.values()].sort((left, right) =>
       String(left.first_air_date || "").localeCompare(String(right.first_air_date || ""))
       || String(left.name || "").localeCompare(String(right.name || "")));
-    const items = originalLanguage === "ar"
-      ? filterAndPrioritizeArabicMediaItems(dateOrderedItems)
-      : dateOrderedItems;
+    const items = filterAndPrioritizeMediaCollectionWorldItems(dateOrderedItems, collectionWorld);
 
     return NextResponse.json({
       from,
       to,
+      collectionWorld,
       items,
       total: items.length,
       pagesFetched: pages,

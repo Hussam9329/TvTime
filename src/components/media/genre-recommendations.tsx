@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDiscoverMovies, useDiscoverTv, useMovieGenres, useTvGenres, useMedia, useMediaStates } from "@/hooks/use-tmdb";
 import { MediaRow } from "@/components/media/media-row";
 import { Sparkles, Star } from "lucide-react";
-import { isArabicMediaItem } from "@/lib/arabic-media";
+import { filterAndPrioritizeMediaCollectionWorldItems } from "@/lib/media-world-pipeline";
 
 /**
  * TVM-42: Personalized recommendations.
@@ -53,8 +53,8 @@ function GenreRecommendationContent() {
   const tvGenres = useTvGenres();
 
   // TVM-42: Fetch the user's highly-rated media to derive personal genres
-  const ratedMovies = useMedia({ type: "movie", rated: "true", isArabic: "false", limit: 500 });
-  const ratedTv = useMedia({ type: "series", rated: "true", isArabic: "false", limit: 500 });
+  const ratedMovies = useMedia({ collectionWorld: "movies", type: "movie", rated: "true", limit: 500 });
+  const ratedTv = useMedia({ collectionWorld: "standard-tv", type: "series", rated: "true", limit: 500 });
 
   // Derive top genres from user's highest-rated items (rating >= 70)
   const userMovieGenres = deriveTopGenres(ratedMovies.data?.items ?? [], movieGenres.data ?? [], 2);
@@ -79,9 +79,18 @@ function GenreRecommendationContent() {
   const rec2 = useDiscoverMovies({ genres: movieGenre2 ? [movieGenre2.id] : undefined, sort_by: "popularity.desc", page: 1, enabled: Boolean(movieGenre2) });
   const rec3 = useDiscoverTv({ genres: tvGenre1 ? [tvGenre1.id] : undefined, sort_by: "popularity.desc", page: 1, enabled: Boolean(tvGenre1) });
 
-  const rec1Items = (rec1.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20);
-  const rec2Items = (rec2.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20);
-  const rec3Items = (rec3.data?.results ?? []).filter((media) => media.poster_path && !isArabicMediaItem(media)).slice(0, 20);
+  const rec1Items = filterAndPrioritizeMediaCollectionWorldItems(
+    (rec1.data?.results ?? []).filter((media) => media.poster_path),
+    "movies",
+  ).slice(0, 20);
+  const rec2Items = filterAndPrioritizeMediaCollectionWorldItems(
+    (rec2.data?.results ?? []).filter((media) => media.poster_path),
+    "movies",
+  ).slice(0, 20);
+  const rec3Items = filterAndPrioritizeMediaCollectionWorldItems(
+    (rec3.data?.results ?? []).filter((media) => media.poster_path),
+    "standard-tv",
+  ).slice(0, 20);
   const recommendationStates = useMediaStates([
     ...rec1Items.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
     ...rec2Items.map((item) => ({ tmdbId: Number(item.id), mediaType: "movie" as const })),
@@ -91,7 +100,7 @@ function GenreRecommendationContent() {
 
   return (
     <>
-      {movieGenre1 && (rec1.data?.results?.length ?? 0) > 0 && (
+      {movieGenre1 && rec1Items.length > 0 && (
         <MediaRow
           title={isPersonalized ? `Top ${movieGenre1.name} Movies • For You` : `Top ${movieGenre1.name} Movies`}
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
@@ -100,7 +109,7 @@ function GenreRecommendationContent() {
           libraryStateSource={libraryStateSource}
         />
       )}
-      {tvGenre1 && (rec3.data?.results?.length ?? 0) > 0 && (
+      {tvGenre1 && rec3Items.length > 0 && (
         <MediaRow
           title={isPersonalized ? `Popular ${tvGenre1.name} Shows • For You` : `Popular ${tvGenre1.name} Shows`}
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}
@@ -110,7 +119,7 @@ function GenreRecommendationContent() {
           libraryStateSource={libraryStateSource}
         />
       )}
-      {movieGenre2 && (rec2.data?.results?.length ?? 0) > 0 && (
+      {movieGenre2 && rec2Items.length > 0 && (
         <MediaRow
           title={isPersonalized ? `Trending ${movieGenre2.name} Movies • For You` : `Trending ${movieGenre2.name} Movies`}
           icon={isPersonalized ? <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> : <Sparkles className="w-5 h-5" />}

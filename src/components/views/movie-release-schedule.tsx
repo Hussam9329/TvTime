@@ -10,9 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MediaGrid } from "@/components/media/media-card";
 import { getTitle } from "@/lib/tmdb";
-import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
-import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
+import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
+import { filterAndPrioritizeMediaCollectionWorldItems } from "@/lib/media-world-pipeline";
+import type { MediaCollectionWorld } from "@/lib/media-world-classification";
 
 function rangeFromOffset(offset: number, seasonal = false) {
   const now = new Date();
@@ -46,7 +46,7 @@ interface ReleaseScheduleProps {
   title?: string;
   /** Header subtitle override. */
   subtitle?: string;
-  collectionWorld?: "movies" | "arabic-movies" | "asian-movies" | "standard-tv" | "arabic-tv" | "asian-tv" | "anime";
+  collectionWorld?: MediaCollectionWorld;
   /** Align navigation to calendar quarters. Used by Anime for Winter/Spring/Summer/Fall seasons. */
   seasonal?: boolean;
 }
@@ -82,6 +82,7 @@ export function ReleaseSchedule({
   const resolvedTitle = title || (isTV ? "TV Release Schedule" : "Movie Release Schedule");
   const resolvedSubtitle = subtitle || `A six-month release agenda for upcoming ${isTV ? "shows" : "films"}. Dates are handled as date-only values and never shift with timezone conversion.`;
   const schedule = useReleaseSchedule(mediaType, range.from, range.to, {
+    collectionWorld,
     language,
     originalLanguage,
     excludedOriginalLanguage,
@@ -91,16 +92,11 @@ export function ReleaseSchedule({
   });
   const items = useMemo(() => {
     const query = search.trim().toLowerCase();
-    let filtered = (schedule.data?.items ?? []).filter((item) => !query || getTitle(item).toLowerCase().includes(query));
-    if (collectionWorld === "standard-tv") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
-    if (collectionWorld === "anime") filtered = filtered.filter(isAnimeMediaItem);
-    if (collectionWorld === "asian-tv") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
-    if (collectionWorld === "movies") filtered = filtered.filter((item) => !isArabicMediaItem(item) && !isAnimeMediaItem(item) && !isAsianMediaItem(item));
-    if (collectionWorld === "arabic-movies" || collectionWorld === "arabic-tv") {
-      filtered = filterAndPrioritizeArabicMediaItems(filtered);
-    }
-    if (collectionWorld === "asian-movies") filtered = filtered.filter((item) => isAsianMediaItem(item) && !isArabicMediaItem(item) && !isAnimeMediaItem(item)).sort((a, b) => asianMediaCountryPriority(a) - asianMediaCountryPriority(b));
-    return filtered;
+    const matchingSearch = (schedule.data?.items ?? [])
+      .filter((item) => !query || getTitle(item).toLowerCase().includes(query));
+    return collectionWorld
+      ? filterAndPrioritizeMediaCollectionWorldItems(matchingSearch, collectionWorld)
+      : matchingSearch;
   }, [collectionWorld, schedule.data?.items, search]);
   const releaseLibraryStates = useMediaStates(items.map((item) => ({
     tmdbId: Number(item.id),
@@ -116,7 +112,9 @@ export function ReleaseSchedule({
       group.push(item);
       map.set(date, group);
     }
-    return [...map.entries()].sort(([left], [right]) => left.localeCompare(right));
+    // Preserve the central world's primary country order. The API's
+    // chronological/title order remains stable inside each priority group.
+    return [...map.entries()];
   }, [items, isTV]);
 
   return (

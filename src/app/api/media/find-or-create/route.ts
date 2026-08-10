@@ -7,6 +7,26 @@ import { canonicalMediaPoster } from "@/lib/media-poster";
 import { normalizeCountryCodes } from "@/lib/arabic-media";
 import { classifyMediaWorld } from "@/lib/media-world-classification";
 
+function normalizeGenreForStorage(genre: unknown): string | null {
+  if (typeof genre === "number") {
+    if (!Number.isFinite(genre)) return null;
+    return genre === 16 ? "Animation" : String(genre);
+  }
+
+  if (genre && typeof genre === "object") {
+    const candidate = genre as { id?: unknown; name?: unknown };
+    const name = typeof candidate.name === "string" ? candidate.name.trim() : "";
+    if (name) return name;
+    const id = Number(candidate.id);
+    if (Number.isFinite(id)) return id === 16 ? "Animation" : String(id);
+    return null;
+  }
+
+  const value = String(genre ?? "").trim();
+  if (!value) return null;
+  return value === "16" ? "Animation" : value;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getOrCreateUser(await resolveUserId(req));
@@ -21,6 +41,7 @@ export async function POST(req: NextRequest) {
       rating,
       runtime,
       genres,
+      genreIds,
       seasons,
       episodes,
       isAnime,
@@ -43,9 +64,16 @@ export async function POST(req: NextRequest) {
     if (!safeTitle) {
       return NextResponse.json({ error: "title required" }, { status: 400 });
     }
-    const normalizedGenres = Array.isArray(genres)
-      ? genres.map((genre: unknown) => String(genre).trim()).filter(Boolean)
-      : [];
+    const rawGenres = [
+      ...(Array.isArray(genres) ? genres : []),
+      ...(Array.isArray(genreIds) ? genreIds : []),
+      ...(Array.isArray(body.genre_ids) ? body.genre_ids : []),
+    ];
+    const normalizedGenres = Array.from(new Set(
+      rawGenres
+        .map(normalizeGenreForStorage)
+        .filter((genre): genre is string => genre !== null),
+    ));
     const normalizedOriginCountries = normalizeCountryCodes(originCountry || body.origin_country);
     const normalizedOriginalLanguage = typeof (originalLanguage || body.original_language) === "string"
       ? String(originalLanguage || body.original_language).trim().toLowerCase() || null

@@ -40,8 +40,19 @@ export function detectIsAnime(params: {
   genres?: Array<string | number | { id?: number; name: string }> | null;
   title?: string;
 }): boolean {
-  // 1. Known anime title (manual override list)
-  if (params.title && isKnownAnimeTitle(params.title)) {
+  const genreNames = normalizeGenres(params.genres);
+  const hasExplicitGenreMetadata = genreNames.length > 0;
+  const hasAnimationGenre = genreNames.some((genre) =>
+    genre.includes("animation") || genre === "anime");
+
+  // 1. Known anime title (legacy fallback for sparse metadata).
+  // A matching title must never override explicit non-animation genres; doing
+  // so classifies live-action adaptations such as a Death Note drama as Anime.
+  if (
+    params.title
+    && isKnownAnimeTitle(params.title)
+    && (!hasExplicitGenreMetadata || hasAnimationGenre)
+  ) {
     return true;
   }
 
@@ -49,22 +60,19 @@ export function detectIsAnime(params: {
   const originCountry = params.originCountry;
   if (Array.isArray(originCountry) && originCountry.includes("JP")) {
     // Japanese origin + animation genre = anime
-    const genreNames = normalizeGenres(params.genres);
-    if (genreNames.some((g) => g.includes("animation") || g.includes("anime"))) {
+    if (hasAnimationGenre) {
       return true;
     }
   }
 
   // 3. Original language = Japanese + animation genre
   if (params.originalLanguage === "ja") {
-    const genreNames = normalizeGenres(params.genres);
-    if (genreNames.some((g) => g.includes("animation") || g.includes("anime"))) {
+    if (hasAnimationGenre) {
       return true;
     }
   }
 
   // 4. Explicit "anime" genre (some TMDB entries have it)
-  const genreNames = normalizeGenres(params.genres);
   if (genreNames.some((g) => g === "anime")) {
     return true;
   }
@@ -76,7 +84,7 @@ function normalizeGenres(genres: Array<string | number | { id?: number; name: st
   if (!genres) return [];
   if (Array.isArray(genres)) {
     return genres.map((g) => {
-      if (typeof g === "string") return g.toLowerCase();
+      if (typeof g === "string") return g.trim() === "16" ? "animation" : g.toLowerCase();
       if (typeof g === "number") return g === 16 ? "animation" : String(g);
       if (g && g.id === 16) return "animation";
       if (g && typeof g.name === "string") return g.name.toLowerCase();

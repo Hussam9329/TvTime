@@ -7,7 +7,6 @@ import { useNav } from "@/lib/store";
 import { mediaStateKey, useMediaStates, useWatchlistToggle, useWatchedMovieToggle, type MediaBatchState } from "@/hooks/use-tmdb";
 import { motion } from "framer-motion";
 import { SafeImage } from "@/components/media/safe-image";
-import { isArabicMediaItem } from "@/lib/arabic-media";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -15,8 +14,7 @@ import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
 import { RatingDialog } from "@/components/media/rating-dialog";
-import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { isAsianMediaItem } from "@/lib/asian-media";
+import { mediaCollectionWorldForItem } from "@/lib/media-world-pipeline";
 import { useState } from "react";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 
@@ -75,17 +73,26 @@ export function MediaCard({ item, index = 0, showMediaType = true, forcedMediaTy
 
   const title = getTitle(item);
   const year = getYear(item);
-  const isArabic = isArabicMediaItem(item);
-  const isAnime = mediaType === "tv" && isAnimeMediaItem(item);
-  const isAsian = !isAnime && !isArabic && isAsianMediaItem(item);
-  const typeLabel = isAnime
+  const classificationGenres = (item.genre_ids ?? []).map((genreId) =>
+    Number(genreId) === 16 ? "Animation" : String(genreId));
+  const collectionWorld = mediaCollectionWorldForItem({
+    type: mediaType === "tv" ? "series" : "movie",
+    title,
+    originalLanguage: item.original_language,
+    originCountries: item.origin_country,
+    genres: classificationGenres,
+    isAnime: libraryState?.isAnime,
+    isArabic: libraryState?.isArabic,
+    classificationComplete: Boolean(item.original_language && classificationGenres.length > 0),
+  }, mediaType);
+  const typeLabel = collectionWorld === "anime"
     ? "Anime"
-    : isAsian
+    : collectionWorld === "asian-movies" || collectionWorld === "asian-tv"
       ? (mediaType === "movie" ? "Asian Movie" : "Asian TV")
-    : isArabic
-      ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV")
-      : (mediaType === "movie" ? "Movie" : "TV");
-  const actionPayload = { tmdbId: id, title, posterPath: item.poster_path, releaseDate: item.release_date || item.first_air_date, voteAverage: item.vote_average, overview: item.overview, originalLanguage: item.original_language, originCountry: item.origin_country };
+      : collectionWorld === "arabic-movies" || collectionWorld === "arabic-tv"
+        ? (mediaType === "movie" ? "Arabic Movie" : "Arabic TV")
+        : (mediaType === "movie" ? "Movie" : "TV");
+  const actionPayload = { tmdbId: id, title, posterPath: item.poster_path, releaseDate: item.release_date || item.first_air_date, voteAverage: item.vote_average, overview: item.overview, genreIds: item.genre_ids, originalLanguage: item.original_language, originCountry: item.origin_country };
   const toggleWatchlist = async () => {
     if (!libraryStateReady) return;
     try {

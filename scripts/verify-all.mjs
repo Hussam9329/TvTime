@@ -31,6 +31,7 @@ const checks = [
   ["Arabic title localization", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-arabic-title-localization.ts"]],
   ["Arabic world consistency and Egyptian priority", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-arabic-world-consistency.ts"]],
   ["Asian TV classification", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-asian-classification.ts"]],
+  ["Unified media-world pipeline", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-media-world-pipeline.ts"]],
   ["World separation", ["scripts/verify-world-separation.mjs"]],
   ["TVM-03/04/05", ["scripts/verify-tvm-03-04-05.mjs"]],
   ["TVM-06/07/08/09", ["scripts/verify-tvm-06-09.mjs"]],

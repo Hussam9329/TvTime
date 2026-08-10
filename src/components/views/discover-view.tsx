@@ -28,10 +28,11 @@ import {
   Sparkles, Info,
 } from "lucide-react";
 import { toast } from "sonner";
-import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
-import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { ASIAN_ORIGIN_COUNTRY_QUERY, asianMediaCountryPriority, isAsianMediaItem } from "@/lib/asian-media";
-import { standardMediaCountryPriority } from "@/lib/standard-media-priority";
+import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
+import {
+  collectionWorldForCatalogue,
+  filterAndPrioritizeMediaCollectionWorldItems,
+} from "@/lib/media-world-pipeline";
 import { applyDiscoverPreset, type DiscoverPresetId } from "@/lib/discover-presets";
 import { updateDiscoverRange } from "@/lib/discover-filter-state";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
@@ -249,6 +250,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
   const resultMediaType: "movie" | "tv" = effectiveIsTV ? "tv" : "movie";
   const resultWorld = isAnime ? "anime" : isArabic ? "arabic" : isAsian ? "asian" : "standard";
+  const resultCollectionWorld = collectionWorldForCatalogue(resultWorld, resultMediaType);
   const seenLabel = isArabic ? (effectiveIsTV ? "بدأت مشاهدته" : "شاهدته") : effectiveIsTV ? "Started" : "Seen";
   const unseenLabel = isArabic ? (effectiveIsTV ? "لم أبدأه" : "لم أشاهده") : effectiveIsTV ? "Not started" : "Haven't seen";
   const sortOptions = isArabic
@@ -284,29 +286,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
   const isError = query.isError;
 
   const items = useMemo(() => {
-    let filtered = allResults.filter((media) => isArabic || !isArabicMediaItem(media));
-    if (effectiveIsTV && !isAnime && !isArabic) {
-      filtered = filtered.filter((media) => !isAnimeMediaItem(media));
-    }
-    if (effectiveIsTV && world === "tv") {
-      filtered = filtered.filter((media) => !isAsianMediaItem(media));
-      if (sortBy === "popularity.desc") {
-        filtered.sort((left, right) => standardMediaCountryPriority(left) - standardMediaCountryPriority(right));
-      }
-    }
-    if (world === "movies") {
-      filtered.sort((left, right) => standardMediaCountryPriority(left) - standardMediaCountryPriority(right));
-    }
-    if (isAsian) {
-      filtered = filtered.filter((media) => isAsianMediaItem(media) && !isAnimeMediaItem(media) && !isArabicMediaItem(media));
-      filtered.sort((left, right) => asianMediaCountryPriority(left) - asianMediaCountryPriority(right));
-    }
-    if (forcedLang === "ar") filtered = filterAndPrioritizeArabicMediaItems(filtered);
-    if (forcedLang === "ja" && isAnime) {
-      filtered = filtered.filter((m) => m.original_language === "ja");
-    }
-    return filtered;
-  }, [allResults, effectiveIsTV, forcedLang, isAnime, isArabic, isAsian, sortBy, world]);
+    return filterAndPrioritizeMediaCollectionWorldItems(allResults, resultCollectionWorld);
+  }, [allResults, resultCollectionWorld]);
 
   const resetPagination = useCallback(() => {
     setPage(1);

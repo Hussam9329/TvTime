@@ -9,9 +9,8 @@ import { Search as SearchIcon, Loader2, AlertCircle, Users, ChevronDown, Languag
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { img } from "@/lib/tmdb";
-import { filterAndPrioritizeArabicMediaItems, isArabicMediaItem } from "@/lib/arabic-media";
-import { isAnimeMediaItem } from "@/lib/anime-detect";
-import { isAsianMediaItem } from "@/lib/asian-media";
+import { filterAndPrioritizeMediaCollectionWorldItems } from "@/lib/media-world-pipeline";
+import type { MediaCollectionWorld } from "@/lib/media-world-classification";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
 
 export function SearchView() {
@@ -23,28 +22,21 @@ export function SearchView() {
   const search = useSearchAccumulated(searchQuery);
 
   const allResults = search.accumulated;
-  const filtered = filter === "all"
-    ? allResults
-    : filter === "arabic-movies"
-      ? filterAndPrioritizeArabicMediaItems(allResults.filter((result) => result.media_type === "movie"))
-      : filter === "arabic-tv"
-        ? filterAndPrioritizeArabicMediaItems(allResults.filter((result) => result.media_type === "tv"))
-        : filter === "anime"
-          ? allResults.filter((result) => result.media_type === "tv" && isAnimeMediaItem(result))
-        : filter === "asian-tv"
-          ? allResults.filter((result) => result.media_type === "tv" && !isAnimeMediaItem(result) && !isArabicMediaItem(result) && isAsianMediaItem(result))
-        : filter === "asian-movies"
-          ? allResults.filter((result) => result.media_type === "movie" && !isAnimeMediaItem(result) && !isArabicMediaItem(result) && isAsianMediaItem(result))
-        : filter === "movie"
-          ? allResults.filter((result) => result.media_type === "movie" && !isArabicMediaItem(result) && !isAnimeMediaItem(result) && !isAsianMediaItem(result))
-          : filter === "tv"
-            ? allResults.filter((result) => result.media_type === "tv" && !isArabicMediaItem(result) && !isAnimeMediaItem(result) && !isAsianMediaItem(result))
-            : [];
-  const arabicMovieCount = allResults.filter((result) => result.media_type === "movie" && isArabicMediaItem(result)).length;
-  const arabicTvCount = allResults.filter((result) => result.media_type === "tv" && isArabicMediaItem(result)).length;
-  const animeCount = allResults.filter((result) => result.media_type === "tv" && isAnimeMediaItem(result)).length;
-  const asianTvCount = allResults.filter((result) => result.media_type === "tv" && !isAnimeMediaItem(result) && !isArabicMediaItem(result) && isAsianMediaItem(result)).length;
-  const asianMovieCount = allResults.filter((result) => result.media_type === "movie" && !isAnimeMediaItem(result) && !isArabicMediaItem(result) && isAsianMediaItem(result)).length;
+  const filterWorld: MediaCollectionWorld | null = filter === "movie"
+    ? "movies"
+    : filter === "tv"
+      ? "standard-tv"
+      : filter === "people" || filter === "all"
+        ? null
+        : filter;
+  const forWorld = (world: MediaCollectionWorld) =>
+    filterAndPrioritizeMediaCollectionWorldItems(allResults, world);
+  const filtered = filter === "all" ? allResults : filterWorld ? forWorld(filterWorld) : [];
+  const arabicMovieCount = forWorld("arabic-movies").length;
+  const arabicTvCount = forWorld("arabic-tv").length;
+  const animeCount = forWorld("anime").length;
+  const asianTvCount = forWorld("asian-tv").length;
+  const asianMovieCount = forWorld("asian-movies").length;
   const people = search.people;
   const filterLabel = {
     all: "all results",

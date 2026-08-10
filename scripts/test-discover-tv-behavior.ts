@@ -14,7 +14,7 @@ const tmdb = read("src/lib/tmdb.ts");
 
 assert.match(view, /effectiveIsTV && showMe === "all" \? "all"/, "TV Everything must use cursor-backed classified discovery");
 assert.match(view, /world: resultWorld/, "Discover must send its media world to the API");
-assert.match(filteredRoute, /matchesDiscoverWorld\(item, mediaType, world\)/, "TV results must be classified before a result page is filled");
+assert.match(filteredRoute, /matchesMediaCollectionWorld\(item, collectionWorld\)/, "TV results must use the central collection-world classifier before a result page is filled");
 assert.match(filteredRoute, /if \(showMe === "all"\) return true/, "Everything must not depend on personal seen state");
 
 const standardMixedProduction = {
@@ -41,7 +41,7 @@ assert.match(tmdbRoute, /vote_average_lte: queryParams\.rating_max/, "TMDB API r
 assert.match(tmdb, /p\["vote_average\.lte"\] = params\.vote_average_lte/, "TMDB client must apply maximum score upstream");
 assert.doesNotMatch(view, /filtered = filtered\.filter\(\(m\) => \(m\.vote_average/, "Maximum score must not sparsify a page in the browser");
 
-assert.match(view, /sortBy === "popularity\.desc"/, "Country priority must not override explicit TV sort choices");
+assert.match(view, /filterAndPrioritizeMediaCollectionWorldItems\(allResults, resultCollectionWorld\)/, "Every TV sort must use world priority while preserving the selected sort inside each priority group");
 assert.match(view, /setTimeout\(\(\) => setDebouncedKeywords/, "Keyword discovery must be debounced");
 assert.match(view, /advancedFilterCount/, "Advanced-filter badge must use the corrected filter count");
 

@@ -5,14 +5,22 @@ import { resolveUserId } from "@/lib/auth";
 import { normalizeMediaMany } from "@/lib/media-normalize";
 import type { Prisma } from "@prisma/client";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
-import { prioritizeArabicMediaItems } from "@/lib/arabic-media";
 import {
   recordMatchesMediaClassification,
+  type MediaCollectionWorld,
   type MediaClassificationFilters,
 } from "@/lib/media-world-classification";
+import {
+  matchesMediaCollectionWorld,
+  prioritizeMediaCollectionWorldItems,
+} from "@/lib/media-world-pipeline";
 
 const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
+const COLLECTION_WORLDS = new Set<MediaCollectionWorld>([
+  "movies", "asian-movies", "anime", "arabic-movies",
+  "standard-tv", "arabic-tv", "asian-tv",
+]);
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,6 +36,10 @@ export async function GET(req: NextRequest) {
     const orderParam = url.searchParams.get("order") || "desc";
     const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 100, 1), 500);
     const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
+    const collectionWorldParam = url.searchParams.get("collectionWorld") as MediaCollectionWorld | null;
+    const collectionWorld = collectionWorldParam && COLLECTION_WORLDS.has(collectionWorldParam)
+      ? collectionWorldParam
+      : null;
 
     const where: Prisma.MediaWhereInput = { userId: user.id };
     if (type && type !== "undefined" && type !== "all") where.type = type;
@@ -71,15 +83,20 @@ export async function GET(req: NextRequest) {
     // produce wrong totals and let stale rows leak between collection worlds.
     const candidates = await db.media.findMany({ where, orderBy: { [sortBy]: order } });
     const classifiedCandidates = await resolveGeneralMediaClassifications(candidates, { allowNetwork: false });
-    const matchingItems = classifiedCandidates.filter((item) =>
-      recordMatchesMediaClassification(item, classificationFilters));
-    // Every Arabic library pagination path is Egypt-first across the complete
-    // result set, then preserves the user's selected order within each group.
-    // Sorting before slicing prevents non-Egyptian titles from occupying the
-    // first page while Egyptian titles remain on later pages.
-    const prioritizedItems = classificationFilters.isArabic === true
-      ? prioritizeArabicMediaItems(matchingItems)
-      : matchingItems;
+    const matchingItems = classifiedCandidates.filter((item) => collectionWorld
+      ? matchesMediaCollectionWorld(item, collectionWorld)
+      : recordMatchesMediaClassification(item, classificationFilters));
+    // Apply the same stable world priority before pagination that Overview,
+    // Discover and Releases use. Legacy boolean-only callers retain their
+    // existing behavior until they identify an exact collection world.
+    const prioritizedItems = collectionWorld
+      ? prioritizeMediaCollectionWorldItems(matchingItems, collectionWorld)
+      : classificationFilters.isArabic === true
+        ? prioritizeMediaCollectionWorldItems(
+            matchingItems,
+            type === "series" || type === "tv" ? "arabic-tv" : "arabic-movies",
+          )
+        : matchingItems;
     const total = prioritizedItems.length;
     const items = prioritizedItems.slice(offset, offset + limit);
 
