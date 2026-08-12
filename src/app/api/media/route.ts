@@ -79,12 +79,13 @@ export async function GET(req: NextRequest) {
         ...(yearTo != null ? { lte: String(Math.trunc(yearTo)).padStart(4, "0") } : {}),
       };
     }
-    if (ratingFrom != null || ratingTo != null) {
-      where.userRating = {
-        ...(ratingFrom != null ? { gte: Math.max(0, Math.min(100, ratingFrom)) } : {}),
-        ...(ratingTo != null ? { lte: Math.max(0, Math.min(100, ratingTo)) } : {}),
-      };
-    }
+    // rating is a String column holding the TMDB score ("0.0"–"10.0").
+    // Numeric range filtering on a string column isn't reliable across
+    // Postgres collations, so we filter in-memory after classification.
+    // Bounds are clamped to [0, 10] regardless of what the client sends.
+    const clampRating = (value: number) => Math.max(0, Math.min(10, value));
+    const tmdbRatingFrom = ratingFrom != null ? clampRating(ratingFrom) : null;
+    const tmdbRatingTo = ratingTo != null ? clampRating(ratingTo) : null;
 
     const booleanFilter = (value: string | null): boolean | undefined =>
       value === "true" ? true : value === "false" ? false : undefined;
@@ -121,8 +122,18 @@ export async function GET(req: NextRequest) {
             type === "series" || type === "tv" ? "arabic-tv" : "arabic-movies",
           )
         : matchingItems;
-    const total = prioritizedItems.length;
-    const items = prioritizedItems.slice(offset, offset + limit);
+    const filteredByRating = (tmdbRatingFrom != null || tmdbRatingTo != null)
+      ? prioritizedItems.filter((item) => {
+          if (item.rating == null || item.rating.trim() === "") return false;
+          const score = Number(item.rating);
+          if (!Number.isFinite(score)) return false;
+          if (tmdbRatingFrom != null && score < tmdbRatingFrom) return false;
+          if (tmdbRatingTo != null && score > tmdbRatingTo) return false;
+          return true;
+        })
+      : prioritizedItems;
+    const total = filteredByRating.length;
+    const items = filteredByRating.slice(offset, offset + limit);
 
     // Anime series may have been saved while the catalogue incorrectly used
     // Japanese as its display locale. TvMetadataCache is populated from the

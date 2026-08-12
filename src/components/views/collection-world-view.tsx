@@ -103,7 +103,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   const [sortBy, setSortBy] = useState("smart");
   const maxLibraryYear = new Date().getFullYear() + 5;
   const [yearRange, setYearRange] = useState<[number, number]>([1900, maxLibraryYear]);
-  const [ratingRange, setRatingRange] = useState<[number, number]>([0, 100]);
+  const [ratingRange, setRatingRange] = useState<[number, number]>([0, 10]);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [animeMediaKind, setAnimeMediaKind] = useState<"all" | "movie" | "series">("all");
   const [page, setPage] = useState(0);
@@ -315,13 +315,13 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
 
           {isMovieWorld && sortBy === "userRating" && (
             <RangeFilter
-              label={isArabicWorld ? "نطاق التقييم" : "Rating range"}
+              label={isArabicWorld ? "نطاق تقييم الفيلم" : "TMDB rating range"}
               fromLabel={isArabicWorld ? "من تقييم" : "From rating"}
               toLabel={isArabicWorld ? "إلى تقييم" : "To rating"}
               min={0}
-              max={100}
-              step={1}
-              suffix="/100"
+              max={10}
+              step={0.1}
+              suffix="/10"
               value={ratingRange}
               onChange={(next) => { setRatingRange(next); setPage(0); }}
             />
@@ -441,13 +441,15 @@ function RangeFilter({
   const clamp = (next: number) => Math.min(max, Math.max(min, next));
   const updateFrom = (next: number) => onChange([Math.min(clamp(next), value[1]), value[1]]);
   const updateTo = (next: number) => onChange([value[0], Math.max(clamp(next), value[0])]);
+  const isFloat = step < 1;
+  const fmt = (n: number) => (isFloat ? (Math.round(n * 10) / 10).toString() : String(n));
 
   return (
     <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3.5 sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
         <span className="rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-semibold tabular-nums">
-          {value[0]}{suffix} — {value[1]}{suffix}
+          {fmt(value[0])}{suffix} — {fmt(value[1])}{suffix}
         </span>
       </div>
       <Slider
@@ -463,7 +465,7 @@ function RangeFilter({
           <span className="text-[11px] font-medium text-muted-foreground">{fromLabel}</span>
           <Input
             type="number"
-            inputMode="numeric"
+            inputMode={isFloat ? "decimal" : "numeric"}
             min={min}
             max={value[1]}
             step={step}
@@ -476,7 +478,7 @@ function RangeFilter({
           <span className="text-[11px] font-medium text-muted-foreground">{toLabel}</span>
           <Input
             type="number"
-            inputMode="numeric"
+            inputMode={isFloat ? "decimal" : "numeric"}
             min={value[0]}
             max={max}
             step={step}
