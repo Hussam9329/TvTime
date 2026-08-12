@@ -62,6 +62,30 @@ export async function GET(req: NextRequest) {
     if (tracked === "true") where.isFollowing = true;
     if (tracked === "false") where.isFollowing = false;
 
+    const parseFiniteNumber = (key: string) => {
+      const raw = url.searchParams.get(key);
+      if (raw == null || raw.trim() === "") return undefined;
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : undefined;
+    };
+    const yearFrom = parseFiniteNumber("yearFrom");
+    const yearTo = parseFiniteNumber("yearTo");
+    const ratingFrom = parseFiniteNumber("ratingFrom");
+    const ratingTo = parseFiniteNumber("ratingTo");
+
+    if (yearFrom != null || yearTo != null) {
+      where.year = {
+        ...(yearFrom != null ? { gte: String(Math.trunc(yearFrom)).padStart(4, "0") } : {}),
+        ...(yearTo != null ? { lte: String(Math.trunc(yearTo)).padStart(4, "0") } : {}),
+      };
+    }
+    if (ratingFrom != null || ratingTo != null) {
+      where.userRating = {
+        ...(ratingFrom != null ? { gte: Math.max(0, Math.min(100, ratingFrom)) } : {}),
+        ...(ratingTo != null ? { lte: Math.max(0, Math.min(100, ratingTo)) } : {}),
+      };
+    }
+
     const booleanFilter = (value: string | null): boolean | undefined =>
       value === "true" ? true : value === "false" ? false : undefined;
     const isAnime = url.searchParams.get("isAnime");

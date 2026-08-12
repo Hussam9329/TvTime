@@ -1312,6 +1312,10 @@ export function useTvTracking(params: {
   search?: string;
   sortBy?: string;
   order?: string;
+  yearFrom?: number;
+  yearTo?: number;
+  ratingFrom?: number;
+  ratingTo?: number;
   limit?: number;
   offset?: number;
   world?: "standard" | "arabic" | "asian";
@@ -1580,6 +1584,10 @@ export function useMedia(params: {
   search?: string;
   sortBy?: string;
   order?: string;
+  yearFrom?: number;
+  yearTo?: number;
+  ratingFrom?: number;
+  ratingTo?: number;
   limit?: number;
   offset?: number;
 }) {

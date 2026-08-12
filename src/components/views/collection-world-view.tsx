@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List } from "lucide-react";
@@ -100,6 +101,9 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   const [tab, setTab] = useState<CollectionTab>("watchlist");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("smart");
+  const maxLibraryYear = new Date().getFullYear() + 5;
+  const [yearRange, setYearRange] = useState<[number, number]>([1900, maxLibraryYear]);
+  const [ratingRange, setRatingRange] = useState<[number, number]>([0, 100]);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [animeMediaKind, setAnimeMediaKind] = useState<"all" | "movie" | "series">("all");
   const [page, setPage] = useState(0);
@@ -120,7 +124,10 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
     scrollRef: statusRef,
   });
   const debouncedSearch = useDebounce(search, 400);
+  const debouncedYearRange = useDebounce(yearRange, 250);
+  const debouncedRatingRange = useDebounce(ratingRange, 250);
   const layoutStorageKey = world === "anime" ? "trakora:anime-library-layout" : "trakora:movie-library-layout";
+  const isMovieWorld = world === "movies" || world === "arabic-movies" || world === "asian-movies";
 
   useEffect(() => {
     const saved = window.localStorage.getItem(layoutStorageKey);
@@ -152,6 +159,8 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
     search: debouncedSearch || undefined,
     sortBy: sortBy === "smart" ? (isWatchedTab ? "watchedAt" : "addedAt") : sortBy,
     order: "desc",
+    ...(isMovieWorld && sortBy === "year" ? { yearFrom: debouncedYearRange[0], yearTo: debouncedYearRange[1] } : {}),
+    ...(isMovieWorld && sortBy === "userRating" ? { ratingFrom: debouncedRatingRange[0], ratingTo: debouncedRatingRange[1] } : {}),
     limit,
     offset: page * limit,
   });
@@ -165,7 +174,6 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   const watchedCount = Number(counts?.[config.watchedCount] ?? 0);
   const notStartedCount = world === "anime" ? Number(counts?.notStartedAnime ?? 0) : 0;
   const watchingCount = world === "anime" ? Number(counts?.watchingAnime ?? 0) : 0;
-  const isMovieWorld = world === "movies" || world === "arabic-movies" || world === "asian-movies";
   const usesHomePosterGrid = (isMovieWorld || world === "anime") && layout === "grid";
   return (
     <div className="tvtime-collection-world-page space-y-5">
@@ -280,7 +288,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
                 ].map((option) => (
                   <button
                     key={option.value}
-                    onClick={() => setSortBy(option.value)}
+                    onClick={() => { setSortBy(option.value); setPage(0); }}
                     className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                       sortBy === option.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                     }`}
@@ -291,6 +299,33 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
               </div>
             </FilterField>
           </FilterGrid>
+
+          {isMovieWorld && sortBy === "year" && (
+            <RangeFilter
+              label={isArabicWorld ? "نطاق السنة" : "Year range"}
+              fromLabel={isArabicWorld ? "من سنة" : "From year"}
+              toLabel={isArabicWorld ? "إلى سنة" : "To year"}
+              min={1900}
+              max={maxLibraryYear}
+              step={1}
+              value={yearRange}
+              onChange={(next) => { setYearRange(next); setPage(0); }}
+            />
+          )}
+
+          {isMovieWorld && sortBy === "userRating" && (
+            <RangeFilter
+              label={isArabicWorld ? "نطاق التقييم" : "Rating range"}
+              fromLabel={isArabicWorld ? "من تقييم" : "From rating"}
+              toLabel={isArabicWorld ? "إلى تقييم" : "To rating"}
+              min={0}
+              max={100}
+              step={1}
+              suffix="/100"
+              value={ratingRange}
+              onChange={(next) => { setRatingRange(next); setPage(0); }}
+            />
+          )}
         </FilterSection>
       </FilterPanel>
 
@@ -378,6 +413,79 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+function RangeFilter({
+  label,
+  fromLabel,
+  toLabel,
+  min,
+  max,
+  step,
+  suffix = "",
+  value,
+  onChange,
+}: {
+  label: string;
+  fromLabel: string;
+  toLabel: string;
+  min: number;
+  max: number;
+  step: number;
+  suffix?: string;
+  value: [number, number];
+  onChange: (value: [number, number]) => void;
+}) {
+  const clamp = (next: number) => Math.min(max, Math.max(min, next));
+  const updateFrom = (next: number) => onChange([Math.min(clamp(next), value[1]), value[1]]);
+  const updateTo = (next: number) => onChange([value[0], Math.max(clamp(next), value[0])]);
+
+  return (
+    <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3.5 sm:p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <span className="rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-semibold tabular-nums">
+          {value[0]}{suffix} — {value[1]}{suffix}
+        </span>
+      </div>
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onValueChange={(next) => onChange([next[0] ?? value[0], next[1] ?? value[1]])}
+        aria-label={label}
+      />
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-md">
+        <label className="space-y-1">
+          <span className="text-[11px] font-medium text-muted-foreground">{fromLabel}</span>
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={min}
+            max={value[1]}
+            step={step}
+            value={value[0]}
+            onChange={(event) => updateFrom(Number(event.target.value))}
+            className="h-9 tabular-nums"
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-[11px] font-medium text-muted-foreground">{toLabel}</span>
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={value[0]}
+            max={max}
+            step={step}
+            value={value[1]}
+            onChange={(event) => updateTo(Number(event.target.value))}
+            className="h-9 tabular-nums"
+          />
+        </label>
+      </div>
     </div>
   );
 }
