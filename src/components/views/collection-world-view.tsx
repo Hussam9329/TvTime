@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List, SlidersHorizontal, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/media/rating-dialog";
@@ -30,6 +30,7 @@ import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { HOME_MEDIA_CARD_GRID_CLASS, MediaCardSkeleton } from "@/components/media/media-card";
 import { pickArabicTitle } from "@/lib/tmdb";
+import { useMobileViewport } from "@/hooks/use-mobile-viewport";
 
 type CollectionWorld = "movies" | "asian-movies" | "anime" | "arabic-movies";
 type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
@@ -95,6 +96,8 @@ const WORLD_CONFIG: Record<CollectionWorld, WorldConfig> = {
 export function CollectionWorldView({ world, embedded = false, onDiscover }: { world: CollectionWorld; embedded?: boolean; onDiscover?: () => void }) {
   const animeTypeRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
+  const infiniteSentinelRef = useRef<HTMLDivElement>(null);
+  const isMobileViewport = useMobileViewport();
   const config = WORLD_CONFIG[world];
   const WorldIcon = config.icon;
   const setView = useNav((s) => s.setView);
@@ -107,6 +110,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [animeMediaKind, setAnimeMediaKind] = useState<"all" | "movie" | "series">("all");
   const [page, setPage] = useState(0);
+  const [mobileAccumulatedItems, setMobileAccumulatedItems] = useState<MediaItemDB[]>([]);
   const limit = 60;
   const isWatchedTab = tab === "watched";
   const isArabicWorld = world === "arabic-movies";
@@ -168,13 +172,49 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
 
   const items = media.data?.items ?? [];
   const total = media.data?.total ?? 0;
+  const filterIdentity = [world, tab, debouncedSearch, sortBy, debouncedYearRange.join("-"), debouncedRatingRange.join("-"), animeMediaKind].join("|");
+
+  useEffect(() => {
+    setMobileAccumulatedItems([]);
+  }, [filterIdentity]);
+
+  useEffect(() => {
+    if (!isMobileViewport || !media.data) return;
+    setMobileAccumulatedItems((current) => {
+      if (page === 0) return media.data.items;
+      const byId = new Map(current.map((item) => [item.id, item]));
+      for (const item of media.data.items) byId.set(item.id, item);
+      return Array.from(byId.values());
+    });
+  }, [isMobileViewport, media.data, page]);
+
+  const visibleItems = isMobileViewport
+    ? (mobileAccumulatedItems.length > 0 ? mobileAccumulatedItems : items)
+    : items;
   const totalPages = Math.ceil(total / limit);
+  const hasMoreMobile = isMobileViewport && visibleItems.length < total;
   const counts = globalCounts.data?.counts;
   const watchlistCount = Number(counts?.[config.watchlistCount] ?? 0);
   const watchedCount = Number(counts?.[config.watchedCount] ?? 0);
   const notStartedCount = world === "anime" ? Number(counts?.notStartedAnime ?? 0) : 0;
   const watchingCount = world === "anime" ? Number(counts?.watchingAnime ?? 0) : 0;
   const usesHomePosterGrid = (isMovieWorld || world === "anime") && layout === "grid";
+
+  useEffect(() => {
+    if (!isMobileViewport || !hasMoreMobile) return;
+    const target = infiniteSentinelRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !media.isFetching) {
+        setPage((current) => Math.min(current + 1, Math.max(0, totalPages - 1)));
+      }
+    }, { rootMargin: "500px 0px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMoreMobile, isMobileViewport, media.isFetching, totalPages]);
+
+  const openMobileFilters = () => window.dispatchEvent(new Event("tvtime:open-filters"));
+
   return (
     <div className="tvtime-collection-world-page space-y-5">
       {!embedded && (
@@ -191,7 +231,9 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
       <FilterPanel
         title={isArabicWorld ? "فلاتر المكتبة" : "Library filters"}
         description={isArabicWorld ? "تصفّح أفلامك العربية حسب حالة المجموعة والبحث والترتيب." : `Browse your ${config.title.toLowerCase()} by collection status, search term and sort order.`}
-        activeCount={Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart") + Number(world === "anime" && animeMediaKind !== "all")}
+        activeCount={Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart") + Number(world === "anime" && animeMediaKind !== "all") + Number(isMovieWorld && sortBy === "year" && (yearRange[0] !== 1900 || yearRange[1] !== maxLibraryYear)) + Number(isMovieWorld && sortBy === "userRating" && (ratingRange[0] !== 0 || ratingRange[1] !== 10))}
+        mobileSheet
+        mobileResultLabel={isArabicWorld ? `عرض ${total} فيلم` : `Show ${total} titles`}
       >
         {world === "anime" && !isNotStartedTab && !isWatchingTab && (
           <FilterSection title="Anime type">
@@ -309,6 +351,11 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
               max={maxLibraryYear}
               step={1}
               value={yearRange}
+              presets={[
+                { label: "2020+", value: [2020, maxLibraryYear] },
+                { label: "2010s", value: [2010, 2019] },
+                { label: "2000s", value: [2000, 2009] },
+              ]}
               onChange={(next) => { setYearRange(next); setPage(0); }}
             />
           )}
@@ -323,14 +370,35 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
               step={0.1}
               suffix="/10"
               value={ratingRange}
+              presets={[
+                { label: "8+", value: [8, 10] },
+                { label: "7+", value: [7, 10] },
+                { label: "6+", value: [6, 10] },
+                { label: "All", value: [0, 10] },
+              ]}
               onChange={(next) => { setRatingRange(next); setPage(0); }}
             />
           )}
         </FilterSection>
       </FilterPanel>
 
+      <div className="tvtime-mobile-library-toolbar md:hidden" role="toolbar" aria-label={isArabicWorld ? "أدوات المكتبة" : "Library tools"}>
+        <div className="tvtime-mobile-library-toolbar__tabs">
+          <button type="button" data-active={tab === "watchlist" ? "true" : "false"} onClick={() => { setTab("watchlist"); setPage(0); }}>
+            {isArabicWorld ? "القائمة" : "Watchlist"}
+          </button>
+          <button type="button" data-active={tab === "watched" ? "true" : "false"} onClick={() => { setTab("watched"); setPage(0); }}>
+            {isArabicWorld ? "شاهدتها" : "Watched"}
+          </button>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="h-9" onClick={openMobileFilters}>
+          <SlidersHorizontal className="h-4 w-4" />
+          {isArabicWorld ? "فلتر" : "Filter"}
+        </Button>
+      </div>
+
       <p className="text-sm text-muted-foreground">
-        {isArabicWorld ? "يُعرض" : "Showing"} <span className="font-bold text-foreground">{items.length}</span> {isArabicWorld ? "من" : "of"} <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "فيلماً عربياً" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : animeMediaKind === "movie" ? "anime movies" : animeMediaKind === "series" ? "anime series" : "anime titles"}
+        {isArabicWorld ? "يُعرض" : "Showing"} <span className="font-bold text-foreground">{visibleItems.length}</span> {isArabicWorld ? "من" : "of"} <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "فيلماً عربياً" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : animeMediaKind === "movie" ? "anime movies" : animeMediaKind === "series" ? "anime series" : "anime titles"}
       </p>
       <div className="flex justify-end gap-1" aria-label={isArabicWorld ? "طريقة عرض المكتبة" : "Library layout"}>
         <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("grid")} title={isArabicWorld ? "شبكة البوسترات" : "Poster grid"}><Grid2X2 className="h-4 w-4" /></Button>
@@ -338,7 +406,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
       </div>
 
       {/* Fix #14: Distinguish loading, error, empty, and success states */}
-      {media.isLoading ? (
+      {media.isLoading && visibleItems.length === 0 ? (
         <div className={usesHomePosterGrid ? HOME_MEDIA_CARD_GRID_CLASS : "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"}>
           {Array.from({ length: 12 }).map((_, index) => (
             usesHomePosterGrid
@@ -353,7 +421,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           <p className="text-sm text-muted-foreground mt-1">Your data was not deleted. This is a connection error.</p>
           <Button variant="outline" className="mt-4" onClick={() => media.refetch()}>Retry</Button>
         </Card>
-      ) : items.length === 0 ? (
+      ) : visibleItems.length === 0 ? (
         <EmptyState
           icon={<WorldIcon className="w-12 h-12" />}
           title={
@@ -386,7 +454,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
         />
       ) : (
         <div className={usesHomePosterGrid ? HOME_MEDIA_CARD_GRID_CLASS : layout === "grid" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" : "grid grid-cols-1 gap-3 md:grid-cols-2"}>
-          {items.map((item, index) => (
+          {visibleItems.map((item, index) => (
             <CollectionMediaCard
               key={item.id}
               item={item}
@@ -400,7 +468,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
         </div>
       )}
 
-      {totalPages > 1 && (
+      {totalPages > 1 && !isMobileViewport && (
         <div className="flex items-center justify-center gap-2 pt-4">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>
             {isArabicWorld ? "السابق" : "Prev"}
@@ -411,6 +479,18 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((current) => current + 1)}>
             {isArabicWorld ? "التالي" : "Next"}
           </Button>
+        </div>
+      )}
+
+      {isMobileViewport && (
+        <div ref={infiniteSentinelRef} className="tvtime-infinite-sentinel" aria-live="polite">
+          {hasMoreMobile && media.isFetching ? (
+            <span><Loader2 className="h-4 w-4 animate-spin" /> {isArabicWorld ? "تحميل المزيد…" : "Loading more…"}</span>
+          ) : hasMoreMobile ? (
+            <span className="text-muted-foreground">{isArabicWorld ? "مرّر لتحميل المزيد" : "Scroll for more"}</span>
+          ) : visibleItems.length > 0 ? (
+            <span className="text-muted-foreground">{isArabicWorld ? "وصلت للنهاية" : "You reached the end"}</span>
+          ) : null}
         </div>
       )}
     </div>
@@ -426,6 +506,7 @@ function RangeFilter({
   step,
   suffix = "",
   value,
+  presets = [],
   onChange,
 }: {
   label: string;
@@ -436,6 +517,7 @@ function RangeFilter({
   step: number;
   suffix?: string;
   value: [number, number];
+  presets?: Array<{ label: string; value: [number, number] }>;
   onChange: (value: [number, number]) => void;
 }) {
   const clamp = (next: number) => Math.min(max, Math.max(min, next));
@@ -452,6 +534,21 @@ function RangeFilter({
           {fmt(value[0])}{suffix} — {fmt(value[1])}{suffix}
         </span>
       </div>
+      {presets.length > 0 && (
+        <div className="tvtime-range-presets mb-3 flex gap-1.5 overflow-x-auto pb-1">
+          {presets.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => onChange(preset.value)}
+              className="shrink-0 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground active:scale-[0.97]"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="tvtime-range-slider">
       <Slider
         min={min}
         max={max}
@@ -460,6 +557,7 @@ function RangeFilter({
         onValueChange={(next) => onChange([next[0] ?? value[0], next[1] ?? value[1]])}
         aria-label={label}
       />
+      </div>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-md">
         <label className="space-y-1">
           <span className="text-[11px] font-medium text-muted-foreground">{fromLabel}</span>
@@ -522,6 +620,16 @@ function CollectionMediaCard({
   const goMovie = useNav((state) => state.goMovie);
   const goTv = useNav((state) => state.goTv);
   const [ratingOpen, setRatingOpen] = useState(false);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const clearLongPress = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+    touchStartRef.current = null;
+  };
 
   const publicRating = item.rating ? parseFloat(item.rating) : null;
   const userRating = item.type === "series" && item.status !== "finished"
@@ -637,7 +745,30 @@ function CollectionMediaCard({
             className={useHomePresentation
               ? "tvtime-media-poster relative aspect-[2/3] cursor-pointer overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
               : `relative cursor-pointer overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${layout === "list" ? "row-span-2 aspect-[2/3]" : "aspect-[2/3]"}`}
-            onClick={handleOpenDetails}
+            onClick={() => {
+              if (longPressTriggeredRef.current) {
+                longPressTriggeredRef.current = false;
+                return;
+              }
+              handleOpenDetails();
+            }}
+            onPointerDown={(event) => {
+              if (event.pointerType !== "touch") return;
+              longPressTriggeredRef.current = false;
+              touchStartRef.current = { x: event.clientX, y: event.clientY };
+              longPressTimerRef.current = setTimeout(() => {
+                longPressTriggeredRef.current = true;
+                setActionMenuOpen(true);
+                if ("vibrate" in navigator) navigator.vibrate?.(12);
+              }, 520);
+            }}
+            onPointerMove={(event) => {
+              const start = touchStartRef.current;
+              if (!start) return;
+              if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 12) clearLongPress();
+            }}
+            onPointerUp={clearLongPress}
+            onPointerCancel={clearLongPress}
             onKeyDown={handleKeyDown}
             role="button"
             tabIndex={0}
@@ -681,7 +812,7 @@ function CollectionMediaCard({
                 </span>
               </div>
             </div>
-            <DropdownMenu>
+            <DropdownMenu open={actionMenuOpen} onOpenChange={setActionMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   size="sm"

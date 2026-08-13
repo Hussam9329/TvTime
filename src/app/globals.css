@@ -7460,3 +7460,302 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     display: none;
   }
 }
+
+/* PATCH: mobile-first interaction polish for library, filters and detail pages */
+.tvtime-app-header {
+  transition: transform 220ms cubic-bezier(.22,.61,.36,1), opacity 180ms ease;
+  will-change: transform;
+}
+
+.tvtime-infinite-sentinel {
+  display: flex;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tvtime-infinite-sentinel > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+@media (max-width: 767px) {
+  .tvtime-app-header[data-mobile-hidden="true"] {
+    transform: translateY(calc(-100% - env(safe-area-inset-top, 0px) - 0.25rem));
+    pointer-events: none;
+  }
+
+  .tvtime-app-header[data-mobile-search-open="true"] {
+    transform: none !important;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Full mobile search surface instead of a cramped inline field. */
+  .tvtime-mobile-search-panel {
+    position: fixed;
+    z-index: 70;
+    inset: calc(4rem + env(safe-area-inset-top, 0px)) 0 0;
+    max-width: none !important;
+    padding: 1rem !important;
+    border: 0;
+    border-radius: 0;
+    background: color-mix(in oklab, var(--background) 96%, transparent);
+    backdrop-filter: blur(28px) saturate(150%);
+  }
+
+  .tvtime-mobile-search-panel > div {
+    max-width: 38rem;
+  }
+
+  /* Filter panel collapses into a one-handed bottom sheet on phones. */
+  .tvtime-filter-panel[data-mobile-sheet="true"] {
+    overflow: visible;
+  }
+
+  .tvtime-filter-panel[data-mobile-sheet="true"] > .tvtime-filter-panel-header {
+    min-height: 3.5rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .tvtime-filter-panel[data-mobile-sheet="true"] > .tvtime-filter-panel-header > div:first-child {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .tvtime-filter-panel[data-mobile-sheet="true"] > .tvtime-filter-panel-header p {
+    display: none;
+  }
+
+  .tvtime-filter-sheet-backdrop {
+    position: fixed;
+    z-index: 58;
+    inset: 0;
+    border: 0;
+    background: rgb(0 0 0 / 0.58);
+    backdrop-filter: blur(3px);
+  }
+
+  .tvtime-filter-sheet-content {
+    position: fixed;
+    z-index: 60;
+    inset-inline: 0;
+    bottom: 0;
+    max-height: min(88dvh, 52rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.55rem 1rem calc(5.25rem + env(safe-area-inset-bottom, 0px)) !important;
+    border: 1px solid color-mix(in oklab, var(--border) 88%, transparent);
+    border-bottom: 0;
+    border-radius: 1.5rem 1.5rem 0 0;
+    background: color-mix(in oklab, var(--background) 97%, transparent);
+    box-shadow: 0 -24px 64px rgb(0 0 0 / 0.34);
+    backdrop-filter: blur(26px) saturate(150%);
+    animation: tvtime-sheet-in 220ms cubic-bezier(.22,.61,.36,1);
+  }
+
+  .tvtime-filter-sheet-grabber {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    width: 2.75rem;
+    height: 0.28rem;
+    margin: 0.15rem auto 0.8rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--muted-foreground) 36%, transparent);
+  }
+
+  .tvtime-filter-sheet-footer {
+    position: fixed;
+    z-index: 62;
+    inset-inline: 0;
+    bottom: 0;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+    background: color-mix(in oklab, var(--background) 94%, transparent);
+    backdrop-filter: blur(22px);
+  }
+
+  @keyframes tvtime-sheet-in {
+    from { transform: translateY(18%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Always-available compact controls after the large library header scrolls away. */
+  .tvtime-mobile-library-toolbar {
+    position: sticky;
+    z-index: 32;
+    top: calc(4.15rem + env(safe-area-inset-top, 0px));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.42rem;
+    border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--background) 87%, transparent);
+    box-shadow: 0 10px 28px rgb(0 0 0 / 0.14);
+    backdrop-filter: blur(20px) saturate(145%);
+  }
+
+  .tvtime-mobile-library-toolbar__tabs {
+    display: grid;
+    min-width: 0;
+    flex: 1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+
+  .tvtime-mobile-library-toolbar__tabs button {
+    min-height: 2.25rem;
+    min-width: 0;
+    border-radius: 0.75rem;
+    padding-inline: 0.55rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted-foreground);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .tvtime-mobile-library-toolbar__tabs button[data-active="true"] {
+    background: color-mix(in oklab, var(--primary) 14%, transparent);
+    color: var(--foreground);
+  }
+
+  /* Range controls are deliberately larger on touch screens. */
+  .tvtime-range-slider {
+    padding-block: 0.6rem;
+  }
+
+  .tvtime-range-slider [data-slot="slider-track"] {
+    height: 0.48rem;
+  }
+
+  .tvtime-range-slider [data-slot="slider-thumb"] {
+    width: 1.35rem;
+    height: 1.35rem;
+    border-width: 2px;
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 9%, transparent);
+  }
+
+  .tvtime-range-presets {
+    scrollbar-width: none;
+  }
+  .tvtime-range-presets::-webkit-scrollbar { display: none; }
+
+  /* Fixed primary actions live above the persistent navigation dock. */
+  .tvtime-mobile-detail-actions {
+    position: fixed;
+    z-index: 43;
+    inset-inline: max(0.75rem, env(safe-area-inset-left, 0px)) max(0.75rem, env(safe-area-inset-right, 0px));
+    bottom: calc(5.15rem + env(safe-area-inset-bottom, 0px));
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    width: min(calc(100% - 1.5rem), 30rem);
+    margin-inline: auto;
+    padding: 0.4rem;
+    border: 1px solid color-mix(in oklab, var(--border) 88%, transparent);
+    border-radius: 1.1rem;
+    background: color-mix(in oklab, var(--background) 88%, transparent);
+    box-shadow: 0 16px 44px rgb(0 0 0 / 0.28);
+    backdrop-filter: blur(24px) saturate(150%);
+  }
+
+  .tvtime-mobile-detail-actions [data-slot="button"] {
+    min-width: 0;
+    min-height: 2.75rem;
+    gap: 0.3rem;
+    padding-inline: 0.45rem;
+    font-size: 0.68rem;
+  }
+
+  .tvtime-mobile-detail-actions [data-slot="button"] svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  /* Footer becomes intentionally quiet because bottom navigation owns mobile navigation. */
+  .tvtime-app-footer {
+    margin-top: 1rem;
+  }
+
+  .tvtime-footer-inner {
+    padding-block: 0.85rem !important;
+  }
+
+  .tvtime-footer-row {
+    gap: 0.5rem !important;
+  }
+
+  .tvtime-footer-stats,
+  .tvtime-footer-attribution,
+  .tvtime-footer-glow {
+    display: none !important;
+  }
+
+  .tvtime-footer-brand {
+    opacity: 0.68;
+    transform: scale(0.92);
+  }
+
+  /* Make touch feedback immediate without introducing motion-heavy UI. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active,
+  .tvtime-media-card-link:active {
+    transform: scale(0.975);
+  }
+
+  .tvtime-media-card,
+  .tvtime-media-card-link,
+  .tvtime-mobile-dock__item,
+  [data-slot="button"] {
+    touch-action: manipulation;
+  }
+
+  .tvtime-mobile-dock__item:active .tvtime-mobile-dock__icon {
+    transform: scale(0.9);
+  }
+}
+
+@media (max-width: 359px) {
+  .tvtime-main-content {
+    padding-inline: 0.6rem;
+  }
+
+  .tvtime-collection-world-page {
+    --app-section-gap: 0.8rem;
+  }
+
+  .tvtime-mobile-library-toolbar {
+    padding: 0.32rem;
+    border-radius: 0.85rem;
+  }
+
+  .tvtime-mobile-library-toolbar__tabs button,
+  .tvtime-mobile-detail-actions [data-slot="button"] {
+    font-size: 0.62rem;
+  }
+
+  .tvtime-media-copy {
+    padding-inline: 0.1rem;
+  }
+
+  .tvtime-media-meta {
+    font-size: 0.62rem;
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,8 @@ type FilterPanelProps = {
   className?: string;
   contentClassName?: string;
   collapsibleOnMobile?: boolean;
+  mobileSheet?: boolean;
+  mobileResultLabel?: ReactNode;
 };
 
 export function FilterPanel({
@@ -33,13 +35,31 @@ export function FilterPanel({
   className,
   contentClassName,
   collapsibleOnMobile = false,
+  mobileSheet = false,
+  mobileResultLabel = "Show results",
 }: FilterPanelProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const contentId = useId();
 
+  useEffect(() => {
+    if (!mobileSheet) return;
+    const openFilters = () => setMobileOpen(true);
+    window.addEventListener("tvtime:open-filters", openFilters);
+    return () => window.removeEventListener("tvtime:open-filters", openFilters);
+  }, [mobileSheet]);
+
+  useEffect(() => {
+    if (!mobileSheet || !mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [mobileOpen, mobileSheet]);
+
   return (
     <section
       data-ui-surface="panel"
+      data-mobile-sheet={mobileSheet ? "true" : "false"}
+      data-mobile-open={mobileOpen ? "true" : "false"}
       className={cn(
         "tvtime-filter-panel glass overflow-hidden rounded-2xl border border-border/60 bg-card/70 shadow-sm",
         className,
@@ -74,7 +94,7 @@ export function FilterPanel({
               {resetLabel}
             </Button>
           )}
-          {collapsibleOnMobile && (
+          {(collapsibleOnMobile || mobileSheet) && (
             <Button
               type="button"
               variant={mobileOpen ? "secondary" : "outline"}
@@ -84,12 +104,21 @@ export function FilterPanel({
               aria-expanded={mobileOpen}
               aria-controls={contentId}
             >
-              {mobileOpen ? "Hide filters" : "Edit filters"}
+              {mobileOpen ? "Close filters" : "Filters"}
               <ChevronDown className={cn("h-4 w-4 transition-transform", mobileOpen && "rotate-180")} />
             </Button>
           )}
         </div>
       </div>
+
+      {mobileSheet && mobileOpen && (
+        <button
+          type="button"
+          className="tvtime-filter-sheet-backdrop md:hidden"
+          aria-label="Close filters"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
       {pinnedContent && (
         <div className="tvtime-filter-panel-pinned">
@@ -101,11 +130,23 @@ export function FilterPanel({
         id={contentId}
         className={cn(
           "tvtime-filter-panel-content space-y-4 p-3 sm:p-4",
-          collapsibleOnMobile && !mobileOpen && "hidden md:block",
+          collapsibleOnMobile && !mobileSheet && !mobileOpen && "hidden md:block",
+          mobileSheet && !mobileOpen && "max-md:hidden",
+          mobileSheet && mobileOpen && "tvtime-filter-sheet-content",
           contentClassName,
         )}
       >
+        {mobileSheet && mobileOpen && (
+          <div className="tvtime-filter-sheet-grabber md:hidden" aria-hidden="true" />
+        )}
         {children}
+        {mobileSheet && mobileOpen && (
+          <div className="tvtime-filter-sheet-footer md:hidden">
+            <Button type="button" className="h-11 w-full" onClick={() => setMobileOpen(false)}>
+              {mobileResultLabel}
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

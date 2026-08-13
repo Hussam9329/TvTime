@@ -534,6 +534,44 @@ export function MovieDetailView() {
         )}
       </Tabs>
 
+      <div className="tvtime-mobile-detail-actions md:hidden" role="toolbar" aria-label="Movie actions">
+        <Button
+          type="button"
+          variant={isWatched ? "default" : "outline"}
+          onClick={onWatched}
+          disabled={stateLoading || watchedToggle.isPending}
+          aria-label={isWatched ? "Remove from watched" : "Mark watched"}
+        >
+          {stateLoading ? <Loader2 className="animate-spin" /> : isWatched ? <CheckCircle2 /> : <Circle />}
+          <span>{isWatched ? "Watched" : "Watched"}</span>
+        </Button>
+        {isWatched ? (
+          <Button type="button" variant="outline" onClick={() => void onRewatch()} disabled={watchedToggle.isPending}>
+            <CheckCircle2 />
+            <span>Rewatch</span>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant={inWatchlist ? "default" : "outline"}
+            onClick={onWatchlist}
+            disabled={stateLoading || watchlistToggle.isPending}
+          >
+            {inWatchlist ? <Check /> : <ListPlus />}
+            <span>Watchlist</span>
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setRatingIntent(isWatched ? "edit" : "complete")}
+          disabled={stateLoading}
+        >
+          <Star className={myRating != null ? "fill-current" : undefined} />
+          <span>{myRating != null ? `${myRating}` : "Rate"}</span>
+        </Button>
+      </div>
+
       {/* Rating dialog — out of 100 */}
       <RatingDialog
         open={ratingIntent !== null}

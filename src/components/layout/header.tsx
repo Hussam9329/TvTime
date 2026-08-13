@@ -89,7 +89,12 @@ const arabicNavItems: NavItem[] = [
   { view: "arabic-tv", icon: Clapperboard },
 ];
 
-const mobileDockItems = primaryNavItems.slice(0, 4);
+const mobileDockItems: NavItem[] = [
+  { view: "home", icon: Home },
+  { view: "watch-next", icon: Play },
+  { view: "discover", icon: Compass },
+  { view: "movies", icon: Film },
+];
 const overflowNavItems = [...exploreNavItems, ...asianNavItems, ...arabicNavItems];
 
 const NOTIFICATION_QUERY_KEY = ["notifications", "unread-count", getClientUserId()] as const;
@@ -113,6 +118,31 @@ export function Header() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [mobileHeaderHidden, setMobileHeaderHidden] = useState(false);
+
+  useEffect(() => {
+    let previousY = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const mobile = window.matchMedia("(max-width: 767px)").matches;
+        if (!mobile || mobileSearchOpen || mobileOpen || currentY < 72) {
+          setMobileHeaderHidden(false);
+        } else if (currentY > previousY + 7) {
+          setMobileHeaderHidden(true);
+        } else if (currentY < previousY - 5) {
+          setMobileHeaderHidden(false);
+        }
+        previousY = currentY;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [mobileOpen, mobileSearchOpen]);
 
   const notificationSummary = useQuery({
     queryKey: NOTIFICATION_QUERY_KEY,
@@ -235,6 +265,7 @@ export function Header() {
       <header
         className="tvtime-app-header sticky top-0 z-40"
         data-mobile-search-open={mobileSearchOpen ? "true" : "false"}
+        data-mobile-hidden={mobileHeaderHidden ? "true" : "false"}
       >
         <div className="tvtime-header-inner mx-auto flex h-16 max-w-[1920px] items-center gap-1.5 px-2.5 sm:h-[4.5rem] sm:gap-2 sm:px-4 lg:px-5">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
