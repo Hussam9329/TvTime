@@ -534,7 +534,7 @@ export function MovieDetailView() {
         )}
       </Tabs>
 
-      <div className="tvtime-mobile-detail-actions md:hidden" role="toolbar" aria-label="Movie actions">
+      <div className="tvtime-mobile-detail-actions tvtime-mobile-experience-only" role="toolbar" aria-label="Movie actions">
         <Button
           type="button"
           variant={isWatched ? "default" : "outline"}

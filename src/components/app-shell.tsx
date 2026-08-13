@@ -18,6 +18,9 @@ import { HomeView } from "@/components/views/home-view";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { MotionConfig } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
+import { useMobileViewport } from "@/hooks/use-mobile-viewport";
 
 const MAX_SAVED_SCROLL_ENTRIES = 50;
 
@@ -110,6 +113,10 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
   const pendingPopIndex = useRef<number | null>(null);
   const scrollPositions = useRef(new Map<number, number>());
   const [routeAnnouncement, setRouteAnnouncement] = useState("");
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+  const isMobileExperience = useMobileViewport();
 
   // The server and the first client render use the route parsed by the page.
   // Zustand is synchronized in the layout effect below, before the browser
@@ -219,6 +226,56 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
     };
   }, [navigationIndex, routeKey, routeReady, viewMetadata.announcement]);
 
+  useEffect(() => {
+    if (!isMobileExperience) return;
+    const pullEnabled = !["movie-detail", "tv-detail", "person-detail", "search"].includes(view);
+    if (!pullEnabled) return;
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+    let distance = 0;
+    const onTouchStart = (event: TouchEvent) => {
+      if (refreshing || window.scrollY > 1 || event.touches.length !== 1) return;
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      distance = 0;
+      tracking = true;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      if (!tracking || event.touches.length !== 1) return;
+      const dx = event.touches[0].clientX - startX;
+      const dy = event.touches[0].clientY - startY;
+      if (dy <= 0 || Math.abs(dx) > dy) { tracking = false; setPullDistance(0); return; }
+      distance = Math.min(118, dy * 0.48);
+      if (distance > 8) event.preventDefault();
+      setPullDistance(distance);
+    };
+    const onTouchEnd = async () => {
+      if (!tracking) return;
+      tracking = false;
+      const shouldRefresh = distance >= 68;
+      setPullDistance(0);
+      if (!shouldRefresh) return;
+      setRefreshing(true);
+      try {
+        await queryClient.invalidateQueries({ refetchType: "active" });
+      } finally {
+        window.setTimeout(() => setRefreshing(false), 350);
+      }
+    };
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
+    document.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchEnd);
+      setPullDistance(0);
+    };
+  }, [isMobileExperience, queryClient, refreshing, view]);
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="tvtime-app min-h-dvh flex flex-col">
@@ -237,6 +294,17 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
         </div>
 
         <Header />
+        <div
+          className="tvtime-pull-refresh tvtime-mobile-experience-only"
+          data-visible={(pullDistance > 0 || refreshing) ? "true" : "false"}
+          data-ready={pullDistance >= 68 ? "true" : "false"}
+          style={{ transform: `translate(-50%, ${refreshing ? 18 : Math.min(48, pullDistance - 30)}px)` }}
+          role="status"
+          aria-live="polite"
+        >
+          <RefreshCw className={refreshing ? "animate-spin" : undefined} />
+          <span>{refreshing ? "Refreshing…" : pullDistance >= 68 ? "Release to refresh" : "Pull to refresh"}</span>
+        </div>
         <KeyboardShortcuts />
 
         <main

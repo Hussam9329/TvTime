@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNav } from "@/lib/store";
 import { useMedia, useMediaUpdate, useLibraryCounts, type MediaItemDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
@@ -34,6 +35,9 @@ import { useMobileViewport } from "@/hooks/use-mobile-viewport";
 
 type CollectionWorld = "movies" | "asian-movies" | "anime" | "arabic-movies";
 type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
+
+const MIN_LIBRARY_YEAR = 1800;
+const MAX_LIBRARY_YEAR_OFFSET = 25;
 
 type WorldConfig = {
   title: string;
@@ -98,18 +102,25 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   const statusRef = useRef<HTMLDivElement>(null);
   const infiniteSentinelRef = useRef<HTMLDivElement>(null);
   const isMobileViewport = useMobileViewport();
+  const queryClient = useQueryClient();
   const config = WORLD_CONFIG[world];
   const WorldIcon = config.icon;
   const setView = useNav((s) => s.setView);
-  const [tab, setTab] = useState<CollectionTab>("watchlist");
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("smart");
-  const maxLibraryYear = new Date().getFullYear() + 5;
-  const [yearRange, setYearRange] = useState<[number, number]>([1900, maxLibraryYear]);
-  const [ratingRange, setRatingRange] = useState<[number, number]>([0, 10]);
-  const [layout, setLayout] = useState<"grid" | "list">("grid");
-  const [animeMediaKind, setAnimeMediaKind] = useState<"all" | "movie" | "series">("all");
-  const [page, setPage] = useState(0);
+  const savedUi = useNav((s) => s.collectionUi[world]);
+  const persistUi = useNav((s) => s.setCollectionUi);
+  const maxLibraryYear = new Date().getFullYear() + MAX_LIBRARY_YEAR_OFFSET;
+  const [tab, setTab] = useState<CollectionTab>(savedUi?.tab ?? "watchlist");
+  const [search, setSearch] = useState(savedUi?.search ?? "");
+  const [sortBy, setSortBy] = useState(savedUi?.sortBy ?? "smart");
+  const [yearRange, setYearRange] = useState<[number, number]>(savedUi?.yearRange ?? [MIN_LIBRARY_YEAR, maxLibraryYear]);
+  const [tmdbRatingRange, setTmdbRatingRange] = useState<[number, number]>(savedUi?.tmdbRatingRange ?? [0, 10]);
+  const [userRatingRange, setUserRatingRange] = useState<[number, number]>(savedUi?.userRatingRange ?? [0, 100]);
+  const [layout, setLayout] = useState<"grid" | "list">(savedUi?.layout ?? "grid");
+  const [animeMediaKind, setAnimeMediaKind] = useState<"all" | "movie" | "series">(savedUi?.animeMediaKind ?? "all");
+  const [page, setPage] = useState(savedUi?.page ?? 0);
+  const initialSavedPageRef = useRef(savedUi?.page ?? 0);
+  const mobileRestoreTargetRef = useRef(-1);
+  const mobileRestoreInitializedRef = useRef(false);
   const [mobileAccumulatedItems, setMobileAccumulatedItems] = useState<MediaItemDB[]>([]);
   const limit = 60;
   const isWatchedTab = tab === "watched";
@@ -129,7 +140,8 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   });
   const debouncedSearch = useDebounce(search, 400);
   const debouncedYearRange = useDebounce(yearRange, 250);
-  const debouncedRatingRange = useDebounce(ratingRange, 250);
+  const debouncedTmdbRatingRange = useDebounce(tmdbRatingRange, 250);
+  const debouncedUserRatingRange = useDebounce(userRatingRange, 250);
   const layoutStorageKey = world === "anime" ? "trakora:anime-library-layout" : "trakora:movie-library-layout";
   const isMovieWorld = world === "movies" || world === "arabic-movies" || world === "asian-movies";
 
@@ -143,7 +155,22 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
     window.localStorage.setItem(layoutStorageKey, next);
   };
 
-  const media = useMedia({
+  useEffect(() => {
+    persistUi(world, { tab, search, sortBy, yearRange, tmdbRatingRange, userRatingRange, layout, animeMediaKind, page });
+  }, [animeMediaKind, layout, page, persistUi, search, sortBy, tab, tmdbRatingRange, userRatingRange, world, yearRange]);
+
+  const resetFilters = () => {
+    setTab("watchlist");
+    setSearch("");
+    setSortBy("smart");
+    setYearRange([MIN_LIBRARY_YEAR, maxLibraryYear]);
+    setTmdbRatingRange([0, 10]);
+    setUserRatingRange([0, 100]);
+    setAnimeMediaKind("all");
+    setPage(0);
+  };
+
+  const mediaParams = useMemo(() => ({
     collectionWorld: world,
     type: isWatchingTab || isNotStartedTab
       ? "series"
@@ -162,17 +189,52 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           : { status: "planned", watched: "false" }),
     search: debouncedSearch || undefined,
     sortBy: sortBy === "smart" ? (isWatchedTab ? "watchedAt" : "addedAt") : sortBy,
-    order: "desc",
-    ...(isMovieWorld && sortBy === "year" ? { yearFrom: debouncedYearRange[0], yearTo: debouncedYearRange[1] } : {}),
-    ...(isMovieWorld && sortBy === "userRating" ? { ratingFrom: debouncedRatingRange[0], ratingTo: debouncedRatingRange[1] } : {}),
+    order: sortBy === "title" ? "asc" : "desc",
+    ...(isMovieWorld && sortBy === "year" && (debouncedYearRange[0] !== MIN_LIBRARY_YEAR || debouncedYearRange[1] !== maxLibraryYear)
+      ? { yearFrom: debouncedYearRange[0], yearTo: debouncedYearRange[1] } : {}),
+    ...(isMovieWorld && sortBy === "tmdbRating" && (debouncedTmdbRatingRange[0] !== 0 || debouncedTmdbRatingRange[1] !== 10)
+      ? { ratingFrom: debouncedTmdbRatingRange[0], ratingTo: debouncedTmdbRatingRange[1] } : {}),
+    ...(isMovieWorld && sortBy === "userRating" && (debouncedUserRatingRange[0] !== 0 || debouncedUserRatingRange[1] !== 100)
+      ? { userRatingFrom: debouncedUserRatingRange[0], userRatingTo: debouncedUserRatingRange[1] } : {}),
     limit,
     offset: page * limit,
-  });
+  }), [animeMediaKind, config.isAnime, config.isArabic, config.isAsian, config.type, debouncedSearch, debouncedTmdbRatingRange, debouncedUserRatingRange, debouncedYearRange, isMovieWorld, isNotStartedTab, isWatchingTab, isWatchedTab, maxLibraryYear, page, sortBy, tab, world]);
+  const media = useMedia(mediaParams);
   const globalCounts = useLibraryCounts();
 
   const items = media.data?.items ?? [];
   const total = media.data?.total ?? 0;
-  const filterIdentity = [world, tab, debouncedSearch, sortBy, debouncedYearRange.join("-"), debouncedRatingRange.join("-"), animeMediaKind].join("|");
+  const filterIdentity = [world, tab, debouncedSearch, sortBy, debouncedYearRange.join("-"), debouncedTmdbRatingRange.join("-"), debouncedUserRatingRange.join("-"), animeMediaKind].join("|");
+  const mediaCoreIdentity = useMemo(() => {
+    const { offset: _offset, limit: _limit, ...core } = mediaParams;
+    return JSON.stringify(core);
+  }, [mediaParams]);
+  const initialFilterIdentityRef = useRef(filterIdentity);
+
+  useEffect(() => {
+    if (filterIdentity !== initialFilterIdentityRef.current) mobileRestoreTargetRef.current = -1;
+  }, [filterIdentity]);
+
+  useEffect(() => {
+    if (!isMobileViewport || mobileRestoreInitializedRef.current) return;
+    mobileRestoreInitializedRef.current = true;
+    const targetPage = initialSavedPageRef.current;
+    if (targetPage <= 0) return;
+    const cachedOffsets = new Set<number>();
+    for (const [key, data] of queryClient.getQueriesData({ queryKey: ["media", "list"] })) {
+      const queryKey = key as unknown as [string, string, Record<string, unknown>];
+      const params = queryKey[2];
+      if (!params || !data) continue;
+      const { offset: cachedOffset, limit: _cachedLimit, ...cachedCore } = params;
+      if (JSON.stringify(cachedCore) === mediaCoreIdentity) cachedOffsets.add(Number(cachedOffset || 0));
+    }
+    const hasEveryPage = Array.from({ length: targetPage + 1 }, (_, index) => index * limit).every((offset) => cachedOffsets.has(offset));
+    if (!hasEveryPage) {
+      mobileRestoreTargetRef.current = targetPage;
+      setMobileAccumulatedItems([]);
+      setPage(0);
+    }
+  }, [isMobileViewport, mediaCoreIdentity, queryClient]);
 
   useEffect(() => {
     setMobileAccumulatedItems([]);
@@ -180,13 +242,29 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
 
   useEffect(() => {
     if (!isMobileViewport || !media.data) return;
-    setMobileAccumulatedItems((current) => {
-      if (page === 0) return media.data.items;
-      const byId = new Map(current.map((item) => [item.id, item]));
-      for (const item of media.data.items) byId.set(item.id, item);
-      return Array.from(byId.values());
-    });
-  }, [isMobileViewport, media.data, page]);
+    const cachedPages: Array<{ offset: number; items: MediaItemDB[] }> = [];
+    for (const [key, data] of queryClient.getQueriesData<{ items: MediaItemDB[]; total: number; limit: number; offset: number }>({ queryKey: ["media", "list"] })) {
+      const queryKey = key as unknown as [string, string, Record<string, unknown>];
+      const params = queryKey[2];
+      if (!params || !data) continue;
+      const { offset: cachedOffset, limit: _cachedLimit, ...cachedCore } = params;
+      if (JSON.stringify(cachedCore) !== mediaCoreIdentity) continue;
+      const numericOffset = Number(cachedOffset || 0);
+      if (numericOffset <= page * limit) cachedPages.push({ offset: numericOffset, items: data.items });
+    }
+    cachedPages.sort((a, b) => a.offset - b.offset);
+    const byId = new Map<string, MediaItemDB>();
+    for (const cached of cachedPages) for (const item of cached.items) byId.set(item.id, item);
+    for (const item of media.data.items) byId.set(item.id, item);
+    setMobileAccumulatedItems(Array.from(byId.values()));
+
+    const restoreTarget = mobileRestoreTargetRef.current;
+    if (restoreTarget >= 0 && page < restoreTarget && !media.isFetching) {
+      setPage((current) => Math.min(current + 1, restoreTarget));
+    } else if (restoreTarget >= 0 && page >= restoreTarget) {
+      mobileRestoreTargetRef.current = -1;
+    }
+  }, [isMobileViewport, media.data, media.isFetching, mediaCoreIdentity, page, queryClient]);
 
   const visibleItems = isMobileViewport
     ? (mobileAccumulatedItems.length > 0 ? mobileAccumulatedItems : items)
@@ -213,6 +291,11 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
     return () => observer.disconnect();
   }, [hasMoreMobile, isMobileViewport, media.isFetching, totalPages]);
 
+  const activeFilterCount = Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart")
+    + Number(world === "anime" && animeMediaKind !== "all")
+    + Number(isMovieWorld && sortBy === "year" && (yearRange[0] !== MIN_LIBRARY_YEAR || yearRange[1] !== maxLibraryYear))
+    + Number(isMovieWorld && sortBy === "tmdbRating" && (tmdbRatingRange[0] !== 0 || tmdbRatingRange[1] !== 10))
+    + Number(isMovieWorld && sortBy === "userRating" && (userRatingRange[0] !== 0 || userRatingRange[1] !== 100));
   const openMobileFilters = () => window.dispatchEvent(new Event("tvtime:open-filters"));
 
   return (
@@ -231,7 +314,9 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
       <FilterPanel
         title={isArabicWorld ? "فلاتر المكتبة" : "Library filters"}
         description={isArabicWorld ? "تصفّح أفلامك العربية حسب حالة المجموعة والبحث والترتيب." : `Browse your ${config.title.toLowerCase()} by collection status, search term and sort order.`}
-        activeCount={Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart") + Number(world === "anime" && animeMediaKind !== "all") + Number(isMovieWorld && sortBy === "year" && (yearRange[0] !== 1900 || yearRange[1] !== maxLibraryYear)) + Number(isMovieWorld && sortBy === "userRating" && (ratingRange[0] !== 0 || ratingRange[1] !== 10))}
+        activeCount={activeFilterCount}
+        onReset={resetFilters}
+        resetLabel={isArabicWorld ? "إعادة الضبط" : "Reset all"}
         mobileSheet
         mobileResultLabel={isArabicWorld ? `عرض ${total} فيلم` : `Show ${total} titles`}
       >
@@ -324,7 +409,8 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
                 {[
                   { value: "smart", label: isArabicWorld ? "ذكي" : "Smart" },
                   { value: "addedAt", label: isArabicWorld ? "الأحدث إضافة" : "Recent" },
-                  { value: "userRating", label: isArabicWorld ? "تقييمي" : "Rating" },
+                  { value: "tmdbRating", label: isArabicWorld ? "تقييم TMDB" : "TMDB Rating" },
+                  { value: "userRating", label: isArabicWorld ? "تقييمي" : "My Rating" },
                   { value: "title", label: isArabicWorld ? "أ-ي" : "A-Z" },
                   { value: "year", label: isArabicWorld ? "السنة" : "Year" },
                 ].map((option) => (
@@ -347,7 +433,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
               label={isArabicWorld ? "نطاق السنة" : "Year range"}
               fromLabel={isArabicWorld ? "من سنة" : "From year"}
               toLabel={isArabicWorld ? "إلى سنة" : "To year"}
-              min={1900}
+              min={MIN_LIBRARY_YEAR}
               max={maxLibraryYear}
               step={1}
               value={yearRange}
@@ -360,29 +446,50 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
             />
           )}
 
-          {isMovieWorld && sortBy === "userRating" && (
+          {isMovieWorld && sortBy === "tmdbRating" && (
             <RangeFilter
-              label={isArabicWorld ? "نطاق تقييم الفيلم" : "TMDB rating range"}
+              label={isArabicWorld ? "نطاق تقييم TMDB" : "TMDB rating range"}
               fromLabel={isArabicWorld ? "من تقييم" : "From rating"}
               toLabel={isArabicWorld ? "إلى تقييم" : "To rating"}
               min={0}
               max={10}
               step={0.1}
               suffix="/10"
-              value={ratingRange}
+              value={tmdbRatingRange}
               presets={[
                 { label: "8+", value: [8, 10] },
                 { label: "7+", value: [7, 10] },
                 { label: "6+", value: [6, 10] },
                 { label: "All", value: [0, 10] },
               ]}
-              onChange={(next) => { setRatingRange(next); setPage(0); }}
+              onChange={(next) => { setTmdbRatingRange(next); setPage(0); }}
+            />
+          )}
+
+
+          {isMovieWorld && sortBy === "userRating" && (
+            <RangeFilter
+              label={isArabicWorld ? "نطاق تقييمي" : "My rating range"}
+              fromLabel={isArabicWorld ? "من تقييم" : "From rating"}
+              toLabel={isArabicWorld ? "إلى تقييم" : "To rating"}
+              min={0}
+              max={100}
+              step={1}
+              suffix="/100"
+              value={userRatingRange}
+              presets={[
+                { label: "90+", value: [90, 100] },
+                { label: "80+", value: [80, 100] },
+                { label: "70+", value: [70, 100] },
+                { label: "All", value: [0, 100] },
+              ]}
+              onChange={(next) => { setUserRatingRange(next); setPage(0); }}
             />
           )}
         </FilterSection>
       </FilterPanel>
 
-      <div className="tvtime-mobile-library-toolbar md:hidden" role="toolbar" aria-label={isArabicWorld ? "أدوات المكتبة" : "Library tools"}>
+      <div className="tvtime-mobile-library-toolbar tvtime-mobile-experience-only" role="toolbar" aria-label={isArabicWorld ? "أدوات المكتبة" : "Library tools"}>
         <div className="tvtime-mobile-library-toolbar__tabs">
           <button type="button" data-active={tab === "watchlist" ? "true" : "false"} onClick={() => { setTab("watchlist"); setPage(0); }}>
             {isArabicWorld ? "القائمة" : "Watchlist"}
@@ -393,7 +500,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
         </div>
         <Button type="button" variant="outline" size="sm" className="h-9" onClick={openMobileFilters}>
           <SlidersHorizontal className="h-4 w-4" />
-          {isArabicWorld ? "فلتر" : "Filter"}
+          {isArabicWorld ? `فلتر${activeFilterCount ? ` · ${activeFilterCount}` : ""}` : `Filters${activeFilterCount ? ` · ${activeFilterCount}` : ""}`}
         </Button>
       </div>
 
@@ -463,6 +570,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
               layout={layout}
               homePresentation={isMovieWorld || world === "anime"}
               arabicUi={isArabicWorld}
+              enableSwipe={isMobileViewport && isMovieWorld}
             />
           ))}
         </div>
@@ -521,10 +629,30 @@ function RangeFilter({
   onChange: (value: [number, number]) => void;
 }) {
   const clamp = (next: number) => Math.min(max, Math.max(min, next));
-  const updateFrom = (next: number) => onChange([Math.min(clamp(next), value[1]), value[1]]);
-  const updateTo = (next: number) => onChange([value[0], Math.max(clamp(next), value[0])]);
   const isFloat = step < 1;
-  const fmt = (n: number) => (isFloat ? (Math.round(n * 10) / 10).toString() : String(n));
+  const fmt = (n: number) => (isFloat ? (Math.round(n * 10) / 10).toString() : String(Math.round(n)));
+  const [fromDraft, setFromDraft] = useState(fmt(value[0]));
+  const [toDraft, setToDraft] = useState(fmt(value[1]));
+  const [activeThumb, setActiveThumb] = useState<0 | 1 | null>(null);
+
+  useEffect(() => setFromDraft(fmt(value[0])), [value[0]]);
+  useEffect(() => setToDraft(fmt(value[1])), [value[1]]);
+
+  const commitFrom = () => {
+    const parsed = Number(fromDraft);
+    if (!Number.isFinite(parsed)) { setFromDraft(fmt(value[0])); return; }
+    const next = Math.min(clamp(parsed), value[1]);
+    setFromDraft(fmt(next));
+    onChange([next, value[1]]);
+  };
+  const commitTo = () => {
+    const parsed = Number(toDraft);
+    if (!Number.isFinite(parsed)) { setToDraft(fmt(value[1])); return; }
+    const next = Math.max(clamp(parsed), value[0]);
+    setToDraft(fmt(next));
+    onChange([value[0], next]);
+  };
+  const percentage = (n: number) => max === min ? 0 : ((n - min) / (max - min)) * 100;
 
   return (
     <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3.5 sm:p-4">
@@ -548,15 +676,33 @@ function RangeFilter({
           ))}
         </div>
       )}
-      <div className="tvtime-range-slider">
-      <Slider
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onValueChange={(next) => onChange([next[0] ?? value[0], next[1] ?? value[1]])}
-        aria-label={label}
-      />
+      <div
+        className="tvtime-range-slider relative"
+        onPointerDown={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect();
+          const rawPercent = rect.width > 0 ? ((event.clientX - rect.left) / rect.width) * 100 : 0;
+          const pointerPercent = window.getComputedStyle(event.currentTarget).direction === "rtl" ? 100 - rawPercent : rawPercent;
+          const fromDistance = Math.abs(pointerPercent - percentage(value[0]));
+          const toDistance = Math.abs(pointerPercent - percentage(value[1]));
+          setActiveThumb(fromDistance <= toDistance ? 0 : 1);
+        }}
+        onPointerUp={() => setActiveThumb(null)}
+        onPointerCancel={() => setActiveThumb(null)}
+        onPointerLeave={(event) => { if (event.buttons === 0) setActiveThumb(null); }}
+      >
+        {activeThumb != null && (
+          <span className="tvtime-range-bubble" data-active="true" style={{ insetInlineStart: `${percentage(value[activeThumb])}%` }}>
+            {fmt(value[activeThumb])}{suffix}
+          </span>
+        )}
+        <Slider
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onValueChange={(next) => onChange([next[0] ?? value[0], next[1] ?? value[1]])}
+          aria-label={label}
+        />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-md">
         <label className="space-y-1">
@@ -567,8 +713,10 @@ function RangeFilter({
             min={min}
             max={value[1]}
             step={step}
-            value={value[0]}
-            onChange={(event) => updateFrom(Number(event.target.value))}
+            value={fromDraft}
+            onChange={(event) => setFromDraft(event.target.value)}
+            onBlur={commitFrom}
+            onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") setFromDraft(fmt(value[0])); }}
             className="h-9 tabular-nums"
           />
         </label>
@@ -580,8 +728,10 @@ function RangeFilter({
             min={value[0]}
             max={max}
             step={step}
-            value={value[1]}
-            onChange={(event) => updateTo(Number(event.target.value))}
+            value={toDraft}
+            onChange={(event) => setToDraft(event.target.value)}
+            onBlur={commitTo}
+            onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") setToDraft(fmt(value[1])); }}
             className="h-9 tabular-nums"
           />
         </label>
@@ -606,6 +756,7 @@ function CollectionMediaCard({
   layout,
   homePresentation = false,
   arabicUi = false,
+  enableSwipe = false,
 }: {
   item: MediaItemDB;
   index: number;
@@ -613,6 +764,7 @@ function CollectionMediaCard({
   layout: "grid" | "list";
   homePresentation?: boolean;
   arabicUi?: boolean;
+  enableSwipe?: boolean;
 }) {
   const isWatchedTab = tab === "watched";
   const update = useMediaUpdate();
@@ -624,6 +776,9 @@ function CollectionMediaCard({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const swipeXRef = useRef(0);
+  const swipeTriggeredRef = useRef(false);
 
   const clearLongPress = () => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
@@ -724,11 +879,26 @@ function CollectionMediaCard({
   // Quick remove from watchlist — clears status only, doesn't touch watched/rating.
   // Used on watchlist items where the user wants to remove the movie entirely.
   const handleQuickUnwatch = async () => {
-    await update.mutateAsync({
+    const result = await update.mutateAsync({
       id: item.id,
       status: null,
     });
-    toast.success("Removed from watchlist");
+    showWatchUndo("Removed from watchlist", result);
+  };
+
+  const finishSwipe = async () => {
+    const distance = swipeXRef.current;
+    swipeXRef.current = 0;
+    setSwipeX(0);
+    clearLongPress();
+    if (!enableSwipe || tab !== "watchlist" || Math.abs(distance) < 72 || update.isPending) return;
+    swipeTriggeredRef.current = true;
+    if (distance > 0) {
+      await handleMarkWatched();
+    } else {
+      await handleQuickUnwatch();
+    }
+    window.setTimeout(() => { swipeTriggeredRef.current = false; }, 50);
   };
 
 
@@ -740,13 +910,22 @@ function CollectionMediaCard({
         transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
         className={useHomePresentation ? "tvtime-media-card group relative min-w-0" : "group"}
       >
-        <Card className={useHomePresentation ? "" : `group overflow-hidden border-border/50 bg-card p-0 transition-[border-color,box-shadow,background-color] duration-200 hover:border-primary/55 hover:shadow-lg hover:shadow-primary/10 ${layout === "list" ? "grid grid-cols-[92px_1fr]" : ""}`}>
+        {enableSwipe && tab === "watchlist" && (
+          <div className="tvtime-swipe-actions" aria-hidden="true">
+            <span data-side="right"><Check className="h-4 w-4" /> Watched</span>
+            <span data-side="left">Remove</span>
+          </div>
+        )}
+        <Card
+          className={useHomePresentation ? "" : `group overflow-hidden border-border/50 bg-card p-0 transition-[border-color,box-shadow,background-color,transform] duration-200 hover:border-primary/55 hover:shadow-lg hover:shadow-primary/10 ${layout === "list" ? "grid grid-cols-[92px_1fr]" : ""}`}
+          style={enableSwipe && tab === "watchlist" ? { transform: `translateX(${swipeX}px)` } : undefined}
+        >
           <div
             className={useHomePresentation
               ? "tvtime-media-poster relative aspect-[2/3] cursor-pointer overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
               : `relative cursor-pointer overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${layout === "list" ? "row-span-2 aspect-[2/3]" : "aspect-[2/3]"}`}
             onClick={() => {
-              if (longPressTriggeredRef.current) {
+              if (longPressTriggeredRef.current || swipeTriggeredRef.current || Math.abs(swipeXRef.current) > 8) {
                 longPressTriggeredRef.current = false;
                 return;
               }
@@ -755,6 +934,9 @@ function CollectionMediaCard({
             onPointerDown={(event) => {
               if (event.pointerType !== "touch") return;
               longPressTriggeredRef.current = false;
+              swipeTriggeredRef.current = false;
+              swipeXRef.current = 0;
+              setSwipeX(0);
               touchStartRef.current = { x: event.clientX, y: event.clientY };
               longPressTimerRef.current = setTimeout(() => {
                 longPressTriggeredRef.current = true;
@@ -765,10 +947,20 @@ function CollectionMediaCard({
             onPointerMove={(event) => {
               const start = touchStartRef.current;
               if (!start) return;
-              if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 12) clearLongPress();
+              const dx = event.clientX - start.x;
+              const dy = event.clientY - start.y;
+              if (Math.hypot(dx, dy) > 12) {
+                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                longPressTimerRef.current = null;
+              }
+              if (enableSwipe && tab === "watchlist" && Math.abs(dx) > Math.abs(dy) + 6) {
+                const next = Math.max(-104, Math.min(104, dx));
+                swipeXRef.current = next;
+                setSwipeX(next);
+              }
             }}
-            onPointerUp={clearLongPress}
-            onPointerCancel={clearLongPress}
+            onPointerUp={() => void finishSwipe()}
+            onPointerCancel={() => { swipeXRef.current = 0; setSwipeX(0); clearLongPress(); }}
             onKeyDown={handleKeyDown}
             role="button"
             tabIndex={0}

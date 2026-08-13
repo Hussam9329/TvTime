@@ -1316,6 +1316,8 @@ export function useTvTracking(params: {
   yearTo?: number;
   ratingFrom?: number;
   ratingTo?: number;
+  userRatingFrom?: number;
+  userRatingTo?: number;
   limit?: number;
   offset?: number;
   world?: "standard" | "arabic" | "asian";
@@ -1588,6 +1590,8 @@ export function useMedia(params: {
   yearTo?: number;
   ratingFrom?: number;
   ratingTo?: number;
+  userRatingFrom?: number;
+  userRatingTo?: number;
   limit?: number;
   offset?: number;
 }) {

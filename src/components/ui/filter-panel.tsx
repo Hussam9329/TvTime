@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
-import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, RotateCcw, SlidersHorizontal, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,10 +40,16 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const contentId = useId();
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const setSheetOpen = (open: boolean) => {
+    if (open) previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setMobileOpen(open);
+  };
 
   useEffect(() => {
     if (!mobileSheet) return;
-    const openFilters = () => setMobileOpen(true);
+    const openFilters = () => setSheetOpen(true);
     window.addEventListener("tvtime:open-filters", openFilters);
     return () => window.removeEventListener("tvtime:open-filters", openFilters);
   }, [mobileSheet]);
@@ -52,7 +58,25 @@ export function FilterPanel({
     if (!mobileSheet || !mobileOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previousOverflow; };
+    const sheet = sheetRef.current;
+    const focusable = () => Array.from(sheet?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? []);
+    window.requestAnimationFrame(() => (focusable()[0] ?? sheet)?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setMobileOpen(false); return; }
+      if (event.key !== "Tab") return;
+      const nodes = focusable();
+      if (nodes.length === 0) { event.preventDefault(); sheet?.focus(); return; }
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      previousFocusRef.current?.focus?.();
+    };
   }, [mobileOpen, mobileSheet]);
 
   return (
@@ -99,8 +123,8 @@ export function FilterPanel({
               type="button"
               variant={mobileOpen ? "secondary" : "outline"}
               size="sm"
-              className="h-9 min-w-0 flex-1 md:hidden"
-              onClick={() => setMobileOpen((open) => !open)}
+              className="tvtime-mobile-experience-only h-9 min-w-0 flex-1"
+              onClick={() => setSheetOpen(!mobileOpen)}
               aria-expanded={mobileOpen}
               aria-controls={contentId}
             >
@@ -114,9 +138,9 @@ export function FilterPanel({
       {mobileSheet && mobileOpen && (
         <button
           type="button"
-          className="tvtime-filter-sheet-backdrop md:hidden"
+          className="tvtime-filter-sheet-backdrop"
           aria-label="Close filters"
-          onClick={() => setMobileOpen(false)}
+          onClick={() => setSheetOpen(false)}
         />
       )}
 
@@ -131,18 +155,41 @@ export function FilterPanel({
         className={cn(
           "tvtime-filter-panel-content space-y-4 p-3 sm:p-4",
           collapsibleOnMobile && !mobileSheet && !mobileOpen && "hidden md:block",
-          mobileSheet && !mobileOpen && "max-md:hidden",
+          mobileSheet && !mobileOpen && "tvtime-filter-sheet-closed",
           mobileSheet && mobileOpen && "tvtime-filter-sheet-content",
           contentClassName,
         )}
+        ref={mobileSheet && mobileOpen ? sheetRef : undefined}
+        role={mobileSheet && mobileOpen ? "dialog" : undefined}
+        aria-modal={mobileSheet && mobileOpen ? true : undefined}
+        aria-label={mobileSheet && mobileOpen ? (typeof title === "string" ? title : "Filters") : undefined}
+        tabIndex={mobileSheet && mobileOpen ? -1 : undefined}
       >
         {mobileSheet && mobileOpen && (
-          <div className="tvtime-filter-sheet-grabber md:hidden" aria-hidden="true" />
+          <>
+            <div className="tvtime-filter-sheet-grabber" aria-hidden="true" />
+            <div className="tvtime-filter-sheet-topbar">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold">{title}</p>
+                {activeCount > 0 && <p className="text-[11px] text-muted-foreground">{activeCount} {activeLabel}</p>}
+              </div>
+              <div className="flex items-center gap-1">
+                {onReset && activeCount > 0 && (
+                  <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-xs" onClick={onReset}>
+                    <RotateCcw className="h-3.5 w-3.5" /> {resetLabel}
+                  </Button>
+                )}
+                <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSheetOpen(false)} aria-label="Close filters">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
         )}
         {children}
         {mobileSheet && mobileOpen && (
-          <div className="tvtime-filter-sheet-footer md:hidden">
-            <Button type="button" className="h-11 w-full" onClick={() => setMobileOpen(false)}>
+          <div className="tvtime-filter-sheet-footer">
+            <Button type="button" className="h-11 w-full" onClick={() => setSheetOpen(false)}>
               {mobileResultLabel}
             </Button>
           </div>

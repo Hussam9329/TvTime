@@ -15,7 +15,7 @@ import {
   prioritizeMediaCollectionWorldItems,
 } from "@/lib/media-world-pipeline";
 
-const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "title", "year", "watchedAt"]);
+const SORTABLE_FIELDS = new Set(["addedAt", "updatedAt", "userRating", "tmdbRating", "title", "year", "watchedAt"]);
 const ORDERS = new Set(["asc", "desc"]);
 const COLLECTION_WORLDS = new Set<MediaCollectionWorld>([
   "movies", "asian-movies", "anime", "arabic-movies",
@@ -72,11 +72,19 @@ export async function GET(req: NextRequest) {
     const yearTo = parseFiniteNumber("yearTo");
     const ratingFrom = parseFiniteNumber("ratingFrom");
     const ratingTo = parseFiniteNumber("ratingTo");
+    const userRatingFrom = parseFiniteNumber("userRatingFrom");
+    const userRatingTo = parseFiniteNumber("userRatingTo");
 
     if (yearFrom != null || yearTo != null) {
       where.year = {
         ...(yearFrom != null ? { gte: String(Math.trunc(yearFrom)).padStart(4, "0") } : {}),
         ...(yearTo != null ? { lte: String(Math.trunc(yearTo)).padStart(4, "0") } : {}),
+      };
+    }
+    if (userRatingFrom != null || userRatingTo != null) {
+      where.userRating = {
+        ...(userRatingFrom != null ? { gte: Math.max(0, Math.min(100, Math.trunc(userRatingFrom))) } : {}),
+        ...(userRatingTo != null ? { lte: Math.max(0, Math.min(100, Math.trunc(userRatingTo))) } : {}),
       };
     }
     // rating is a String column holding the TMDB score ("0.0"–"10.0").
@@ -97,31 +105,58 @@ export async function GET(req: NextRequest) {
       isArabic: booleanFilter(isArabic),
       isAsian: booleanFilter(isAsian),
     };
-    if (search) where.title = { contains: search };
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { originalTitle: { contains: search, mode: "insensitive" } },
+      ];
+    }
 
     const sortBy = SORTABLE_FIELDS.has(sortByParam) ? sortByParam : "addedAt";
     const order = ORDERS.has(orderParam) ? orderParam : "desc";
+    const dbSortBy = sortBy === "tmdbRating" ? "addedAt" : sortBy;
 
     // Classification happens after the ordinary database predicates so every
     // My Media surface uses the same canonical classifier. We deliberately
     // paginate after classification; filtering a single DB page first can
     // produce wrong totals and let stale rows leak between collection worlds.
-    const candidates = await db.media.findMany({ where, orderBy: { [sortBy]: order } });
+    // First pass intentionally selects only the columns needed for classification,
+    // filtering and ordering. Large overview/poster/notes payloads are fetched only
+    // for the final page, keeping infinite-scroll requests cheap as the library grows.
+    const candidates = await db.media.findMany({
+      where,
+      orderBy: { [dbSortBy]: order },
+      select: {
+        id: true, tmdbId: true, title: true, originalTitle: true, year: true, type: true,
+        rating: true, genres: true, status: true, watched: true, userRating: true,
+        isAnime: true, isArabic: true, originalLanguage: true, originCountries: true,
+        addedAt: true, updatedAt: true, watchedAt: true,
+      },
+    });
     const classifiedCandidates = await resolveGeneralMediaClassifications(candidates, { allowNetwork: false });
     const matchingItems = classifiedCandidates.filter((item) => collectionWorld
       ? matchesMediaCollectionWorld(item, collectionWorld)
       : recordMatchesMediaClassification(item, classificationFilters));
+    const sortedItems = sortBy === "tmdbRating"
+      ? [...matchingItems].sort((left, right) => {
+          const a = Number(left.rating);
+          const b = Number(right.rating);
+          const safeA = Number.isFinite(a) ? a : -1;
+          const safeB = Number.isFinite(b) ? b : -1;
+          return order === "asc" ? safeA - safeB : safeB - safeA;
+        })
+      : matchingItems;
     // Apply the same stable world priority before pagination that Overview,
     // Discover and Releases use. Legacy boolean-only callers retain their
     // existing behavior until they identify an exact collection world.
     const prioritizedItems = collectionWorld
-      ? prioritizeMediaCollectionWorldItems(matchingItems, collectionWorld)
+      ? prioritizeMediaCollectionWorldItems(sortedItems, collectionWorld)
       : classificationFilters.isArabic === true
         ? prioritizeMediaCollectionWorldItems(
-            matchingItems,
+            sortedItems,
             type === "series" || type === "tv" ? "arabic-tv" : "arabic-movies",
           )
-        : matchingItems;
+        : sortedItems;
     const filteredByRating = (tmdbRatingFrom != null || tmdbRatingTo != null)
       ? prioritizedItems.filter((item) => {
           if (item.rating == null || item.rating.trim() === "") return false;
@@ -133,7 +168,13 @@ export async function GET(req: NextRequest) {
         })
       : prioritizedItems;
     const total = filteredByRating.length;
-    const items = filteredByRating.slice(offset, offset + limit);
+    const pageCandidates = filteredByRating.slice(offset, offset + limit);
+    const pageIds = pageCandidates.map((item) => item.id);
+    const fullRows = pageIds.length > 0
+      ? await db.media.findMany({ where: { userId: user.id, id: { in: pageIds } } })
+      : [];
+    const fullById = new Map(fullRows.map((item) => [item.id, item]));
+    const items = pageCandidates.map((item) => fullById.get(item.id)).filter((item): item is NonNullable<typeof item> => item != null);
 
     // Anime series may have been saved while the catalogue incorrectly used
     // Japanese as its display locale. TvMetadataCache is populated from the

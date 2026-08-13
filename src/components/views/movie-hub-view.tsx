@@ -34,12 +34,12 @@ import {
   type MovieHubWorld,
   type MovieTonightMode,
 } from "@/hooks/use-tmdb";
-import { useNav } from "@/lib/store";
+import { useNav, type MovieHubTab } from "@/lib/store";
 import { getTitle, getYear, img } from "@/lib/tmdb";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import { useHeroCarousel } from "@/hooks/use-hero-carousel";
 
-type HubTab = "overview" | "library" | "discover" | "releases";
+type HubTab = MovieHubTab;
 
 type WorldCopy = {
   title: string;
@@ -134,7 +134,10 @@ const TONIGHT_OPTIONS_AR: Array<{ value: MovieTonightMode; label: string }> = [
 export function MovieHubView({ world }: { world: MovieHubWorld }) {
   const copy = WORLD_COPY[world];
   const isArabic = world === "arabic-movies";
-  const [tab, setTab] = useState<HubTab>("overview");
+  const savedTab = useNav((state) => state.movieHubTabs[world]);
+  const setMovieHubTab = useNav((state) => state.setMovieHubTab);
+  const tab: HubTab = savedTab ?? "overview";
+  const setTab = (next: HubTab) => setMovieHubTab(world, next);
   const hub = useMovieHub(world);
   const summary = hub.data?.summary;
 

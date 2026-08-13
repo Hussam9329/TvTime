@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   Clapperboard,
+  Clock3,
   Compass,
   Globe2,
   Film,
@@ -50,6 +51,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { APP_NAME } from "@/lib/brand";
 import { getViewLabel } from "@/lib/view-metadata";
 import { BrandMark, BrandWordmark } from "@/components/ui/brand-logo";
+import { useMobileViewport } from "@/hooks/use-mobile-viewport";
 
 const ProfileDialog = dynamic(
   () => import("@/components/profile/profile-dialog").then((module) => module.ProfileDialog),
@@ -119,6 +121,34 @@ export function Header() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [mobileHeaderHidden, setMobileHeaderHidden] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [searchTab, setSearchTab] = useState<"all" | "movie" | "tv" | "person">("all");
+  const isMobileExperience = useMobileViewport();
+
+  useEffect(() => {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem("tvtime:recent-searches") || "[]");
+      if (Array.isArray(parsed)) setRecentSearches(parsed.filter((item): item is string => typeof item === "string").slice(0, 6));
+    } catch {}
+  }, []);
+
+  const searchSuggestions = useQuery({
+    queryKey: ["tmdb", "search-suggestions", searchVal.trim(), searchTab],
+    enabled: mobileSearchOpen && searchVal.trim().length >= 2,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const url = new URL("/api/tmdb/search", window.location.origin);
+      url.searchParams.set("q", searchVal.trim());
+      url.searchParams.set("page", "1");
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to load search suggestions");
+      const payload = await response.json() as { results?: Array<any> };
+      return (payload.results ?? []).filter((item) => {
+        if (searchTab === "all") return ["movie", "tv", "person"].includes(item.media_type);
+        return item.media_type === searchTab;
+      }).slice(0, 6);
+    },
+  });
 
   useEffect(() => {
     let previousY = window.scrollY;
@@ -128,7 +158,7 @@ export function Header() {
       ticking = true;
       window.requestAnimationFrame(() => {
         const currentY = window.scrollY;
-        const mobile = window.matchMedia("(max-width: 767px)").matches;
+        const mobile = isMobileExperience;
         if (!mobile || mobileSearchOpen || mobileOpen || currentY < 72) {
           setMobileHeaderHidden(false);
         } else if (currentY > previousY + 7) {
@@ -142,7 +172,7 @@ export function Header() {
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [mobileOpen, mobileSearchOpen]);
+  }, [isMobileExperience, mobileOpen, mobileSearchOpen]);
 
   const notificationSummary = useQuery({
     queryKey: NOTIFICATION_QUERY_KEY,
@@ -172,7 +202,7 @@ export function Header() {
   useEffect(() => {
     const focusSearch = () => {
       prefetchViewModule("search");
-      const desktop = window.matchMedia("(min-width: 768px)").matches;
+      const desktop = !isMobileExperience;
       if (desktop) {
         desktopSearchInputRef.current?.focus();
         desktopSearchInputRef.current?.select();
@@ -195,7 +225,7 @@ export function Header() {
       window.removeEventListener(TVTIME_SEARCH_FOCUS_EVENT, focusSearch);
       window.removeEventListener(TVTIME_SEARCH_CLOSE_EVENT, closeSearch);
     };
-  }, []);
+  }, [isMobileExperience]);
 
   const onSubmitSearch = (event: React.FormEvent) => {
     event.preventDefault();
@@ -204,6 +234,9 @@ export function Header() {
       (desktopSearchInputRef.current ?? mobileSearchInputRef.current)?.focus();
       return;
     }
+    const nextRecent = [query, ...recentSearches.filter((item) => item.toLocaleLowerCase() !== query.toLocaleLowerCase())].slice(0, 6);
+    setRecentSearches(nextRecent);
+    window.localStorage.setItem("tvtime:recent-searches", JSON.stringify(nextRecent));
     setSearchQuery(query);
     setView("search");
     setMobileOpen(false);
@@ -444,7 +477,7 @@ export function Header() {
                 window.requestAnimationFrame(() => mobileSearchInputRef.current?.focus());
               }
             }}
-            className="tvtime-header-icon md:hidden"
+            className="tvtime-header-icon tvtime-mobile-experience-only"
             aria-label={mobileSearchOpen ? "Close search" : "Open search"}
             aria-expanded={mobileSearchOpen}
             aria-controls="tvtime-mobile-search"
@@ -530,30 +563,79 @@ export function Header() {
           <form
             id="tvtime-mobile-search"
             onSubmit={onSubmitSearch}
-            className="tvtime-mobile-search-panel mx-auto max-w-[1920px] px-3 py-2 md:hidden"
+            className="tvtime-mobile-search-panel tvtime-mobile-experience-only mx-auto max-w-[1920px] px-3 py-2"
           >
-            <div className="relative mx-auto max-w-xl">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-              <Input
-                ref={mobileSearchInputRef}
-                value={searchVal}
-                onChange={(event) => setSearchVal(event.target.value)}
-                placeholder="Search movies, shows, anime and people..."
-                aria-label="Search movies, shows, anime and people"
-                className="h-11 rounded-xl bg-muted/50 pl-9 pr-10"
-              />
-              <button
-                data-ui-action="icon"
-                type="button"
-                onClick={() => {
-                  clearSearch();
-                  setMobileSearchOpen(false);
-                }}
-                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
-                aria-label="Close search"
-              >
-                <X className="h-4 w-4" />
-              </button>
+            <div className="tvtime-mobile-search-shell mx-auto max-w-xl">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                <Input
+                  ref={mobileSearchInputRef}
+                  value={searchVal}
+                  onChange={(event) => setSearchVal(event.target.value)}
+                  placeholder="Search movies, shows, anime and people..."
+                  aria-label="Search movies, shows, anime and people"
+                  className="h-11 rounded-xl bg-muted/50 pl-9 pr-10"
+                />
+                <button
+                  data-ui-action="icon"
+                  type="button"
+                  onClick={() => { clearSearch(); setMobileSearchOpen(false); }}
+                  className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
+                  aria-label="Close search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="tvtime-mobile-search-tabs" role="tablist" aria-label="Search type">
+                {([
+                  ["all", "All"], ["movie", "Movies"], ["tv", "TV"], ["person", "People"],
+                ] as const).map(([value, label]) => (
+                  <button key={value} type="button" role="tab" aria-selected={searchTab === value} data-active={searchTab === value ? "true" : "false"} onClick={() => setSearchTab(value)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {searchVal.trim().length < 2 && recentSearches.length > 0 && (
+                <section className="tvtime-mobile-search-section" aria-label="Recent searches">
+                  <div className="tvtime-mobile-search-section__heading">
+                    <span>Recent searches</span>
+                    <button type="button" onClick={() => { setRecentSearches([]); window.localStorage.removeItem("tvtime:recent-searches"); }}>Clear</button>
+                  </div>
+                  <div className="tvtime-mobile-search-recents">
+                    {recentSearches.map((query) => (
+                      <button key={query} type="button" onClick={() => { setSearchVal(query); window.requestAnimationFrame(() => mobileSearchInputRef.current?.focus()); }}>
+                        <Clock3 className="h-3.5 w-3.5" /> {query}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {searchVal.trim().length >= 2 && (
+                <section className="tvtime-mobile-search-section" aria-label="Search suggestions">
+                  <div className="tvtime-mobile-search-section__heading"><span>Suggestions</span></div>
+                  <div className="tvtime-mobile-search-suggestions" aria-live="polite">
+                    {searchSuggestions.isLoading && <p className="text-sm text-muted-foreground">Searching…</p>}
+                    {!searchSuggestions.isLoading && (searchSuggestions.data ?? []).map((item: any) => {
+                      const label = item.title || item.name || item.original_title || item.original_name || "Untitled";
+                      const kind = item.media_type === "movie" ? "Movie" : item.media_type === "tv" ? "TV" : "Person";
+                      return (
+                        <button key={`${item.media_type}-${item.id}`} type="button" onClick={() => {
+                          if (item.media_type === "movie") useNav.getState().goMovie(Number(item.id));
+                          else if (item.media_type === "tv") useNav.getState().goTv(Number(item.id));
+                          else if (item.media_type === "person") useNav.getState().goPerson(Number(item.id));
+                          setMobileSearchOpen(false);
+                        }}>
+                          <span className="min-w-0 flex-1 truncate">{label}</span><span>{kind}</span>
+                        </button>
+                      );
+                    })}
+                    {!searchSuggestions.isLoading && (searchSuggestions.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No suggestions yet.</p>}
+                  </div>
+                </section>
+              )}
             </div>
           </form>
         )}

@@ -16,6 +16,19 @@ import {
 export type { NavigationEntry, ViewName } from "@/lib/navigation";
 type DiscoverTab = "movies" | "tv";
 
+export type MovieHubTab = "overview" | "library" | "discover" | "releases";
+export type CollectionUiState = {
+  tab: "watchlist" | "not-started" | "watching" | "watched";
+  search: string;
+  sortBy: string;
+  yearRange: [number, number];
+  tmdbRatingRange: [number, number];
+  userRatingRange: [number, number];
+  layout: "grid" | "list";
+  animeMediaKind: "all" | "movie" | "series";
+  page: number;
+};
+
 type RouteSyncMode = "reset" | "pop";
 
 interface NavState extends NavigationEntry {
@@ -27,6 +40,8 @@ interface NavState extends NavigationEntry {
   routeReady: boolean;
   userId: string;
   userName: string;
+  movieHubTabs: Record<string, MovieHubTab>;
+  collectionUi: Record<string, CollectionUiState>;
 
   setView: (v: ViewName) => void;
   goMovie: (id: number) => void;
@@ -38,6 +53,8 @@ interface NavState extends NavigationEntry {
   setDiscoverGenre: (g: number | null) => void;
   setSearchQuery: (q: string) => void;
   setUserName: (n: string) => void;
+  setMovieHubTab: (world: string, tab: MovieHubTab) => void;
+  setCollectionUi: (world: string, state: CollectionUiState) => void;
   ensureUserId: () => void;
 }
 
@@ -101,6 +118,8 @@ export const useNav = create<NavState>()(
         routeReady: false,
         userId: DEFAULT_USER_ID,
         userName: "Cinephile",
+        movieHubTabs: {},
+        collectionUi: {},
 
         setView: (view) => navigate(navigationEntryFromView(view)),
         goMovie: (movieId) => navigate({ view: "movie-detail", movieId, tvId: null, personId: null }),
@@ -147,13 +166,19 @@ export const useNav = create<NavState>()(
         setDiscoverGenre: (discoverGenre) => set({ discoverGenre }),
         setSearchQuery: (searchQuery) => set({ searchQuery }),
         setUserName: (userName) => set({ userName }),
+        setMovieHubTab: (world, tab) => set((state) => ({
+          movieHubTabs: { ...state.movieHubTabs, [world]: tab },
+        })),
+        setCollectionUi: (world, collectionState) => set((state) => ({
+          collectionUi: { ...state.collectionUi, [world]: collectionState },
+        })),
         ensureUserId: () => set((state) => (state.userId === DEFAULT_USER_ID ? {} : { userId: DEFAULT_USER_ID })),
       };
     },
     {
       name: "cinetrack-nav",
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ userName: state.userName }),
+      partialize: (state) => ({ userName: state.userName, movieHubTabs: state.movieHubTabs, collectionUi: state.collectionUi }),
       merge: (persisted, current) => ({
         ...current,
         ...(persisted as Partial<NavState>),
