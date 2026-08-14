@@ -1183,8 +1183,33 @@
   transition: transform 700ms ease;
 }
 
+/* A landscape episode still is the preferred featured artwork. When TMDB has
+   no still yet, keep the portrait poster intact on the right instead of
+   stretching/cropping it across the wide hero. */
+.tvtime-watch-featured__backdrop[data-image-kind="episode-still"] img {
+  object-fit: cover !important;
+  object-position: center;
+}
+
+.tvtime-watch-featured__backdrop[data-image-kind="poster-fallback"] {
+  background:
+    radial-gradient(circle at 82% 48%, color-mix(in oklab, var(--primary) 13%, transparent), transparent 34%),
+    #080807;
+}
+
+.tvtime-watch-featured__backdrop[data-image-kind="poster-fallback"] img {
+  object-fit: contain !important;
+  object-position: right center;
+  opacity: 0.68;
+  filter: saturate(0.78) contrast(1.04);
+}
+
 .tvtime-watch-featured:hover .tvtime-watch-featured__backdrop img {
   transform: scale(1.018);
+}
+
+.tvtime-watch-featured:hover .tvtime-watch-featured__backdrop[data-image-kind="poster-fallback"] img {
+  transform: none;
 }
 
 .tvtime-watch-featured__scrim {
@@ -1944,6 +1969,15 @@
 
   .tvtime-watch-featured__backdrop img {
     object-position: center 20%;
+  }
+
+  .tvtime-watch-featured__backdrop[data-image-kind="episode-still"] img {
+    object-position: center;
+  }
+
+  .tvtime-watch-featured__backdrop[data-image-kind="poster-fallback"] img {
+    object-position: center top;
+    opacity: 0.52;
   }
 
   .tvtime-watch-featured__scrim {

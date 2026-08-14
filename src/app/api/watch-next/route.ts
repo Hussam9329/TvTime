@@ -15,10 +15,20 @@ function episodeParts(key: string) {
   return Number.isInteger(season) && Number.isInteger(episode) ? { season, episode } : null;
 }
 
-function posterUrl(value: string | null | undefined) {
+function tmdbImageUrl(value: string | null | undefined, size: "w342" | "original") {
   if (!value) return null;
   if (value.startsWith("http://") || value.startsWith("https://")) return value;
-  return value.startsWith("/") ? `https://image.tmdb.org/t/p/w342${value}` : null;
+  return value.startsWith("/") ? `https://image.tmdb.org/t/p/${size}${value}` : null;
+}
+
+function posterUrl(value: string | null | undefined) {
+  return tmdbImageUrl(value, "w342");
+}
+
+function episodeStillUrl(value: string | null | undefined) {
+  // Episode stills are already landscape artwork. Request the original asset
+  // and let next/image deliver an appropriately resized AVIF/WebP variant.
+  return tmdbImageUrl(value, "original");
 }
 
 function estimatedRuntimeMinutes(value: number | null | undefined, duration: string | null | undefined) {
@@ -202,6 +212,7 @@ export async function GET(req: NextRequest) {
         episodeName: episode?.name || null,
         episodeAirDate: episode?.air_date || null,
         episodeRuntime: episode?.runtime ?? null,
+        episodeStill: episodeStillUrl(episode?.still_path),
       };
     });
 

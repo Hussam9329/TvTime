@@ -457,7 +457,8 @@ check(
     && /Mark episode watched/.test(watchNextView)
     && /View episode/.test(watchNextView)
     && /onNotNow/.test(watchNextView)
-    && /variant="backdrop" priority/.test(watchNextView)
+    && /variant="backdrop"[\s\S]*priority/.test(watchNextView)
+    && /resolvedEpisodeStill/.test(watchNextView)
     && /tvtime-watch-featured/.test(globalStyles),
   "Watch Next presents one cinematic lead episode with progress and direct actions",
 );

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(path, "utf8");
 const view = read("src/components/views/watch-next-view.tsx");
 const styles = read("src/app/globals.css");
+const route = read("src/app/api/watch-next/route.ts");
 
 const cardMarkup = view.slice(
   view.indexOf("function CompactWatchCard"),
@@ -67,6 +68,22 @@ const checks = [
       && /aria-valuemax=\{100\}/.test(view)
       && /aria-valuenow=\{progress\}/.test(view),
     "The visual redesign preserves accessible progress semantics",
+  ],
+  [
+    /episodeStill: episodeStillUrl\(episode\?\.still_path\)/.test(route)
+      && /return tmdbImageUrl\(value, "original"\)/.test(route),
+    "The Watch Next API supplies the episode still at original TMDB quality",
+  ],
+  [
+    /useSeasonDetail\(/.test(view)
+      && /resolvedEpisodeStill = item\.episodeStill/.test(view)
+      && /data-image-kind=\{imageKind\}/.test(view),
+    "The actual pinned item resolves its episode artwork even after local queue reordering",
+  ],
+  [
+    /data-image-kind="episode-still"[\s\S]*object-fit: cover !important/.test(styles)
+      && /data-image-kind="poster-fallback"[\s\S]*object-fit: contain !important/.test(styles),
+    "Landscape stills fill the hero while portrait fallback posters are never stretched",
   ],
 ];
 

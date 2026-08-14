@@ -28,9 +28,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SafeImage } from "@/components/media/safe-image";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
-import { useEpisodeToggle } from "@/hooks/use-tmdb";
+import { useEpisodeToggle, useSeasonDetail } from "@/hooks/use-tmdb";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 import { useNav } from "@/lib/store";
+import { img } from "@/lib/tmdb";
 import { userHeaders, withUserId } from "@/lib/client-user";
 import { toast } from "sonner";
 
@@ -55,6 +56,7 @@ type WatchNextItem = {
   episodeName: string | null;
   episodeAirDate: string | null;
   episodeRuntime: number | null;
+  episodeStill: string | null;
 };
 
 type EnrichedWatchNextItem = WatchNextItem;
@@ -344,10 +346,25 @@ function FeaturedWatchCard({
   onOpen: () => void;
   onNotNow: () => void;
 }) {
-  const backdrop = item.poster;
+  // The queue API enriches the visible items on the server, but a locally
+  // customized order can promote an item that was outside that enrichment
+  // window. Resolve only the actual featured season on the client as a
+  // fallback so the pinned card always prefers the episode's landscape still.
+  const seasonQuery = useSeasonDetail(
+    item.episodeStill ? null : item.tmdbId,
+    item.episodeStill ? null : item.seasonNumber,
+  );
+  const resolvedEpisode = seasonQuery.data?.episodes?.find((episode) =>
+    episode.season_number === item.seasonNumber
+    && episode.episode_number === item.episodeNumber);
+  const resolvedEpisodeStill = item.episodeStill
+    || (resolvedEpisode?.still_path ? img(resolvedEpisode.still_path, "original") : null);
+  const backdrop = resolvedEpisodeStill || item.poster;
+  const imageKind = resolvedEpisodeStill ? "episode-still" : "poster-fallback";
   const progress = progressPercent(item);
-  const episodeName = item.episodeName || `Episode ${item.episodeNumber}`;
-  const runtime = item.episodeRuntime || item.estimatedRuntime;
+  const episodeName = item.episodeName || resolvedEpisode?.name || `Episode ${item.episodeNumber}`;
+  const runtime = item.episodeRuntime || resolvedEpisode?.runtime || item.estimatedRuntime;
+  const airDate = item.episodeAirDate || resolvedEpisode?.air_date || null;
 
   return (
     <motion.section
@@ -359,8 +376,17 @@ function FeaturedWatchCard({
       className="tvtime-watch-featured"
       aria-labelledby={`watch-featured-${item.tmdbId}`}
     >
-      <div className="tvtime-watch-featured__backdrop">
-        <SafeImage src={backdrop} alt="" fill variant="backdrop" priority sizes="(max-width: 768px) 100vw, 1200px" />
+      <div className="tvtime-watch-featured__backdrop" data-image-kind={imageKind}>
+        <SafeImage
+          src={backdrop}
+          alt=""
+          fill
+          variant="backdrop"
+          priority
+          fetchPriority="high"
+          decoding="async"
+          sizes="(max-width: 768px) 100vw, (max-width: 1440px) 92vw, 1440px"
+        />
       </div>
       <div className="tvtime-watch-featured__scrim" />
       <div className="tvtime-watch-featured__content">
@@ -376,7 +402,7 @@ function FeaturedWatchCard({
         </p>
         <div className="tvtime-watch-featured__meta">
           <span><Clock3 className="h-3.5 w-3.5" />{runtime}m</span>
-          <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(item.episodeAirDate)}</span>
+          <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(airDate)}</span>
           <span>{item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}</span>
         </div>
         <ProgressBar item={item} progress={progress} featured />
