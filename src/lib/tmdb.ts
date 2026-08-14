@@ -175,6 +175,21 @@ export interface Episode {
   vote_average: number;
 }
 
+export interface EpisodeStillImage {
+  aspect_ratio: number;
+  file_path: string;
+  height: number;
+  iso_639_1: string | null;
+  vote_average: number;
+  vote_count: number;
+  width: number;
+}
+
+export interface EpisodeImagesResponse {
+  id: number;
+  stills: EpisodeStillImage[];
+}
+
 export interface MovieDetail extends MediaItem {
   runtime: number | null;
   genres: Genre[];
@@ -327,6 +342,13 @@ export const tmdb = {
     tmdbFetch<any>(`/tv/${id}`, { append_to_response: "images" }, language),
   seasonDetail: (tvId: number, seasonNumber: number, options?: TmdbRequestOptions) =>
     tmdbFetch<SeasonDetail>(`/tv/${tvId}/season/${seasonNumber}`, {}, "en-US", options),
+  episodeImages: (tvId: number, seasonNumber: number, episodeNumber: number, options?: TmdbRequestOptions) =>
+    tmdbFetch<EpisodeImagesResponse>(
+      `/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/images`,
+      {},
+      "en-US",
+      options,
+    ),
 
   // Search
   searchMulti: (query: string, page = 1) =>

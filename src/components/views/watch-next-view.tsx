@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion, Reorder, useDragControls } from "framer-motion";
 import {
@@ -28,7 +28,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SafeImage } from "@/components/media/safe-image";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
-import { useEpisodeToggle, useSeasonDetail } from "@/hooks/use-tmdb";
+import { useEpisodeImages, useEpisodeToggle, useSeasonDetail, useTvDetail } from "@/hooks/use-tmdb";
+import { useMobileViewport } from "@/hooks/use-mobile-viewport";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
 import { useNav } from "@/lib/store";
 import { img } from "@/lib/tmdb";
@@ -36,20 +37,24 @@ import { userHeaders, withUserId } from "@/lib/client-user";
 import { toast } from "sonner";
 
 const CUSTOM_ORDER_KEY = "trakora:watch-next-order:v1";
-const RECENT_EPISODE_DAYS = 7;
 const PAUSED_DAYS = 30;
 
 type WatchNextItem = {
   tmdbId: number;
   title: string;
   poster: string | null;
+  showBackdrop: string | null;
+  seasonBackdrop: string | null;
   seasonNumber: number;
   episodeNumber: number;
+  followingSeasonNumber: number | null;
+  followingEpisodeNumber: number | null;
   readyEpisodes: number;
   watchedEpisodes: number;
   releasedEpisodes: number;
   estimatedRuntime: number;
   lastActivity: string;
+  lastWatchedAt: string | null;
   status: string | null;
   isAnime: boolean;
   isArabic: boolean;
@@ -57,6 +62,15 @@ type WatchNextItem = {
   episodeAirDate: string | null;
   episodeRuntime: number | null;
   episodeStill: string | null;
+  episodeStillRanked: boolean;
+  isNewEpisode: boolean;
+  isSeasonFinale: boolean;
+  nextSeasonNumber: number | null;
+  lastSeasonNumber: number | null;
+  followingEpisodeName: string | null;
+  followingEpisodeAirDate: string | null;
+  followingEpisodeRuntime: number | null;
+  followingEpisodeStill: string | null;
 };
 
 type EnrichedWatchNextItem = WatchNextItem;
@@ -93,6 +107,10 @@ type WatchNextResponse = {
   summary: { readyEpisodes: number; estimatedMinutes: number };
 };
 
+type SeasonCompletionState = Pick<WatchNextItem,
+  "tmdbId" | "title" | "poster" | "showBackdrop" | "seasonNumber" | "nextSeasonNumber" | "isAnime" | "isArabic"
+>;
+
 export function WatchNextView() {
   const goTv = useNav((state) => state.goTv);
   const episodeToggle = useEpisodeToggle();
@@ -101,6 +119,7 @@ export function WatchNextView() {
   const [draftOrder, setDraftOrder] = useState<number[]>([]);
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [deferredIds, setDeferredIds] = useState<number[]>([]);
+  const [seasonCompletion, setSeasonCompletion] = useState<SeasonCompletionState | null>(null);
 
   useEffect(() => {
     try {
@@ -128,7 +147,7 @@ export function WatchNextView() {
   const smartItems = [...items].sort((left, right) =>
     smartPriority(right) - smartPriority(left)
     || Date.parse(right.lastActivity) - Date.parse(left.lastActivity));
-  const orderIndex = new Map((manualOrder ?? []).map((id, index) => [id, index]));
+  const orderIndex = new Map<number, number>((manualOrder ?? []).map((id, index) => [id, index] as const));
   const baseOrderedItems = manualOrder
     ? [...smartItems].sort((left, right) =>
         (orderIndex.get(left.tmdbId) ?? Number.MAX_SAFE_INTEGER) - (orderIndex.get(right.tmdbId) ?? Number.MAX_SAFE_INTEGER)
@@ -152,7 +171,23 @@ export function WatchNextView() {
         episodeNumber: item.episodeNumber,
         episodeName: item.episodeName || undefined,
       });
-      showWatchUndo(`${episodeCode(item)} watched — your queue is updated`, result);
+      if (item.isSeasonFinale) {
+        setSeasonCompletion({
+          tmdbId: item.tmdbId,
+          title: item.title,
+          poster: item.poster,
+          showBackdrop: item.showBackdrop,
+          seasonNumber: item.seasonNumber,
+          nextSeasonNumber: item.nextSeasonNumber,
+          isAnime: item.isAnime,
+          isArabic: item.isArabic,
+        });
+      }
+      showWatchUndo(`${episodeCode(item)} watched — your queue is updated`, result, {
+        onUndoSuccess: () => {
+          setSeasonCompletion((current) => current?.tmdbId === item.tmdbId && current.seasonNumber === item.seasonNumber ? null : current);
+        },
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to mark episode watched");
     }
@@ -226,13 +261,25 @@ export function WatchNextView() {
             />
           ) : (
             <AnimatePresence mode="popLayout" initial={false}>
-              {featured && (
+              {seasonCompletion ? (
+                <SeasonCompletionCard
+                  key={`season-complete-${seasonCompletion.tmdbId}-${seasonCompletion.seasonNumber}`}
+                  completion={seasonCompletion}
+                  onOpenShow={() => goTv(seasonCompletion.tmdbId)}
+                  onContinue={() => setSeasonCompletion(null)}
+                  onOpenSimilar={goTv}
+                />
+              ) : featured && (
                 <FeaturedWatchCard
-                  key={`featured-${featured.tmdbId}`}
+                  key="featured"
                   item={featured}
                   pending={isPending(featured)}
                   disabled={episodeToggle.isPending}
-                  onMark={() => void markWatched(featured)}
+                  onMark={(completion) => void markWatched({
+                    ...featured,
+                    isSeasonFinale: completion?.isSeasonFinale ?? featured.isSeasonFinale,
+                    nextSeasonNumber: completion?.nextSeasonNumber ?? featured.nextSeasonNumber,
+                  })}
                   onOpen={() => goTv(featured.tmdbId)}
                   onNotNow={() => notNow(featured)}
                 />
@@ -252,17 +299,20 @@ export function WatchNextView() {
                 pendingId={episodeToggle.variables?.showId}
                 onMark={markWatched}
                 onOpen={goTv}
+                onNotNow={notNow}
+                rail
               />
               <WatchSection
                 key="new"
                 icon={<Sparkles className="h-4 w-4" />}
                 title="New Episodes"
-                subtitle="Fresh episodes released during the last 7 days"
+                subtitle="Episodes released after your last watch"
                 items={sections.newEpisodes}
                 episodeTogglePending={episodeToggle.isPending}
                 pendingId={episodeToggle.variables?.showId}
                 onMark={markWatched}
                 onOpen={goTv}
+                onNotNow={notNow}
                 tone="new"
               />
               <WatchSection
@@ -275,6 +325,7 @@ export function WatchNextView() {
                 pendingId={episodeToggle.variables?.showId}
                 onMark={markWatched}
                 onOpen={goTv}
+                onNotNow={notNow}
                 tone="behind"
               />
               <UpToDateSection key="up-to-date" items={query.data?.upToDate ?? []} onOpen={goTv} />
@@ -289,6 +340,7 @@ export function WatchNextView() {
                 pendingId={episodeToggle.variables?.showId}
                 onMark={markWatched}
                 onOpen={goTv}
+                onNotNow={notNow}
                 tone="paused"
               />
             </AnimatePresence>
@@ -342,29 +394,95 @@ function FeaturedWatchCard({
   item: EnrichedWatchNextItem;
   pending: boolean;
   disabled: boolean;
-  onMark: () => void;
+  onMark: (completion?: { isSeasonFinale: boolean; nextSeasonNumber: number | null }) => void;
   onOpen: () => void;
   onNotNow: () => void;
 }) {
-  // The queue API enriches the visible items on the server, but a locally
-  // customized order can promote an item that was outside that enrichment
-  // window. Resolve only the actual featured season on the client as a
-  // fallback so the pinned card always prefers the episode's landscape still.
+  const isMobile = useMobileViewport();
+  const swipeRef = useRef(false);
+  const needsSeasonFallback = !item.episodeStill
+    || !item.seasonBackdrop
+    || (item.followingSeasonNumber === item.seasonNumber && (!item.followingEpisodeName || !item.followingEpisodeStill));
   const seasonQuery = useSeasonDetail(
-    item.episodeStill ? null : item.tmdbId,
-    item.episodeStill ? null : item.seasonNumber,
+    needsSeasonFallback ? item.tmdbId : null,
+    needsSeasonFallback ? item.seasonNumber : null,
   );
+  const episodeImagesQuery = useEpisodeImages(
+    item.episodeStillRanked ? null : item.tmdbId,
+    item.episodeStillRanked ? null : item.seasonNumber,
+    item.episodeStillRanked ? null : item.episodeNumber,
+  );
+  const followingNeedsLookup = item.followingSeasonNumber != null
+    && item.followingEpisodeNumber != null
+    && (!item.followingEpisodeName || !item.followingEpisodeStill)
+    && item.followingSeasonNumber !== item.seasonNumber;
+  const followingSeasonQuery = useSeasonDetail(
+    followingNeedsLookup ? item.tmdbId : null,
+    followingNeedsLookup ? item.followingSeasonNumber : null,
+  );
+
   const resolvedEpisode = seasonQuery.data?.episodes?.find((episode) =>
     episode.season_number === item.seasonNumber
     && episode.episode_number === item.episodeNumber);
-  const resolvedEpisodeStill = item.episodeStill
+  const bestStill = pickBestStillClient(episodeImagesQuery.data?.stills)
+    || item.episodeStill
     || (resolvedEpisode?.still_path ? img(resolvedEpisode.still_path, "original") : null);
-  const backdrop = resolvedEpisodeStill || item.poster;
-  const imageKind = resolvedEpisodeStill ? "episode-still" : "poster-fallback";
+  const resolvedEpisodeStill = bestStill;
+  const resolvedSeasonBackdrop = item.seasonBackdrop || pickSeasonBackdropClient(seasonQuery.data, item.episodeNumber);
+  const needsShowFallback = !bestStill && !resolvedSeasonBackdrop && !item.showBackdrop;
+  const showQuery = useTvDetail(needsShowFallback ? item.tmdbId : null);
+  const showBackdrop = item.showBackdrop
+    || (showQuery.data?.backdrop_path ? img(showQuery.data.backdrop_path, "original") : null);
+  const backdrop = resolvedEpisodeStill || resolvedSeasonBackdrop || showBackdrop || item.poster;
+  const imageKind = resolvedEpisodeStill
+    ? "episode-still"
+    : resolvedSeasonBackdrop
+      ? "season-backdrop"
+      : showBackdrop
+        ? "show-backdrop"
+        : "poster-fallback";
+
+  const currentSeasonForFollowing = item.followingSeasonNumber === item.seasonNumber ? seasonQuery.data : null;
+  const followingSeason = currentSeasonForFollowing || followingSeasonQuery.data;
+  const resolvedFollowing = followingSeason?.episodes?.find((episode) =>
+    episode.season_number === item.followingSeasonNumber
+    && episode.episode_number === item.followingEpisodeNumber);
+  const followingName = item.followingEpisodeName || resolvedFollowing?.name || (
+    item.followingEpisodeNumber != null ? `Episode ${item.followingEpisodeNumber}` : null
+  );
+  const followingStill = item.followingEpisodeStill
+    || (resolvedFollowing?.still_path ? img(resolvedFollowing.still_path, "original") : null)
+    || resolvedSeasonBackdrop
+    || showBackdrop
+    || item.poster;
+  const followingRuntime = item.followingEpisodeRuntime || resolvedFollowing?.runtime || item.estimatedRuntime;
+  const followingAirDate = item.followingEpisodeAirDate || resolvedFollowing?.air_date || null;
+
   const progress = progressPercent(item);
   const episodeName = item.episodeName || resolvedEpisode?.name || `Episode ${item.episodeNumber}`;
   const runtime = item.episodeRuntime || resolvedEpisode?.runtime || item.estimatedRuntime;
   const airDate = item.episodeAirDate || resolvedEpisode?.air_date || null;
+  const regularSeasonEpisodes = (seasonQuery.data?.episodes ?? []).filter((episode) => episode.episode_number > 0);
+  const seasonLastEpisode = regularSeasonEpisodes.length > 0
+    ? Math.max(...regularSeasonEpisodes.map((episode) => episode.episode_number))
+    : null;
+  const resolvedIsSeasonFinale = item.isSeasonFinale || seasonLastEpisode === item.episodeNumber;
+  const resolvedNextSeasonNumber = item.nextSeasonNumber ?? (
+    resolvedIsSeasonFinale && item.lastSeasonNumber != null && item.seasonNumber < item.lastSeasonNumber
+      ? item.seasonNumber + 1
+      : null
+  );
+  const resolvedIsNewEpisode = item.isNewEpisode || isEpisodeNewSinceLastWatch(airDate, item.lastWatchedAt, item.watchedEpisodes);
+
+  const handleSwipeEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: { offset: { x: number } }) => {
+    if (!isMobile || disabled) return;
+    if (info.offset.x >= 88) onMark({ isSeasonFinale: resolvedIsSeasonFinale, nextSeasonNumber: resolvedNextSeasonNumber });
+    else if (info.offset.x <= -88) onNotNow();
+    window.setTimeout(() => { swipeRef.current = false; }, 0);
+  };
+  const handleOpen = () => {
+    if (!swipeRef.current) onOpen();
+  };
 
   return (
     <motion.section
@@ -373,25 +491,60 @@ function FeaturedWatchCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.985 }}
       transition={{ duration: 0.22 }}
+      drag={isMobile && !disabled ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.14}
+      dragSnapToOrigin
+      onDragStart={() => { swipeRef.current = true; }}
+      onDragEnd={handleSwipeEnd}
+      whileDrag={isMobile ? { scale: 0.995 } : undefined}
       className="tvtime-watch-featured"
       aria-labelledby={`watch-featured-${item.tmdbId}`}
+      style={isMobile ? { touchAction: "pan-y" } : undefined}
     >
-      <div className="tvtime-watch-featured__backdrop" data-image-kind={imageKind}>
-        <SafeImage
-          src={backdrop}
-          alt=""
-          fill
-          variant="backdrop"
-          priority
-          fetchPriority="high"
-          decoding="async"
-          sizes="(max-width: 768px) 100vw, (max-width: 1440px) 92vw, 1440px"
-        />
-      </div>
+      <span className="tvtime-watch-swipe-hint is-right" aria-hidden="true"><CheckCircle2 /> Watched</span>
+      <span className="tvtime-watch-swipe-hint is-left" aria-hidden="true"><PauseCircle /> Not now</span>
+      <AnimatePresence initial={false} mode="sync">
+        <motion.div
+          key={backdrop || `poster-${item.tmdbId}`}
+          className="tvtime-watch-featured__backdrop-stage"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.46, ease: "easeOut" }}
+          aria-hidden="true"
+        >
+          <div className="tvtime-watch-featured__backdrop-blur" data-image-kind={imageKind}>
+            <SafeImage
+              src={backdrop}
+              alt=""
+              fill
+              variant="backdrop"
+              priority
+              fetchPriority="high"
+              decoding="async"
+              sizes="(max-width: 768px) 100vw, (max-width: 1440px) 92vw, 1440px"
+            />
+          </div>
+          <div className="tvtime-watch-featured__backdrop" data-image-kind={imageKind}>
+            <SafeImage
+              src={backdrop}
+              alt=""
+              fill
+              variant="backdrop"
+              priority
+              fetchPriority="high"
+              decoding="async"
+              sizes="(max-width: 768px) 100vw, (max-width: 1440px) 92vw, 1440px"
+            />
+          </div>
+        </motion.div>
+      </AnimatePresence>
       <div className="tvtime-watch-featured__scrim" />
       <div className="tvtime-watch-featured__content">
         <div className="tvtime-watch-featured__eyebrow">
           <span>Up next</span>
+          {resolvedIsNewEpisode && <NewEpisodeBadge />}
           <PersonalStatus item={item} />
         </div>
         <h2 id={`watch-featured-${item.tmdbId}`}>{item.title}</h2>
@@ -404,19 +557,154 @@ function FeaturedWatchCard({
           <span><Clock3 className="h-3.5 w-3.5" />{runtime}m</span>
           <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(airDate)}</span>
           <span>{item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}</span>
+          {resolvedIsSeasonFinale && <span className="tvtime-watch-finale-label"><Sparkles /> Season finale</span>}
         </div>
-        <ProgressBar item={item} progress={progress} featured />
+        <ProgressBar item={item} progress={progress} runtime={runtime} featured />
+        <NextEpisodePreview
+          item={item}
+          name={followingName}
+          still={followingStill}
+          runtime={followingRuntime}
+          airDate={followingAirDate}
+          onOpen={handleOpen}
+        />
         <div className="tvtime-watch-featured__actions">
-          <Button type="button" onClick={onMark} disabled={disabled} className="tvtime-watch-featured__primary">
+          <Button type="button" onClick={() => onMark({ isSeasonFinale: resolvedIsSeasonFinale, nextSeasonNumber: resolvedNextSeasonNumber })} disabled={disabled} className="tvtime-watch-featured__primary">
             <CheckCircle2 className={pending ? "animate-pulse" : ""} />
             {pending ? "Updating…" : "Mark episode watched"}
           </Button>
-          <Button type="button" variant="outline" onClick={onOpen} className="tvtime-watch-featured__secondary">
+          <Button type="button" variant="outline" onClick={handleOpen} className="tvtime-watch-featured__secondary">
             <Eye /> View episode
           </Button>
           <Button type="button" variant="ghost" onClick={onNotNow} className="tvtime-watch-featured__later">
             Not now
           </Button>
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
+function NextEpisodePreview({
+  item,
+  name,
+  still,
+  runtime,
+  airDate,
+  onOpen,
+}: {
+  item: EnrichedWatchNextItem;
+  name: string | null;
+  still: string | null;
+  runtime: number;
+  airDate: string | null;
+  onOpen: () => void;
+}) {
+  if (item.followingSeasonNumber == null || item.followingEpisodeNumber == null) return null;
+  const code = episodeCode({ seasonNumber: item.followingSeasonNumber, episodeNumber: item.followingEpisodeNumber });
+  const isUpcoming = Boolean(airDate && airDate > new Date().toISOString().slice(0, 10));
+  return (
+    <button type="button" className="tvtime-watch-next-episode" onClick={onOpen} aria-label={`View ${code} ${name || "next episode"}`}>
+      <span className="tvtime-watch-next-episode__thumb">
+        <SafeImage src={still} alt="" fill variant="still" sizes="128px" />
+      </span>
+      <span className="tvtime-watch-next-episode__copy">
+        <small>{isUpcoming ? "Coming next" : "Next after this"}</small>
+        <strong>{code} <span>—</span> {name || `Episode ${item.followingEpisodeNumber}`}</strong>
+        <span>{runtime}m{airDate ? ` • ${isUpcoming ? formatAirDate(airDate) : releasedLabel(airDate)}` : ""}</span>
+      </span>
+      <Eye className="tvtime-watch-next-episode__icon" />
+    </button>
+  );
+}
+
+function NewEpisodeBadge() {
+  return <span className="tvtime-watch-new-badge"><Sparkles />New</span>;
+}
+
+function SeasonCompletionCard({
+  completion,
+  onOpenShow,
+  onContinue,
+  onOpenSimilar,
+}: {
+  completion: SeasonCompletionState;
+  onOpenShow: () => void;
+  onContinue: () => void;
+  onOpenSimilar: (id: number) => void;
+}) {
+  const nextSeasonQuery = useSeasonDetail(
+    completion.nextSeasonNumber != null ? completion.tmdbId : null,
+    completion.nextSeasonNumber,
+  );
+  const similarQuery = useTvDetail(completion.nextSeasonNumber == null ? completion.tmdbId : null);
+  const firstNextEpisode = nextSeasonQuery.data?.episodes?.find((episode) => episode.episode_number > 0) || null;
+  const nextSeasonArtwork = firstNextEpisode?.still_path
+    ? img(firstNextEpisode.still_path, "original")
+    : nextSeasonQuery.data?.poster_path
+      ? img(nextSeasonQuery.data.poster_path, "w500")
+      : completion.showBackdrop || completion.poster;
+  const similarItems = ((((similarQuery.data as any)?.recommendations?.results ?? []) as Array<any>)
+    .filter((item) => Number(item?.id) > 0 && Number(item.id) !== completion.tmdbId));
+  const similar = similarItems[0] ?? null;
+  const similarArtwork = similar?.backdrop_path
+    ? img(similar.backdrop_path, "w780")
+    : similar?.poster_path
+      ? img(similar.poster_path, "w500")
+      : null;
+
+  return (
+    <motion.section
+      layout
+      initial={{ opacity: 0, y: 12, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.99 }}
+      className="tvtime-watch-season-complete"
+    >
+      <div className="tvtime-watch-season-complete__artwork">
+        <SafeImage
+          src={completion.nextSeasonNumber != null ? nextSeasonArtwork : similarArtwork || completion.showBackdrop || completion.poster}
+          alt=""
+          fill
+          variant="backdrop"
+          sizes="(max-width: 768px) 100vw, 50vw"
+        />
+      </div>
+      <div className="tvtime-watch-season-complete__scrim" />
+      <div className="tvtime-watch-season-complete__content">
+        <span className="tvtime-watch-season-complete__badge"><CircleCheckBig />Season complete</span>
+        <h2>{completion.title}</h2>
+        <p>You finished Season {completion.seasonNumber}.</p>
+        {completion.nextSeasonNumber != null ? (
+          <div className="tvtime-watch-season-complete__suggestion">
+            <span className="tvtime-watch-season-complete__thumb">
+              <SafeImage src={nextSeasonArtwork} alt="" fill variant={firstNextEpisode?.still_path ? "still" : "poster"} sizes="132px" />
+            </span>
+            <span>
+              <small>Continue the story</small>
+              <strong>Season {completion.nextSeasonNumber}</strong>
+              <em>{firstNextEpisode ? `${episodeCode(firstNextEpisode)} — ${firstNextEpisode.name || `Episode ${firstNextEpisode.episode_number}`}` : "The next season is ready when you are"}</em>
+            </span>
+          </div>
+        ) : similar ? (
+          <button type="button" className="tvtime-watch-season-complete__suggestion is-clickable" onClick={() => onOpenSimilar(Number(similar.id))}>
+            <span className="tvtime-watch-season-complete__thumb">
+              <SafeImage src={similarArtwork} alt="" fill variant={similar?.backdrop_path ? "still" : "poster"} sizes="132px" />
+            </span>
+            <span>
+              <small>Try something similar</small>
+              <strong>{similar.name || similar.title || "Recommended show"}</strong>
+              <em>Based on this series</em>
+            </span>
+          </button>
+        ) : (
+          <p className="tvtime-watch-season-complete__quiet">You’re caught up. Open the show for recommendations and similar titles.</p>
+        )}
+        <div className="tvtime-watch-season-complete__actions">
+          <Button type="button" onClick={completion.nextSeasonNumber != null ? onOpenShow : similar ? () => onOpenSimilar(Number(similar.id)) : onOpenShow}>
+            <Play />{completion.nextSeasonNumber != null ? `Open Season ${completion.nextSeasonNumber}` : similar ? "View recommendation" : "Explore recommendations"}
+          </Button>
+          <Button type="button" variant="outline" onClick={onContinue}>Continue queue</Button>
         </div>
       </div>
     </motion.section>
@@ -432,7 +720,9 @@ function WatchSection({
   pendingId,
   onMark,
   onOpen,
+  onNotNow,
   tone = "default",
+  rail = false,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -442,11 +732,13 @@ function WatchSection({
   pendingId?: number;
   onMark: (item: EnrichedWatchNextItem) => Promise<void>;
   onOpen: (id: number) => void;
+  onNotNow: (item: EnrichedWatchNextItem) => void;
   tone?: "default" | "new" | "behind" | "paused";
+  rail?: boolean;
 }) {
   if (items.length === 0) return null;
   return (
-    <motion.section layout className="tvtime-watch-section" data-tone={tone}>
+    <motion.section layout className="tvtime-watch-section" data-tone={tone} data-layout={rail ? "rail" : "grid"}>
       <SectionHeading icon={icon} title={title} subtitle={subtitle} count={items.length} />
       <div className="tvtime-watch-card-grid">
         <AnimatePresence mode="popLayout" initial={false}>
@@ -458,6 +750,7 @@ function WatchSection({
               pending={episodeTogglePending && pendingId === item.tmdbId}
               onMark={() => void onMark(item)}
               onOpen={() => onOpen(item.tmdbId)}
+              onNotNow={() => onNotNow(item)}
               tone={tone}
             />
           ))}
@@ -473,6 +766,7 @@ function CompactWatchCard({
   pending,
   onMark,
   onOpen,
+  onNotNow,
   tone,
 }: {
   item: EnrichedWatchNextItem;
@@ -480,69 +774,135 @@ function CompactWatchCard({
   pending: boolean;
   onMark: () => void;
   onOpen: () => void;
+  onNotNow: () => void;
   tone: "default" | "new" | "behind" | "paused";
 }) {
+  const isMobile = useMobileViewport();
+  const swipeRef = useRef(false);
+  // Compact cards stay query-free: the server enriches the smartest visible
+  // items in one bounded batch, then this chain falls back without N+1 calls.
+  const artwork = item.episodeStill || item.seasonBackdrop || item.showBackdrop || item.poster;
+  const imageKind = item.episodeStill
+    ? "episode-still"
+    : item.seasonBackdrop
+      ? "season-backdrop"
+      : item.showBackdrop
+        ? "show-backdrop"
+        : "poster-fallback";
   const progress = progressPercent(item);
   const episodeName = item.episodeName || `Episode ${item.episodeNumber}`;
   const runtime = item.episodeRuntime || item.estimatedRuntime;
+
+  const handleSwipeEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: { offset: { x: number } }) => {
+    if (!isMobile || disabled) return;
+    if (info.offset.x >= 76) onMark();
+    else if (info.offset.x <= -76) onNotNow();
+    window.setTimeout(() => { swipeRef.current = false; }, 0);
+  };
+  const handleOpen = () => {
+    if (!swipeRef.current) onOpen();
+  };
+
   return (
-    <motion.article
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
-      transition={{ duration: 0.18 }}
-      className="tvtime-watch-card"
-      data-tone={tone}
-      aria-busy={pending}
-    >
-      <button type="button" className="tvtime-watch-card__poster" onClick={onOpen} aria-label={`Open ${item.title}`}>
-        <SafeImage src={item.poster} alt={item.title} fill variant="poster" sizes="(max-width: 479px) 80px, 112px" />
-      </button>
-      <div className="tvtime-watch-card__body">
-        <div className="tvtime-watch-card__topline">
-          <PersonalStatus item={item} />
-          <span
-            className="tvtime-watch-card__ready"
-            title={item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}
-          >
-            {item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}
+    <div className="tvtime-watch-swipe-shell">
+      <span className="tvtime-watch-swipe-hint is-right" aria-hidden="true"><CheckCircle2 /> Watched</span>
+      <span className="tvtime-watch-swipe-hint is-left" aria-hidden="true"><PauseCircle /> Not now</span>
+      <motion.article
+        layout
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        transition={{ duration: 0.18 }}
+        drag={isMobile && !disabled ? "x" : false}
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.16}
+        dragSnapToOrigin
+        onDragStart={() => { swipeRef.current = true; }}
+        onDragEnd={handleSwipeEnd}
+        whileDrag={isMobile ? { scale: 0.985 } : undefined}
+        className="tvtime-watch-card"
+        data-tone={tone}
+        aria-busy={pending}
+        style={isMobile ? { touchAction: "pan-y" } : undefined}
+      >
+        <button
+          type="button"
+          className="tvtime-watch-card__poster tvtime-watch-card__artwork"
+          data-image-kind={imageKind}
+          onClick={handleOpen}
+          aria-label={`Open ${item.title}`}
+        >
+          <SafeImage
+            src={artwork}
+            alt={item.title}
+            fill
+            variant={imageKind === "poster-fallback" ? "poster" : "still"}
+            sizes="(max-width: 479px) 42vw, (max-width: 1024px) 260px, 320px"
+          />
+          <span className="tvtime-watch-card__preview" aria-hidden="true">
+            <strong>{episodeCode(item)}</strong>
+            <span>{episodeName}</span>
+            <small>{runtime}m • {formatReadyTime(remainingMinutes(item, runtime))} left</small>
           </span>
+          {item.isNewEpisode && <NewEpisodeBadge />}
+        </button>
+        <div className="tvtime-watch-card__body">
+          <div className="tvtime-watch-card__topline">
+            <PersonalStatus item={item} />
+            <span
+              className="tvtime-watch-card__ready"
+              title={item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}
+            >
+              {item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}
+            </span>
+          </div>
+          <button type="button" className="tvtime-watch-card__title" onClick={handleOpen}>{item.title}</button>
+          <p className="tvtime-watch-card__episode"><strong>{episodeCode(item)}</strong><span>—</span>{episodeName}</p>
+          <div className="tvtime-watch-card__meta">
+            <span><Clock3 />{runtime}m</span>
+            <span><CalendarDays />{releasedLabel(item.episodeAirDate)}</span>
+            {item.isSeasonFinale && <span><Sparkles />Season finale</span>}
+            {tone === "paused" && <span><PauseCircle />{daysSince(item.lastActivity)}d away</span>}
+          </div>
+          <ProgressBar item={item} progress={progress} runtime={runtime} />
+          <div className="tvtime-watch-card__actions">
+            <Button type="button" size="sm" variant="outline" className="tvtime-watch-card__mark" onClick={onMark} disabled={disabled}>
+              <CheckCircle2 className={pending ? "animate-pulse" : ""} />
+              {pending ? "Updating…" : "Mark watched"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="tvtime-watch-card__details"
+              onClick={handleOpen}
+              aria-label={`View ${item.title} details`}
+            >
+              <Eye /> View
+            </Button>
+          </div>
         </div>
-        <button type="button" className="tvtime-watch-card__title" onClick={onOpen}>{item.title}</button>
-        <p className="tvtime-watch-card__episode"><strong>{episodeCode(item)}</strong><span>—</span>{episodeName}</p>
-        <div className="tvtime-watch-card__meta">
-          <span><Clock3 />{runtime}m</span>
-          <span><CalendarDays />{releasedLabel(item.episodeAirDate)}</span>
-          {tone === "paused" && <span><PauseCircle />{daysSince(item.lastActivity)}d paused</span>}
-        </div>
-        <ProgressBar item={item} progress={progress} />
-        <div className="tvtime-watch-card__actions">
-          <Button type="button" size="sm" variant="outline" className="tvtime-watch-card__mark" onClick={onMark} disabled={disabled}>
-            <CheckCircle2 className={pending ? "animate-pulse" : ""} />
-            {pending ? "Updating…" : "Mark watched"}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="tvtime-watch-card__details"
-            onClick={onOpen}
-            aria-label={`View ${item.title} details`}
-          >
-            <Eye /> View
-          </Button>
-        </div>
-      </div>
-    </motion.article>
+      </motion.article>
+    </div>
   );
 }
 
-function ProgressBar({ item, progress, featured = false }: { item: WatchNextItem; progress: number; featured?: boolean }) {
+function ProgressBar({
+  item,
+  progress,
+  runtime,
+  featured = false,
+}: {
+  item: WatchNextItem;
+  progress: number;
+  runtime: number;
+  featured?: boolean;
+}) {
+  const remaining = remainingMinutes(item, runtime);
   return (
     <div className={featured ? "tvtime-watch-progress is-featured" : "tvtime-watch-progress"}>
       <div className="tvtime-watch-progress__copy">
-        <span>{item.watchedEpisodes}/{item.releasedEpisodes} watched</span>
+        <span>{item.watchedEpisodes}/{item.releasedEpisodes} watched <em>• {formatReadyTime(remaining)} left</em></span>
         <strong>{progress}%</strong>
       </div>
       <div className="tvtime-watch-progress__track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
@@ -703,11 +1063,30 @@ function EmptyReady() {
 function WatchNextSkeleton() {
   return (
     <div className="tvtime-watch-skeleton" aria-label="Loading Watch Next">
-      <div className="h-12 shimmer rounded-xl" />
-      <div className="tvtime-watch-skeleton__featured shimmer" />
+      <div className="tvtime-watch-skeleton__summary shimmer" />
+      <div className="tvtime-watch-skeleton__featured">
+        <div className="tvtime-watch-skeleton__hero-image shimmer" />
+        <div className="tvtime-watch-skeleton__hero-copy">
+          <div className="h-4 w-24 shimmer rounded-full" />
+          <div className="h-12 w-3/5 max-w-md shimmer rounded-xl" />
+          <div className="h-5 w-2/5 max-w-xs shimmer rounded-lg" />
+          <div className="h-3 w-full max-w-sm shimmer rounded-full" />
+          <div className="h-11 w-56 max-w-full shimmer rounded-xl" />
+        </div>
+      </div>
       <div className="h-10 w-64 max-w-full shimmer rounded-lg" />
       <div className="tvtime-watch-card-grid">
-        {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-52 shimmer rounded-xl" />)}
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="tvtime-watch-skeleton__card">
+            <div className="tvtime-watch-skeleton__card-art shimmer" />
+            <div className="tvtime-watch-skeleton__card-copy">
+              <div className="h-3 w-20 shimmer rounded-full" />
+              <div className="h-5 w-4/5 shimmer rounded-lg" />
+              <div className="h-3 w-3/5 shimmer rounded-full" />
+              <div className="h-2 w-full shimmer rounded-full" />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -721,12 +1100,12 @@ function categorizeItems(items: EnrichedWatchNextItem[]) {
     paused: [] as EnrichedWatchNextItem[],
   };
   for (const item of items) {
-    if (daysSince(item.lastActivity) >= PAUSED_DAYS) {
+    if (item.isNewEpisode) {
+      result.newEpisodes.push(item);
+    } else if (daysSince(item.lastActivity) >= PAUSED_DAYS) {
       result.paused.push(item);
     } else if (item.readyEpisodes >= 3 || item.watchedEpisodes === 0) {
       result.fallingBehind.push(item);
-    } else if (releasedWithin(item.episodeAirDate, RECENT_EPISODE_DAYS)) {
-      result.newEpisodes.push(item);
     } else {
       result.continueWatching.push(item);
     }
@@ -737,21 +1116,34 @@ function categorizeItems(items: EnrichedWatchNextItem[]) {
 function smartPriority(item: EnrichedWatchNextItem) {
   const activityAge = daysSince(item.lastActivity);
   const releaseAge = item.episodeAirDate ? daysSince(`${item.episodeAirDate}T00:00:00Z`) : Number.MAX_SAFE_INTEGER;
-  const recentActivity = item.watchedEpisodes > 0 ? Math.max(0, 45 - activityAge) * 30 : 0;
-  const oneReady = item.readyEpisodes === 1 ? 650 : 0;
-  const newRelease = releaseAge <= 14 ? Math.max(0, 14 - releaseAge) * 28 : 0;
-  const nearCompletion = progressPercent(item) * 3;
-  const backlogPenalty = Math.max(0, item.readyEpisodes - 2) * 45;
-  const stalePenalty = Math.max(0, activityAge - PAUSED_DAYS) * 5;
-  return recentActivity + oneReady + newRelease + nearCompletion - backlogPenalty - stalePenalty;
+  const completionRatio = progressPercent(item) / 100;
+  const completionBase = progressPercent(item) * 3;
+  const nearCompletion = completionRatio >= 0.7 ? Math.round(completionRatio * 650) : 0;
+  const newEpisode = item.isNewEpisode ? 1_250 : releaseAge <= 7 ? Math.max(0, 8 - releaseAge) * 70 : 0;
+  const oneReady = item.readyEpisodes === 1 ? 540 : 0;
+  // A long-neglected show gets a controlled comeback boost instead of being
+  // buried forever. Cap it so a 3-year-old pause cannot dominate fresh TV.
+  const returnBoost = activityAge >= 21 ? Math.min(520, (activityAge - 20) * 9) : 0;
+  const recentMomentum = item.watchedEpisodes > 0 && activityAge < 14 ? (14 - activityAge) * 24 : 0;
+  const backlogPenalty = Math.max(0, item.readyEpisodes - 4) * 32;
+  return newEpisode + completionBase + nearCompletion + oneReady + returnBoost + recentMomentum - backlogPenalty;
 }
 
 function progressPercent(item: Pick<WatchNextItem, "watchedEpisodes" | "releasedEpisodes">) {
   return Math.min(100, Math.max(0, Math.round((item.watchedEpisodes / Math.max(item.releasedEpisodes, 1)) * 100)));
 }
 
-function episodeCode(item: { seasonNumber: number; episodeNumber: number }) {
-  return `S${String(item.seasonNumber).padStart(2, "0")} E${String(item.episodeNumber).padStart(2, "0")}`;
+function remainingMinutes(item: Pick<WatchNextItem, "readyEpisodes" | "estimatedRuntime">, currentRuntime?: number | null) {
+  if (item.readyEpisodes <= 0) return 0;
+  const current = Math.max(1, Math.round(currentRuntime || item.estimatedRuntime || 1));
+  const rest = Math.max(0, item.readyEpisodes - 1) * Math.max(1, Math.round(item.estimatedRuntime || current));
+  return current + rest;
+}
+
+function episodeCode(item: { seasonNumber?: number; episodeNumber?: number; season_number?: number; episode_number?: number }) {
+  const season = item.seasonNumber ?? item.season_number ?? 0;
+  const episode = item.episodeNumber ?? item.episode_number ?? 0;
+  return `S${String(season).padStart(2, "0")} E${String(episode).padStart(2, "0")}`;
 }
 
 function formatReadyTime(minutes: number) {
@@ -762,10 +1154,40 @@ function formatReadyTime(minutes: number) {
   return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`;
 }
 
-function releasedWithin(value: string | null | undefined, days: number) {
-  if (!value) return false;
-  const age = daysSince(`${value}T00:00:00Z`);
-  return age >= 0 && age <= days;
+function pickBestStillClient(stills: Array<{ aspect_ratio?: number; width?: number; height?: number; vote_average?: number; vote_count?: number; file_path?: string | null }> | null | undefined) {
+  const best = [...(stills ?? [])]
+    .filter((still) => Boolean(still.file_path))
+    .sort((left, right) => clientStillScore(right) - clientStillScore(left))[0];
+  return best?.file_path ? img(best.file_path, "original") : null;
+}
+
+function clientStillScore(still: { aspect_ratio?: number; width?: number; height?: number; vote_average?: number; vote_count?: number }) {
+  const width = Math.max(1, Number(still.width) || 1);
+  const height = Math.max(1, Number(still.height) || 1);
+  const ratio = Number(still.aspect_ratio) > 0 ? Number(still.aspect_ratio) : width / height;
+  const ratioPenalty = Math.abs(ratio - 16 / 9) * 1_800;
+  const resolution = Math.min(width * height, 3_000_000) / 2_500;
+  const votes = Math.max(0, Number(still.vote_average) || 0) * 24 + Math.min(50, Number(still.vote_count) || 0) * 2;
+  return resolution + votes - ratioPenalty;
+}
+
+function pickSeasonBackdropClient(
+  season: { episodes?: Array<{ episode_number: number; still_path: string | null; vote_average?: number }> } | null | undefined,
+  currentEpisodeNumber: number,
+) {
+  const best = [...(season?.episodes ?? [])]
+    .filter((episode) => Boolean(episode.still_path))
+    .sort((left, right) => {
+      const leftScore = Math.max(0, Number(left.vote_average) || 0) * 25 - Math.abs(left.episode_number - currentEpisodeNumber) * 1.2;
+      const rightScore = Math.max(0, Number(right.vote_average) || 0) * 25 - Math.abs(right.episode_number - currentEpisodeNumber) * 1.2;
+      return rightScore - leftScore;
+    })[0];
+  return best?.still_path ? img(best.still_path, "original") : null;
+}
+
+function isEpisodeNewSinceLastWatch(airDate: string | null | undefined, lastWatchedAt: string | null, watchedEpisodes: number) {
+  if (!airDate || !lastWatchedAt || watchedEpisodes <= 0) return false;
+  return airDate > lastWatchedAt.slice(0, 10);
 }
 
 function releasedLabel(value: string | null | undefined) {

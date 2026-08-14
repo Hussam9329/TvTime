@@ -6,13 +6,16 @@ import { toast } from "sonner";
 import { userHeaders, withUserId } from "@/lib/client-user";
 
 export type WatchUndoResult = { undoToken?: string | null } | null | undefined;
+export type WatchUndoOptions = {
+  onUndoSuccess?: () => void;
+};
 
 let activeWatchUndoToast: string | number | null = null;
 
 export function useWatchUndo() {
   const queryClient = useQueryClient();
 
-  return useCallback((message: string, result?: WatchUndoResult) => {
+  return useCallback((message: string, result?: WatchUndoResult, options?: WatchUndoOptions) => {
     const token = result?.undoToken;
     if (!token) {
       toast.success(message);
@@ -51,6 +54,7 @@ export function useWatchUndo() {
                 queryClient.invalidateQueries({ queryKey: ["movie-hub"] }),
                 queryClient.invalidateQueries({ queryKey: ["notifications"] }),
               ]);
+              options?.onUndoSuccess?.();
               toast.success("Watch change undone", { id: loading });
             } catch (error) {
               toast.error(error instanceof Error ? error.message : "Failed to undo watch change", { id: loading });

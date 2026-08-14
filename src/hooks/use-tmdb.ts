@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNav } from "@/lib/store";
-import type { MediaItem, MovieDetail, TvDetail, PaginatedResponse, SeasonDetail, Genre } from "@/lib/tmdb";
+import type { MediaItem, MovieDetail, TvDetail, PaginatedResponse, SeasonDetail, EpisodeImagesResponse, Genre } from "@/lib/tmdb";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
 import {
   deriveTvTrackingState,
@@ -387,6 +387,15 @@ export function useSeasonDetail(tvId: number | null, seasonNumber: number | null
     queryKey: ["tmdb", "tv", tvId, "season", seasonNumber],
     queryFn: () => tmdbGet<SeasonDetail>(`tv/${tvId}/season/${seasonNumber}`),
     enabled: tvId != null && seasonNumber != null,
+  });
+}
+
+export function useEpisodeImages(tvId: number | null, seasonNumber: number | null, episodeNumber: number | null) {
+  return useQuery({
+    queryKey: ["tmdb", "tv", tvId, "season", seasonNumber, "episode", episodeNumber, "images"],
+    queryFn: () => tmdbGet<EpisodeImagesResponse>(`tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/images`),
+    enabled: tvId != null && seasonNumber != null && episodeNumber != null,
+    staleTime: 30 * 60 * 1000,
   });
 }
 
