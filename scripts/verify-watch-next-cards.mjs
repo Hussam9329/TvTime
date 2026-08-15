@@ -55,10 +55,11 @@ const checks = [
   [
     /data-layout=\{rail \? "rail" : "grid"\}/.test(view)
       && /rail/.test(view)
-      && /tvtime-watch-card__artwork/.test(compact)
-      && /item\.episodeStill \|\| item\.seasonBackdrop \|\| item\.showBackdrop \|\| item\.poster/.test(compact)
-      && /aspect-ratio: 16 \/ 9 !important/.test(styles),
-    "Continue Watching is a horizontal episode-art rail with the complete smart artwork fallback chain",
+      && /src=\{item\.poster\}/.test(compact)
+      && /variant="poster"/.test(compact)
+      && /aspect-ratio: 2 \/ 3 !important/.test(styles)
+      && !/item\.episodeStill \|\| item\.seasonBackdrop \|\| item\.showBackdrop/.test(compact),
+    "Continue Watching keeps the classic vertical show poster on every non-featured card",
   ],
   [
     /tvtime-watch-card__preview/.test(compact)
@@ -94,10 +95,10 @@ const checks = [
     "Watch Next has a dimensionally matched hero and card skeleton",
   ],
   [
-    /const artwork = item\.episodeStill \|\| item\.seasonBackdrop \|\| item\.showBackdrop \|\| item\.poster/.test(compact)
-      && /resolvedEpisodeStill \|\| resolvedSeasonBackdrop \|\| showBackdrop \|\| item\.poster/.test(featured)
+    /resolvedEpisodeStill \|\| resolvedSeasonBackdrop \|\| showBackdrop \|\| item\.poster/.test(featured)
+      && /src=\{item\.poster\}/.test(compact)
       && /data-image-kind="poster-fallback"/.test(styles),
-    "Artwork fallback order is Episode Still → Season Backdrop → Show Backdrop → Poster",
+    "Smart Episode Still → Season Backdrop → Show Backdrop → Poster fallback is reserved for the pinned card",
   ],
   [
     /function imageScore/.test(route)
@@ -110,10 +111,11 @@ const checks = [
   ],
   [
     /WATCH_NEXT_SEASON_ENRICHMENT_LIMIT = 8/.test(route)
+      && /WATCH_NEXT_STILL_ENRICHMENT_LIMIT = 1/.test(route)
       && /WATCH_NEXT_SEASON_TIMEOUT_MS = 1_200/.test(route)
       && /Compact cards stay query-free/.test(compact)
       && !/useSeasonDetail\(/.test(compact),
-    "Richer Watch Next artwork remains bounded and does not reintroduce per-card season-query fan-out",
+    "Best-still enrichment is limited to the pinned card and compact cards stay query-free",
   ],
   [
     /swipeRef/.test(featured)

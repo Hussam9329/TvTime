@@ -779,16 +779,8 @@ function CompactWatchCard({
 }) {
   const isMobile = useMobileViewport();
   const swipeRef = useRef(false);
-  // Compact cards stay query-free: the server enriches the smartest visible
-  // items in one bounded batch, then this chain falls back without N+1 calls.
-  const artwork = item.episodeStill || item.seasonBackdrop || item.showBackdrop || item.poster;
-  const imageKind = item.episodeStill
-    ? "episode-still"
-    : item.seasonBackdrop
-      ? "season-backdrop"
-      : item.showBackdrop
-        ? "show-backdrop"
-        : "poster-fallback";
+  // Compact cards stay query-free and intentionally keep the classic vertical
+  // show poster. Only the pinned/featured card uses cinematic episode artwork.
   const progress = progressPercent(item);
   const episodeName = item.episodeName || `Episode ${item.episodeNumber}`;
   const runtime = item.episodeRuntime || item.estimatedRuntime;
@@ -827,17 +819,16 @@ function CompactWatchCard({
       >
         <button
           type="button"
-          className="tvtime-watch-card__poster tvtime-watch-card__artwork"
-          data-image-kind={imageKind}
+          className="tvtime-watch-card__poster tvtime-watch-card__poster-preview"
           onClick={handleOpen}
           aria-label={`Open ${item.title}`}
         >
           <SafeImage
-            src={artwork}
+            src={item.poster}
             alt={item.title}
             fill
-            variant={imageKind === "poster-fallback" ? "poster" : "still"}
-            sizes="(max-width: 479px) 42vw, (max-width: 1024px) 260px, 320px"
+            variant="poster"
+            sizes="(max-width: 479px) 80px, 112px"
           />
           <span className="tvtime-watch-card__preview" aria-hidden="true">
             <strong>{episodeCode(item)}</strong>

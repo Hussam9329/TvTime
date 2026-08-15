@@ -8163,31 +8163,14 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
 }
 
 .tvtime-app .tvtime-watch-card {
-  grid-template-columns: 10rem minmax(0, 1fr) !important;
+  grid-template-columns: 6.75rem minmax(0, 1fr) !important;
 }
 
-.tvtime-app .tvtime-watch-card > .tvtime-watch-card__artwork {
-  position: relative;
-  width: 100% !important;
-  aspect-ratio: 16 / 9 !important;
-  align-self: center;
-  overflow: hidden;
-  border-radius: 0.72rem;
-  background: #050505;
-}
-
-.tvtime-watch-card__artwork img {
-  object-fit: cover !important;
-  object-position: center !important;
+.tvtime-watch-card__poster-preview img {
   transition: transform 280ms ease, filter 280ms ease;
 }
 
-.tvtime-watch-card__artwork[data-image-kind="poster-fallback"] img {
-  object-fit: contain !important;
-  background: radial-gradient(circle at center, color-mix(in oklab, var(--primary) 9%, #090909), #050505 72%);
-}
-
-.tvtime-watch-card__artwork > .tvtime-watch-new-badge {
+.tvtime-watch-card__poster-preview > .tvtime-watch-new-badge {
   position: absolute;
   z-index: 3;
   top: 0.42rem;
@@ -8232,8 +8215,8 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .tvtime-watch-card:hover .tvtime-watch-card__artwork img,
-  .tvtime-watch-card:focus-within .tvtime-watch-card__artwork img {
+  .tvtime-watch-card:hover .tvtime-watch-card__poster-preview img,
+  .tvtime-watch-card:focus-within .tvtime-watch-card__poster-preview img {
     transform: scale(1.045);
     filter: brightness(0.82) saturate(1.08);
   }
@@ -8431,7 +8414,7 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
 
 .tvtime-watch-skeleton__card {
   display: grid;
-  grid-template-columns: 10rem minmax(0, 1fr);
+  grid-template-columns: 6.75rem minmax(0, 1fr);
   align-items: center;
   gap: 0.7rem;
   min-height: 7.1rem;
@@ -8443,7 +8426,7 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
 
 .tvtime-watch-skeleton__card-art {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 2 / 3;
   border-radius: 0.72rem;
 }
 
@@ -8501,7 +8484,7 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   }
 
   .tvtime-app .tvtime-watch-card {
-    grid-template-columns: 8.2rem minmax(0, 1fr) !important;
+    grid-template-columns: 5.25rem minmax(0, 1fr) !important;
     gap: 0.55rem;
   }
 
@@ -8509,7 +8492,7 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     display: none;
   }
 
-  .tvtime-watch-card__artwork > .tvtime-watch-new-badge {
+  .tvtime-watch-card__poster-preview > .tvtime-watch-new-badge {
     top: 0.32rem;
     inset-inline-start: 0.32rem;
   }
@@ -8559,13 +8542,13 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   }
 
   .tvtime-watch-skeleton__card {
-    grid-template-columns: 8.2rem minmax(0, 1fr);
+    grid-template-columns: 5.25rem minmax(0, 1fr);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tvtime-watch-featured__backdrop-stage,
-  .tvtime-watch-card__artwork img,
+  .tvtime-watch-card__poster-preview img,
   .tvtime-watch-card__preview,
   .tvtime-watch-next-episode {
     transition-duration: 0.01ms !important;

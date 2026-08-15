@@ -10,7 +10,7 @@ import { tmdb, type EpisodeStillImage, type SeasonDetail } from "@/lib/tmdb";
 
 const WATCH_NEXT_VISIBLE_LIMIT = 20;
 const WATCH_NEXT_SEASON_ENRICHMENT_LIMIT = 8;
-const WATCH_NEXT_STILL_ENRICHMENT_LIMIT = 6;
+const WATCH_NEXT_STILL_ENRICHMENT_LIMIT = 1;
 const WATCH_NEXT_SEASON_TIMEOUT_MS = 1_200;
 const WATCH_NEXT_STILL_TIMEOUT_MS = 1_100;
 
@@ -326,9 +326,9 @@ export async function GET(req: NextRequest) {
       ...otherFollowing,
     ]).values()].slice(0, WATCH_NEXT_SEASON_ENRICHMENT_LIMIT);
 
-    // TMDB can expose several stills for one episode. Rank only the first few
-    // prominent queue items by 16:9 fit, resolution and community votes; the
-    // remainder uses the season payload's canonical still to avoid an N+1 storm.
+    // TMDB can expose several stills for one episode. Only the pinned/featured
+    // item needs the expensive best-still ranking; compact cards use classic
+    // posters, while season payloads still provide their episode metadata.
     // Season metadata and alternate-still lookups run in parallel so this richer
     // response does not become a serial waterfall.
     const stillTargets = visibleItems.slice(0, WATCH_NEXT_STILL_ENRICHMENT_LIMIT);
