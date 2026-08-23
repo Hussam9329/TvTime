@@ -8,8 +8,11 @@ export type CarouselAutoplayState = {
 };
 
 export function carouselShouldAutoplay(state: CarouselAutoplayState) {
+  // Reduced-motion is a visual preference, not a request to pin the hero to
+  // its first item. Hero components already collapse their Framer Motion
+  // transitions when reducedMotion is enabled, so keep the content rotation
+  // alive while still pausing during an active touch gesture or hidden tab.
   return state.itemCount > 1
-    && !state.reducedMotion
     && !state.interacting
     && state.documentVisible;
 }

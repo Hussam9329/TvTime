@@ -94,12 +94,18 @@ export function useHeroCarousel({
 
   useEffect(() => {
     if (!autoplaying) return;
-    const timer = window.setTimeout(() => {
+
+    // Keep one stable autoplay clock for the whole hero. The previous
+    // one-shot timeout was recreated whenever slide state changed, which
+    // made auto-rotation vulnerable to unrelated state churn in the page.
+    // A stable interval guarantees that every mounted hero advances while
+    // it has multiple items and the document is visible.
+    const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % itemCount);
       setCycleVersion((current) => current + 1);
     }, intervalMs);
-    return () => window.clearTimeout(timer);
-  }, [activeIndex, autoplaying, cycleVersion, intervalMs, itemCount]);
+    return () => window.clearInterval(timer);
+  }, [autoplaying, intervalMs, itemCount]);
 
   const moveSlide = useCallback((slideDirection: -1 | 1) => {
     if (itemCount < 2) return;

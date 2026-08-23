@@ -21,8 +21,12 @@ const autoplayState: CarouselAutoplayState = {
 };
 
 assert.equal(carouselShouldAutoplay(autoplayState), true, "A visible carousel may autoplay continuously");
+assert.equal(
+  carouselShouldAutoplay({ ...autoplayState, reducedMotion: true }),
+  true,
+  "Reduced motion keeps hero content rotating while visual transitions are minimized",
+);
 for (const pausedState of [
-  { reducedMotion: true },
   { interacting: true },
   { documentVisible: false },
   { itemCount: 1 },
