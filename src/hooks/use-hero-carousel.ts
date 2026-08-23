@@ -7,7 +7,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type FocusEvent as ReactFocusEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
@@ -57,10 +56,7 @@ export function useHeroCarousel({
 }: HeroCarouselOptions) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [cycleVersion, setCycleVersion] = useState(0);
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
   const [interacting, setInteracting] = useState(false);
-  const [userInteracted, setUserInteracted] = useState(false);
   const [documentVisible, setDocumentVisible] = useState(true);
   const swipe = useRef<SwipeGesture>({ active: false, pointerId: -1, startX: 0, startY: 0 });
   const suppressClick = useRef(false);
@@ -85,10 +81,7 @@ export function useHeroCarousel({
   const autoplaying = carouselShouldAutoplay({
     itemCount,
     reducedMotion: Boolean(reducedMotion),
-    hovered,
-    focused,
     interacting,
-    userInteracted,
     documentVisible,
   });
 
@@ -108,21 +101,17 @@ export function useHeroCarousel({
     return () => window.clearTimeout(timer);
   }, [activeIndex, autoplaying, cycleVersion, intervalMs, itemCount]);
 
-  const stopAutoplay = useCallback(() => setUserInteracted(true), []);
-
   const moveSlide = useCallback((slideDirection: -1 | 1) => {
     if (itemCount < 2) return;
-    stopAutoplay();
     setActiveIndex((current) => (current + slideDirection + itemCount) % itemCount);
     setCycleVersion((current) => current + 1);
-  }, [itemCount, stopAutoplay]);
+  }, [itemCount]);
 
   const selectSlide = useCallback((index: number) => {
     if (itemCount < 1) return;
-    stopAutoplay();
     setActiveIndex(Math.max(0, Math.min(index, itemCount - 1)));
     setCycleVersion((current) => current + 1);
-  }, [itemCount, stopAutoplay]);
+  }, [itemCount]);
 
   const clearSuppressedClickSoon = useCallback(() => {
     if (suppressClickTimer.current !== null) window.clearTimeout(suppressClickTimer.current);
@@ -191,10 +180,6 @@ export function useHeroCarousel({
     event.stopPropagation();
   }, []);
 
-  const onBlurCapture = useCallback((event: ReactFocusEvent<HTMLElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false);
-  }, []);
-
   const progressStyle = useMemo(() => ({
     "--tvtime-carousel-duration": `${intervalMs}ms`,
     "--tvtime-carousel-play-state": autoplaying ? "running" : "paused",
@@ -209,16 +194,6 @@ export function useHeroCarousel({
     selectSlide,
     progressStyle,
     rootProps: {
-      onPointerEnter(event: ReactPointerEvent<HTMLElement>) {
-        if (event.pointerType === "mouse") setHovered(true);
-      },
-      onPointerLeave(event: ReactPointerEvent<HTMLElement>) {
-        if (event.pointerType === "mouse") setHovered(false);
-      },
-      onFocusCapture() {
-        setFocused(true);
-      },
-      onBlurCapture,
       onPointerDown,
       onPointerMove,
       onPointerUp(event: ReactPointerEvent<HTMLElement>) {

@@ -3,20 +3,14 @@ export type ReadingDirection = "ltr" | "rtl";
 export type CarouselAutoplayState = {
   itemCount: number;
   reducedMotion: boolean;
-  hovered: boolean;
-  focused: boolean;
   interacting: boolean;
-  userInteracted: boolean;
   documentVisible: boolean;
 };
 
 export function carouselShouldAutoplay(state: CarouselAutoplayState) {
   return state.itemCount > 1
     && !state.reducedMotion
-    && !state.hovered
-    && !state.focused
     && !state.interacting
-    && !state.userInteracted
     && state.documentVisible;
 }
 

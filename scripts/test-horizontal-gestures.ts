@@ -16,20 +16,14 @@ import {
 const autoplayState: CarouselAutoplayState = {
   itemCount: 5,
   reducedMotion: false,
-  hovered: false,
-  focused: false,
   interacting: false,
-  userInteracted: false,
   documentVisible: true,
 };
 
-assert.equal(carouselShouldAutoplay(autoplayState), true, "An untouched visible carousel may autoplay");
+assert.equal(carouselShouldAutoplay(autoplayState), true, "A visible carousel may autoplay continuously");
 for (const pausedState of [
   { reducedMotion: true },
-  { hovered: true },
-  { focused: true },
   { interacting: true },
-  { userInteracted: true },
   { documentVisible: false },
   { itemCount: 1 },
 ] satisfies Array<Partial<CarouselAutoplayState>>) {
@@ -92,4 +86,4 @@ assert.equal(rememberedPositions.get("home:third"), 320, "The newest rail remain
 rememberedPositions.set("invalid", Number.NaN);
 assert.equal(rememberedPositions.size, 2, "Invalid positions cannot grow the cache");
 
-console.log("PASS: Horizontal carousel pause, swipe direction, bounded inertia, and rail restoration behavior");
+console.log("PASS: Horizontal carousel autoplay, swipe direction, bounded inertia, and rail restoration behavior");
