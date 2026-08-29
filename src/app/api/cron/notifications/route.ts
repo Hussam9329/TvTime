@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     distinct: ["userId"],
     select: { userId: true },
   });
-  const results = [];
+  const results: Array<Record<string, unknown>> = [];
   for (const { userId } of users) {
     try {
       results.push({ userId, ...(await syncNotificationsForUser(userId, { sendPush: true, refreshEnded: new Date().getUTCDay() === 0 })) });
