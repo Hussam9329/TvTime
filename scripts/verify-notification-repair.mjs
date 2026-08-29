@@ -20,6 +20,7 @@ const migration = "prisma/migrations/20260829010000_web_push_subscriptions/migra
 const worker = "public/sw.js";
 const publicKey = "src/app/api/notifications/push/public-key/route.ts";
 const middleware = "src/middleware.ts";
+const packageJson = "package.json";
 
 requireText(route, /resolveUserId\(req\)[\s\S]*syncNotificationsForUser\(user\.id/, "sync route must resolve the authenticated user and delegate to the shared service");
 requireText(service, /!canReconcileEpisodeBacklog\(current\)\)\s*continue/, "unreliable TMDB episode boundaries must not reconcile or erase alerts");
@@ -55,6 +56,8 @@ const publicPrefixesBlock = read(middleware).match(/const PUBLIC_PREFIXES\s*=\s*
 if (/\/api\/cron(?:[\/"'])/.test(publicPrefixesBlock)) {
   failures.push(`${middleware}: cron authentication must not be weakened through a public path prefix`);
 }
+requireText(packageJson, /"build"\s*:\s*"[^"]*verify-required-schema\.mjs/, "production builds must fail closed when the required notification schema is absent");
+rejectText(packageJson, /"build"\s*:\s*"[^"]*prisma migrate deploy/, "production builds must not race pooled PostgreSQL advisory locks; migrations run through db:migrate:deploy before deployment");
 
 requireText(worker, /addEventListener\("push"[\s\S]*event\.waitUntil/, "service worker must keep real push delivery alive");
 requireText(worker, /safeNotificationTarget[\s\S]*target\.origin\s*===\s*self\.location\.origin/, "notification click targets must remain same-origin");
