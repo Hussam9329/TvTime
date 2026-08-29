@@ -19,6 +19,7 @@ const cron = "src/app/api/cron/notifications/route.ts";
 const migration = "prisma/migrations/20260829010000_web_push_subscriptions/migration.sql";
 const worker = "public/sw.js";
 const publicKey = "src/app/api/notifications/push/public-key/route.ts";
+const middleware = "src/middleware.ts";
 
 requireText(route, /resolveUserId\(req\)[\s\S]*syncNotificationsForUser\(user\.id/, "sync route must resolve the authenticated user and delegate to the shared service");
 requireText(service, /!canReconcileEpisodeBacklog\(current\)\)\s*continue/, "unreliable TMDB episode boundaries must not reconcile or erase alerts");
@@ -49,6 +50,11 @@ requireText(cron, /timingSafeEqual\(expectedBytes,\s*providedBytes\)/, "cron aut
 requireText(cron, /secret\.length\s*<\s*24/, "cron secret must enforce a minimum length");
 requireText(cron, /dynamic\s*=\s*"force-dynamic"/, "cron response must never be statically cached");
 requireText(cron, /Cache-Control["']:\s*["']private, no-store/, "cron response must be no-store");
+requireText(middleware, /INDEPENDENTLY_AUTHENTICATED_PATHS\s*=\s*new Set\(\[\s*["']\/api\/cron\/notifications["'],?\s*\]\)/, "middleware must allow the exact independently-authenticated cron route to reach its bearer guard");
+const publicPrefixesBlock = read(middleware).match(/const PUBLIC_PREFIXES\s*=\s*\[[\s\S]*?\n\];/)?.[0] ?? "";
+if (/\/api\/cron(?:[\/"'])/.test(publicPrefixesBlock)) {
+  failures.push(`${middleware}: cron authentication must not be weakened through a public path prefix`);
+}
 
 requireText(worker, /addEventListener\("push"[\s\S]*event\.waitUntil/, "service worker must keep real push delivery alive");
 requireText(worker, /safeNotificationTarget[\s\S]*target\.origin\s*===\s*self\.location\.origin/, "notification click targets must remain same-origin");

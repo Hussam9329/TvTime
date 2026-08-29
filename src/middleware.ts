@@ -27,6 +27,13 @@ const PUBLIC_PREFIXES = [
   "/sitemap.xml",
 ];
 
+// These endpoints authenticate the request themselves and must be reachable
+// without a browser session. Keep this allowlist exact: making `/api/cron` a
+// public prefix would silently bypass the session boundary for future routes.
+const INDEPENDENTLY_AUTHENTICATED_PATHS = new Set([
+  "/api/cron/notifications",
+]);
+
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
@@ -34,8 +41,12 @@ function isPublicPath(pathname: string): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Auth endpoints/login/static assets remain reachable in every mode.
-  if (isPublicPath(pathname)) return NextResponse.next();
+  // Auth endpoints/login/static assets and exact independently-authenticated
+  // machine endpoints remain reachable in every mode. The machine endpoint
+  // still enforces its own timing-safe Bearer-secret check in the route.
+  if (isPublicPath(pathname) || INDEPENDENTLY_AUTHENTICATED_PATHS.has(pathname)) {
+    return NextResponse.next();
+  }
 
   const configuration = getAuthConfiguration();
 
