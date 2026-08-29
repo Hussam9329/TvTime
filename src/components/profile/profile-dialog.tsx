@@ -583,11 +583,13 @@ function PreferencesSection() {
   );
 }
 
-function urlBase64ToUint8Array(value: string): Uint8Array {
+function urlBase64ToUint8Array(value: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
   const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = window.atob(base64);
-  return Uint8Array.from(raw, (char) => char.charCodeAt(0));
+  const bytes = new Uint8Array(new ArrayBuffer(raw.length));
+  for (let index = 0; index < raw.length; index += 1) bytes[index] = raw.charCodeAt(index);
+  return bytes;
 }
 
 function applicationServerKeysEqual(existing: ArrayBuffer | null, expected: Uint8Array): boolean {
