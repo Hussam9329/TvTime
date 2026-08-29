@@ -7590,16 +7590,39 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     position: fixed;
     z-index: 70;
     inset: calc(4rem + env(safe-area-inset-top, 0px)) 0 0;
+    width: 100%;
+    height: calc(100dvh - 4rem - env(safe-area-inset-top, 0px));
     max-width: none !important;
     padding: 1rem !important;
+    overflow: hidden;
+    overscroll-behavior: contain;
     border: 0;
     border-radius: 0;
-    background: color-mix(in oklab, var(--background) 96%, transparent);
-    backdrop-filter: blur(28px) saturate(150%);
+    background: var(--background) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
   }
 
   .tvtime-mobile-search-panel > div {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
     max-width: 38rem;
+  }
+
+  .tvtime-app-header[data-mobile-search-open="true"] {
+    z-index: 80;
+  }
+
+  html.tvtime-mobile-search-active,
+  html.tvtime-mobile-search-active body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  html.tvtime-mobile-search-active .tvtime-mobile-dock {
+    visibility: hidden;
+    pointer-events: none;
   }
 
   /* Filter panel collapses into a one-handed bottom sheet on phones. */
@@ -7841,7 +7864,7 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
 
 @media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
 
-  .tvtime-mobile-search-shell { display: flex; flex-direction: column; gap: 0.9rem; }
+  .tvtime-mobile-search-shell { display: flex; min-height: 0; flex-direction: column; gap: 0.9rem; overflow: hidden; }
   .tvtime-mobile-search-tabs { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; }
   .tvtime-mobile-search-tabs::-webkit-scrollbar { display: none; }
   .tvtime-mobile-search-tabs button {
@@ -7850,7 +7873,17 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     background: color-mix(in oklab, var(--muted) 45%, transparent);
   }
   .tvtime-mobile-search-tabs button[data-active="true"] { background: color-mix(in oklab, var(--primary) 18%, transparent); color: var(--foreground); }
-  .tvtime-mobile-search-section { border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); padding-top: 0.85rem; }
+  .tvtime-mobile-search-section {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    padding-top: 0.85rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
   .tvtime-mobile-search-section__heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.55rem; font-size: 0.72rem; font-weight: 800; color: var(--muted-foreground); }
   .tvtime-mobile-search-section__heading button { color: var(--primary); }
   .tvtime-mobile-search-recents { display: flex; flex-wrap: wrap; gap: 0.45rem; }

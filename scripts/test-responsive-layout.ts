@@ -17,6 +17,14 @@ assert.match(layout, /viewportFit:\s*"cover"/, "Standalone mode must opt into sa
 assert.match(layout, /userScalable:\s*true/, "Pinch zoom must remain enabled");
 assert.doesNotMatch(layout, /maximumScale:\s*1\b/, "The viewport must not cap pinch zoom");
 
+const header = read("src/components/layout/header.tsx");
+assert.match(
+  header,
+  /classList\.add\("tvtime-mobile-search-active"\)/,
+  "Opening mobile search must lock the background document",
+);
+assert.match(header, /role="dialog"[\s\S]*?aria-modal="true"/, "Mobile search must be exposed as a modal surface");
+
 const footer = read("src/components/layout/footer.tsx");
 assert.match(footer, /tvtime-footer-row/);
 assert.match(footer, /sm:flex-wrap/);
@@ -52,6 +60,26 @@ assert.match(
   "Short landscape phones need a height-aware override",
 );
 assert.match(responsiveCss, /\.tvtime-mobile-dock\s*{\s*display:\s*block\s*!important;/);
+assert.match(
+  responsiveCss,
+  /\.tvtime-mobile-search-panel\s*{[^}]*height:\s*calc\(100dvh[^}]*overflow:\s*hidden[^}]*background:\s*var\(--background\)\s*!important;/s,
+  "Mobile search must be an opaque viewport-bounded surface",
+);
+assert.match(
+  responsiveCss,
+  /\.tvtime-app-header\[data-mobile-search-open="true"\]\s*{[^}]*z-index:\s*80;/s,
+  "Open mobile search must sit above the dock and page content",
+);
+assert.match(
+  responsiveCss,
+  /html\.tvtime-mobile-search-active[\s\S]*?overflow:\s*hidden;/,
+  "The page behind mobile search must not scroll",
+);
+assert.match(
+  responsiveCss,
+  /\.tvtime-mobile-search-section\s*{[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;/s,
+  "Search suggestions must scroll inside the available mobile viewport",
+);
 
 const tvDetail = read("src/components/views/tv-detail-view.tsx");
 assert.match(tvDetail, /tvtime-tv-detail-tabs[^"\n]*justify-start[^"\n]*overflow-x-auto/);

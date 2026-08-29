@@ -196,6 +196,25 @@ export function Header() {
   }, []);
 
   useEffect(() => {
+    if (!mobileSearchOpen || !isMobileExperience) return;
+
+    const root = document.documentElement;
+    root.classList.add("tvtime-mobile-search-active");
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      mobileSearchInputRef.current?.blur();
+      setMobileSearchOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      root.classList.remove("tvtime-mobile-search-active");
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isMobileExperience, mobileSearchOpen]);
+
+  useEffect(() => {
     if (view === "search") setSearchVal(searchQuery);
   }, [searchQuery, view]);
 
@@ -564,6 +583,9 @@ export function Header() {
             id="tvtime-mobile-search"
             onSubmit={onSubmitSearch}
             className="tvtime-mobile-search-panel tvtime-mobile-experience-only mx-auto max-w-[1920px] px-3 py-2"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Search movies, shows, anime and people"
           >
             <div className="tvtime-mobile-search-shell mx-auto max-w-xl">
               <div className="relative">
