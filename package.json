@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "node scripts/assert-production-db.mjs && node scripts/verify-migration-history.mjs && prisma generate && node scripts/verify-required-schema.mjs && next build",
+    "build": "node scripts/assert-production-db.mjs && node scripts/verify-migration-history.mjs && prisma generate && prisma migrate deploy && node scripts/verify-required-schema.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "db:push": "node scripts/refuse-destructive-db-command.mjs",
@@ -44,7 +44,8 @@
     "lint:strict": "eslint . --max-warnings=0",
     "verify:ci": "node scripts/verify-ci.mjs",
     "verify:patch-10": "node --experimental-strip-types --loader ./scripts/ts-path-loader.mjs scripts/test-patch-10.ts && node scripts/verify-patch-10.mjs",
-    "verify:patch-11": "node --experimental-strip-types scripts/test-patch-11.ts && node scripts/verify-patch-11.mjs"
+    "verify:patch-11": "node --experimental-strip-types scripts/test-patch-11.ts && node scripts/verify-patch-11.mjs",
+    "verify:notifications": "node --experimental-strip-types --loader ./scripts/ts-path-loader.mjs scripts/test-notification-repair.ts && node scripts/verify-notification-repair.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",

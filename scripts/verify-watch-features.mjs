@@ -25,11 +25,13 @@ for (const path of [
 }
 
 const notificationRoute = "src/app/api/notifications/sync/route.ts";
-requireText(notificationRoute, /"season_premiere"/, "season premiere notifications are missing");
-requireText(notificationRoute, /"season_finale"/, "season finale notifications are missing");
-requireText(notificationRoute, /"not_started",\s*"watching",\s*"uptodate"/, "followed shows that have not started are excluded");
-requireText(notificationRoute, /isSeasonFinale\(episode, season\.episodes/, "finale is not verified against current season metadata");
-requireText(notificationRoute, /notificationId[\s\S]*skipDuplicates:\s*true/, "concurrent season syncs can create duplicate alerts");
+const notificationServer = "src/lib/notification-sync-server.ts";
+requireText(notificationRoute, /syncNotificationsForUser\(user\.id,\s*\{\s*sendPush:\s*true\s*\}\)/, "authenticated sync route does not delegate to the notification service");
+requireText(notificationServer, /"season_premiere"/, "season premiere notifications are missing");
+requireText(notificationServer, /"season_finale"/, "season finale notifications are missing");
+requireText(notificationServer, /"not_started",\s*"watching",\s*"uptodate"/, "followed shows that have not started are excluded");
+requireText(notificationServer, /isSeasonFinale\(episode, season\.episodes/, "finale is not verified against current season metadata");
+requireText(notificationServer, /notificationId[\s\S]*skipDuplicates:\s*true/, "concurrent season syncs can create duplicate alerts");
 requireText("src/components/views/notification-center.tsx", /season_premiere[\s\S]*season_finale/, "new season types are not rendered in the notification center");
 
 for (const path of [

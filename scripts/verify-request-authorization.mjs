@@ -13,7 +13,9 @@ function walk(dir) {
 }
 
 const routeFiles = walk("src/app/api").filter((file) => file.endsWith("/route.ts"));
-const publicRouteSuffixes = new Set([
+// These routes are intentionally not user-owned: public metadata/auth routes
+// resolve no account data, while the cron route enforces its own bearer secret.
+const nonUserOwnedRouteSuffixes = new Set([
   "src/app/api/route.ts",
   "src/app/api/auth/login/route.ts",
   "src/app/api/auth/logout/route.ts",
@@ -22,6 +24,8 @@ const publicRouteSuffixes = new Set([
   "src/app/api/movies/calendar/route.ts",
   "src/app/api/tv/calendar/route.ts",
   "src/app/api/arabic-movies/calendar/route.ts",
+  "src/app/api/notifications/push/public-key/route.ts",
+  "src/app/api/cron/notifications/route.ts",
 ]);
 
 for (const file of routeFiles) {
@@ -35,7 +39,7 @@ for (const file of routeFiles) {
 
   const isPublicApi = normalized.startsWith("src/app/api/public/");
   if (
-    !publicRouteSuffixes.has(normalized)
+    !nonUserOwnedRouteSuffixes.has(normalized)
     && !isPublicApi
     && !/resolveUserId\(req\)|requireAdminCommand\(req,\s*OPERATION\)/.test(source)
   ) {

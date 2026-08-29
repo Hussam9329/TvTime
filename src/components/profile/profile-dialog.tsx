@@ -48,6 +48,8 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [signingOut, setSigningOut] = useState(false);
   const [authEnabled, setAuthEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [notificationBusy, setNotificationBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,20 +66,121 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
   useEffect(() => {
     if (!open) return;
-    setNotificationPermission("Notification" in window ? Notification.permission : "unsupported");
+    let cancelled = false;
+    const supported = "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+    setNotificationPermission(supported ? Notification.permission : "unsupported");
+    if (!supported) {
+      setPushSubscribed(false);
+      return;
+    }
+    void (async () => {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const [subscription, keyRes] = await Promise.all([
+          registration.pushManager.getSubscription(),
+          fetch("/api/notifications/push/public-key", { cache: "no-store" }),
+        ]);
+        const keyData = keyRes.ok ? await keyRes.json() : null;
+        const requestedKey = keyData?.publicKey ? urlBase64ToUint8Array(keyData.publicKey) : null;
+        if (!cancelled) {
+          setPushSubscribed(Boolean(
+            subscription
+            && requestedKey
+            && applicationServerKeysEqual(subscription.options.applicationServerKey, requestedKey),
+          ));
+        }
+      } catch {
+        if (!cancelled) setPushSubscribed(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [open]);
 
   const enableNotifications = async () => {
-    if (!("Notification" in window)) return;
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setNotificationPermission("unsupported");
+      toast.error("هذا المتصفح لا يدعم إشعارات الخلفية");
+      return;
+    }
     const permission = await Notification.requestPermission();
     setNotificationPermission(permission);
-    if (permission === "granted") toast.success("Device notifications enabled");
-    else toast.info("Notifications were not enabled");
+    if (permission !== "granted") {
+      toast.info("لم يتم تفعيل الإشعارات");
+      return;
+    }
+    setNotificationBusy(true);
+    try {
+      const keyRes = await fetch("/api/notifications/push/public-key", { cache: "no-store" });
+      const keyData = await keyRes.json();
+      if (!keyData?.enabled || !keyData?.publicKey) {
+        toast.error("Web Push غير مهيأ على السيرفر بعد");
+        return;
+      }
+      const registration = await navigator.serviceWorker.ready;
+      const requestedKey = urlBase64ToUint8Array(keyData.publicKey);
+      let existing = await registration.pushManager.getSubscription();
+      if (existing && !applicationServerKeysEqual(existing.options.applicationServerKey, requestedKey)) {
+        const deleteUrl = withUserId(new URL("/api/notifications/push/subscriptions", window.location.origin));
+        const removed = await fetch(deleteUrl, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", ...userHeaders() },
+          body: JSON.stringify({ endpoint: existing.endpoint }),
+        });
+        if (!removed.ok) throw new Error("old_subscription_cleanup_failed");
+        await existing.unsubscribe();
+        existing = null;
+      }
+      const subscription = existing ?? await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: requestedKey,
+      });
+      const saveUrl = withUserId(new URL("/api/notifications/push/subscriptions", window.location.origin));
+      const saved = await fetch(saveUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...userHeaders() },
+        body: JSON.stringify(subscription.toJSON()),
+      });
+      if (!saved.ok) throw new Error("save_failed");
+      setPushSubscribed(true);
+      toast.success("تم تفعيل إشعارات الخلفية على هذا الجهاز");
+    } catch (error) {
+      console.error(error);
+      toast.error("تعذر تفعيل إشعارات الخلفية");
+    } finally {
+      setNotificationBusy(false);
+    }
+  };
+
+  const disableNotifications = async (showToast = true) => {
+    if (!("serviceWorker" in navigator)) return;
+    setNotificationBusy(true);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        const deleteUrl = withUserId(new URL("/api/notifications/push/subscriptions", window.location.origin));
+        const removed = await fetch(deleteUrl, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", ...userHeaders() },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        });
+        if (!removed.ok) throw new Error("delete_failed");
+        await subscription.unsubscribe();
+      }
+      setPushSubscribed(false);
+      if (showToast) toast.success("تم إيقاف إشعارات الخلفية على هذا الجهاز");
+    } catch (error) {
+      console.error(error);
+      if (showToast) toast.error("تعذر إيقاف إشعارات الخلفية");
+    } finally {
+      setNotificationBusy(false);
+    }
   };
 
   const onSignOut = async () => {
     setSigningOut(true);
     try {
+      await disableNotifications(false);
       await fetch("/api/auth/logout", { method: "POST" });
       toast.success("Signed out");
       onOpenChange(false);
@@ -336,7 +439,16 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
           <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
             <div className="flex items-start gap-2"><Smartphone className="w-4 h-4 text-primary mt-0.5" /><div className="flex-1"><p className="text-sm font-semibold">Install & notifications</p><p className="text-xs text-muted-foreground">Install {APP_NAME} from your browser menu and receive alerts for released episodes.</p></div></div>
-            <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => void enableNotifications()} disabled={notificationPermission === "granted" || notificationPermission === "unsupported"}><BellRing className="w-4 h-4 mr-1.5" />{notificationPermission === "granted" ? "Notifications enabled" : notificationPermission === "denied" ? "Blocked in browser settings" : "Enable notifications"}</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 w-full"
+              onClick={() => void (pushSubscribed ? disableNotifications() : enableNotifications())}
+              disabled={notificationBusy || notificationPermission === "unsupported" || (!pushSubscribed && notificationPermission === "denied")}
+            >
+              {notificationBusy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <BellRing className="w-4 h-4 mr-1.5" />}
+              {pushSubscribed ? "Disable background notifications" : notificationPermission === "denied" ? "Blocked in browser settings" : notificationPermission === "granted" ? "Finish enabling background notifications" : "Enable notifications"}
+            </Button>
           </div>
 
           {/* Account-synchronized timezone preference */}
@@ -469,4 +581,18 @@ function PreferencesSection() {
       </div>
     </div>
   );
+}
+
+function urlBase64ToUint8Array(value: string): Uint8Array {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = window.atob(base64);
+  return Uint8Array.from(raw, (char) => char.charCodeAt(0));
+}
+
+function applicationServerKeysEqual(existing: ArrayBuffer | null, expected: Uint8Array): boolean {
+  if (!existing) return false;
+  const current = new Uint8Array(existing);
+  if (current.length !== expected.length) return false;
+  return current.every((value, index) => value === expected[index]);
 }

@@ -15,6 +15,7 @@ const requiredTables = [
   "TvMetadataCache",
   "WatchSession",
   "Notification",
+  "PushSubscription",
   "LibraryImportSession",
   "LibraryImportChunk",
   "LibraryImportRecord",
@@ -29,10 +30,21 @@ const requiredColumns = {
   User: ["timezone", "country", "preferredPlatforms"],
   WatchSession: ["userId", "mediaId", "mediaType", "tmdbId", "watchedAt"],
   Notification: ["userId", "type", "read", "createdAt"],
+  PushSubscription: ["userId", "endpoint", "p256dh", "auth", "createdAt", "updatedAt"],
   LibraryImportSession: ["userId", "version", "status", "manifest", "expectedRecords", "receivedRecords", "expiresAt"],
   LibraryImportChunk: ["sessionId", "sequence", "checksum", "recordCount"],
   LibraryImportRecord: ["sessionId", "collection", "ordinal", "payload"],
 };
+
+const requiredNotNullColumns = [
+  "PushSubscription.id",
+  "PushSubscription.userId",
+  "PushSubscription.endpoint",
+  "PushSubscription.p256dh",
+  "PushSubscription.auth",
+  "PushSubscription.createdAt",
+  "PushSubscription.updatedAt",
+];
 
 const requiredIndexes = [
   "Media_userId_type_tmdbId_key",
@@ -40,6 +52,8 @@ const requiredIndexes = [
   "WatchedEpisode_userId_showId_seasonNumber_episodeNumber_key",
   "LibraryImportChunk_sessionId_sequence_key",
   "LibraryImportRecord_sessionId_collection_ordinal_key",
+  "PushSubscription_endpoint_key",
+  "PushSubscription_userId_idx",
 ];
 
 const requiredConstraints = [
@@ -48,6 +62,10 @@ const requiredConstraints = [
   "WatchSession_userId_fkey",
   "WatchSession_mediaId_fkey",
   "Notification_userId_fkey",
+  "PushSubscription_pkey",
+  "PushSubscription_userId_fkey",
+  "PushSubscription_endpoint_length_check",
+  "PushSubscription_key_shape_check",
   "LibraryImportSession_userId_fkey",
   "LibraryImportChunk_sessionId_fkey",
   "LibraryImportRecord_sessionId_fkey",
@@ -61,6 +79,13 @@ const requiredConstraints = [
   "WatchSession_values_check",
 ];
 
+const requiredConstraintTypes = [
+  "PushSubscription_pkey:p",
+  "PushSubscription_userId_fkey:f",
+  "PushSubscription_endpoint_length_check:c",
+  "PushSubscription_key_shape_check:c",
+];
+
 const requiredPolicies = [
   "media_isolate_own_rows",
   "watched_episode_isolate_own_rows",
@@ -68,6 +93,7 @@ const requiredPolicies = [
   "user_isolate_own_row",
   "watch_session_isolate_own_rows",
   "notification_isolate_own_rows",
+  "push_subscription_isolate_own_rows",
   "library_import_session_isolate_own_rows",
   "library_import_chunk_isolate_own_rows",
   "library_import_record_isolate_own_rows",
@@ -85,6 +111,7 @@ const requiredMigrations = [
   "20260718000000_data_lifecycle_preferences",
   "20260722000000_remove_dead_mymedia_data",
   "20260722010000_remove_custom_lists",
+  "20260829010000_web_push_subscriptions",
 ];
 
 function assertAll(label, required, present) {
@@ -122,6 +149,12 @@ async function verifySchemaOnce() {
     for (const [table, names] of Object.entries(requiredColumns)) {
       assertAll(`${table} columns`, names.map((name) => `${table}.${name}`), columnSet);
     }
+    const notNullColumnSet = new Set(
+      columns
+        .filter((row) => String(row.nullable) === "NO")
+        .map((row) => `${row.table}.${row.column}`),
+    );
+    assertAll("Required NOT NULL columns", requiredNotNullColumns, notNullColumnSet);
 
     const legacyTvIdentityRows = await tx.$queryRawUnsafe(`
       SELECT COUNT(*)::integer AS "count"
@@ -138,13 +171,18 @@ async function verifySchemaOnce() {
     assertAll("Required indexes", requiredIndexes, new Set(indexes.map((row) => String(row.name))));
 
     const constraints = await tx.$queryRawUnsafe(`
-      SELECT conname AS "name"
+      SELECT conname AS "name", contype::text AS "type"
       FROM pg_constraint constraint_row
       JOIN pg_class relation ON relation.oid = constraint_row.conrelid
       JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
       WHERE namespace.nspname = current_schema()
     `);
     assertAll("Required constraints", requiredConstraints, new Set(constraints.map((row) => String(row.name))));
+    assertAll(
+      "Required constraint types",
+      requiredConstraintTypes,
+      new Set(constraints.map((row) => `${row.name}:${row.type}`)),
+    );
 
     const rlsTables = await tx.$queryRawUnsafe(`
       SELECT relname AS "name"
@@ -157,7 +195,7 @@ async function verifySchemaOnce() {
     assertAll(
       "RLS-enabled tables",
       [
-        "User", "Media", "WatchedEpisode", "Rating", "WatchSession", "Notification",
+        "User", "Media", "WatchedEpisode", "Rating", "WatchSession", "Notification", "PushSubscription",
         "LibraryImportSession", "LibraryImportChunk", "LibraryImportRecord",
       ],
       new Set(rlsTables.map((row) => String(row.name))),

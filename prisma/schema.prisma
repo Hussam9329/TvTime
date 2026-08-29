@@ -28,6 +28,7 @@ model User {
   ratings         Rating[]
   watchSessions   WatchSession[]
   notifications   Notification[]
+  pushSubscriptions PushSubscription[]
   importSessions  LibraryImportSession[]
 }
 
@@ -240,6 +241,21 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+
+/// Browser Web Push subscriptions for background notifications.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 /// Temporary, user-scoped staging session for a validated library restore.

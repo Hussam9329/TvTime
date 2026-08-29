@@ -40,6 +40,8 @@ const checks = [
   ["TVM-10/11/12/13", ["scripts/verify-tvm-10-13.mjs"]],
   ["Watch Undo and season alert behavior", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-watch-features.ts"]],
   ["Watch Undo and season alert guards", ["scripts/verify-watch-features.mjs"]],
+  ["Notification repair behavior", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-notification-repair.ts"]],
+  ["Notification repair security and deployment guards", ["scripts/verify-notification-repair.mjs"]],
   ["Global poster hover cleanup", ["scripts/verify-poster-hover-cleanup.mjs"]],
   ["Discover preset behavior", ["--experimental-strip-types", "scripts/test-discover-presets.ts"]],
   ["TV Discover behavior", ["--experimental-strip-types", "--loader", "./scripts/ts-path-loader.mjs", "scripts/test-discover-tv-behavior.ts"]],
