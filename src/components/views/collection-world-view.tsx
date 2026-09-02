@@ -201,11 +201,14 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
     genre: isMovieWorld && filterGenre ? filterGenre : undefined,
     sortBy: sortBy === "smart" ? (isWatchedTab ? "watchedAt" : "addedAt") : sortBy,
     order: sortBy === "title" ? "asc" : "desc",
-    ...(isMovieWorld && sortBy === "year" && (debouncedYearRange[0] !== MIN_LIBRARY_YEAR || debouncedYearRange[1] !== maxLibraryYear)
+    // BAT-08: range filters are independent from the selected sort.
+    // A user can combine Genre + Year + Rating + My Rating + Status + Search
+    // while sorting by any supported field.
+    ...(isMovieWorld && (debouncedYearRange[0] !== MIN_LIBRARY_YEAR || debouncedYearRange[1] !== maxLibraryYear)
       ? { yearFrom: debouncedYearRange[0], yearTo: debouncedYearRange[1] } : {}),
-    ...(isMovieWorld && sortBy === "tmdbRating" && (debouncedTmdbRatingRange[0] !== 0 || debouncedTmdbRatingRange[1] !== 10)
+    ...(isMovieWorld && (debouncedTmdbRatingRange[0] !== 0 || debouncedTmdbRatingRange[1] !== 10)
       ? { ratingFrom: debouncedTmdbRatingRange[0], ratingTo: debouncedTmdbRatingRange[1] } : {}),
-    ...(isMovieWorld && sortBy === "userRating" && (debouncedUserRatingRange[0] !== 0 || debouncedUserRatingRange[1] !== 100)
+    ...(isMovieWorld && (debouncedUserRatingRange[0] !== 0 || debouncedUserRatingRange[1] !== 100)
       ? { userRatingFrom: debouncedUserRatingRange[0], userRatingTo: debouncedUserRatingRange[1] } : {}),
     limit,
     offset: page * limit,
@@ -305,9 +308,9 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   const activeFilterCount = Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart")
     + Number(isMovieWorld && filterGenre !== "")
     + Number(world === "anime" && animeMediaKind !== "all")
-    + Number(isMovieWorld && sortBy === "year" && (yearRange[0] !== MIN_LIBRARY_YEAR || yearRange[1] !== maxLibraryYear))
-    + Number(isMovieWorld && sortBy === "tmdbRating" && (tmdbRatingRange[0] !== 0 || tmdbRatingRange[1] !== 10))
-    + Number(isMovieWorld && sortBy === "userRating" && (userRatingRange[0] !== 0 || userRatingRange[1] !== 100));
+    + Number(isMovieWorld && (yearRange[0] !== MIN_LIBRARY_YEAR || yearRange[1] !== maxLibraryYear))
+    + Number(isMovieWorld && (tmdbRatingRange[0] !== 0 || tmdbRatingRange[1] !== 10))
+    + Number(isMovieWorld && (userRatingRange[0] !== 0 || userRatingRange[1] !== 100));
   const openMobileFilters = () => window.dispatchEvent(new Event("tvtime:open-filters"));
 
   return (
@@ -439,7 +442,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
                 {[
                   { value: "smart", label: isArabicWorld ? "ذكي" : "Smart" },
                   { value: "addedAt", label: isArabicWorld ? "الأحدث إضافة" : "Recent" },
-                  { value: "tmdbRating", label: isArabicWorld ? "تقييم TMDB" : "TMDB Rating" },
+                  { value: "tmdbRating", label: isArabicWorld ? "الأعلى تقييماً" : "Highest Rated" },
                   { value: "userRating", label: isArabicWorld ? "تقييمي" : "My Rating" },
                   { value: "title", label: isArabicWorld ? "أ-ي" : "A-Z" },
                   { value: "year", label: isArabicWorld ? "السنة" : "Year" },
@@ -458,7 +461,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
             </FilterField>
           </FilterGrid>
 
-          {isMovieWorld && sortBy === "year" && (
+          {isMovieWorld && (
             <RangeFilter
               label={isArabicWorld ? "نطاق السنة" : "Year range"}
               fromLabel={isArabicWorld ? "من سنة" : "From year"}
@@ -476,7 +479,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
             />
           )}
 
-          {isMovieWorld && sortBy === "tmdbRating" && (
+          {isMovieWorld && (
             <RangeFilter
               label={isArabicWorld ? "نطاق تقييم TMDB" : "TMDB rating range"}
               fromLabel={isArabicWorld ? "من تقييم" : "From rating"}
@@ -497,7 +500,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           )}
 
 
-          {isMovieWorld && sortBy === "userRating" && (
+          {isMovieWorld && (
             <RangeFilter
               label={isArabicWorld ? "نطاق تقييمي" : "My rating range"}
               fromLabel={isArabicWorld ? "من تقييم" : "From rating"}

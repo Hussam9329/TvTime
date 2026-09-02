@@ -5,12 +5,14 @@ import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FilterPanel, FilterSection } from "@/components/ui/filter-panel";
+import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { SafeImage } from "@/components/media/safe-image";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
-import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronLeft, ChevronRight, Grid2X2, List, CircleStop } from "lucide-react";
+import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronLeft, ChevronRight, Grid2X2, List, CircleStop, Search, ArrowUpDown } from "lucide-react";
 import { img, pickArabicTitle } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -97,9 +99,27 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
 function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void; globalCounts?: any; world: "standard" | "arabic" | "asian" }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<TvTrackingCategory>("all");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"title" | "addedAt" | "watchedAt">("title");
   const [layout, setLayout] = useState<"list" | "grid">("grid");
   const limit = 60;
-  const tracking = useTvTracking({ category: filter, sortBy: "title", order: "asc", limit, offset: page * limit, world });
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const order = sortBy === "title" ? "asc" : "desc";
+  const tracking = useTvTracking({
+    category: filter,
+    search: debouncedSearch || undefined,
+    sortBy,
+    order,
+    limit,
+    offset: page * limit,
+    world,
+  });
 
   const items = tracking.data?.items ?? [];
   const total = tracking.data?.total ?? 0;
@@ -138,6 +158,15 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
   ];
 
   const activeFilterLabel = filters.find((f) => f.value === filter)?.label ?? (isArabic ? "الكل" : "All");
+  const activeFilterCount = Number(filter !== "all") + Number(search.trim() !== "") + Number(sortBy !== "title");
+
+  const resetFilters = () => {
+    setFilter("all");
+    setSearch("");
+    setDebouncedSearch("");
+    setSortBy("title");
+    setPage(0);
+  };
 
   useEffect(() => {
     const savedLayout = window.localStorage.getItem("tvtime:tv-card-layout");
@@ -164,9 +193,50 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
           : world === "asian"
             ? "Every number is calculated across your Asian TV collection only, separate from standard TV, Arabic TV and Anime."
             : "Use these filters from inside All. Every number is calculated across your complete TV Shows collection, never from Arabic TV, Asian TV, Anime or only the visible page."}
-        activeCount={filter === "all" ? 0 : 1}
+        activeCount={activeFilterCount}
+        onReset={resetFilters}
+        resetLabel={isArabic ? "إعادة الضبط" : "Reset all"}
       >
-        <FilterSection title={isArabic ? "حالة المتابعة" : "Tracking status"}>
+        <FilterSection title={isArabic ? "البحث والترتيب" : "Search and sort"}>
+          <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_280px]">
+            <FilterField label={isArabic ? "البحث في المسلسلات" : "Search TV Shows"}>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => { setSearch(event.target.value); setPage(0); }}
+                  placeholder={isArabic ? "ابحث باسم المسلسل..." : "Search your shows..."}
+                  className="h-9 pl-9"
+                  aria-label={isArabic ? "البحث في المسلسلات" : "Search TV Shows"}
+                />
+              </div>
+            </FilterField>
+
+            <FilterField label={isArabic ? "الترتيب حسب" : "Sort by"}>
+              <div className="relative">
+                <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) => {
+                    setSortBy(value as "title" | "addedAt" | "watchedAt");
+                    setPage(0);
+                  }}
+                >
+                  <SelectTrigger className="h-9 w-full pl-9" aria-label={isArabic ? "ترتيب المسلسلات" : "Sort TV Shows"}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="title">{isArabic ? "العنوان أ-ي" : "Title A-Z"}</SelectItem>
+                    <SelectItem value="addedAt">{isArabic ? "المضافة حديثاً" : "Recently Added"}</SelectItem>
+                    <SelectItem value="watchedAt">{isArabic ? "آخر مشاهدة" : "Last Watched"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
+
+        <FilterSection title={isArabic ? "حالة المتابعة" : "Tracking status"} divided>
           <div className="tvtime-tracking-status-grid">
             {filters.map((item) => (
               <FilterChip
@@ -221,8 +291,16 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       ) : items.length === 0 ? (
         <EmptyTab
           icon={<Layers className="w-10 h-10" />}
-          title={filter === "all" ? (isArabic ? "لا توجد مسلسلات عربية متابَعة بعد" : world === "asian" ? "No tracked Asian shows yet" : "No tracked shows yet") : (isArabic ? `لا توجد مسلسلات ضمن «${activeFilterLabel}»` : `No ${activeFilterLabel} shows`)}
-          subtitle={filter === "all" ? (isArabic ? "أضف مسلسلاً عربياً إلى مكتبتك لتبدأ المتابعة" : world === "asian" ? "Follow an Asian TV show to start tracking" : "Follow TV shows to start tracking") : (isArabic ? "هذا الفلتر فارغ ضمن كامل مجموعة المسلسلات العربية" : `This filter is empty across your full ${world === "asian" ? "Asian TV" : "TV Shows"} collection`)}
+          title={search.trim()
+            ? (isArabic ? `لا توجد نتائج لـ «${search.trim()}»` : `No results for “${search.trim()}”`)
+            : filter === "all"
+              ? (isArabic ? "لا توجد مسلسلات عربية متابَعة بعد" : world === "asian" ? "No tracked Asian shows yet" : "No tracked shows yet")
+              : (isArabic ? `لا توجد مسلسلات ضمن «${activeFilterLabel}»` : `No ${activeFilterLabel} shows`)}
+          subtitle={search.trim()
+            ? (isArabic ? "جرّب اسماً مختلفاً أو أعد ضبط الفلاتر." : "Try another title or reset the filters.")
+            : filter === "all"
+              ? (isArabic ? "أضف مسلسلاً عربياً إلى مكتبتك لتبدأ المتابعة" : world === "asian" ? "Follow an Asian TV show to start tracking" : "Follow TV shows to start tracking")
+              : (isArabic ? "هذا الفلتر فارغ ضمن كامل مجموعة المسلسلات العربية" : `This filter is empty across your full ${world === "asian" ? "Asian TV" : "TV Shows"} collection`)}
         />
       ) : (
         <>

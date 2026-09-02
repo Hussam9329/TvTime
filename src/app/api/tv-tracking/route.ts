@@ -98,8 +98,10 @@ async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper:
 function sortShows(items: DecoratedShow[], sortBy: string, order: "asc" | "desc", world: TvWorld) {
   const direction = order === "asc" ? 1 : -1;
   const sorted = [...items].sort((a, b) => {
-    const av = a?.[sortBy];
-    const bv = b?.[sortBy];
+    // BAT-06: "Last Watched" should reflect the user's actual latest episode
+    // activity, not only the legacy Media.watchedAt snapshot.
+    const av = sortBy === "watchedAt" ? (a?._serverWatchedMeta?.lastWatchedAt ?? a?.watchedAt) : a?.[sortBy];
+    const bv = sortBy === "watchedAt" ? (b?._serverWatchedMeta?.lastWatchedAt ?? b?.watchedAt) : b?.[sortBy];
     if (sortBy === "title") return String(av || "").localeCompare(String(bv || "")) * direction;
 
     const aTime = av instanceof Date ? av.getTime() : Date.parse(String(av || ""));
@@ -506,7 +508,12 @@ export async function GET(req: NextRequest) {
     const snapshot = await buildTrackingSnapshot(user.id, world);
 
     const filteredBySearch = search
-      ? snapshot.decorated.filter((show) => String(show.title || "").toLowerCase().includes(search))
+      ? snapshot.decorated.filter((show) => {
+          const searchableTitles = [show.title, show.originalTitle, show.original_title]
+            .filter(Boolean)
+            .map((value) => String(value).toLowerCase());
+          return searchableTitles.some((value) => value.includes(search));
+        })
       : snapshot.decorated;
 
     const categoryPredicates: Record<TvTrackingCategory, (show: DecoratedShow) => boolean> = {
