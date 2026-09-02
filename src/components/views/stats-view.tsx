@@ -62,7 +62,11 @@ export function StatsView() {
               {wt.totalHours} <span className="text-lg text-muted-foreground font-normal">hours</span>
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              ≈ {Math.floor(wt.totalHours / 24)} days · {wt.movieMinutes} min from movies + {wt.episodeMinutes} min from episodes
+              <span className="whitespace-nowrap">≈ {Math.floor(wt.totalHours / 24)} days</span>
+              {" · "}
+              <span className="whitespace-nowrap">{wt.movieMinutes} min from movies</span>
+              {" + "}
+              <span className="whitespace-nowrap">{wt.episodeMinutes} min from episodes</span>
             </p>
           </div>
         </div>
