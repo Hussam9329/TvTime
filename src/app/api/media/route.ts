@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
     const rated = url.searchParams.get("rated");
     const tracked = url.searchParams.get("tracked");
     const search = url.searchParams.get("search")?.trim();
+    const genre = url.searchParams.get("genre")?.trim();
     const sortByParam = url.searchParams.get("sortBy") || "addedAt";
     const orderParam = url.searchParams.get("order") || "desc";
     const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 100, 1), 500);
@@ -61,6 +62,7 @@ export async function GET(req: NextRequest) {
     if (rated === "false") where.userRating = null;
     if (tracked === "true") where.isFollowing = true;
     if (tracked === "false") where.isFollowing = false;
+    if (genre) where.genres = { has: genre };
 
     const parseFiniteNumber = (key: string) => {
       const raw = url.searchParams.get(key);

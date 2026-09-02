@@ -1593,6 +1593,7 @@ export function useMedia(params: {
   isArabic?: string;
   isAsian?: string;
   search?: string;
+  genre?: string;
   sortBy?: string;
   order?: string;
   yearFrom?: number;

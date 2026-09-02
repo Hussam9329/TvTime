@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,6 +39,12 @@ type CollectionTab = "watchlist" | "not-started" | "watching" | "watched";
 
 const MIN_LIBRARY_YEAR = 1800;
 const MAX_LIBRARY_YEAR_OFFSET = 25;
+
+const MOVIE_GENRES = [
+  "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary",
+  "Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery",
+  "Romance", "Science Fiction", "TV Movie", "Thriller", "War", "Western",
+] as const;
 
 type WorldConfig = {
   title: string;
@@ -112,6 +119,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   const [tab, setTab] = useState<CollectionTab>(savedUi?.tab ?? "watchlist");
   const [search, setSearch] = useState(savedUi?.search ?? "");
   const [sortBy, setSortBy] = useState(savedUi?.sortBy ?? "smart");
+  const [filterGenre, setFilterGenre] = useState(savedUi?.filterGenre ?? "");
   const [yearRange, setYearRange] = useState<[number, number]>(savedUi?.yearRange ?? [MIN_LIBRARY_YEAR, maxLibraryYear]);
   const [tmdbRatingRange, setTmdbRatingRange] = useState<[number, number]>(savedUi?.tmdbRatingRange ?? [0, 10]);
   const [userRatingRange, setUserRatingRange] = useState<[number, number]>(savedUi?.userRatingRange ?? [0, 100]);
@@ -144,6 +152,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   const debouncedUserRatingRange = useDebounce(userRatingRange, 250);
   const layoutStorageKey = world === "anime" ? "trakora:anime-library-layout" : "trakora:movie-library-layout";
   const isMovieWorld = world === "movies" || world === "arabic-movies" || world === "asian-movies";
+  const genreOptions = MOVIE_GENRES;
 
   useEffect(() => {
     const saved = window.localStorage.getItem(layoutStorageKey);
@@ -156,13 +165,14 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   };
 
   useEffect(() => {
-    persistUi(world, { tab, search, sortBy, yearRange, tmdbRatingRange, userRatingRange, layout, animeMediaKind, page });
-  }, [animeMediaKind, layout, page, persistUi, search, sortBy, tab, tmdbRatingRange, userRatingRange, world, yearRange]);
+    persistUi(world, { tab, search, sortBy, filterGenre: filterGenre || undefined, yearRange, tmdbRatingRange, userRatingRange, layout, animeMediaKind, page });
+  }, [animeMediaKind, filterGenre, layout, page, persistUi, search, sortBy, tab, tmdbRatingRange, userRatingRange, world, yearRange]);
 
   const resetFilters = () => {
     setTab("watchlist");
     setSearch("");
     setSortBy("smart");
+    setFilterGenre("");
     setYearRange([MIN_LIBRARY_YEAR, maxLibraryYear]);
     setTmdbRatingRange([0, 10]);
     setUserRatingRange([0, 100]);
@@ -188,6 +198,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           ? { status: "watching,uptodate", watched: "false" }
           : { status: "planned", watched: "false" }),
     search: debouncedSearch || undefined,
+    genre: isMovieWorld && filterGenre ? filterGenre : undefined,
     sortBy: sortBy === "smart" ? (isWatchedTab ? "watchedAt" : "addedAt") : sortBy,
     order: sortBy === "title" ? "asc" : "desc",
     ...(isMovieWorld && sortBy === "year" && (debouncedYearRange[0] !== MIN_LIBRARY_YEAR || debouncedYearRange[1] !== maxLibraryYear)
@@ -198,13 +209,13 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
       ? { userRatingFrom: debouncedUserRatingRange[0], userRatingTo: debouncedUserRatingRange[1] } : {}),
     limit,
     offset: page * limit,
-  }), [animeMediaKind, config.isAnime, config.isArabic, config.isAsian, config.type, debouncedSearch, debouncedTmdbRatingRange, debouncedUserRatingRange, debouncedYearRange, isMovieWorld, isNotStartedTab, isWatchingTab, isWatchedTab, maxLibraryYear, page, sortBy, tab, world]);
+  }), [animeMediaKind, config.isAnime, config.isArabic, config.isAsian, config.type, debouncedSearch, debouncedTmdbRatingRange, debouncedUserRatingRange, debouncedYearRange, filterGenre, isMovieWorld, isNotStartedTab, isWatchingTab, isWatchedTab, maxLibraryYear, page, sortBy, tab, world]);
   const media = useMedia(mediaParams);
   const globalCounts = useLibraryCounts();
 
   const items = media.data?.items ?? [];
   const total = media.data?.total ?? 0;
-  const filterIdentity = [world, tab, debouncedSearch, sortBy, debouncedYearRange.join("-"), debouncedTmdbRatingRange.join("-"), debouncedUserRatingRange.join("-"), animeMediaKind].join("|");
+  const filterIdentity = [world, tab, debouncedSearch, filterGenre, sortBy, debouncedYearRange.join("-"), debouncedTmdbRatingRange.join("-"), debouncedUserRatingRange.join("-"), animeMediaKind].join("|");
   const mediaCoreIdentity = useMemo(() => {
     const { offset: _offset, limit: _limit, ...core } = mediaParams;
     return JSON.stringify(core);
@@ -292,6 +303,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
   }, [hasMoreMobile, isMobileViewport, media.isFetching, totalPages]);
 
   const activeFilterCount = Number(tab !== "watchlist") + Number(search.trim() !== "") + Number(sortBy !== "smart")
+    + Number(isMovieWorld && filterGenre !== "")
     + Number(world === "anime" && animeMediaKind !== "all")
     + Number(isMovieWorld && sortBy === "year" && (yearRange[0] !== MIN_LIBRARY_YEAR || yearRange[1] !== maxLibraryYear))
     + Number(isMovieWorld && sortBy === "tmdbRating" && (tmdbRatingRange[0] !== 0 || tmdbRatingRange[1] !== 10))
@@ -388,6 +400,24 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
             </TabsList>
           </Tabs>
         </FilterSection>
+
+        {isMovieWorld && (
+          <FilterSection title={isArabicWorld ? "النوع" : "Genre"} divided>
+            <FilterField label={isArabicWorld ? "نوع الفيلم" : "Movie genre"}>
+              <Select value={filterGenre || "all"} onValueChange={(value) => { setFilterGenre(value === "all" ? "" : value); setPage(0); }}>
+                <SelectTrigger className="h-9 w-full max-w-sm text-sm" aria-label={isArabicWorld ? "تصفية الأفلام حسب النوع" : "Filter movies by genre"}>
+                  <SelectValue placeholder={isArabicWorld ? "كل الأنواع" : "All genres"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isArabicWorld ? "كل الأنواع" : "All genres"}</SelectItem>
+                  {genreOptions.map((genre) => (
+                    <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FilterField>
+          </FilterSection>
+        )}
 
         <FilterSection title={isArabicWorld ? "البحث والترتيب" : "Search and sort"} divided>
           <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_auto]">

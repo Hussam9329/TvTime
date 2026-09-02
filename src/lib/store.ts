@@ -21,6 +21,7 @@ export type CollectionUiState = {
   tab: "watchlist" | "not-started" | "watching" | "watched";
   search: string;
   sortBy: string;
+  filterGenre?: string;
   yearRange: [number, number];
   tmdbRatingRange: [number, number];
   userRatingRange: [number, number];
