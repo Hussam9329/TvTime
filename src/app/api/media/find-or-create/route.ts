@@ -6,6 +6,7 @@ import { normalizeMedia } from "@/lib/media-normalize";
 import { canonicalMediaPoster } from "@/lib/media-poster";
 import { normalizeCountryCodes } from "@/lib/arabic-media";
 import { classifyMediaWorld } from "@/lib/media-world-classification";
+import { tmdb } from "@/lib/tmdb";
 
 function normalizeGenreForStorage(genre: unknown): string | null {
   if (typeof genre === "number") {
@@ -64,11 +65,50 @@ export async function POST(req: NextRequest) {
     if (!safeTitle) {
       return NextResponse.json({ error: "title required" }, { status: 400 });
     }
-    const rawGenres = [
-      ...(Array.isArray(genres) ? genres : []),
-      ...(Array.isArray(genreIds) ? genreIds : []),
-      ...(Array.isArray(body.genre_ids) ? body.genre_ids : []),
-    ];
+    const suppliedGenres = Array.isArray(genres) ? genres : [];
+    const hasNamedGenres = suppliedGenres.some((genre: unknown) => {
+      if (typeof genre === "string") return genre.trim().length > 0 && !/^\d+$/.test(genre.trim());
+      return Boolean(genre && typeof genre === "object" && typeof (genre as { name?: unknown }).name === "string" && String((genre as { name?: unknown }).name).trim());
+    });
+
+    // BAT-04: Discover/search results commonly contain only `genre_ids`.
+    // Those numeric IDs are not enough for the library's human-readable Genre
+    // filters, so enrich TMDB-backed media on the server before the first write.
+    // This makes persistence independent from whichever client screen initiated
+    // the add action and prevents creating new Media rows with empty genres.
+    let authoritativeGenreNames: string[] = [];
+    let usedTmdbGenreEnrichment = false;
+    if (parsedTmdbId != null && !hasNamedGenres) {
+      try {
+        const tmdbDetails = mediaType === "series"
+          ? await tmdb.tvDetail(parsedTmdbId)
+          : await tmdb.movieSummary(parsedTmdbId);
+        authoritativeGenreNames = Array.isArray(tmdbDetails.genres)
+          ? tmdbDetails.genres
+              .map((genre) => String(genre?.name || "").trim())
+              .filter(Boolean)
+          : [];
+        usedTmdbGenreEnrichment = true;
+      } catch (error) {
+        console.error("[media:find-or-create] TMDB genre enrichment failed", {
+          tmdbId: parsedTmdbId,
+          mediaType,
+          error,
+        });
+        return NextResponse.json(
+          { error: "Failed to load TMDB genres. Please retry adding this title." },
+          { status: 502 },
+        );
+      }
+    }
+
+    const rawGenres = usedTmdbGenreEnrichment
+      ? authoritativeGenreNames
+      : [
+          ...suppliedGenres,
+          ...(Array.isArray(genreIds) ? genreIds : []),
+          ...(Array.isArray(body.genre_ids) ? body.genre_ids : []),
+        ];
     const normalizedGenres = Array.from(new Set(
       rawGenres
         .map(normalizeGenreForStorage)
