@@ -23,6 +23,12 @@ import { PageTitlebar } from "@/components/ui/page-titlebar";
 // Tracking status is calculated by the shared server engine.
 type TrackingStatus = "planned" | "not_started" | "watching" | "uptodate" | "finished" | "stopped";
 
+const TV_GENRES = [
+  "Action & Adventure", "Animation", "Comedy", "Crime", "Documentary", "Drama",
+  "Family", "Kids", "Mystery", "News", "Reality", "Sci-Fi & Fantasy",
+  "Soap", "Talk", "War & Politics", "Western",
+] as const;
+
 function deriveTrackingStatus(show: any): TrackingStatus {
   const value = String(show?._trackingStatus || show?.status || "not_started").toLowerCase();
   if (value === "finished") {
@@ -101,6 +107,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
   const [filter, setFilter] = useState<TvTrackingCategory>("all");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [genre, setGenre] = useState("");
   const [sortBy, setSortBy] = useState<"title" | "addedAt" | "watchedAt">("title");
   const [layout, setLayout] = useState<"list" | "grid">("grid");
   const limit = 60;
@@ -114,6 +121,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
   const tracking = useTvTracking({
     category: filter,
     search: debouncedSearch || undefined,
+    genre: genre || undefined,
     sortBy,
     order,
     limit,
@@ -158,12 +166,13 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
   ];
 
   const activeFilterLabel = filters.find((f) => f.value === filter)?.label ?? (isArabic ? "الكل" : "All");
-  const activeFilterCount = Number(filter !== "all") + Number(search.trim() !== "") + Number(sortBy !== "title");
+  const activeFilterCount = Number(filter !== "all") + Number(search.trim() !== "") + Number(genre !== "") + Number(sortBy !== "title");
 
   const resetFilters = () => {
     setFilter("all");
     setSearch("");
     setDebouncedSearch("");
+    setGenre("");
     setSortBy("title");
     setPage(0);
   };
@@ -197,8 +206,8 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
         onReset={resetFilters}
         resetLabel={isArabic ? "إعادة الضبط" : "Reset all"}
       >
-        <FilterSection title={isArabic ? "البحث والترتيب" : "Search and sort"}>
-          <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_280px]">
+        <FilterSection title={isArabic ? "البحث والنوع والترتيب" : "Search, genre and sort"}>
+          <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_220px_260px]">
             <FilterField label={isArabic ? "البحث في المسلسلات" : "Search TV Shows"}>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -210,6 +219,26 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
                   aria-label={isArabic ? "البحث في المسلسلات" : "Search TV Shows"}
                 />
               </div>
+            </FilterField>
+
+            <FilterField label={isArabic ? "النوع" : "Genre"}>
+              <Select
+                value={genre || "all"}
+                onValueChange={(value) => {
+                  setGenre(value === "all" ? "" : value);
+                  setPage(0);
+                }}
+              >
+                <SelectTrigger className="h-9 w-full" aria-label={isArabic ? "فلتر نوع المسلسلات" : "Filter TV Shows by genre"}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isArabic ? "كل الأنواع" : "All Genres"}</SelectItem>
+                  {TV_GENRES.map((item) => (
+                    <SelectItem key={item} value={item}>{item}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FilterField>
 
             <FilterField label={isArabic ? "الترتيب حسب" : "Sort by"}>

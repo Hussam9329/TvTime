@@ -1319,6 +1319,7 @@ export function useTvTrackingCounts(world: "standard" | "arabic" | "asian" = "st
 export function useTvTracking(params: {
   category?: TvTrackingCategory;
   search?: string;
+  genre?: string;
   sortBy?: string;
   order?: string;
   yearFrom?: number;

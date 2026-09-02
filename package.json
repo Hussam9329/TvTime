@@ -48,7 +48,8 @@
     "verify:ci": "node scripts/verify-ci.mjs",
     "verify:patch-10": "node --experimental-strip-types --loader ./scripts/ts-path-loader.mjs scripts/test-patch-10.ts && node scripts/verify-patch-10.mjs",
     "verify:patch-11": "node --experimental-strip-types scripts/test-patch-11.ts && node scripts/verify-patch-11.mjs",
-    "verify:notifications": "node --experimental-strip-types --loader ./scripts/ts-path-loader.mjs scripts/test-notification-repair.ts && node scripts/verify-notification-repair.mjs"
+    "verify:notifications": "node --experimental-strip-types --loader ./scripts/ts-path-loader.mjs scripts/test-notification-repair.ts && node scripts/verify-notification-repair.mjs",
+    "verify:release:genres": "node --experimental-strip-types scripts/test-bat-07-12.ts && node scripts/verify-bat-07-12-release.mjs && node scripts/verify-migration-history.mjs && node scripts/verify-user-facing-integrity.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",

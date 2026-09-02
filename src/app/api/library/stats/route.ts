@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
 import { eligibleTitleRatingWhere, getCanonicalLibraryCounts } from "@/lib/library-counts";
+import { buildGenreDistribution } from "@/lib/genre-profile";
 
 export async function GET(req: NextRequest) {
   try {
@@ -57,13 +58,12 @@ export async function GET(req: NextRequest) {
       ratingDistMap.set(item.userRating, (ratingDistMap.get(item.userRating) || 0) + 1);
     }
 
-    const genreMap = new Map<string, number>();
+    const genreDistribution = buildGenreDistribution(watchedMedia);
+    const topGenres = genreDistribution.items.slice(0, 8);
     const yearMap = new Map<string, number>();
     for (const item of watchedMedia) {
-      for (const genre of item.genres) genreMap.set(genre, (genreMap.get(genre) || 0) + 1);
       if (item.year) yearMap.set(item.year, (yearMap.get(item.year) || 0) + 1);
     }
-    const topGenres = [...genreMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([genre, count]) => ({ genre, count }));
     const bestYear = [...yearMap.entries()].sort((a, b) => b[1] - a[1] || b[0].localeCompare(a[0]))[0] ?? null;
     const longestShow = watchedMedia.filter((item) => item.type === "series" && item.episodes).sort((a, b) => Number(b.episodes || 0) - Number(a.episodes || 0))[0] ?? null;
 
@@ -92,6 +92,7 @@ export async function GET(req: NextRequest) {
       ratingDist: Array.from(ratingDistMap.entries())
         .sort((a, b) => a[0] - b[0])
         .map(([value, count]) => ({ value, count })),
+      genreDistribution,
       insights: {
         topGenres,
         bestYear: bestYear ? { year: bestYear[0], count: bestYear[1] } : null,

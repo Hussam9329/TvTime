@@ -69,12 +69,33 @@ export function StatsView() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="p-4 bg-gradient-to-br from-primary/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Star className="h-4 w-4 text-primary" /> Most watched genre</p><p className="mt-2 text-2xl font-black">{d.insights?.topGenres?.[0]?.genre ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.topGenres?.[0]?.count ?? 0} titles</p></Card>
+        <Card className="p-4 bg-gradient-to-br from-primary/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Star className="h-4 w-4 text-primary" /> Most watched genre</p><p className="mt-2 text-2xl font-black">{d.insights?.topGenres?.[0]?.genre ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.topGenres?.[0]?.percentage ?? 0}% of your genre profile · {d.insights?.topGenres?.[0]?.count ?? 0} titles</p></Card>
         <Card className="p-4 bg-gradient-to-br from-amber-500/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-amber-400" /> Best release year</p><p className="mt-2 text-2xl font-black">{d.insights?.bestYear?.year ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.bestYear?.count ?? 0} watched titles</p></Card>
         <Card className="p-4 bg-gradient-to-br from-fuchsia-500/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Layers3 className="h-4 w-4 text-fuchsia-400" /> Longest show</p><p className="mt-2 line-clamp-1 text-xl font-black">{d.insights?.longestShow?.title ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.longestShow?.episodes ?? 0} episodes</p></Card>
       </div>
 
-      {d.insights?.topGenres && d.insights.topGenres.length > 0 && <Card className="p-4"><h3 className="font-bold mb-3">Your genre profile</h3><div className="space-y-2">{d.insights.topGenres.map((item) => <div key={item.genre} className="grid grid-cols-[110px_1fr_32px] items-center gap-2 text-xs"><span className="truncate">{item.genre}</span><div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${(item.count / Math.max(d.insights!.topGenres[0].count, 1)) * 100}%` }} /></div><span className="text-right text-muted-foreground">{item.count}</span></div>)}</div></Card>}
+      {d.genreDistribution?.items && d.genreDistribution.items.length > 0 && (
+        <Card className="p-4">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h3 className="font-bold">Your genre profile</h3>
+              <p className="text-xs text-muted-foreground">Real distribution across the genres attached to titles you watch or actively track.</p>
+            </div>
+            <span className="text-[11px] font-semibold text-muted-foreground">Genre coverage: {d.genreDistribution.coveragePercentage}%</span>
+          </div>
+          <div className="space-y-2.5">
+            {d.genreDistribution.items.slice(0, 8).map((item) => (
+              <div key={item.genre} className="grid grid-cols-[120px_minmax(0,1fr)_88px] items-center gap-2 text-xs">
+                <span className="truncate font-medium">{item.genre}</span>
+                <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${Math.max(0, Math.min(100, item.percentage))}%` }} />
+                </div>
+                <span className="text-right tabular-nums text-muted-foreground">{item.percentage}% · {item.count}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Grid of charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

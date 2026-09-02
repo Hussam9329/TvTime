@@ -21,6 +21,7 @@ import {
   collectionWorldForCatalogue,
   filterAndPrioritizeMediaCollectionWorldItems,
 } from "@/lib/media-world-pipeline";
+import { mediaHasGenre } from "@/lib/genre-profile";
 
 const CATEGORY_VALUES = new Set([
   "all",
@@ -472,6 +473,7 @@ export async function GET(req: NextRequest) {
     }
     const category = aliasedCategory as TvTrackingCategory;
     const search = url.searchParams.get("search")?.trim().toLowerCase() || "";
+    const genre = url.searchParams.get("genre")?.trim() || "";
     const sortByParam = url.searchParams.get("sortBy") || "title";
     const orderParam = url.searchParams.get("order") || "asc";
     const sortBy = SORTABLE_FIELDS.has(sortByParam) ? sortByParam : "title";
@@ -516,6 +518,13 @@ export async function GET(req: NextRequest) {
         })
       : snapshot.decorated;
 
+    // BAT-07: genre is an independent server-side filter. The values come
+    // from TMDB genre names persisted on Media / TvMetadataCache, so it can
+    // be combined freely with search, tracking category and sorting.
+    const filteredByGenre = genre
+      ? filteredBySearch.filter((show) => mediaHasGenre(show.genres, genre))
+      : filteredBySearch;
+
     const categoryPredicates: Record<TvTrackingCategory, (show: DecoratedShow) => boolean> = {
       all: () => true,
       watchlist: (show) => show._serverTrackingStatus === "planned",
@@ -528,7 +537,7 @@ export async function GET(req: NextRequest) {
       stale: snapshot.predicates.isStaleWatching,
     };
 
-    const matching = sortShows(filteredBySearch.filter(categoryPredicates[category]), sortBy, order, world);
+    const matching = sortShows(filteredByGenre.filter(categoryPredicates[category]), sortBy, order, world);
     const pageItems = matching.slice(offset, offset + limit).map((show) => {
       const nextEpisode = show._serverTvMeta?.nextEpisode ?? null;
       const {
