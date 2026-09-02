@@ -267,6 +267,9 @@ const handler = async (
         } else if (segments.match(/^tv\/\d+\/season\/\d+\/episode\/\d+\/images$/)) {
           const parts = segments.split("/");
           data = await tmdb.episodeImages(Number(parts[1]), Number(parts[3]), Number(parts[5]));
+        } else if (segments.match(/^collection\/\d+$/)) {
+          const id = Number(segments.split("/")[1]);
+          data = await tmdb.collectionDetail(id);
         } else if (segments.match(/^person\/\d+$/)) {
           const id = Number(segments.split("/")[1]);
           data = await tmdb.personDetail(id);
