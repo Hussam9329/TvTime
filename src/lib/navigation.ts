@@ -9,6 +9,8 @@ export type ViewName =
   | "movies"
   | "anime"
   | "stats"
+  | "calendar"
+  | "collections"
   | "tv-shows"
   | "asian-movies"
   | "asian-tv"
@@ -30,6 +32,8 @@ const ROOT_VIEWS = new Set<ViewName>([
   "movies",
   "anime",
   "stats",
+  "calendar",
+  "collections",
   "tv-shows",
   "asian-movies",
   "asian-tv",

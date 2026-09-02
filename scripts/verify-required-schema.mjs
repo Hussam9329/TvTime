@@ -19,10 +19,12 @@ const requiredTables = [
   "LibraryImportSession",
   "LibraryImportChunk",
   "LibraryImportRecord",
+  "FilmSeries",
 ];
 
 const requiredColumns = {
-  Media: ["isFollowing", "isArabic", "originalLanguage", "originCountries"],
+  Media: ["isFollowing", "isArabic", "originalLanguage", "originCountries", "seriesId", "seriesPart"],
+  FilmSeries: ["userId", "tmdbCollectionId", "name", "posterPath", "totalParts"],
   TvMetadataCache: [
     "airedEpisodeCount", "airedEpisodeKeys", "refreshAfter", "originalLanguage",
     "originCountries", "genreIds", "genreNames", "classificationComplete",
@@ -54,6 +56,9 @@ const requiredIndexes = [
   "LibraryImportRecord_sessionId_collection_ordinal_key",
   "PushSubscription_endpoint_key",
   "PushSubscription_userId_idx",
+  "FilmSeries_userId_tmdbCollectionId_key",
+  "FilmSeries_userId_idx",
+  "Media_userId_seriesId_idx",
 ];
 
 const requiredConstraints = [
@@ -70,6 +75,10 @@ const requiredConstraints = [
   "LibraryImportChunk_sessionId_fkey",
   "LibraryImportRecord_sessionId_fkey",
   "LibraryImportSession_status_check",
+  "FilmSeries_userId_fkey",
+  "Media_seriesId_fkey",
+  "FilmSeries_totalParts_nonnegative_check",
+  "Media_seriesPart_positive_check",
   "User_country_format_check",
   "Media_userRating_range_check",
   "Media_rewatchCount_nonnegative_check",
@@ -97,6 +106,7 @@ const requiredPolicies = [
   "library_import_session_isolate_own_rows",
   "library_import_chunk_isolate_own_rows",
   "library_import_record_isolate_own_rows",
+  "film_series_isolate_own_rows",
 ];
 
 const requiredMigrations = [
@@ -112,6 +122,7 @@ const requiredMigrations = [
   "20260722000000_remove_dead_mymedia_data",
   "20260722010000_remove_custom_lists",
   "20260829010000_web_push_subscriptions",
+  "20260902090000_film_series",
 ];
 
 function assertAll(label, required, present) {
@@ -196,7 +207,7 @@ async function verifySchemaOnce() {
       "RLS-enabled tables",
       [
         "User", "Media", "WatchedEpisode", "Rating", "WatchSession", "Notification", "PushSubscription",
-        "LibraryImportSession", "LibraryImportChunk", "LibraryImportRecord",
+        "LibraryImportSession", "LibraryImportChunk", "LibraryImportRecord", "FilmSeries",
       ],
       new Set(rlsTables.map((row) => String(row.name))),
     );

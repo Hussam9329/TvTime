@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 type LibraryImportCommitResult = {
+  filmSeriesRowsAffected: number;
   mediaRowsAffected: number;
   watchedEpisodeRowsAffected: number;
   episodeRatingRowsAffected: number;
@@ -25,6 +26,29 @@ export async function commitStagedLibraryImport(
   sessionId: string,
   userId: string,
 ): Promise<LibraryImportCommitResult> {
+  const filmSeriesRowsAffected = await tx.$executeRaw`
+    WITH staged AS (
+      SELECT DISTINCT ON ((record.payload->'filmSeries'->>'tmdbCollectionId')::INTEGER)
+        (record.payload->'filmSeries'->>'tmdbCollectionId')::INTEGER AS "tmdbCollectionId",
+        record.payload->'filmSeries'->>'name' AS name,
+        NULLIF(record.payload->'filmSeries'->>'posterPath', '') AS "posterPath",
+        COALESCE(NULLIF(record.payload->'filmSeries'->>'totalParts', '')::INTEGER, 0) AS "totalParts"
+      FROM "LibraryImportRecord" record
+      WHERE record."sessionId" = ${sessionId}
+        AND record.collection = 'media'
+        AND record.payload->'filmSeries' IS NOT NULL
+      ORDER BY (record.payload->'filmSeries'->>'tmdbCollectionId')::INTEGER, record.ordinal
+    )
+    INSERT INTO "FilmSeries" (id, "userId", "tmdbCollectionId", name, "posterPath", "totalParts", "createdAt", "updatedAt")
+    SELECT concat('fs_', md5(${userId} || ':' || "tmdbCollectionId"::text)), ${userId}, "tmdbCollectionId", name, "posterPath", "totalParts", NOW(), NOW()
+    FROM staged
+    ON CONFLICT ("userId", "tmdbCollectionId") DO UPDATE SET
+      name = EXCLUDED.name,
+      "posterPath" = COALESCE(EXCLUDED."posterPath", "FilmSeries"."posterPath"),
+      "totalParts" = GREATEST("FilmSeries"."totalParts", EXCLUDED."totalParts"),
+      "updatedAt" = NOW()
+  `;
+
   const mediaWithIdentity = await tx.$executeRaw`
     WITH staged_raw AS (
       SELECT
@@ -58,6 +82,8 @@ export async function commitStagedLibraryImport(
         COALESCE((record.payload->>'isFollowing')::BOOLEAN, false) AS "isFollowing",
         CASE WHEN record.payload->>'notifyOnNewEpisode' IS NULL THEN NULL ELSE (record.payload->>'notifyOnNewEpisode')::BOOLEAN END AS "notifyOnNewEpisode",
         COALESCE(NULLIF(record.payload->>'rewatchCount', '')::INTEGER, 0) AS "rewatchCount",
+        NULLIF(record.payload->>'seriesPart', '')::INTEGER AS "seriesPart",
+        NULLIF(record.payload->'filmSeries'->>'tmdbCollectionId', '')::INTEGER AS "seriesTmdbCollectionId",
         CASE WHEN NULLIF(record.payload->>'addedAt', '') IS NULL THEN NOW() ELSE (record.payload->>'addedAt')::TIMESTAMPTZ END AS "addedAt"
       FROM "LibraryImportRecord" record
       WHERE record."sessionId" = ${sessionId}
@@ -75,14 +101,16 @@ export async function commitStagedLibraryImport(
       overview, genres, episodes, seasons, duration, status, tags,
       notes, watched, "watchedAt", "userRating", rewatch, runtime, "ratingStatus",
       "isAnime", "isArabic", "originalLanguage", "originCountries", "isFollowing",
-      "notifyOnNewEpisode", "rewatchCount", "addedAt", "updatedAt"
+      "notifyOnNewEpisode", "rewatchCount", "seriesId", "seriesPart", "addedAt", "updatedAt"
     )
     SELECT
       id, ${userId}, "tmdbId", title, "originalTitle", year, type, poster, rating,
       overview, genres, episodes, seasons, duration, status, tags,
       notes, watched, "watchedAt", "userRating", rewatch, runtime, "ratingStatus",
       "isAnime", "isArabic", "originalLanguage", "originCountries", "isFollowing",
-      "notifyOnNewEpisode", "rewatchCount", "addedAt", NOW()
+      "notifyOnNewEpisode", "rewatchCount",
+      (SELECT series.id FROM "FilmSeries" series WHERE series."userId" = ${userId} AND series."tmdbCollectionId" = staged."seriesTmdbCollectionId"),
+      "seriesPart", "addedAt", NOW()
     FROM staged
     WHERE duplicate_rank = 1
     ON CONFLICT ("userId", "type", "tmdbId") DO UPDATE SET
@@ -121,6 +149,8 @@ export async function commitStagedLibraryImport(
       "isFollowing" = "Media"."isFollowing" OR EXCLUDED."isFollowing",
       "notifyOnNewEpisode" = COALESCE("Media"."notifyOnNewEpisode", EXCLUDED."notifyOnNewEpisode"),
       "rewatchCount" = GREATEST("Media"."rewatchCount", EXCLUDED."rewatchCount"),
+      "seriesId" = COALESCE("Media"."seriesId", EXCLUDED."seriesId"),
+      "seriesPart" = COALESCE("Media"."seriesPart", EXCLUDED."seriesPart"),
       "addedAt" = LEAST("Media"."addedAt", EXCLUDED."addedAt"),
       "updatedAt" = NOW()
   `;
@@ -144,7 +174,7 @@ export async function commitStagedLibraryImport(
       overview, genres, episodes, seasons, duration, status, tags,
       notes, watched, "watchedAt", "userRating", rewatch, runtime, "ratingStatus",
       "isAnime", "isArabic", "originalLanguage", "originCountries", "isFollowing",
-      "notifyOnNewEpisode", "rewatchCount", "addedAt", "updatedAt"
+      "notifyOnNewEpisode", "rewatchCount", "seriesId", "seriesPart", "addedAt", "updatedAt"
     )
     SELECT
       payload->>'importId',
@@ -177,6 +207,8 @@ export async function commitStagedLibraryImport(
       COALESCE((payload->>'isFollowing')::BOOLEAN, false),
       CASE WHEN payload->>'notifyOnNewEpisode' IS NULL THEN NULL ELSE (payload->>'notifyOnNewEpisode')::BOOLEAN END,
       COALESCE(NULLIF(payload->>'rewatchCount', '')::INTEGER, 0),
+      (SELECT series.id FROM "FilmSeries" series WHERE series."userId" = ${userId} AND series."tmdbCollectionId" = NULLIF(payload->'filmSeries'->>'tmdbCollectionId', '')::INTEGER),
+      NULLIF(payload->>'seriesPart', '')::INTEGER,
       CASE WHEN NULLIF(payload->>'addedAt', '') IS NULL THEN NOW() ELSE (payload->>'addedAt')::TIMESTAMPTZ END,
       NOW()
     FROM staged
@@ -357,12 +389,17 @@ export async function commitStagedLibraryImport(
       where: { id: userId },
       data: {
         timezone: String(payload.timezone || "Asia/Baghdad"),
+        ...(typeof payload.country === "string" && payload.country.trim() ? { country: payload.country.trim().toUpperCase() } : {}),
+        ...(Array.isArray(payload.preferredPlatforms) ? { preferredPlatforms: payload.preferredPlatforms.map(String).filter(Boolean) } : {}),
+        ...(typeof payload.name === "string" && payload.name.trim() ? { name: payload.name.trim() } : {}),
+        ...((payload.avatar === null || typeof payload.avatar === "string") ? { avatar: payload.avatar } : {}),
       },
     });
     preferencesUpdated = true;
   }
 
   return {
+    filmSeriesRowsAffected: Number(filmSeriesRowsAffected),
     mediaRowsAffected: Number(mediaWithIdentity) + Number(mediaWithoutIdentity),
     watchedEpisodeRowsAffected: Number(watchedEpisodeRowsAffected),
     episodeRatingRowsAffected: Number(episodeRatingRowsAffected),

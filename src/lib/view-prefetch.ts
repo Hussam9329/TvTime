@@ -40,6 +40,12 @@ export function prefetchViewModule(view: ViewName) {
     case "stats":
       request = import("@/components/views/stats-view");
       break;
+    case "calendar":
+      request = import("@/components/views/calendar-view");
+      break;
+    case "collections":
+      request = import("@/components/views/film-series-view");
+      break;
     case "arabic-movies":
       request = import("@/components/views/arabic-movies-view");
       break;

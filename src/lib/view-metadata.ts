@@ -87,6 +87,18 @@ export const VIEW_METADATA: Record<ViewName, ViewMetadata> = {
     announcement: "Viewing statistics loaded",
     ...ENGLISH_VIEW,
   },
+  calendar: {
+    label: "Calendar",
+    accessibleLabel: "Upcoming episode calendar",
+    announcement: "Upcoming episode calendar loaded",
+    ...ENGLISH_VIEW,
+  },
+  collections: {
+    label: "Collections",
+    accessibleLabel: "Film collections",
+    announcement: "Film collections loaded",
+    ...ENGLISH_VIEW,
+  },
   "tv-shows": {
     label: "TV Shows",
     accessibleLabel: "TV Shows",

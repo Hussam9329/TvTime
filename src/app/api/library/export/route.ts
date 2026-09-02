@@ -46,8 +46,27 @@ function fitRowsToBudget(rows: ExportRow[]) {
 }
 
 function sanitizeMedia(row: Record<string, unknown>) {
-  const { id: _id, userId: _userId, updatedAt: _updatedAt, ...data } = normalizeMedia(row);
-  return data;
+  const normalized = normalizeMedia(row);
+  const series = normalized.series && typeof normalized.series === "object"
+    ? normalized.series as Record<string, unknown>
+    : null;
+  const {
+    id: _id,
+    userId: _userId,
+    updatedAt: _updatedAt,
+    seriesId: _seriesId,
+    series: _series,
+    ...data
+  } = normalized;
+  return {
+    ...data,
+    filmSeries: series ? {
+      tmdbCollectionId: series.tmdbCollectionId,
+      name: series.name,
+      posterPath: series.posterPath ?? null,
+      totalParts: series.totalParts ?? 0,
+    } : null,
+  };
 }
 
 function sanitizeUserOwnedRow(row: Record<string, unknown>) {
@@ -64,7 +83,14 @@ async function loadPage(
   const cursorWhere = cursor ? { id: { gt: cursor } } : {};
 
   if (collection === "media") {
-    const rows = await db.media.findMany({ where: { userId, ...cursorWhere }, orderBy: { id: "asc" }, take: limit });
+    const rows = await db.media.findMany({
+      where: { userId, ...cursorWhere },
+      orderBy: { id: "asc" },
+      take: limit,
+      include: {
+        series: { select: { tmdbCollectionId: true, name: true, posterPath: true, totalParts: true } },
+      },
+    });
     return rows.map((row) => ({ cursor: row.id, data: sanitizeMedia(row) }));
   }
 
@@ -98,7 +124,7 @@ async function loadPage(
   if (cursor) return [];
   const user = await db.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { timezone: true },
+    select: { timezone: true, country: true, preferredPlatforms: true, name: true, avatar: true },
   });
   return [{ cursor: "preferences", data: user }];
 }

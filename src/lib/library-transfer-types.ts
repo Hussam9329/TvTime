@@ -1,8 +1,8 @@
 import { APP_NAME, LEGACY_APP_ALIASES } from "@/lib/brand";
 
-export const LIBRARY_BACKUP_VERSION = 6;
+export const LIBRARY_BACKUP_VERSION = 7;
 export const LIBRARY_BACKUP_KIND = "tvtime-backup";
-export const LIBRARY_SUPPORTED_BACKUP_VERSIONS = [5, 6] as const;
+export const LIBRARY_SUPPORTED_BACKUP_VERSIONS = [5, 6, 7] as const;
 export const LIBRARY_IMPORT_MAX_RECORDS = 250_000;
 export const LIBRARY_IMPORT_MAX_CHUNK_RECORDS = 500;
 export const LIBRARY_IMPORT_MAX_CHUNK_BYTES = 1_500_000;

@@ -6,7 +6,8 @@ import { normalizeMedia } from "@/lib/media-normalize";
 import { canonicalMediaPoster } from "@/lib/media-poster";
 import { normalizeCountryCodes } from "@/lib/arabic-media";
 import { classifyMediaWorld } from "@/lib/media-world-classification";
-import { tmdb } from "@/lib/tmdb";
+import { tmdb, type MovieDetail } from "@/lib/tmdb";
+import { syncFilmSeriesForMedia } from "@/lib/film-series-server";
 
 function normalizeGenreForStorage(genre: unknown): string | null {
   if (typeof genre === "number") {
@@ -77,12 +78,14 @@ export async function POST(req: NextRequest) {
     // This makes persistence independent from whichever client screen initiated
     // the add action and prevents creating new Media rows with empty genres.
     let authoritativeGenreNames: string[] = [];
+    let authoritativeMovieDetails: MovieDetail | null = null;
     let usedTmdbGenreEnrichment = false;
     if (parsedTmdbId != null && !hasNamedGenres) {
       try {
         const tmdbDetails = mediaType === "series"
           ? await tmdb.tvDetail(parsedTmdbId)
           : await tmdb.movieSummary(parsedTmdbId);
+        if (mediaType === "movie") authoritativeMovieDetails = tmdbDetails as MovieDetail;
         authoritativeGenreNames = Array.isArray(tmdbDetails.genres)
           ? tmdbDetails.genres
               .map((genre) => String(genre?.name || "").trim())
@@ -223,6 +226,17 @@ export async function POST(req: NextRequest) {
             ...classificationFlags,
           },
         });
+      }
+    }
+
+    if (mediaType === "movie" && parsedTmdbId != null) {
+      try {
+        await syncFilmSeriesForMedia({ userId: user.id, mediaId: item.id, tmdbId: parsedTmdbId, movie: authoritativeMovieDetails });
+        item = await db.media.findUniqueOrThrow({ where: { id: item.id } });
+      } catch (error) {
+        // Film-series metadata is additive. A TMDB collection outage must never
+        // block the core add-to-library action. The maintenance backfill can retry.
+        console.error("[media:find-or-create] film-series sync failed", { tmdbId: parsedTmdbId, error });
       }
     }
 

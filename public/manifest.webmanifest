@@ -59,6 +59,17 @@
       ]
     },
     {
+      "name": "Calendar",
+      "url": "/?view=calendar",
+      "icons": [
+        {
+          "src": "/logo.svg?v=4",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
       "name": "Stats",
       "url": "/?view=stats",
       "icons": [
@@ -69,5 +80,11 @@
         }
       ]
     }
-  ]
+  ],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "prefer_related_applications": false
 }

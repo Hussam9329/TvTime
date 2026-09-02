@@ -61,6 +61,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const onInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      (window as Window & { __trakoraInstallPrompt?: Event }).__trakoraInstallPrompt = event;
+      window.dispatchEvent(new Event("trakora-install-ready"));
+    };
+    const onInstalled = () => {
+      delete (window as Window & { __trakoraInstallPrompt?: Event }).__trakoraInstallPrompt;
+    };
+    window.addEventListener("beforeinstallprompt", onInstallPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onInstallPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!userId || typeof window === "undefined") return;
     const syncNotifications = async () => {
       try {
@@ -195,7 +212,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [client, userId]);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     </ThemeProvider>
   );

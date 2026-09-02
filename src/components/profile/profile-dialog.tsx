@@ -33,12 +33,19 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { APP_NAME } from "@/lib/brand";
+import { useTheme } from "next-themes";
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
 
 export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { userName, setUserName } = useNav();
   const userId = getClientUserId();
   const stats = useStats();
   const qc = useQueryClient();
+  const { theme, setTheme } = useTheme();
   const [name, setName] = useState(userName);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -50,6 +57,8 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default");
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const [notificationBusy, setNotificationBusy] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installedPwa, setInstalledPwa] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -63,6 +72,39 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       .catch(() => { /* best-effort */ });
     return () => { cancelled = true; };
   }, [open]);
+
+  useEffect(() => {
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    setInstalledPwa(standalone);
+    const readPrompt = () => {
+      const prompt = (window as Window & { __trakoraInstallPrompt?: Event }).__trakoraInstallPrompt;
+      setInstallPrompt(prompt ? prompt as BeforeInstallPromptEvent : null);
+    };
+    const onInstalled = () => {
+      setInstalledPwa(true);
+      setInstallPrompt(null);
+    };
+    readPrompt();
+    window.addEventListener("trakora-install-ready", readPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("trakora-install-ready", readPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  const installPwa = async () => {
+    if (!installPrompt) {
+      toast.info(installedPwa ? `${APP_NAME} is already installed` : "Use your browser's Install app option if the install prompt is unavailable.");
+      return;
+    }
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === "accepted") {
+      setInstallPrompt(null);
+      delete (window as Window & { __trakoraInstallPrompt?: Event }).__trakoraInstallPrompt;
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -325,7 +367,8 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       }
       await invalidateLibraryQueries();
       const imported = result.imported ?? {};
-      const affected = Number(imported.mediaRowsAffected ?? 0)
+      const affected = Number(imported.filmSeriesRowsAffected ?? 0)
+        + Number(imported.mediaRowsAffected ?? 0)
         + Number(imported.watchedEpisodeRowsAffected ?? 0)
         + Number(imported.episodeRatingRowsAffected ?? 0)
         + Number(imported.watchSessionRowsAffected ?? 0)
@@ -415,7 +458,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             <div className="grid grid-cols-3 gap-2">
               <Button variant="outline" size="sm" onClick={onExport} disabled={exporting || importing}>
                 {exporting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
-                Export
+                JSON Backup
               </Button>
               <Button variant="outline" size="sm" onClick={onExportCsv} disabled={exporting || importing}><Download className="w-4 h-4 mr-1" />CSV</Button>
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing || exporting}>
@@ -438,17 +481,33 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           </div>
 
           <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-            <div className="flex items-start gap-2"><Smartphone className="w-4 h-4 text-primary mt-0.5" /><div className="flex-1"><p className="text-sm font-semibold">Install & notifications</p><p className="text-xs text-muted-foreground">Install {APP_NAME} from your browser menu and receive alerts for released episodes.</p></div></div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3 w-full"
-              onClick={() => void (pushSubscribed ? disableNotifications() : enableNotifications())}
-              disabled={notificationBusy || notificationPermission === "unsupported" || (!pushSubscribed && notificationPermission === "denied")}
-            >
-              {notificationBusy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <BellRing className="w-4 h-4 mr-1.5" />}
-              {pushSubscribed ? "Disable background notifications" : notificationPermission === "denied" ? "Blocked in browser settings" : notificationPermission === "granted" ? "Finish enabling background notifications" : "Enable notifications"}
-            </Button>
+            <div className="flex items-start gap-2"><Smartphone className="w-4 h-4 text-primary mt-0.5" /><div className="flex-1"><p className="text-sm font-semibold">Install & notifications</p><p className="text-xs text-muted-foreground">Install {APP_NAME} as a PWA and receive alerts for released episodes.</p></div></div>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button variant="outline" size="sm" onClick={() => void installPwa()} disabled={installedPwa}>
+                <Smartphone className="w-4 h-4 mr-1.5" />{installedPwa ? "Installed" : installPrompt ? "Install app" : "Install help"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void (pushSubscribed ? disableNotifications() : enableNotifications())}
+                disabled={notificationBusy || notificationPermission === "unsupported" || (!pushSubscribed && notificationPermission === "denied")}
+              >
+                {notificationBusy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <BellRing className="w-4 h-4 mr-1.5" />}
+                {pushSubscribed ? "Disable notifications" : notificationPermission === "denied" ? "Notifications blocked" : "Enable notifications"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <p className="text-sm font-semibold">Appearance</p>
+            <p className="mb-3 text-xs text-muted-foreground">Choose a persistent theme or follow your device.</p>
+            <div className="grid grid-cols-3 gap-2">
+              {["dark", "light", "system"].map((value) => (
+                <Button key={value} type="button" variant={theme === value ? "default" : "outline"} size="sm" onClick={() => setTheme(value)} className="capitalize">
+                  {value}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {/* Account-synchronized timezone preference */}

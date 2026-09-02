@@ -9,11 +9,13 @@ import {
   Bell,
   Clapperboard,
   Clock3,
+  CalendarDays,
   Compass,
   Globe2,
   Film,
   Home,
   Keyboard,
+  Layers3,
   Menu,
   Moon,
   MoreHorizontal,
@@ -78,6 +80,8 @@ const primaryNavItems: NavItem[] = [
 
 const exploreNavItems: NavItem[] = [
   { view: "discover", icon: Compass },
+  { view: "calendar", icon: CalendarDays },
+  { view: "collections", icon: Layers3 },
   { view: "stats", icon: BarChart3 },
 ];
 

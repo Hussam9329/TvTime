@@ -89,6 +89,13 @@ const nullableMediaStatus = z.preprocess((value) => {
   return aliases[normalized] ?? normalized;
 }, z.enum(["planned", "not_started", "watching", "uptodate", "finished", "watched"]).nullable());
 
+const embeddedFilmSeriesSchema = z.object({
+  tmdbCollectionId: z.preprocess((value) => Number(value), z.number().int().positive()),
+  name: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(500)),
+  posterPath: nullableString(2_000).default(null),
+  totalParts: z.preprocess((value) => Number(value ?? 0), z.number().int().nonnegative().max(10_000)).default(0),
+});
+
 const mediaSchema = z.object({
   tmdbId: optionalPositiveInt.default(null),
   title: z.preprocess((value) => String(value ?? "").trim(), z.string().min(1).max(500)),
@@ -120,6 +127,8 @@ const mediaSchema = z.object({
   isFollowing: strictBoolean.default(false),
   notifyOnNewEpisode: nullableBoolean.default(null),
   rewatchCount: z.preprocess((value) => value === null || value === undefined || value === "" ? 0 : Number(value), z.number().int().nonnegative().max(10_000)).default(0),
+  seriesPart: optionalPositiveInt.default(null),
+  filmSeries: embeddedFilmSeriesSchema.nullable().optional().default(null),
   addedAt: nullableIsoDate.default(null),
 });
 
@@ -170,6 +179,10 @@ const notificationSchema = z.object({
 
 const preferencesSchema = z.object({
   timezone: z.preprocess((value) => String(value ?? "Asia/Baghdad").trim(), z.string().min(1).max(100)),
+  country: nullableString(8).optional(),
+  preferredPlatforms: stringArray.optional(),
+  name: nullableString(100).optional(),
+  avatar: nullableString(2_000).optional(),
 });
 
 const collectionsSchema = z.preprocess(normalizeCollectionCounts, z.object({
@@ -184,7 +197,9 @@ const collectionsSchema = z.preprocess(normalizeCollectionCounts, z.object({
 export const importStartSchema = z.object({
   manifest: z.object({
     kind: z.literal(LIBRARY_BACKUP_KIND),
-    version: z.union(LIBRARY_SUPPORTED_BACKUP_VERSIONS.map((version) => z.literal(version)) as [z.ZodLiteral<5>, z.ZodLiteral<6>]),
+    version: z.number().int().refine((value) => (LIBRARY_SUPPORTED_BACKUP_VERSIONS as readonly number[]).includes(value), {
+      message: "Unsupported backup version",
+    }),
     format: z.literal("ndjson"),
     app: z.string().optional().refine((value) => value === undefined || isSupportedBackupApp(value), {
       message: "Unsupported backup application identity",
@@ -256,6 +271,7 @@ export function normalizeImportRecord(record: LibraryTransferRecord): Normalized
         originalLanguage,
         originCountries,
         isFollowing: parsed.type === "series" && parsed.isFollowing,
+        seriesPart: parsed.filmSeries ? parsed.seriesPart : null,
       },
     };
   }

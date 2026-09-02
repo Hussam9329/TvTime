@@ -30,6 +30,7 @@ model User {
   notifications   Notification[]
   pushSubscriptions PushSubscription[]
   importSessions  LibraryImportSession[]
+  filmSeries      FilmSeries[]
 }
 
 /// Canonical media record - tracks movies and TV series.
@@ -69,6 +70,9 @@ model Media {
   addedAt        DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  seriesId       String?
+  seriesPart     Int?
+  series         FilmSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   watchSessions  WatchSession[]
 
   @@unique([userId, type, tmdbId], map: "Media_userId_type_tmdbId_key")
@@ -80,6 +84,23 @@ model Media {
   @@index([userId, isAnime])
   @@index([userId, isArabic])
   @@index([tmdbId])
+  @@index([userId, seriesId])
+}
+
+model FilmSeries {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbCollectionId Int
+  name             String
+  posterPath       String?
+  totalParts       Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  media            Media[]
+
+  @@unique([userId, tmdbCollectionId])
+  @@index([userId])
 }
 
 model WatchlistItem {

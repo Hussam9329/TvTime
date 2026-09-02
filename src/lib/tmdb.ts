@@ -205,6 +205,15 @@ export interface MovieDetail extends MediaItem {
   belongs_to_collection: { id: number; name: string; poster_path: string | null } | null;
 }
 
+export interface CollectionDetail {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  parts: MediaItem[];
+}
+
 export interface TvDetail extends MediaItem {
   origin_country: string[];
   original_language: string;
@@ -332,6 +341,8 @@ export const tmdb = {
     tmdbFetch<MovieDetail>(`/movie/${id}`, {}, language),
   movieDetail: (id: number, language?: TmdbLanguage) =>
     tmdbFetch<MovieDetail>(`/movie/${id}`, { append_to_response: "credits,videos,recommendations,similar,images,release_dates" }, language),
+  collectionDetail: (id: number, language?: TmdbLanguage) =>
+    tmdbFetch<CollectionDetail>(`/collection/${id}`, {}, language),
   tvSummary: (id: number, language?: TmdbLanguage) =>
     tmdbFetch<Pick<TvDetail, "id" | "number_of_seasons">>(`/tv/${id}`, {}, language),
   tvDetail: (id: number, language?: TmdbLanguage) =>

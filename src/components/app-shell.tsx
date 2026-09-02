@@ -54,6 +54,12 @@ const AnimeView = lazy(() =>
 const StatsView = lazy(() =>
   import("@/components/views/stats-view").then((m) => ({ default: m.StatsView })),
 );
+const CalendarView = lazy(() =>
+  import("@/components/views/calendar-view").then((m) => ({ default: m.CalendarView })),
+);
+const FilmSeriesView = lazy(() =>
+  import("@/components/views/film-series-view").then((m) => ({ default: m.FilmSeriesView })),
+);
 const TvShowsView = lazy(() =>
   import("@/components/views/tv-shows-page-view").then((m) => ({ default: m.TVShowsPageView })),
 );
@@ -341,6 +347,8 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
                 {view === "movies" && <MoviesView />}
                 {view === "anime" && <AnimeView />}
                 {view === "stats" && <StatsView />}
+                {view === "calendar" && <CalendarView />}
+                {view === "collections" && <FilmSeriesView />}
                 {view === "tv-shows" && <TvShowsView />}
                 {view === "asian-tv" && <AsianTvView />}
                 {view === "asian-movies" && <AsianMoviesView />}

@@ -21,6 +21,10 @@ const PUBLIC_PREFIXES = [
   "/logo.svg",
   "/manifest.webmanifest",
   "/sw.js",
+  "/offline.html",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/apple-touch-icon.png",
   "/api/auth",
   "/login",
   "/robots.txt",
@@ -80,5 +84,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|placeholder-poster.svg|logo.svg|manifest.webmanifest|sw.js).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|placeholder-poster.svg|logo.svg|manifest.webmanifest|sw.js|offline.html|icon-192.png|icon-512.png|apple-touch-icon.png).*)"],
 };
