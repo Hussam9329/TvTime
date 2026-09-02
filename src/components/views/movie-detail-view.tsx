@@ -433,7 +433,7 @@ export function MovieDetailView() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex h-14 w-full justify-stretch overflow-x-auto rounded-2xl border border-white/10 bg-[#0a1220]/90 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:flex-1 [&>*]:rounded-xl">
+        <TabsList className="flex h-14 w-full justify-stretch overflow-x-auto rounded-2xl border border-border/70 bg-muted/80 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:flex-1 [&>*]:rounded-xl">
           <TabsTrigger value="overview">{isArabicMovie ? "نظرة عامة" : "Overview"}</TabsTrigger>
           <TabsTrigger value="cast">{isArabicMovie ? "طاقم العمل" : "Cast"}</TabsTrigger>
           {m.budget > 0 && <TabsTrigger value="details">{isArabicMovie ? "التفاصيل" : "Details"}</TabsTrigger>}

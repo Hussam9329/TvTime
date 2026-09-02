@@ -12,7 +12,7 @@ export function ArabicTvView() {
       releaseOriginalLanguage="ar"
       releaseLanguage="ar"
       releaseCollectionWorld="arabic-tv"
-      releaseAccentClass="text-amber-400"
+      releaseAccentClass="text-amber-600 dark:text-amber-400"
       releaseTitle="جدول إصدارات المسلسلات العربية"
       releaseSubtitle="جدول لستة أشهر من العروض العربية الجديدة، منفصل عن المسلسلات العالمية والأنمي."
       locale="ar"

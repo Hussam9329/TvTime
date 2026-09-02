@@ -150,9 +150,9 @@ export function StatsView() {
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={d.ratingDist} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.08)" />
-                  <XAxis dataKey="value" stroke="oklch(0.68 0.02 280)" fontSize={11} />
-                  <YAxis allowDecimals={false} stroke="oklch(0.68 0.02 280)" fontSize={11} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="value" stroke="var(--muted-foreground)" fontSize={11} />
+                  <YAxis allowDecimals={false} stroke="var(--muted-foreground)" fontSize={11} />
                   <Tooltip contentStyle={{ background: "oklch(0.21 0.025 280)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 8 }} />
                   <Bar dataKey="count" name="Ratings" fill="oklch(0.62 0.23 16)" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -224,9 +224,9 @@ function ActivityChart({ movies, episodes }: { movies: { month: string; count: n
     <div className="h-56">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.08)" />
-          <XAxis dataKey="month" stroke="oklch(0.68 0.02 280)" fontSize={11} />
-          <YAxis allowDecimals={false} stroke="oklch(0.68 0.02 280)" fontSize={11} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={11} />
+          <YAxis allowDecimals={false} stroke="var(--muted-foreground)" fontSize={11} />
           <Tooltip contentStyle={{ background: "oklch(0.21 0.025 280)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 8 }} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Bar dataKey="Movies" stackId="a" fill="oklch(0.62 0.23 16)" radius={[0, 0, 0, 0]} />

@@ -68,15 +68,15 @@ export function RatingDialog({
     }
   };
 
-  const ratingColor = rating >= 80 ? "text-emerald-400" : rating >= 60 ? "text-amber-400" : rating >= 40 ? "text-orange-400" : "text-rose-400";
+  const ratingColor = rating >= 80 ? "text-emerald-600 dark:text-emerald-400" : rating >= 60 ? "text-amber-600 dark:text-amber-400" : rating >= 40 ? "text-orange-600 dark:text-orange-400" : "text-rose-600 dark:text-rose-400";
   const ratingLabel = rating >= 90 ? "Masterpiece!" : rating >= 80 ? "Excellent" : rating >= 70 ? "Very good" : rating >= 60 ? "Good" : rating >= 40 ? "Average" : rating >= 20 ? "Poor" : "Very bad";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="tvtime-rating-dialog gap-0 overflow-hidden rounded-[1.6rem] border-white/10 bg-[linear-gradient(155deg,rgba(24,27,40,0.99),rgba(10,13,22,0.99))] p-0 shadow-[0_32px_90px_rgba(0,0,0,0.58)] sm:max-w-[32rem] sm:p-0">
-        <DialogHeader className="relative top-auto z-0 gap-1.5 border-b border-white/[0.08] bg-transparent px-5 py-5 pe-14 backdrop-blur-none supports-[backdrop-filter]:bg-transparent sm:px-6 sm:py-6 sm:pe-16">
+        <DialogHeader className="relative top-auto z-0 gap-1.5 border-b border-border/60 bg-transparent px-5 py-5 pe-14 backdrop-blur-none supports-[backdrop-filter]:bg-transparent sm:px-6 sm:py-6 sm:pe-16">
           <DialogTitle className="flex items-center gap-3 text-xl leading-tight">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-600 dark:text-amber-300">
               <Star className="h-5 w-5 fill-current" />
             </span>
             Rate this title
@@ -87,13 +87,13 @@ export function RatingDialog({
         </DialogHeader>
 
         <div className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
-          <div className="flex min-w-0 items-center gap-3.5 border-b border-white/[0.07] pb-5">
+          <div className="flex min-w-0 items-center gap-3.5 border-b border-border/60 pb-5">
             {poster ? (
-              <div className="relative h-[5.25rem] w-14 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-muted shadow-[0_10px_24px_rgba(0,0,0,0.3)]">
+              <div className="relative h-[5.25rem] w-14 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted shadow-md">
                 <SafeImage src={poster} alt={title} fill variant="poster" />
               </div>
             ) : (
-              <div className="flex h-[5.25rem] w-14 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-muted-foreground">
+              <div className="flex h-[5.25rem] w-14 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/50 text-muted-foreground">
                 <Star className="h-5 w-5" />
               </div>
             )}
@@ -101,7 +101,7 @@ export function RatingDialog({
               <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Now rating</p>
               <h4 className="line-clamp-2 text-base font-bold leading-snug text-foreground">{title}</h4>
               {isRerating && (
-                <p className="mt-1.5 text-xs font-semibold text-amber-300">Current rating: {safeInitialRating}/100</p>
+                <p className="mt-1.5 text-xs font-semibold text-amber-600 dark:text-amber-300">Current rating: {safeInitialRating}/100</p>
               )}
             </div>
           </div>
@@ -160,7 +160,7 @@ export function RatingDialog({
           </div>
         </div>
 
-        <DialogFooter className="static z-0 grid grid-cols-[0.8fr_1.35fr] gap-3 border-t border-white/[0.08] bg-white/[0.025] px-5 py-4 pt-4 backdrop-blur-none supports-[backdrop-filter]:bg-white/[0.025] sm:grid-cols-[0.8fr_1.35fr] sm:px-6 [&>[data-slot=button]]:w-full">
+        <DialogFooter className="static z-0 grid grid-cols-[0.8fr_1.35fr] gap-3 border-t border-border/60 bg-muted/30 px-5 py-4 pt-4 backdrop-blur-none supports-[backdrop-filter]:bg-muted/30 sm:grid-cols-[0.8fr_1.35fr] sm:px-6 [&>[data-slot=button]]:w-full">
           <Button type="button" variant="outline" className="min-h-11" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

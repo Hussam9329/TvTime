@@ -8,7 +8,7 @@ export function AsianTvView() {
       trackingWorld="asian"
       discoverWorld="asian-tv"
       releaseCollectionWorld="asian-tv"
-      releaseAccentClass="text-teal-300"
+      releaseAccentClass="text-teal-700 dark:text-teal-300"
       releaseTitle="Asian TV Release Schedule"
       releaseSubtitle="Upcoming Asian series, ordered with Korea, Japan and China first."
     />
