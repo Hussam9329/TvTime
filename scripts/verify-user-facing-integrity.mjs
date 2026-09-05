@@ -172,7 +172,7 @@ check(
     && /data-state="watchlist"/.test(watchlistIndicator)
     && /Bookmark className="fill-current"/.test(watchlistIndicator)
     && /--cinema-purple: #a78bfa/.test(globalStyles)
-    && /\.tvtime-watchlist-indicator\s*\{[\s\S]*border: 1px solid var\(--cinema-purple-line\)[\s\S]*border-radius: 0\.55rem 1\.02rem 0\.55rem 0\.55rem[\s\S]*color: var\(--cinema-purple\)/.test(globalStyles)
+    && /\.tvtime-watchlist-indicator\s*\{[\s\S]*border: 1px solid var\(--cinema-purple-line\)[\s\S]*border-radius: 0\.55rem 1\.1rem 0\.55rem 0\.55rem[\s\S]*color: var\(--cinema-purple\)/.test(globalStyles)
     && /ListPlus \/> \{inWatchlist \? "Remove from watchlist" : "Add to watchlist"\}/.test(mediaCard)
     && /Remove from watchlist/.test(collection),
   "Watchlist membership uses one compact purple bookmark badge while actions remain available",
@@ -288,8 +288,8 @@ check(
   "Discover and release posters use Home's shared card presentation and sizing",
 );
 check(
-  /\.tvtime-media-menu\s*\{[\s\S]*right: 0\.38rem !important;[\s\S]*bottom: calc\(4\.2rem \+ 0\.38rem\) !important;/.test(globalStyles)
-    && /@media \(hover: none\), \(pointer: coarse\)[\s\S]*\.tvtime-media-menu\s*\{[\s\S]*min-width: 1\.3rem !important;[\s\S]*min-height: 0\.9rem !important;/.test(globalStyles)
+  /\.tvtime-media-menu\s*\{[\s\S]*right: 0\.5rem !important;[\s\S]*bottom: calc\(4\.4rem \+ 0\.5rem\) !important;/.test(globalStyles)
+    && /@media \(hover: none\), \(pointer: coarse\)[\s\S]*\.tvtime-media-menu\s*\{[\s\S]*min-width: 1\.6rem !important;[\s\S]*min-height: 1\.6rem !important;/.test(globalStyles)
     && /tvtime-media-title line-clamp-2 text-start/.test(mediaCard)
     && /tvtime-media-title line-clamp-2 text-start/.test(collection),
   "Shared poster menus stay clear of titles and metadata on touch layouts",

@@ -88,7 +88,7 @@
   gap: 0.28rem;
   padding: 0.28rem;
   border: 1px solid color-mix(in oklab, var(--movie-world-accent) 18%, var(--border));
-  border-radius: 0.85rem;
+  border-radius: 0.8rem;
   background: color-mix(in oklab, var(--card) 88%, transparent);
   overflow-x: auto;
   scrollbar-width: none;
@@ -154,7 +154,7 @@
   gap: 0.75rem;
   padding: 0.58rem;
   border: 1px solid color-mix(in oklab, var(--movie-world-accent) 18%, var(--border));
-  border-radius: 1rem;
+  border-radius: 1.1rem;
   background: color-mix(in oklab, var(--card) 92%, transparent);
   color: var(--foreground);
   scroll-snap-align: start;
@@ -174,7 +174,7 @@
   aspect-ratio: 2 / 3;
   flex: 0 0 auto;
   overflow: hidden;
-  border-radius: 0.7rem;
+  border-radius: 0.8rem;
   background: var(--muted);
 }
 
@@ -305,7 +305,7 @@
   min-width: 0;
   min-height: 2.45rem;
   gap: 0.4rem;
-  border-radius: 0.75rem;
+  border-radius: 0.8rem;
   font-size: 0.76rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -362,7 +362,7 @@
   min-height: clamp(20rem, 32vw, 26rem);
   overflow: hidden;
   border: 1px solid color-mix(in oklab, var(--movie-world-accent) 43%, var(--border));
-  border-radius: 1.55rem;
+  border-radius: 1.5rem;
   background: #090806;
   box-shadow: 0 28px 70px rgb(0 0 0 / 0.34), inset 0 1px rgb(255 255 255 / 0.08);
 }
@@ -786,7 +786,7 @@
 
 /* Default = dark cinema theme */
 :root {
-  --radius: 0.7rem;
+  --radius: 0.8rem;
   --background: oklch(0.105 0.012 72);
   --foreground: oklch(0.965 0.012 84);
   --card: oklch(0.145 0.014 72);
@@ -3656,7 +3656,7 @@ body {
 
 .tvtime-header-inner {
   border: 1px solid var(--app-surface-border);
-  border-radius: 1.25rem;
+  border-radius: 1.5rem;
   background: var(--app-header-background);
   box-shadow: 0 14px 44px rgb(0 0 0 / 0.18), inset 0 1px color-mix(in oklab, var(--foreground) 6%, transparent);
   backdrop-filter: blur(22px) saturate(145%);
@@ -3747,7 +3747,7 @@ body {
 .tvtime-mobile-search-panel {
   border: 1px solid var(--app-surface-border);
   border-top: 0;
-  border-radius: 0 0 1.25rem 1.25rem;
+  border-radius: 0 0 1.5rem 1.5rem;
   background: var(--app-header-background);
   box-shadow: 0 18px 40px rgb(0 0 0 / 0.16);
   backdrop-filter: blur(22px) saturate(145%);
@@ -3774,7 +3774,7 @@ body {
   margin-inline: auto;
   padding: 0.35rem;
   border: 1px solid color-mix(in oklab, var(--border) 88%, transparent);
-  border-radius: 1.25rem;
+  border-radius: 1.5rem;
   background: color-mix(in oklab, var(--background) 82%, transparent);
   box-shadow: 0 20px 54px rgb(0 0 0 / 0.3), inset 0 1px color-mix(in oklab, var(--foreground) 7%, transparent);
   backdrop-filter: blur(24px) saturate(155%);
@@ -3795,7 +3795,7 @@ body {
   flex-direction: column;
   gap: 0.2rem;
   padding: 0.35rem 0.2rem;
-  border-radius: 0.95rem;
+  border-radius: 0.8rem;
   color: var(--muted-foreground);
   font-size: 0.625rem;
   font-weight: 700;
@@ -3814,7 +3814,7 @@ body {
   height: 1.8rem;
   align-items: center;
   justify-content: center;
-  border-radius: 0.7rem;
+  border-radius: 0.55rem;
   transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
 }
 
@@ -4247,12 +4247,12 @@ body {
 .tvtime-row-controls {
   padding: 0.18rem;
   border: 1px solid var(--app-surface-border);
-  border-radius: 0.75rem;
+  border-radius: 0.8rem;
   background: var(--app-surface-subtle);
 }
 
 .tvtime-row-controls [data-slot="button"] {
-  border-radius: 0.58rem;
+  border-radius: 0.65rem;
 }
 
 .tvtime-see-all {
@@ -4415,16 +4415,16 @@ body {
 }
 
 .tvtime-media-copy {
-  min-height: 4.2rem;
+  min-height: 4.4rem;
   padding: 0.78rem 0.2rem 0.1rem;
 }
 
 .tvtime-media-title {
-  min-height: 2.2em;
+  min-height: 2.2rem;
   color: var(--foreground);
   font-size: 0.86rem;
   font-weight: 720;
-  line-height: 1.28;
+  line-height: 1.26;
   letter-spacing: -0.012em;
   transition: color 180ms ease;
 }
@@ -4460,7 +4460,7 @@ body {
 }
 
 .tvtime-media-card-skeleton .shimmer:first-child {
-  border-radius: 1.15rem;
+  border-radius: 1.1rem;
 }
 
 /* Recently watched follows the same poster language at a smaller scale. */
@@ -6336,29 +6336,33 @@ body {
 .tvtime-media-state-rail {
   inset-inline: auto !important;
   right: auto !important;
-  left: 0.625rem !important;
+  left: 0.5rem !important;
 }
 
 .tvtime-media-menu {
   inset-inline: auto !important;
   top: auto !important;
-  right: 0.38rem !important;
-  /* Keep the compact action fully inside the poster and clear of its frame. */
-  bottom: calc(4.2rem + 0.38rem) !important;
+  right: 0.5rem !important;
+  /* Anchor inside the poster's bottom-right with the same inset as the
+     state rail so the two never collide and the button never straddles
+     the poster frame. The copy block below the poster has a fixed
+     4.4rem height, making this offset deterministic. */
+  bottom: calc(4.4rem + 0.5rem) !important;
   left: auto !important;
-  width: 1.3rem !important;
-  min-width: 1.3rem !important;
-  height: 0.9rem !important;
-  min-height: 0.9rem !important;
+  width: 1.6rem !important;
+  min-width: 1.6rem !important;
+  height: 1.6rem !important;
+  min-height: 1.6rem !important;
   padding: 0 !important;
+  border-radius: 999px !important;
 }
 
 @media (hover: none), (pointer: coarse) {
   .tvtime-media-menu {
-    width: 1.3rem !important;
-    min-width: 1.3rem !important;
-    height: 0.9rem !important;
-    min-height: 0.9rem !important;
+    width: 1.6rem !important;
+    min-width: 1.6rem !important;
+    height: 1.6rem !important;
+    min-height: 1.6rem !important;
   }
 }
 
@@ -6464,9 +6468,9 @@ body {
   --cinema-panel-strong: rgb(10 10 8 / 0.98);
   --cinema-purple: #a78bfa;
   --cinema-purple-line: rgb(167 139 250 / 0.78);
-  --app-radius-control: 0.72rem;
-  --app-radius-card: 1.05rem;
-  --app-radius-hero: 1.45rem;
+  --app-radius-control: 0.8rem;
+  --app-radius-card: 1.1rem;
+  --app-radius-hero: 1.5rem;
   --app-surface: linear-gradient(145deg, rgb(19 18 14 / 0.94), rgb(9 9 7 / 0.97));
   --app-surface-strong: rgb(11 11 9 / 0.98);
   --app-surface-subtle: rgb(28 25 18 / 0.72);
@@ -6669,7 +6673,7 @@ body {
 }
 
 .tvtime-media-card-link {
-  border-radius: 1.02rem;
+  border-radius: 1.1rem;
 }
 
 .tvtime-media-poster,
@@ -6677,7 +6681,7 @@ body {
 .tvtime-movie-detail-hero__poster > [data-slot="card"],
 .tvtime-tv-detail-hero__poster > [data-slot="card"] {
   border-color: var(--cinema-line-strong) !important;
-  border-radius: 1.02rem !important;
+  border-radius: 1.1rem !important;
   background: #070706 !important;
   box-shadow:
     var(--app-shadow-poster),
@@ -6694,20 +6698,20 @@ body {
 .tvtime-user-score,
 .tvtime-tmdb-score {
   top: -1px !important;
-  border-radius: 0.36rem !important;
+  border-radius: 0.55rem !important;
   backdrop-filter: blur(12px) saturate(120%);
 }
 
 .tvtime-user-score {
   right: auto !important;
   left: -1px !important;
-  border-top-left-radius: 1.02rem !important;
+  border-top-left-radius: 1.1rem !important;
 }
 
 .tvtime-tmdb-score {
   right: -1px !important;
   left: auto !important;
-  border-top-right-radius: 1.02rem !important;
+  border-top-right-radius: 1.1rem !important;
 }
 
 .tvtime-watchlist-indicator {
@@ -6721,7 +6725,7 @@ body {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--cinema-purple-line);
-  border-radius: 0.55rem 1.02rem 0.55rem 0.55rem;
+  border-radius: 0.55rem 1.1rem 0.55rem 0.55rem;
   background: rgb(15 8 28 / 0.9);
   color: var(--cinema-purple);
   box-shadow:
@@ -6741,7 +6745,7 @@ body {
 
 .tvtime-tmdb-score + .tvtime-watchlist-indicator {
   top: 1.75rem;
-  border-radius: 0.55rem 0.3rem 0.3rem 0.55rem;
+  border-radius: 0.55rem;
 }
 
 .tvtime-media-menu {
@@ -6759,8 +6763,8 @@ body {
 }
 
 .tvtime-media-menu svg {
-  width: 0.48rem !important;
-  height: 0.48rem !important;
+  width: 0.75rem !important;
+  height: 0.75rem !important;
 }
 
 .tvtime-media-copy {
@@ -6843,7 +6847,7 @@ body {
 
 .tvtime-detail-hero__actions :is([data-slot="button"], .tvtime-detail-hero__watch-button) {
   border-color: var(--cinema-line) !important;
-  border-radius: 0.72rem !important;
+  border-radius: 0.8rem !important;
 }
 
 .tvtime-tv-detail-hero__meta > * {
@@ -8883,4 +8887,151 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
 }
 .light .tvtime-app::before {
   opacity: 0.16;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Patch 13 — Professional edges, overlap-free card controls & universal
+   responsive refinement.
+
+   One radius scale now governs every corner in the app:
+     chip    0.55rem — score badges, dock icons, small floating controls
+     control 0.8rem  — buttons, inputs, segmented controls, row arrows
+     tabs    1rem    — tabs bars and library type switchers
+     card    1.1rem  — posters, cards, panels, portal surfaces
+     hero    1.5rem  — heroes, floating header, mobile dock
+
+   Poster cards additionally gained a deterministic copy block (fixed 4.4rem
+   height with a clamped two-line title) so the floating action dot always
+   anchors 0.5rem inside the poster's bottom-right edge, level with the
+   state rail on the opposite side — never straddling the frame and never
+   colliding with titles or metadata.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.tvtime-media-meta {
+  line-height: 1.4;
+}
+
+/* Section headers: keep the action cluster on the icon's centerline so the
+   arrows no longer droop below the title, and lift the count pill by 1px
+   to compensate for the title's descender space (optical baseline). */
+.tvtime-section-heading__actions {
+  align-self: center;
+  height: 2.2rem;
+}
+
+.tvtime-section-heading__count {
+  transform: translateY(-1px);
+}
+
+/* Fine pointers get a slightly larger, fully circular action dot. */
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-app .tvtime-media-card .tvtime-media-menu {
+    width: 1.8rem !important;
+    min-width: 1.8rem !important;
+    height: 1.8rem !important;
+    min-height: 1.8rem !important;
+  }
+
+  .tvtime-app .tvtime-media-card .tvtime-media-menu svg {
+    width: 0.85rem !important;
+    height: 0.85rem !important;
+  }
+}
+
+/* Portal surfaces follow the card radius so dialogs, sheets and menus share
+   the poster language instead of a mix of ad-hoc corners. */
+.tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+  border-radius: 1.2rem !important;
+}
+
+.tvtime-app .tvtime-sheet-content[data-side="bottom"] {
+  border-radius: 1.2rem 1.2rem 0 0 !important;
+}
+
+.tvtime-app .tvtime-sheet-content[data-side="left"] {
+  border-radius: 0 1.2rem 1.2rem 0 !important;
+}
+
+.tvtime-app .tvtime-sheet-content[data-side="right"] {
+  border-radius: 1.2rem 0 0 1.2rem !important;
+}
+
+/* Watch cards and collection cards join the same card radius. */
+.tvtime-app .tvtime-watch-card,
+.tvtime-app .tvtime-watch-upcoming-card,
+.tvtime-app .tvtime-person-credit__card {
+  border-radius: var(--app-radius-card);
+}
+
+.tvtime-app .tvtime-watch-card__poster,
+.tvtime-app .tvtime-watch-upcoming-card__poster {
+  border-radius: var(--app-radius-control);
+}
+
+/* ── Responsive refinements ─────────────────────────────────────────────── */
+
+/* Ultra-compact phones (≤380px): tighten gutters so two poster columns and
+   the section headers still breathe without horizontal overflow. */
+@media (max-width: 380px) {
+  .tvtime-home-media-grid {
+    gap: 0.65rem;
+  }
+
+  .tvtime-media-row-scroller,
+  .tvtime-recent-scroller {
+    gap: 0.72rem;
+  }
+
+  .tvtime-media-copy {
+    padding-inline: 0.1rem;
+  }
+
+  .tvtime-section-heading {
+    gap: 0.7rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .tvtime-section-heading__icon {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+/* Short landscape phones: cap hero heights so primary actions stay visible
+   without scrolling past the artwork. */
+@media (orientation: landscape) and (max-height: 480px) {
+  .tvtime-home-hero,
+  .tvtime-movie-hub-hero {
+    min-height: 15rem;
+  }
+
+  .tvtime-movie-hub-hero__content {
+    min-height: 15rem;
+  }
+}
+
+/* XL desktops (≥1536px): scale the section rhythm and shelf gutters so wide
+   canvases feel composed rather than stretched. */
+@media (min-width: 1536px) {
+  .tvtime-section-heading {
+    margin-bottom: 1.05rem;
+  }
+
+  .tvtime-section-heading__icon {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+
+  .tvtime-media-row-scroller,
+  .tvtime-recent-scroller {
+    gap: 1.05rem;
+  }
+}
+
+/* Long-press / keyboard focus keeps the action dot inside its poster with a
+   soft ring instead of a hard rectangle outline. */
+.tvtime-app .tvtime-media-card .tvtime-media-menu:focus-visible {
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--primary) 30%, transparent),
+    0 3px 10px rgb(0 0 0 / 0.34) !important;
 }
