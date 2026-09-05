@@ -25,6 +25,10 @@ export async function DELETE(req: NextRequest) {
       const watchlistItems = await tx.watchlistItem.deleteMany({ where: { userId: user.id } });
       const watchedMovies = await tx.watchedMovie.deleteMany({ where: { userId: user.id } });
       const followingShows = await tx.followingShow.deleteMany({ where: { userId: user.id } });
+      // FilmSeries rows are user-owned collection data. Media.seriesId is
+      // SetNull-on-delete, so skipping this table left orphaned series behind
+      // after a "delete everything" request.
+      const filmSeries = await tx.filmSeries.deleteMany({ where: { userId: user.id } });
       const media = await tx.media.deleteMany({ where: { userId: user.id } });
       return {
         media: media.count,
@@ -32,6 +36,7 @@ export async function DELETE(req: NextRequest) {
         ratings: ratings.count,
         watchSessions: watchSessions.count,
         notifications: notifications.count,
+        filmSeries: filmSeries.count,
         legacyWatchlistItems: watchlistItems.count,
         legacyWatchedMovies: watchedMovies.count,
         legacyFollowingShows: followingShows.count,

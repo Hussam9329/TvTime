@@ -20,13 +20,13 @@ import {
   filterAndPrioritizeMediaCollectionWorldItems,
   filterAndPrioritizeMediaCollectionWorldItemsBy,
 } from "@/lib/media-world-pipeline";
+import { TV_STARTED_STATUSES } from "@/lib/tv-started-statuses";
 import type { MediaCollectionWorld } from "@/lib/media-world-classification";
 
 const HOME_ROW_ITEM_LIMIT = 12;
 const MediaRow = ({ items, ...props }: ComponentProps<typeof BaseMediaRow>) => (
   <BaseMediaRow {...props} items={items.slice(0, HOME_ROW_ITEM_LIMIT)} compactCards={false} />
 );
-const SEEN_HOME_TV_STATUSES = new Set(["watching", "uptodate", "up_to_date", "finished", "watched", "stopped"]);
 
 function standardCollectionWorldForHomeItem(item: MediaItem): MediaCollectionWorld | null {
   if (item.media_type === "tv") return "standard-tv";
@@ -42,7 +42,7 @@ function isUnseenHomeHeroState(mediaType: "movie" | "tv", state: MediaBatchState
   if (!state) return true;
   if (state.watched || state.userRating != null) return false;
   if (mediaType === "movie") return true;
-  return !SEEN_HOME_TV_STATUSES.has(String(state.status || "").trim().toLowerCase());
+  return !TV_STARTED_STATUSES.has(String(state.status || "").trim().toLowerCase());
 }
 
 export function HomeView() {

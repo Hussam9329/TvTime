@@ -41,10 +41,10 @@ export function StatsView() {
 
       {/* Big numbers */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <BigStat icon={<Film className="w-5 h-5" />} label="Movies watched" value={counts.watchedMovies} color="from-rose-500/20 to-rose-500/5" />
+        <BigStat icon={<Film className="w-5 h-5" />} label="All movies watched" value={counts.watchedMoviesAll ?? counts.watchedMovies} color="from-rose-500/20 to-rose-500/5" />
         <BigStat icon={<Tv className="w-5 h-5" />} label="Episodes watched" value={counts.watchedEpisodes} color="from-purple-500/20 to-purple-500/5" />
         <BigStat icon={<Bell className="w-5 h-5" />} label="TV shows following" value={counts.following} color="from-amber-500/20 to-amber-500/5" />
-        <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic movies" value={(counts.watchedArabicMovies ?? 0) + (counts.watchlistArabicMovies ?? 0)} color="from-emerald-500/20 to-emerald-500/5" />
+        <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic movies" value={counts.arabicMovies ?? (counts.watchedArabicMovies ?? 0) + (counts.watchlistArabicMovies ?? 0)} color="from-emerald-500/20 to-emerald-500/5" />
         <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic TV following" value={counts.followingArabicShows ?? 0} color="from-orange-500/20 to-orange-500/5" />
         <BigStat icon={<BookOpen className="w-5 h-5" />} label="All watchlists" value={counts.watchlist} color="from-cyan-500/20 to-cyan-500/5" />
       </div>
@@ -117,13 +117,13 @@ export function StatsView() {
               <PieChart>
                 <Pie
                   data={[
-                    { name: "Movies watched", value: counts.watchedMovies },
+                    { name: "Standard movies watched", value: counts.watchedMovies },
                     { name: "TV shows following", value: counts.following },
                     { name: "Watchlist movies", value: counts.watchlistMovies },
                     { name: "Watchlist shows", value: counts.watchlistShows },
                     { name: "Anime watched", value: counts.watchedAnime },
                     { name: "Anime watchlist", value: counts.watchlistAnime },
-                    { name: "Arabic movies", value: (counts.watchedArabicMovies ?? 0) + (counts.watchlistArabicMovies ?? 0) },
+                    { name: "Arabic movies", value: counts.arabicMovies ?? (counts.watchedArabicMovies ?? 0) + (counts.watchlistArabicMovies ?? 0) },
                     { name: "Arabic TV", value: counts.followingArabicShows ?? 0 },
                   ].filter((x) => x.value > 0)}
                   dataKey="value"
@@ -176,7 +176,7 @@ export function StatsView() {
       )}
 
       {/* Empty state CTA */}
-      {counts.watchedMovies === 0 && counts.watchedEpisodes === 0 && counts.watchlist === 0 && counts.following === 0 && (
+      {(counts.watchedMoviesAll ?? counts.watchedMovies) === 0 && counts.watchedEpisodes === 0 && counts.watchlist === 0 && counts.following === 0 && (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground mb-4">You haven't tracked anything yet. Start exploring!</p>
           <button type="button" data-ui-action="link" onClick={() => setView("discover")} className="text-primary font-semibold underline">Go to Discover →</button>

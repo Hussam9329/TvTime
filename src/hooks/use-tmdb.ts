@@ -115,7 +115,9 @@ export function useMovieHub(world: MovieHubWorld) {
       await ensureApiOk(response, "Failed to load the movie hub");
       return response.json() as Promise<MovieHubResponse>;
     },
-    staleTime: 5 * 60 * 1000,
+    // Aligned with useStats (60s) so the Movies header summary and the Home
+    // library overview can never drift apart for more than one minute.
+    staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 }
@@ -793,6 +795,9 @@ export function useWatchedMovieToggle() {
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
       qc.invalidateQueries({ queryKey: ["movie-hub"] });
+      // Watching a movie changes Watch Next picks and notification state too.
+      qc.invalidateQueries({ queryKey: ["watch-next"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -880,7 +885,6 @@ export function useEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
-      qc.invalidateQueries({ queryKey: ["episode-watch-plan"] });
       qc.invalidateQueries({ queryKey: ["watch-next"] });
     },
   });
@@ -912,7 +916,8 @@ export function useBulkEpisodeToggle() {
       qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
-      qc.invalidateQueries({ queryKey: ["episode-watch-plan"] });
+      // Bulk episode changes also shift Watch Next picks.
+      qc.invalidateQueries({ queryKey: ["watch-next"] });
     },
   });
 }
@@ -1063,6 +1068,9 @@ export function useFollowingToggle() {
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+      // Following/unfollowing changes Watch Next and notification targeting.
+      qc.invalidateQueries({ queryKey: ["watch-next"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -1206,6 +1214,10 @@ export function useRatingMutate() {
       qc.invalidateQueries({ queryKey: ["lib"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+      // Ratings feed the Movies hub summary (averageRating) and Watch Next.
+      qc.invalidateQueries({ queryKey: ["movie-hub"] });
+      qc.invalidateQueries({ queryKey: ["watch-next"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -1656,10 +1668,18 @@ export function useMediaUpdate() {
       return res.json();
     },
     onSuccess: () => {
+      // useMediaUpdate mutates status/watched/userRating — the exact fields the
+      // Home stats (lib.stats), Movies hub summary (movie-hub) and Watch Next
+      // display. Without these invalidations the Library tab (library-counts,
+      // 30s cache) refreshes while Home/Movies keep showing stale numbers.
+      qc.invalidateQueries({ queryKey: ["lib"] });
+      qc.invalidateQueries({ queryKey: ["movie-hub"] });
       qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["library-counts"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking"] });
       qc.invalidateQueries({ queryKey: ["tv-tracking-counts"] });
+      qc.invalidateQueries({ queryKey: ["watch-next"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }

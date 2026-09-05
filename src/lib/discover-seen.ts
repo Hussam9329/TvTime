@@ -1,4 +1,4 @@
-const TV_STARTED_STATUSES = new Set(["watching", "uptodate", "up_to_date", "finished", "watched"]);
+import { TV_STARTED_STATUSES } from "@/lib/tv-started-statuses";
 
 type SeenMediaRow = {
   tmdbId: number | null;

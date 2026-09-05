@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveUserId } from "@/lib/auth";
 import { getOrCreateUser } from "@/lib/user";
+import { getCanonicalLibraryCounts } from "@/lib/library-counts";
 import { resolveGeneralMediaClassifications } from "@/lib/media-classification-resolver-server";
 import { discoverArabicShelfByCountryPriority } from "@/lib/arabic-discover";
 import { discoverAsianMoviesByPriority } from "@/lib/asian-discover-server";
@@ -94,6 +95,16 @@ export async function GET(req: NextRequest) {
       where: { userId: user.id, type: "movie" },
       orderBy: { updatedAt: "desc" },
     });
+    // Summary numbers MUST come from the canonical counters (the same source
+    // used by the Library tab badges, Home overview and Stats page) so the
+    // Movies header can never disagree with the rest of the app. Previously
+    // these were recomputed inline here, which allowed drift.
+    const canonicalCounts = await getCanonicalLibraryCounts(user.id);
+    const summaryCounts = world === "arabic-movies"
+      ? { watchlist: canonicalCounts.watchlistArabicMovies, watched: canonicalCounts.watchedArabicMovies }
+      : world === "asian-movies"
+        ? { watchlist: canonicalCounts.watchlistAsianMovies, watched: canonicalCounts.watchedAsianMovies }
+        : { watchlist: canonicalCounts.watchlistMovies, watched: canonicalCounts.watchedMovies };
     const classified = await resolveGeneralMediaClassifications(stored, { allowNetwork: false });
     const worldItems = filterAndPrioritizeMediaCollectionWorldItems(classified, world);
     const watchlistBase = worldItems
@@ -146,8 +157,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       world,
       summary: {
-        watchlist: watchlistRecords.length,
-        watched: worldItems.filter((item) => item.watched).length,
+        watchlist: summaryCounts.watchlist,
+        watched: summaryCounts.watched,
         averageRating: ratings.length ? Math.round(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) : null,
       },
       featured,

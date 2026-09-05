@@ -1,7 +1,8 @@
 type RequestAuthMode = "authenticated" | "public" | "invalid";
 type RequestIdentityErrorCode = "AUTH_CONFIGURATION_ERROR" | "UNAUTHORIZED";
 
-const DEFAULT_USER_ID = "cinetrack_default";
+export { DEFAULT_USER_ID } from "@/lib/user-id";
+import { DEFAULT_USER_ID } from "@/lib/user-id";
 
 function sanitizeRequestUserId(userId?: string | null): string {
   const trimmed = String(userId ?? "").trim();

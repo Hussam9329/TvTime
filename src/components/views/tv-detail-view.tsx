@@ -117,7 +117,10 @@ export function TvDetailView() {
   // After early returns, detail.data is guaranteed to be defined.
   const t = detail.data;
   const displayTitle = getTitle(t);
-  const inWatchlist = Boolean(mediaState.data?.status === "planned");
+  // Watchlist is a strict state (planned AND not watched), matching the
+  // canonical isPlanned predicate used by library counts and /api/media.
+  // A stale row that is both planned and watched must not show as watchlisted.
+  const inWatchlist = Boolean(mediaState.data?.status === "planned" && !mediaState.data?.watched);
   // Following membership and episode progress are separate concepts. A show
   // can retain a Watching/Up To Date progress badge while isFollowing is false.
   const isFollowing = progress.isFollowing;

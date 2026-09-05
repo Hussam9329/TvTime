@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { resolveTmdbKeywordIds, tmdb, type MediaItem, type PaginatedResponse, type TmdbLanguage } from "@/lib/tmdb";
 import { resolveUserId } from "@/lib/auth";
 import { buildSeenIdSet } from "@/lib/discover-seen";
+import { TV_STARTED_STATUS_VALUES } from "@/lib/tv-started-statuses";
 import { discoverArabicByCountryPriority } from "@/lib/arabic-discover";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import { discoverAsianMoviesByPriority, discoverAsianTvByPriority } from "@/lib/asian-discover-server";
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
             type: mediaType === "tv" ? "series" : "movie",
             tmdbId: { not: null },
             ...(mediaType === "tv"
-              ? { OR: [{ watched: true }, { status: { in: ["watching", "uptodate", "up_to_date", "finished", "watched"] } }] }
+              ? { OR: [{ watched: true }, { status: { in: [...TV_STARTED_STATUS_VALUES] } }] }
               : { watched: true }),
           },
           select: { tmdbId: true, watched: true, status: true },

@@ -439,7 +439,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               <p className="text-xs text-muted-foreground mb-2">Your collection</p>
               <div className="grid grid-cols-2 gap-2">
                 <StatBox label="Watchlist" value={counts.watchlist} />
-                <StatBox label="Watched movies" value={counts.watchedMovies} />
+                <StatBox label="Watched movies (all)" value={counts.watchedMoviesAll ?? counts.watchedMovies} />
                 <StatBox label="TV Following" value={counts.following} />
                 <StatBox label="Ratings" value={counts.ratings} />
               </div>

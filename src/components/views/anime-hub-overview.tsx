@@ -26,8 +26,7 @@ import { useHeroCarousel } from "@/hooks/use-hero-carousel";
 import { formatDateOnly } from "@/lib/date-only";
 import { useNav } from "@/lib/store";
 import { getTitle, getYear, img } from "@/lib/tmdb";
-
-const STARTED_TV_STATUSES = new Set(["watching", "uptodate", "up_to_date", "finished", "watched", "stopped"]);
+import { TV_STARTED_STATUSES } from "@/lib/tv-started-statuses";
 
 function itemType(item: AnimeHubItem): "movie" | "tv" {
   return item.media_type === "movie" ? "movie" : "tv";
@@ -59,7 +58,7 @@ export function AnimeHubOverview({ onBrowse }: { onBrowse: () => void }) {
         const state = states.data?.[mediaStateKey(mediaType, Number(item.id))];
         if (!state) return true;
         if (state.watched || state.userRating != null) return false;
-        return mediaType === "movie" || !STARTED_TV_STATUSES.has(String(state.status || "").toLowerCase());
+        return mediaType === "movie" || !TV_STARTED_STATUSES.has(String(state.status || "").toLowerCase());
       })
     : [];
 

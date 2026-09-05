@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
 import { APP_NAME } from "@/lib/brand";
@@ -115,7 +114,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased bg-background text-foreground`}
       >
         <Providers>{children}</Providers>
-        <Toaster />
         <SonnerToaster position="top-center" richColors />
       </body>
     </html>

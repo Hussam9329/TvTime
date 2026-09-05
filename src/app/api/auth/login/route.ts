@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual, createHash } from "node:crypto";
 import { issueSession, getOwnerPassword, getOwnerUsername } from "@/lib/auth";
+import { DEFAULT_USER_ID } from "@/lib/user-id";
 import { getRemainingBlockTime, recordFailedAttempt, clearAttempts, getClientIp } from "@/lib/rate-limit";
 
 /**
@@ -101,11 +102,15 @@ export async function POST(req: NextRequest) {
 
   // ── Success ───────────────────────────────────────────────────────
   clearAttempts(clientIp);
+  // Session identity must stay in sync with the rest of the app: the user id
+  // comes from the shared DEFAULT_USER_ID constant (not a duplicated literal)
+  // and the display name mirrors getOrCreateUser's "Cinephile" fallback, so
+  // the JWT and the User row can never disagree.
   const res = NextResponse.json({
     ok: true,
-    user: { id: "cinetrack_default", name: "Hussam" },
+    user: { id: DEFAULT_USER_ID, name: "Cinephile" },
   });
-  return issueSession(res, { sub: "cinetrack_default", name: "Hussam" });
+  return issueSession(res, { sub: DEFAULT_USER_ID, name: "Cinephile" });
 }
 
 type CredentialResult = "OK" | "INVALID" | "MISSING_FIELD";
