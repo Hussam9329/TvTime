@@ -470,8 +470,8 @@ export function TvDetailView() {
           </div>
 
           <div className="tvtime-tv-detail-hero__rating-card">
-            <div className="tvtime-tv-detail-hero__rating-grid grid grid-cols-1 items-center gap-5 md:grid-cols-[minmax(220px,1fr)_auto] xl:grid-cols-[minmax(260px,1fr)_auto_minmax(220px,auto)]">
-              <div className="tvtime-tv-detail-hero__rating-summary flex min-w-0 items-center gap-4">
+            <div className="tvtime-tv-detail-hero__rating-grid">
+              <div className="tvtime-tv-detail-hero__rating-summary">
                 <div className="tvtime-detail-rating__icon" aria-hidden="true"><Star className="fill-current" /></div>
                 <div className="tvtime-detail-rating__body">
                   <p className="text-xs text-muted-foreground mb-1">{isArabicShow ? "تقييمك" : "Your rating"}</p>
@@ -499,7 +499,7 @@ export function TvDetailView() {
                   )}
                 </div>
               </div>
-              <div className="tvtime-tv-detail-hero__rating-actions flex items-center gap-2 md:justify-self-end xl:justify-self-center">
+              <div className="tvtime-tv-detail-hero__rating-actions flex items-center gap-2">
                 {myRating != null && (
                   <Button variant="outline" size="sm" onClick={onRemoveRating}>
                     Remove rating
@@ -521,7 +521,7 @@ export function TvDetailView() {
                   {displayedShowRating != null ? "Re-rate" : canRateShow ? "Rate & finish" : "Rating locked"}
                 </Button>
               </div>
-              <div className="tvtime-tv-detail-hero__tmdb-rating md:col-span-2 md:justify-self-end xl:col-span-1 xl:text-right">
+              <div className="tvtime-tv-detail-hero__tmdb-rating">
                 <div className="tvtime-detail-rating__tmdb-mark" aria-hidden="true"><span>TM</span><span>DB</span></div>
                 <div className="tvtime-detail-rating__body">
                 <p className="text-xs text-muted-foreground mb-1">{isArabicShow ? "تقييم TMDB" : "TMDB score"}</p>
@@ -1031,7 +1031,7 @@ function SeasonEpisodes({
           ))}
         </div>
       ) : (
-        <div className="tvtime-episode-grid space-y-2">
+        <div className="tvtime-episode-grid">
           {seasonData.data?.episodes.map((ep, idx) => {
             const futureEpisode = isFutureEpisode(ep.air_date);
             const released = isReleased(ep);
@@ -1039,12 +1039,13 @@ function SeasonEpisodes({
             return (
               <motion.div
                 key={ep.id}
+                className="tvtime-episode-item"
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: Math.min(idx * 0.02, 0.3) }}
               >
                 <Card className={cn(
-                  "tvtime-episode-card p-3 flex gap-3 items-start transition-colors",
+                  "tvtime-episode-card transition-colors",
                   isWatched ? "border-primary/40 bg-primary/5" : futureEpisode ? "opacity-65 border-dashed" : "hover:border-border/80"
                 )}>
                   <button
