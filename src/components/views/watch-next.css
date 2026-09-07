@@ -1,0 +1,178 @@
+/* Watch Next: consistent queue cards and a clear featured episode hierarchy.
+   Scope above the legacy global styles without affecting other views. */
+:root .tvtime-app .tvtime-watch-next-page {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  width: min(100%, 94rem);
+  min-width: 0;
+  margin-inline: auto;
+  padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px));
+}
+
+:root .tvtime-app .tvtime-watch-next-page > * { min-width: 0; margin-block: 0; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-page-titlebar h1 {
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-summary {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 0 1.1rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-summary__copy { flex-wrap: wrap; gap: 0.65rem; font-size: 0.875rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-summary__copy strong { font-size: 0.95rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-summary__customize { width: auto; min-width: 0; min-height: 2.75rem; border-radius: 0.7rem; }
+
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured {
+  min-height: 28rem !important;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 1.5rem;
+  background: #0c1015;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.15);
+}
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__scrim {
+  background: linear-gradient(90deg, #0c1015 0%, rgb(12 16 21 / 0.9) 30%, rgb(12 16 21 / 0.42) 65%, rgb(12 16 21 / 0.1)), linear-gradient(0deg, #0c1015, transparent 80%);
+}
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  align-items: end;
+  gap: 2rem;
+  width: 100%;
+  padding: clamp(1.5rem, 3.5vw, 3rem);
+}
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__intro { min-width: 0; max-width: 38rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__eyebrow { flex-wrap: wrap; margin-bottom: 1rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured h2 {
+  max-width: 22ch;
+  font-size: clamp(2rem, 3.6vw, 3.25rem);
+  line-height: 1.08;
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+}
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__episode { font-size: 1rem; line-height: 1.5; margin-top: 0.9rem; overflow-wrap: anywhere; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__meta { font-size: 0.8125rem; gap: 0.5rem 1rem; color: #b7c0cc; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-progress.is-featured { max-width: 32rem; margin-top: 1.35rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 1.5rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__actions [data-slot="button"] { width: auto; min-height: 2.875rem; height: auto; padding: 0.65rem 1rem; font-size: 0.875rem; white-space: normal; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__primary { background: #edbd70 !important; color: #211707 !important; box-shadow: none; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured .tvtime-watch-featured__actions .tvtime-watch-featured__secondary { background: rgb(255 255 255 / 0.07) !important; border-color: rgb(255 255 255 / 0.2) !important; box-shadow: none !important; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__later { color: #c8cdd4 !important; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-next-episode {
+  align-self: end;
+  justify-self: end;
+  width: min(100%, 25rem);
+  grid-template-columns: 5.5rem minmax(0, 1fr) 1rem;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.8rem;
+  border-radius: 1rem;
+  background: rgb(12 16 21 / 0.82);
+  box-shadow: none;
+}
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-next-episode__copy small { font-size: 0.65rem; color: #edbd70; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-next-episode__copy strong { white-space: normal; overflow: visible; font-size: 0.875rem; line-height: 1.4; overflow-wrap: anywhere; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-next-episode__copy > span { font-size: 0.75rem; color: #b7c0cc; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-next-episode__icon { margin: 0; }
+
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-section { gap: 1rem; padding-top: 0; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-section__heading { align-items: center; gap: 0.8rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-section__heading h2 { font-size: 1.2rem; font-weight: 700; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-section__heading p { font-size: 0.8125rem; line-height: 1.5; margin-top: 0.2rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-section__icon { width: 2.5rem; height: 2.5rem; border-radius: 0.8rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  align-items: stretch;
+  gap: 1rem;
+}
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-swipe-shell { display: flex; border-radius: 1rem; overflow: hidden; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card {
+  flex: 1 1 auto;
+  grid-template-columns: 7rem minmax(0, 1fr) !important;
+  align-items: start;
+  gap: 1rem;
+  padding: 1rem;
+  border-color: var(--border);
+  background: var(--card);
+  box-shadow: none;
+}
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card::before { content: none; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card:hover { border-color: color-mix(in oklab, var(--primary) 40%, var(--border)); box-shadow: 0 8px 24px rgb(0 0 0 / 0.08); }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card > .tvtime-watch-card__poster { align-self: start; border-radius: 0.65rem; box-shadow: none; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card > .tvtime-watch-card__body { padding: 0 !important; overflow: visible; justify-content: flex-start; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card__title { font-size: 1.0625rem; line-height: 1.35; font-weight: 700; margin-top: 0.6rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card__episode { font-size: 0.8125rem; line-height: 1.5; margin-top: 0.4rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card__meta { font-size: 0.75rem; gap: 0.4rem 0.7rem; margin-block: 0.5rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card__ready { white-space: normal; font-size: 0.7rem; line-height: 1.3; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-personal-status { font-size: 0.7rem; line-height: 1.2; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-progress__copy { flex-wrap: wrap; gap: 0.3rem 0.6rem; font-size: 0.75rem; line-height: 1.5; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-progress__copy > span { min-width: 0; overflow-wrap: anywhere; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-progress__track { height: 0.35rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-progress__track span { box-shadow: none; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card__actions { flex-wrap: wrap; gap: 0.5rem; margin-top: auto; padding-top: 0.85rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card__actions [data-slot="button"] { min-height: 2.75rem; height: auto; padding: 0.5rem 0.7rem; font-size: 0.8125rem; white-space: normal; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card .tvtime-watch-card__actions .tvtime-watch-card__mark { background: color-mix(in oklab, var(--primary) 10%, var(--card)) !important; border-color: color-mix(in oklab, var(--primary) 30%, var(--border)) !important; color: var(--foreground) !important; box-shadow: none !important; }
+
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-upcoming-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 23rem), 1fr)); gap: 1rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-upcoming-card { grid-template-columns: 3.5rem minmax(0, 1fr); gap: 0.25rem 0.9rem; padding: 1rem; border-radius: 1rem; background: var(--card); border-color: var(--border); }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-upcoming-card__poster { grid-row: 1 / 3; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-upcoming-card__copy > * { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-upcoming-card__copy strong { font-size: 0.95rem; line-height: 1.4; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-upcoming-card__copy > span { font-size: 0.8rem; line-height: 1.5; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-upcoming-card__copy small { font-size: 0.75rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-upcoming-card__countdown { grid-column: 2; justify-self: start; white-space: normal; font-size: 0.75rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-collapsible { border-color: var(--border); background: var(--card); border-radius: 1rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-collapsible__trigger { padding: 1rem; gap: 0.8rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-collapsible__trigger strong { font-size: 1rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-collapsible__trigger small { font-size: 0.8rem; line-height: 1.5; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-collapsible__content { padding: 0 1rem 1rem; gap: 0.75rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-complete-row :is(strong, small) { white-space: normal; overflow-wrap: anywhere; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-complete-row strong { font-size: 0.9rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-complete-row small { font-size: 0.75rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-order-editor { border-radius: 1rem; padding: 1rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-order-editor__header { flex-wrap: wrap; gap: 1rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-order-editor__actions { flex-wrap: wrap; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-order-row { min-width: 0; padding: 0.75rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-order-row strong { white-space: normal; overflow-wrap: anywhere; font-size: 0.95rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-order-row small { white-space: normal; font-size: 0.8rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-order-row__handle { min-width: 2.75rem; min-height: 2.75rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-season-complete { border-radius: 1.5rem; border-color: rgb(255 255 255 / 0.12); box-shadow: none; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-season-complete__content { padding: clamp(1.25rem, 3vw, 2.5rem); }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-season-complete__suggestion { max-width: 100%; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-season-complete__suggestion em { white-space: normal; font-size: 0.8rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-skeleton__featured { min-height: 28rem; border-radius: 1.5rem; }
+:root .tvtime-app .tvtime-watch-next-page .tvtime-watch-skeleton__card { grid-template-columns: 7rem minmax(0, 1fr); padding: 1rem; gap: 1rem; min-height: 15rem; }
+
+@media (max-width: 899px) {
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-skeleton__featured { min-height: 40rem; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__content { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding: 12rem 1.25rem 1.25rem; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__intro { max-width: 100%; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__backdrop-stage { bottom: auto; height: 25rem; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__scrim { background: linear-gradient(180deg, rgb(12 16 21 / 0.08), rgb(12 16 21 / 0.5) 10rem, #0c1015 24rem); }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-next-episode { justify-self: start; width: 100%; max-width: none; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured h2 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__primary { grid-column: 1 / -1; }
+}
+
+@media (max-width: 479px) {
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-summary__customize { width: 100%; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured { border-radius: 1rem; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-featured__content { padding-inline: 1rem; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card { grid-template-columns: 5rem minmax(0, 1fr) !important; gap: 0.75rem; padding: 0.8rem; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-skeleton__card { grid-template-columns: 5rem minmax(0, 1fr); gap: 0.75rem; padding: 0.8rem; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card__actions { gap: 0.3rem; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-card__actions [data-slot="button"] { flex: 1 1 auto; padding-inline: 0.4rem; }
+  :root .tvtime-app .tvtime-watch-next-page .tvtime-watch-next-episode { grid-template-columns: 4rem minmax(0, 1fr) 1rem; padding: 0.65rem; gap: 0.55rem; }
+}

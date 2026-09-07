@@ -1,5 +1,7 @@
 "use client";
 
+import "./watch-next.css";
+
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion, Reorder, useDragControls } from "framer-motion";
@@ -229,7 +231,7 @@ export function WatchNextView() {
   const summary = query.data?.summary ?? { readyEpisodes: 0, estimatedMinutes: 0 };
 
   return (
-    <div className="tvtime-watch-next-page space-y-5">
+    <div className="tvtime-watch-next-page">
       <PageTitlebar title="Watch Next" />
 
       {query.isLoading ? <WatchNextSkeleton /> : query.isError ? (
@@ -300,7 +302,6 @@ export function WatchNextView() {
                 onMark={markWatched}
                 onOpen={goTv}
                 onNotNow={notNow}
-                rail
               />
               <WatchSection
                 key="new"
@@ -542,24 +543,38 @@ function FeaturedWatchCard({
       </AnimatePresence>
       <div className="tvtime-watch-featured__scrim" />
       <div className="tvtime-watch-featured__content">
-        <div className="tvtime-watch-featured__eyebrow">
-          <span>Up next</span>
-          {resolvedIsNewEpisode && <NewEpisodeBadge />}
-          <PersonalStatus item={item} />
+        <div className="tvtime-watch-featured__intro">
+          <div className="tvtime-watch-featured__eyebrow">
+            <span>Up next</span>
+            {resolvedIsNewEpisode && <NewEpisodeBadge />}
+            <PersonalStatus item={item} />
+          </div>
+          <h2 id={`watch-featured-${item.tmdbId}`}>{item.title}</h2>
+          <p className="tvtime-watch-featured__episode">
+            <strong>{episodeCode(item)}</strong>
+            <span aria-hidden="true">—</span>
+            <span>{episodeName}</span>
+          </p>
+          <div className="tvtime-watch-featured__meta">
+            <span><Clock3 className="h-3.5 w-3.5" />{runtime}m</span>
+            <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(airDate)}</span>
+            <span>{item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}</span>
+            {resolvedIsSeasonFinale && <span className="tvtime-watch-finale-label"><Sparkles /> Season finale</span>}
+          </div>
+          <ProgressBar item={item} progress={progress} runtime={runtime} featured />
+          <div className="tvtime-watch-featured__actions">
+            <Button type="button" onClick={() => onMark({ isSeasonFinale: resolvedIsSeasonFinale, nextSeasonNumber: resolvedNextSeasonNumber })} disabled={disabled} className="tvtime-watch-featured__primary">
+              <CheckCircle2 className={pending ? "animate-pulse" : ""} />
+              {pending ? "Updating…" : "Mark episode watched"}
+            </Button>
+            <Button type="button" variant="outline" onClick={handleOpen} className="tvtime-watch-featured__secondary">
+              <Eye /> View episode
+            </Button>
+            <Button type="button" variant="ghost" onClick={onNotNow} className="tvtime-watch-featured__later">
+              Not now
+            </Button>
+          </div>
         </div>
-        <h2 id={`watch-featured-${item.tmdbId}`}>{item.title}</h2>
-        <p className="tvtime-watch-featured__episode">
-          <strong>{episodeCode(item)}</strong>
-          <span aria-hidden="true">—</span>
-          <span>{episodeName}</span>
-        </p>
-        <div className="tvtime-watch-featured__meta">
-          <span><Clock3 className="h-3.5 w-3.5" />{runtime}m</span>
-          <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(airDate)}</span>
-          <span>{item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}</span>
-          {resolvedIsSeasonFinale && <span className="tvtime-watch-finale-label"><Sparkles /> Season finale</span>}
-        </div>
-        <ProgressBar item={item} progress={progress} runtime={runtime} featured />
         <NextEpisodePreview
           item={item}
           name={followingName}
@@ -568,18 +583,6 @@ function FeaturedWatchCard({
           airDate={followingAirDate}
           onOpen={handleOpen}
         />
-        <div className="tvtime-watch-featured__actions">
-          <Button type="button" onClick={() => onMark({ isSeasonFinale: resolvedIsSeasonFinale, nextSeasonNumber: resolvedNextSeasonNumber })} disabled={disabled} className="tvtime-watch-featured__primary">
-            <CheckCircle2 className={pending ? "animate-pulse" : ""} />
-            {pending ? "Updating…" : "Mark episode watched"}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleOpen} className="tvtime-watch-featured__secondary">
-            <Eye /> View episode
-          </Button>
-          <Button type="button" variant="ghost" onClick={onNotNow} className="tvtime-watch-featured__later">
-            Not now
-          </Button>
-        </div>
       </div>
     </motion.section>
   );
