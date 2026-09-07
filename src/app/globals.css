@@ -9201,3 +9201,234 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     box-shadow: var(--audit-shadow-4) !important;
   }
 }
+
+/* Patch 16 — Media Card Redesign.
+   Keeps card dimensions, poster ratio, responsive layout and media/library
+   behavior unchanged. This layer only refines the reusable catalogue card:
+   quieter poster frame, neutral glass badges, restrained Trakora accents,
+   tighter copy hierarchy and a softer fine-pointer hover treatment. */
+
+/* Poster frame: image-first, smaller radius and quieter elevation. */
+.tvtime-app .tvtime-media-card-link {
+  border-radius: 0.875rem;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-poster {
+  border: 1px solid rgb(255 255 255 / 0.105) !important;
+  border-radius: 0.875rem !important;
+  background: #111 !important;
+  box-shadow: var(--audit-shadow-2, 0 1px 3px rgb(0 0 0 / 0.3)) !important;
+  transition:
+    border-color 180ms ease,
+    box-shadow 220ms ease,
+    transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.light .tvtime-app .tvtime-media-card .tvtime-media-poster {
+  border-color: rgb(15 23 42 / 0.11) !important;
+  background: #f8fafc !important;
+  box-shadow: 0 6px 18px rgb(15 23 42 / 0.11) !important;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-poster__image {
+  transition:
+    filter 220ms ease,
+    opacity 220ms ease,
+    transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-poster__veil {
+  background:
+    linear-gradient(to top, rgb(0 0 0 / 0.34), transparent 34%),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.09), transparent 22%);
+  opacity: 0.58;
+}
+
+/* Score corners become neutral glass chips. Tone is carried by the icon/text,
+   not by the whole surface. Keep their current placement and semantics. */
+.tvtime-app .tvtime-media-card :is(.tvtime-user-score, .tvtime-tmdb-score) {
+  top: 0.5rem !important;
+  min-width: 0 !important;
+  height: 1.55rem !important;
+  gap: 0.22rem !important;
+  padding-inline: 0.42rem !important;
+  border: 1px solid rgb(255 255 255 / 0.13) !important;
+  border-radius: 0.5rem !important;
+  background: rgb(10 10 10 / 0.72) !important;
+  box-shadow: var(--audit-shadow-2, 0 4px 12px rgb(0 0 0 / 0.24)) !important;
+  backdrop-filter: blur(12px) saturate(105%) !important;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-user-score {
+  left: 0.5rem !important;
+  right: auto !important;
+  color: #6ee7b7 !important;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-tmdb-score {
+  right: 0.5rem !important;
+  left: auto !important;
+  color: #f5c96a !important;
+}
+
+.light .tvtime-app .tvtime-media-card :is(.tvtime-user-score, .tvtime-tmdb-score) {
+  border-color: rgb(15 23 42 / 0.11) !important;
+  background: rgb(255 255 255 / 0.82) !important;
+  box-shadow: 0 4px 14px rgb(15 23 42 / 0.11) !important;
+}
+
+/* Watchlist becomes a compact neutral glass control with a purple semantic
+   icon only. If TMDB score is present, keep it on the next visual row. */
+.tvtime-app .tvtime-media-card .tvtime-watchlist-indicator {
+  top: 0.5rem !important;
+  right: 0.5rem !important;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1px solid rgb(255 255 255 / 0.13);
+  border-radius: 0.5rem;
+  background: rgb(10 10 10 / 0.72);
+  color: #a78bfa;
+  box-shadow: var(--audit-shadow-2, 0 4px 12px rgb(0 0 0 / 0.24));
+  backdrop-filter: blur(12px) saturate(105%);
+}
+
+.tvtime-app .tvtime-media-card .tvtime-watchlist-indicator svg {
+  width: 0.76rem;
+  height: 0.76rem;
+  fill-opacity: 0.12;
+  stroke-width: 1.9;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-tmdb-score + .tvtime-watchlist-indicator {
+  top: 2.35rem !important;
+  right: 0.5rem !important;
+  border-radius: 0.5rem;
+}
+
+.light .tvtime-app .tvtime-media-card .tvtime-watchlist-indicator {
+  border-color: rgb(15 23 42 / 0.11);
+  background: rgb(255 255 255 / 0.82);
+  box-shadow: 0 4px 14px rgb(15 23 42 / 0.1);
+}
+
+/* Following / rated state rail follows the same quiet glass treatment. */
+.tvtime-app .tvtime-media-card .tvtime-media-state-rail {
+  left: 0.5rem;
+  bottom: 0.5rem !important;
+  gap: 0.25rem;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-state-rail > span {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-color: rgb(255 255 255 / 0.13);
+  border-radius: 0.5rem;
+  background: rgb(10 10 10 / 0.72);
+  box-shadow: var(--audit-shadow-2, 0 4px 12px rgb(0 0 0 / 0.24));
+  backdrop-filter: blur(12px) saturate(105%);
+}
+
+/* Action dot: 32px neutral glass button, no persistent gold fill/glow. */
+.tvtime-app .tvtime-media-card .tvtime-media-menu {
+  right: 0.5rem !important;
+  bottom: calc(4.4rem + 0.5rem) !important;
+  top: auto !important;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  border: 1px solid rgb(255 255 255 / 0.13) !important;
+  border-radius: 0.55rem !important;
+  background: rgb(10 10 10 / 0.72) !important;
+  color: rgb(255 255 255 / 0.82) !important;
+  box-shadow: var(--audit-shadow-2, 0 4px 12px rgb(0 0 0 / 0.24)) !important;
+  backdrop-filter: blur(12px) saturate(105%);
+  transform: translateY(0.1rem);
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-menu:hover {
+  border-color: rgb(255 255 255 / 0.2) !important;
+  background: rgb(18 18 18 / 0.88) !important;
+  color: #fff !important;
+}
+
+.light .tvtime-app .tvtime-media-card .tvtime-media-menu {
+  border-color: rgb(15 23 42 / 0.11) !important;
+  background: rgb(255 255 255 / 0.84) !important;
+  color: rgb(15 23 42 / 0.75) !important;
+  box-shadow: 0 4px 14px rgb(15 23 42 / 0.1) !important;
+}
+
+/* Copy hierarchy: slightly tighter poster-to-title gap, quieter metadata and
+   no visual badge/icon competition under the poster. */
+.tvtime-app .tvtime-media-card .tvtime-media-copy {
+  min-height: 4.4rem;
+  padding: 0.6rem 0.12rem 0.05rem;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-title {
+  min-height: 2.12rem;
+  color: rgb(244 244 245 / 0.96);
+  font-size: 0.86rem;
+  font-weight: 710;
+  line-height: 1.24;
+  letter-spacing: -0.01em;
+  transition: color 180ms ease;
+}
+
+.light .tvtime-app .tvtime-media-card .tvtime-media-title {
+  color: rgb(24 24 27 / 0.96);
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-meta {
+  gap: 0.32rem;
+  margin-top: 0.28rem;
+  color: rgb(161 161 170 / 0.88);
+  font-size: 0.66rem;
+  font-weight: 560;
+  letter-spacing: 0;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-meta svg {
+  display: none;
+}
+
+.light .tvtime-app .tvtime-media-card .tvtime-media-meta {
+  color: rgb(82 82 91 / 0.78);
+}
+
+/* Fine-pointer motion: 2px lift, tiny 1.02 image zoom, deeper neutral shadow.
+   Gold survives only as a restrained title accent. */
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-app .tvtime-media-card:hover .tvtime-media-poster {
+    border-color: rgb(255 255 255 / 0.18) !important;
+    box-shadow: var(--audit-shadow-4, 0 12px 32px rgb(0 0 0 / 0.32)) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .light .tvtime-app .tvtime-media-card:hover .tvtime-media-poster {
+    border-color: rgb(15 23 42 / 0.18) !important;
+    box-shadow: 0 12px 28px rgb(15 23 42 / 0.16) !important;
+  }
+
+  .tvtime-app .tvtime-media-card:hover .tvtime-media-poster__image {
+    filter: saturate(1.025) contrast(1.01);
+    transform: scale(1.02) !important;
+  }
+
+  .tvtime-app .tvtime-media-card:hover .tvtime-media-poster__veil {
+    opacity: 0.64;
+  }
+
+  .tvtime-app .tvtime-media-card:hover .tvtime-media-title {
+    color: color-mix(in oklab, var(--cinema-gold-bright, #f0bd63) 48%, var(--foreground)) !important;
+  }
+}
+
+/* Keyboard focus mirrors the neutral poster frame without changing geometry. */
+.tvtime-app .tvtime-media-card-link:focus-visible .tvtime-media-poster {
+  border-color: color-mix(in oklab, var(--cinema-gold-bright, #f0bd63) 40%, rgb(255 255 255 / 0.2)) !important;
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--cinema-gold-bright, #f0bd63) 16%, transparent),
+    var(--audit-shadow-4, 0 12px 32px rgb(0 0 0 / 0.3)) !important;
+}
