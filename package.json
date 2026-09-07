@@ -53,7 +53,8 @@
     "db:backfill:film-series": "node --experimental-strip-types prisma/scripts/backfill-film-series.ts",
     "db:backfill:film-series:apply": "node --experimental-strip-types prisma/scripts/backfill-film-series.ts --apply",
     "db:verify:film-series": "node --experimental-strip-types prisma/scripts/backfill-film-series.ts --verify-only",
-    "verify:release:future": "node scripts/verify-bat-11-10-future.mjs && node scripts/verify-migration-history.mjs && node scripts/verify-user-facing-integrity.mjs"
+    "verify:release:future": "node scripts/verify-bat-11-10-future.mjs && node scripts/verify-migration-history.mjs && node scripts/verify-user-facing-integrity.mjs",
+    "verify:patch-14": "node --experimental-strip-types scripts/test-structured-personal-rating.ts && node scripts/verify-patch-14.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",

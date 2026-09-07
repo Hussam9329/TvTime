@@ -12,6 +12,7 @@ export type MediaWatchSnapshot = {
   watchedAt: string | null;
   status: string | null;
   userRating: number | null;
+  ratingBreakdown: unknown | null;
   rewatch: boolean;
   rewatchCount: number;
   tags: string[];
@@ -60,6 +61,7 @@ export function mediaWatchSnapshot(item: {
   watchedAt: Date | null;
   status: string | null;
   userRating: number | null;
+  ratingBreakdown: unknown | null;
   rewatch: boolean;
   rewatchCount: number;
   tags: string[];
@@ -69,6 +71,7 @@ export function mediaWatchSnapshot(item: {
     watchedAt: item.watchedAt?.toISOString() ?? null,
     status: item.status,
     userRating: item.userRating,
+    ratingBreakdown: item.ratingBreakdown,
     rewatch: item.rewatch,
     rewatchCount: item.rewatchCount,
     tags: [...item.tags],

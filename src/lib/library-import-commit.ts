@@ -72,6 +72,7 @@ export async function commitStagedLibraryImport(
         COALESCE((record.payload->>'watched')::BOOLEAN, false) AS watched,
         CASE WHEN NULLIF(record.payload->>'watchedAt', '') IS NULL THEN NULL ELSE (record.payload->>'watchedAt')::TIMESTAMPTZ END AS "watchedAt",
         NULLIF(record.payload->>'userRating', '')::INTEGER AS "userRating",
+        CASE WHEN jsonb_typeof(record.payload->'ratingBreakdown') = 'object' THEN record.payload->'ratingBreakdown' ELSE NULL END AS "ratingBreakdown",
         COALESCE((record.payload->>'rewatch')::BOOLEAN, false) AS rewatch,
         NULLIF(record.payload->>'runtime', '')::INTEGER AS runtime,
         NULLIF(record.payload->>'ratingStatus', '') AS "ratingStatus",
@@ -99,14 +100,14 @@ export async function commitStagedLibraryImport(
     INSERT INTO "Media" (
       id, "userId", "tmdbId", title, "originalTitle", year, type, poster, rating,
       overview, genres, episodes, seasons, duration, status, tags,
-      notes, watched, "watchedAt", "userRating", rewatch, runtime, "ratingStatus",
+      notes, watched, "watchedAt", "userRating", "ratingBreakdown", rewatch, runtime, "ratingStatus",
       "isAnime", "isArabic", "originalLanguage", "originCountries", "isFollowing",
       "notifyOnNewEpisode", "rewatchCount", "seriesId", "seriesPart", "addedAt", "updatedAt"
     )
     SELECT
       id, ${userId}, "tmdbId", title, "originalTitle", year, type, poster, rating,
       overview, genres, episodes, seasons, duration, status, tags,
-      notes, watched, "watchedAt", "userRating", rewatch, runtime, "ratingStatus",
+      notes, watched, "watchedAt", "userRating", "ratingBreakdown", rewatch, runtime, "ratingStatus",
       "isAnime", "isArabic", "originalLanguage", "originCountries", "isFollowing",
       "notifyOnNewEpisode", "rewatchCount",
       (SELECT series.id FROM "FilmSeries" series WHERE series."userId" = ${userId} AND series."tmdbCollectionId" = staged."seriesTmdbCollectionId"),
@@ -132,7 +133,12 @@ export async function commitStagedLibraryImport(
       notes = COALESCE("Media".notes, EXCLUDED.notes),
       watched = "Media".watched OR EXCLUDED.watched,
       "watchedAt" = GREATEST("Media"."watchedAt", EXCLUDED."watchedAt"),
-      "userRating" = COALESCE("Media"."userRating", EXCLUDED."userRating"),
+      "userRating" = CASE
+        WHEN "Media"."ratingBreakdown" IS NULL AND EXCLUDED."ratingBreakdown" IS NOT NULL AND "Media".type = 'movie'
+          THEN EXCLUDED."userRating"
+        ELSE COALESCE("Media"."userRating", EXCLUDED."userRating")
+      END,
+      "ratingBreakdown" = COALESCE("Media"."ratingBreakdown", EXCLUDED."ratingBreakdown"),
       rewatch = "Media".rewatch OR EXCLUDED.rewatch,
       runtime = COALESCE("Media".runtime, EXCLUDED.runtime),
       "ratingStatus" = COALESCE("Media"."ratingStatus", EXCLUDED."ratingStatus"),
@@ -172,7 +178,7 @@ export async function commitStagedLibraryImport(
     INSERT INTO "Media" (
       id, "userId", "tmdbId", title, "originalTitle", year, type, poster, rating,
       overview, genres, episodes, seasons, duration, status, tags,
-      notes, watched, "watchedAt", "userRating", rewatch, runtime, "ratingStatus",
+      notes, watched, "watchedAt", "userRating", "ratingBreakdown", rewatch, runtime, "ratingStatus",
       "isAnime", "isArabic", "originalLanguage", "originCountries", "isFollowing",
       "notifyOnNewEpisode", "rewatchCount", "seriesId", "seriesPart", "addedAt", "updatedAt"
     )
@@ -197,6 +203,7 @@ export async function commitStagedLibraryImport(
       COALESCE((payload->>'watched')::BOOLEAN, false),
       CASE WHEN NULLIF(payload->>'watchedAt', '') IS NULL THEN NULL ELSE (payload->>'watchedAt')::TIMESTAMPTZ END,
       NULLIF(payload->>'userRating', '')::INTEGER,
+      CASE WHEN jsonb_typeof(payload->'ratingBreakdown') = 'object' THEN payload->'ratingBreakdown' ELSE NULL END,
       COALESCE((payload->>'rewatch')::BOOLEAN, false),
       NULLIF(payload->>'runtime', '')::INTEGER,
       NULLIF(payload->>'ratingStatus', ''),

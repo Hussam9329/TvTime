@@ -125,6 +125,7 @@ export async function saveTvCompletionRating(args: {
   userId: string;
   mediaId: string;
   rating: number;
+  ratingBreakdown: Prisma.InputJsonValue;
 }): Promise<{ item: Media | null; eligibility: TvRatingEligibility }> {
   const media = await db.media.findFirst({
     where: { id: args.mediaId, userId: args.userId, type: "series" },
@@ -215,6 +216,7 @@ export async function saveTvCompletionRating(args: {
       where: { id: lockedMedia.id },
       data: {
         userRating: args.rating,
+        ratingBreakdown: args.ratingBreakdown,
         status: "finished",
         watched: true,
         watchedAt: watchedRows[0]?.watchedAt ?? lockedMedia.watchedAt ?? new Date(),

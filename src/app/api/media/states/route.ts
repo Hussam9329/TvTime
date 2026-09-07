@@ -18,12 +18,14 @@ function keyFor(mediaType: "movie" | "tv", tmdbId: number) {
 function completenessScore(item: {
   watched: boolean;
   userRating: number | null;
+  ratingBreakdown: unknown | null;
   status: string | null;
   poster: string | null;
   overview: string | null;
   updatedAt: Date;
 }) {
   return Number(item.watched) * 1000
+    + Number(item.ratingBreakdown != null) * 750
     + Number(item.userRating != null) * 500
     + Number(item.status != null) * 300
     + Number(item.poster != null) * 40
@@ -72,6 +74,7 @@ export async function POST(req: NextRequest) {
         status: true,
         watched: true,
         userRating: true,
+        ratingBreakdown: true,
         isAnime: true,
         isArabic: true,
         originalLanguage: true,
@@ -105,6 +108,7 @@ export async function POST(req: NextRequest) {
         status: row.status,
         watched: row.watched,
         userRating: row.userRating,
+        ratingBreakdown: row.ratingBreakdown,
         isAnime: row.isAnime,
         isArabic: row.isArabic,
         originalLanguage: row.originalLanguage,

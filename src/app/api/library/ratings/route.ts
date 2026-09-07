@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
@@ -9,7 +9,6 @@ import {
   parseEpisodeRatingMediaType,
 } from "@/lib/episode-rating";
 import { validateReleasedEpisodeBatch } from "@/lib/tv-status-server";
-import { saveTvCompletionRating, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
 import { normalizeTvTrackingState } from "@/lib/tv-status-engine";
 
 function positiveInteger(value: unknown): number | null {
@@ -19,13 +18,6 @@ function positiveInteger(value: unknown): number | null {
 
 function canonicalType(mediaType: string) {
   return mediaType === "tv" || mediaType === "series" ? "series" : "movie";
-}
-
-function titleRatingValueOutOf100(value: unknown) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return null;
-  const numeric = value;
-  if (numeric < 0 || numeric > 100) return null;
-  return Math.round(numeric <= 10 ? numeric * 10 : numeric);
 }
 
 function titleRatingCompat(item: any) {
@@ -40,6 +32,7 @@ function titleRatingCompat(item: any) {
     valueOutOf100: item.userRating,
     createdAt: item.addedAt,
     updatedAt: item.updatedAt,
+    ratingBreakdown: item.ratingBreakdown ?? null,
     scope: "title",
     source: "Media",
   };
@@ -180,77 +173,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ item: { ...item, showId, seasonNumber, episodeNumber, scope: "episode" } });
     }
 
-    const mediaType = String(body.mediaType || "");
-    const tmdbId = positiveInteger(body.tmdbId);
-    const value = titleRatingValueOutOf100(body.value);
-    if (!mediaType || !tmdbId || value == null) {
-      return NextResponse.json({ error: "mediaType, tmdbId, value required" }, { status: 400 });
-    }
-    const type = canonicalType(mediaType);
-
-    const existingTitle = await db.media.findUnique({
-      where: { userId_type_tmdbId: { userId: user.id, type, tmdbId } },
-      select: { poster: true },
-    });
-    if (type === "series") {
-      const base = await db.media.upsert({
-        where: { userId_type_tmdbId: { userId: user.id, type, tmdbId } },
-        create: {
-          userId: user.id,
-          type,
-          tmdbId,
-          title: body.title || "Unknown",
-          poster: body.posterPath || null,
-          watched: false,
-          status: null,
-        },
-        update: {
-          ...(body.title ? { title: body.title } : {}),
-          ...(!existingTitle?.poster && body.posterPath !== undefined ? { poster: body.posterPath || null } : {}),
-        },
-      });
-      const completion = await saveTvCompletionRating({
-        userId: user.id,
-        mediaId: base.id,
-        rating: value,
-      });
-      if (!completion.item) {
-        const failure = tvRatingEligibilityError(completion.eligibility);
-        return NextResponse.json(
-          {
-            error: failure.message,
-            code: failure.code,
-            totalEpisodes: completion.eligibility.totalEpisodes,
-            watchedEpisodes: completion.eligibility.watchedEpisodes,
-            tmdbStatus: completion.eligibility.tmdbStatus,
-          },
-          { status: 409 },
-        );
-      }
-      return NextResponse.json({ item: titleRatingCompat(completion.item), source: "Media" });
-    }
-
-    const item = await db.media.upsert({
-      where: {
-        userId_type_tmdbId: { userId: user.id, type, tmdbId },
+    return NextResponse.json(
+      {
+        error: "Whole-title ratings must be submitted through the 10 personal rating criteria.",
+        code: "STRUCTURED_RATING_REQUIRED",
       },
-      create: {
-        userId: user.id,
-        type,
-        tmdbId,
-        title: body.title || "Unknown",
-        poster: body.posterPath || null,
-        userRating: value,
-        watched: false,
-        status: null,
-      },
-      update: {
-        userRating: value,
-        ...(body.title ? { title: body.title } : {}),
-        ...(!existingTitle?.poster && body.posterPath !== undefined ? { poster: body.posterPath || null } : {}),
-      },
-    });
-    return NextResponse.json({ item: titleRatingCompat(item), source: "Media" });
+      { status: 400 },
+    );
   } catch (error) {
     console.error("[ratings:POST]", error);
     return NextResponse.json({ error: "Failed to save rating" }, { status: 500 });
@@ -294,6 +223,7 @@ export async function DELETE(req: NextRequest) {
       where: { id: existing.id },
       data: {
         userRating: null,
+        ratingBreakdown: Prisma.DbNull,
         ratingStatus: null,
         ...(isSeriesCompletion
           ? { status: "uptodate", watched: false }

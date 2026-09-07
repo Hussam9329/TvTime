@@ -402,20 +402,20 @@ check(
 );
 check(
   /if \(!isWatched\) \{\s*if \(myRating == null\)[\s\S]*setRatingIntent\("complete"\)/.test(movieDetailView)
-    && /ratingIntent === "complete"[\s\S]*action: "add"[\s\S]*userRating: v/.test(movieDetailView)
-    && /Closing or cancelling keeps it unwatched/.test(movieDetailView),
-  "Movie details defer Watched until the required rating is submitted",
+    && /ratingIntent === "complete"[\s\S]*action: "add"[\s\S]*ratingBreakdown: breakdown/.test(movieDetailView)
+    && /Save rating & mark watched/.test(movieDetailView),
+  "Movie details defer Watched until the required structured rating is submitted",
 );
 check(
   /if \(!watched\) \{\s*if \(userRating != null\)[\s\S]*setRatingOpen\(true\)/.test(mediaCard)
-    && /action: "add",\s*userRating: rating/.test(mediaCard)
-    && /Closing or cancelling keeps it unwatched/.test(mediaCard),
-  "Poster-card Watched actions require the same rating-first flow",
+    && /action: "add"[\s\S]*ratingBreakdown: breakdown/.test(mediaCard)
+    && /Save rating & mark watched/.test(mediaCard),
+  "Poster-card Watched actions require the same structured rating-first flow",
 );
 check(
-  /if \(isMovie && !item\.watched\)[\s\S]*userRating: rating[\s\S]*watched: true/.test(collection)
+  /if \(isMovie && !item\.watched\)[\s\S]*ratingBreakdown: breakdown[\s\S]*watched: true/.test(collection)
     && /Remove rating & watched/.test(collection),
-  "Collection cards save movie completion atomically and cannot remove its rating alone",
+  "Collection cards save structured movie completion atomically and cannot remove its rating alone",
 );
 check(
   /existing\.type === "series" && hasRatingMutation && hasWatchMutation/.test(movieMediaRoute)
@@ -489,14 +489,15 @@ check(
 );
 check(
   /if \(c\.needsRating\)[\s\S]*setPendingCompletionRating\(true\)[\s\S]*setRatingOpen\(true\)/.test(tvDetailView)
-    && /Closing or cancelling keeps it Up To Date/.test(tvDetailView)
+    && /kind="series"/.test(tvDetailView)
     && /Save rating & mark Finished/.test(tvDetailView),
-  "TV completion stays non-Finished until its rating dialog is submitted",
+  "TV completion stays non-Finished until its structured rating dialog is submitted",
 );
 check(
-  /validWatchedMovie = parsed\.type === "movie" && parsed\.watched && parsed\.userRating !== null/.test(importValidation)
+  /canonicalRating = ratingValidation\?\.ok \? ratingValidation\.score : parsed\.userRating/.test(importValidation)
+    && /validWatchedMovie = parsed\.type === "movie" && parsed\.watched && canonicalRating !== null/.test(importValidation)
     && /watched: validWatchedMovie/.test(importValidation),
-  "Library imports cannot reintroduce an unrated watched movie",
+  "Library imports cannot reintroduce an unrated watched movie and preserve structured ratings",
 );
 
 check(/verify-required-schema\.mjs/.test(pkg.scripts?.build || ""), "Production build verifies the required database contract before Next.js build");

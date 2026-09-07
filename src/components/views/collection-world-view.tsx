@@ -15,7 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List, SlidersHorizontal, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { RatingDialog } from "@/components/media/rating-dialog";
+import { StructuredRatingDialog, type StructuredRatingResult } from "@/components/media/structured-rating-dialog";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
@@ -860,7 +860,6 @@ function CollectionMediaCard({
     if (item.userRating != null) {
       const result = await update.mutateAsync({
         id: item.id,
-        userRating: item.userRating,
         watched: true,
         watchedAt: new Date().toISOString(),
         status: "watched",
@@ -871,29 +870,29 @@ function CollectionMediaCard({
     setRatingOpen(true);
   };
 
-  const handleRate = async (rating: number) => {
+  const handleRate = async ({ breakdown }: StructuredRatingResult) => {
     if (isMovie && !item.watched) {
       return update.mutateAsync({
         id: item.id,
-        userRating: rating,
+        ratingBreakdown: breakdown,
         watched: true,
         watchedAt: new Date().toISOString(),
         status: "watched",
       });
     }
-    return update.mutateAsync({ id: item.id, userRating: rating });
+    return update.mutateAsync({ id: item.id, ratingBreakdown: breakdown });
   };
 
   const handleRemoveRating = async () => {
     const result = await update.mutateAsync(isMovie
       ? {
           id: item.id,
-          userRating: null,
+          ratingBreakdown: null,
           watched: false,
           watchedAt: null,
           status: null,
         }
-      : { id: item.id, userRating: null });
+      : { id: item.id, ratingBreakdown: null });
     showWatchUndo(isMovie
       ? "Rating removed and movie marked as not watched"
       : "Rating removed and Finished status cleared", result);
@@ -1086,20 +1085,24 @@ function CollectionMediaCard({
         </Card>
       </motion.div>
 
-      <RatingDialog
+      <StructuredRatingDialog
         open={ratingOpen}
         onOpenChange={setRatingOpen}
         title={displayTitle}
         poster={item.poster}
+        kind={isMovie ? "movie" : "series"}
         onRate={handleRate}
-        initialRating={item.userRating ?? null}
+        initialBreakdown={item.ratingBreakdown}
+        legacyInitialRating={item.userRating ?? null}
         description={isMovie && !item.watched
-          ? "Choose your rating out of 100 to mark this movie watched. Closing or cancelling keeps it unwatched."
-          : "Update your personal rating out of 100."}
-        submitLabel={isMovie && !item.watched ? "Save rating & mark watched" : "Save rating"}
+          ? "قيّم المحاور العشرة كاملة. مجموعها الدقيق يصبح تقييمك من 100، وبعد الحفظ فقط يتم اعتبار الفيلم مُشاهَدًا."
+          : isMovie
+            ? "أعد تقييم الفيلم عبر المحاور العشرة كاملة. مجموعها الدقيق سيستبدل تقييمك الحالي من 100."
+            : "أعد تقييم رحلة المسلسل المكتملة عبر المحاور العشرة. مجموعها الدقيق سيستبدل تقييمك الحالي من 100."}
+        submitLabel={(score) => isMovie && !item.watched ? `Save rating & mark watched · ${score}/100` : `Save rating · ${score}/100`}
         successMessage={isMovie && !item.watched
-          ? (rating) => `Marked as watched · Your rating ${rating}/100`
-          : (rating) => `Rated ${rating}/100`}
+          ? (score) => `Marked as watched · Your rating ${score}/100`
+          : (score) => `Rated ${score}/100`}
       />
     </>
   );

@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
         watched: true,
         status: true,
         userRating: true,
+        ratingBreakdown: true,
         watchedAt: true,
         updatedAt: true,
         addedAt: true,
@@ -97,9 +98,18 @@ export async function POST(req: NextRequest) {
     for (const group of duplicateGroups) {
       const items = group.items;
 
-      // Pick the best row: watched=true wins, highest rating wins, most recent wins
+      // Pick the best row. A structured rating wins over a legacy numeric-only
+      // rating so its score and criterion breakdown always stay together.
       let best = items[0];
       for (const item of items) {
+        const itemHasStructuredRating = item.ratingBreakdown != null;
+        const bestHasStructuredRating = best.ratingBreakdown != null;
+        if (itemHasStructuredRating && !bestHasStructuredRating) {
+          best = item;
+          continue;
+        }
+        if (!itemHasStructuredRating && bestHasStructuredRating) continue;
+
         if (item.watched && !best.watched) best = item;
         if (item.userRating != null && (best.userRating == null || item.userRating > best.userRating)) best = item;
         if (item.status && !best.status) best = item;
@@ -112,7 +122,15 @@ export async function POST(req: NextRequest) {
       for (const item of items) {
         if (item.id === best.id) continue;
         if (item.watched && !best.watched) mergedData.watched = true;
-        if (item.userRating != null && (best.userRating == null || item.userRating > best.userRating)) mergedData.userRating = item.userRating;
+        // Never detach a numeric score from its structured criteria. If the
+        // chosen row already has a breakdown, legacy scores cannot overwrite it.
+        if (best.ratingBreakdown == null && item.ratingBreakdown != null && mergedData.ratingBreakdown == null) {
+          mergedData.ratingBreakdown = item.ratingBreakdown;
+          mergedData.userRating = item.userRating;
+        } else if (best.ratingBreakdown == null && mergedData.ratingBreakdown == null
+          && item.userRating != null && (best.userRating == null || item.userRating > best.userRating)) {
+          mergedData.userRating = item.userRating;
+        }
         if (item.status && !best.status) mergedData.status = item.status;
         if (item.watchedAt && !best.watchedAt) mergedData.watchedAt = item.watchedAt;
         if (item.poster && !best.poster) mergedData.poster = item.poster;

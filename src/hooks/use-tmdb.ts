@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useNav } from "@/lib/store";
 import type { MediaItem, MovieDetail, TvDetail, PaginatedResponse, SeasonDetail, EpisodeImagesResponse, Genre } from "@/lib/tmdb";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
+import type { PersonalRatingBreakdown } from "@/lib/personal-rating";
 import {
   deriveTvTrackingState,
   episodeKey,
@@ -509,6 +510,7 @@ export type MediaBatchState = {
   status: string | null;
   watched: boolean;
   userRating: number | null;
+  ratingBreakdown: PersonalRatingBreakdown | null;
   isAnime: boolean;
   isArabic: boolean;
   originalLanguage: string | null;
@@ -732,14 +734,9 @@ export function useWatchedMovieToggle() {
       originalLanguage?: string | null;
       seasons?: number | null;
       episodes?: number | null;
-      userRating?: number;
+      ratingBreakdown?: PersonalRatingBreakdown;
     }) => {
       if (args.action === "add" || args.action === "rewatch") {
-        const userRating = args.userRating;
-        if (args.action === "add" && (typeof userRating !== "number" || !Number.isInteger(userRating) || userRating < 0 || userRating > 100)) {
-          throw new Error("Choose your rating out of 100 before marking this movie watched.");
-        }
-
         // Find-or-create, then save first-watch completion and its required
         // personal rating atomically. Closing the rating dialog performs no write.
         const id = await findOrCreateMedia({
@@ -767,7 +764,7 @@ export function useWatchedMovieToggle() {
                 watched: true,
                 watchedAt: new Date().toISOString(),
                 status: "watched",
-                userRating,
+                ...(args.ratingBreakdown ? { ratingBreakdown: args.ratingBreakdown } : {}),
               }),
         });
         await ensureApiOk(patchRes, "Failed to mark movie watched");
@@ -1154,8 +1151,9 @@ export function useEpisodeRatingMutate(showId: number) {
 export function useRatingMutate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; value?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null; genres?: string[]; originCountry?: string[] | null; originalLanguage?: string | null; seasons?: number | null; episodes?: number | null }) => {
+    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; ratingBreakdown?: PersonalRatingBreakdown; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null; genres?: string[]; originCountry?: string[] | null; originalLanguage?: string | null; seasons?: number | null; episodes?: number | null }) => {
       if (args.action === "set") {
+        if (!args.ratingBreakdown) throw new Error("Complete all 10 personal rating criteria before saving.");
         // Find-or-create, then save the personal rating. For an eligible TV
         // series, the server atomically couples this with Finished status.
         const id = await findOrCreateMedia({
@@ -1177,7 +1175,7 @@ export function useRatingMutate() {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({
-            userRating: args.value, // stored as 0-100 directly
+            ratingBreakdown: args.ratingBreakdown,
           }),
         });
         if (!patchRes.ok) {
@@ -1195,12 +1193,12 @@ export function useRatingMutate() {
             headers: { "Content-Type": "application/json", ...userHeaders() },
             body: JSON.stringify(args.mediaType === "movie"
               ? {
-                  userRating: null,
+                  ratingBreakdown: null,
                   watched: false,
                   watchedAt: null,
                   status: null,
                 }
-              : { userRating: null }),
+              : { ratingBreakdown: null }),
           });
           await ensureApiOk(patchRes, "Failed to remove rating");
           return patchRes.json();
@@ -1514,6 +1512,7 @@ export interface MediaItemDB {
   watched: boolean;
   watchedAt: string | null;
   userRating: number | null;
+  ratingBreakdown: PersonalRatingBreakdown | null;
   rewatch: boolean;
   rewatchCount: number;
   runtime: number | null;
@@ -1651,7 +1650,7 @@ export function useMediaUpdate() {
   return useMutation({
     mutationFn: async (args: {
       id: string;
-      userRating?: number | null;
+      ratingBreakdown?: PersonalRatingBreakdown | null;
       watched?: boolean;
       watchedAt?: string | null;
       status?: string | null;

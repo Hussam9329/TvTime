@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { RatingDialog } from "@/components/media/rating-dialog";
+import { StructuredRatingDialog, type StructuredRatingResult } from "@/components/media/structured-rating-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
 import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
@@ -74,6 +74,7 @@ export function MovieDetailView() {
   const inWatchlist = stateItem?.status === "planned" && stateItem?.watched !== true;
   const isWatched = stateItem?.watched === true;
   const myRating = stateItem?.userRating ?? null;
+  const myRatingBreakdown = stateItem?.ratingBreakdown ?? null;
 
   const runtime = m.runtime ? `${Math.floor(m.runtime / 60)}h ${m.runtime % 60}m` : null;
   const releaseDate = formatReleaseDateParts(m.release_date);
@@ -157,7 +158,7 @@ export function MovieDetailView() {
           genres: genreNames,
           originCountry: originCountries,
           originalLanguage: m.original_language,
-          userRating: myRating,
+          ...(myRatingBreakdown ? { ratingBreakdown: myRatingBreakdown } : {}),
         });
         showWatchUndo(`Marked as watched · Your rating ${myRating}/100`, result);
       } catch (error) {
@@ -195,7 +196,7 @@ export function MovieDetailView() {
     }
   };
 
-  const onRateSubmit = async (v: number) => {
+  const onRateSubmit = async ({ breakdown }: StructuredRatingResult) => {
     if (ratingIntent === "complete") {
       return watchedToggle.mutateAsync({
         action: "add",
@@ -209,7 +210,7 @@ export function MovieDetailView() {
         genres: genreNames,
         originCountry: originCountries,
         originalLanguage: m.original_language,
-        userRating: v,
+        ratingBreakdown: breakdown,
       });
     }
     if (!isWatched) throw new Error("Mark this movie watched before rating it.");
@@ -217,7 +218,7 @@ export function MovieDetailView() {
       action: "set",
       mediaType: "movie",
       tmdbId: m.id,
-      value: v,
+      ratingBreakdown: breakdown,
       title: displayTitle,
       posterPath: m.poster_path,
       releaseDate: m.release_date,
@@ -420,7 +421,7 @@ export function MovieDetailView() {
                     )}
                     <Button size="sm" onClick={() => setRatingIntent("edit")}>
                       <Star className="fill-current" />
-                      {myRating != null ? "Re-rate" : "Rate out of 100"}
+                      {myRating != null ? "Re-rate" : "Rate with 10 criteria"}
                     </Button>
                   </div>
                 )}
@@ -572,23 +573,25 @@ export function MovieDetailView() {
         </Button>
       </div>
 
-      {/* Rating dialog — out of 100 */}
-      <RatingDialog
+      {/* Structured personal movie rating — 10 criteria, exact sum = /100. */}
+      <StructuredRatingDialog
         open={ratingIntent !== null}
         onOpenChange={(open) => {
           if (!open) setRatingIntent(null);
         }}
         title={displayTitle}
         poster={m.poster_path ? img(m.poster_path, "w185") : null}
+        kind="movie"
         onRate={onRateSubmit}
-        initialRating={myRating}
+        initialBreakdown={myRatingBreakdown}
+        legacyInitialRating={myRating}
         description={ratingIntent === "complete"
-          ? "Choose your rating out of 100 to mark this movie watched. Closing or cancelling keeps it unwatched."
-          : "Update your personal rating out of 100."}
-        submitLabel={ratingIntent === "complete" ? "Save rating & mark watched" : "Save rating"}
+          ? "قيّم المحاور العشرة كاملة. مجموعها الدقيق يصبح تقييمك من 100، وبعد الحفظ فقط يتم اعتبار الفيلم مُشاهَدًا."
+          : "أعد تقييم الفيلم عبر المحاور العشرة كاملة. مجموعها الدقيق سيستبدل تقييمك الحالي من 100."}
+        submitLabel={(score) => ratingIntent === "complete" ? `Save rating & mark watched · ${score}/100` : `Update rating · ${score}/100`}
         successMessage={ratingIntent === "complete"
-          ? (rating) => `Marked as watched · Your rating ${rating}/100`
-          : (rating) => `Rated ${rating}/100`}
+          ? (score) => `Marked as watched · Your rating ${score}/100`
+          : (score) => `Rated ${score}/100`}
       />
     </div>
   );

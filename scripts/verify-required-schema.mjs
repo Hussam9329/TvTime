@@ -23,7 +23,7 @@ const requiredTables = [
 ];
 
 const requiredColumns = {
-  Media: ["isFollowing", "isArabic", "originalLanguage", "originCountries", "seriesId", "seriesPart"],
+  Media: ["isFollowing", "isArabic", "originalLanguage", "originCountries", "seriesId", "seriesPart", "ratingBreakdown"],
   FilmSeries: ["userId", "tmdbCollectionId", "name", "posterPath", "totalParts"],
   TvMetadataCache: [
     "airedEpisodeCount", "airedEpisodeKeys", "refreshAfter", "originalLanguage",
@@ -123,6 +123,7 @@ const requiredMigrations = [
   "20260722010000_remove_custom_lists",
   "20260829010000_web_push_subscriptions",
   "20260902090000_film_series",
+  "20260907010000_structured_personal_rating",
 ];
 
 function assertAll(label, required, present) {

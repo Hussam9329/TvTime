@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { resolveUserId } from "@/lib/auth";
 import { verifyWatchUndoToken, type MediaWatchSnapshot } from "@/lib/watch-undo-token";
@@ -9,6 +10,7 @@ function mediaRestoreData(snapshot: MediaWatchSnapshot) {
     watchedAt: snapshot.watchedAt ? new Date(snapshot.watchedAt) : null,
     status: snapshot.status,
     userRating: snapshot.userRating,
+    ratingBreakdown: snapshot.ratingBreakdown == null ? Prisma.DbNull : snapshot.ratingBreakdown as Prisma.InputJsonValue,
     rewatch: snapshot.rewatch,
     rewatchCount: snapshot.rewatchCount,
     tags: snapshot.tags,
@@ -114,6 +116,7 @@ export async function POST(req: NextRequest) {
       const disposable = current
         && watchedEpisodeCount === 0
         && current.userRating == null
+        && current.ratingBreakdown == null
         && !current.isFollowing
         && [null, "not_started", "watching", "uptodate"].includes(current.status);
       if (disposable) await tx.media.delete({ where: { id: media.id } });

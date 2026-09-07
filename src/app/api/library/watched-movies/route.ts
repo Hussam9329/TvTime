@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
+import { validatePersonalRatingBreakdown } from "@/lib/personal-rating";
 
 function toCompat(item: any) {
   return {
@@ -34,22 +35,32 @@ export async function POST(req: NextRequest) {
     if (!Number.isInteger(tmdbId) || tmdbId <= 0 || !body.title) {
       return NextResponse.json({ error: "tmdbId, title required" }, { status: 400 });
     }
-    const suppliedRating = body.userRating;
-    if (suppliedRating !== undefined
-      && (typeof suppliedRating !== "number" || !Number.isInteger(suppliedRating) || suppliedRating < 0 || suppliedRating > 100)) {
+    if (body.userRating !== undefined) {
       return NextResponse.json(
-        { error: "User rating must be a whole number from 0 to 100.", code: "INVALID_USER_RATING" },
+        {
+          error: "Whole-title ratings must be submitted through the 10 personal rating criteria.",
+          code: "STRUCTURED_RATING_REQUIRED",
+        },
         { status: 400 },
       );
     }
 
     const identity = { userId: user.id, type: "movie", tmdbId };
     const existing = await db.media.findUnique({ where: { userId_type_tmdbId: identity } });
-    const userRating = suppliedRating === undefined ? existing?.userRating : suppliedRating;
+    const ratingValidation = body.ratingBreakdown === undefined
+      ? null
+      : validatePersonalRatingBreakdown(body.ratingBreakdown, "movie");
+    if (ratingValidation && !ratingValidation.ok) {
+      return NextResponse.json(
+        { error: ratingValidation.error, code: "INVALID_RATING_BREAKDOWN" },
+        { status: 400 },
+      );
+    }
+    const userRating = ratingValidation?.ok ? ratingValidation.score : existing?.userRating;
     if (typeof userRating !== "number" || !Number.isInteger(userRating) || userRating < 0 || userRating > 100) {
       return NextResponse.json(
         {
-          error: "Marking a movie watched requires your rating from 0 to 100.",
+          error: "Marking a new movie watched requires all 10 personal rating criteria.",
           code: "MOVIE_WATCHED_REQUIRES_RATING",
         },
         { status: 400 },
@@ -64,6 +75,7 @@ export async function POST(req: NextRequest) {
       watchedAt: new Date(),
       status: "watched",
       userRating,
+      ...(ratingValidation?.ok ? { ratingBreakdown: ratingValidation.breakdown } : {}),
     };
     const item = await db.media.upsert({
       where: { userId_type_tmdbId: identity },

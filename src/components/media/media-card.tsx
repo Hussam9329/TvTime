@@ -12,7 +12,8 @@ import { toast } from "sonner";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
-import { RatingDialog } from "@/components/media/rating-dialog";
+import { StructuredRatingDialog, type StructuredRatingResult } from "@/components/media/structured-rating-dialog";
+import type { PersonalRatingBreakdown } from "@/lib/personal-rating";
 import { mediaCollectionWorldForItem } from "@/lib/media-world-pipeline";
 import { memo, useMemo, useRef, useState } from "react";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
@@ -180,6 +181,7 @@ export const MediaCard = memo(function MediaCard({ item, showMediaType = true, f
             inWatchlist={inWatchlist}
             watched={watched}
             userRating={userRating}
+            ratingBreakdown={libraryState?.ratingBreakdown ?? null}
             libraryStateReady={libraryStateReady}
             onOpenDetails={handleClick}
           />
@@ -196,11 +198,12 @@ interface MediaCardActionsProps {
   inWatchlist: boolean;
   watched: boolean;
   userRating: number | null;
+  ratingBreakdown: PersonalRatingBreakdown | null;
   libraryStateReady: boolean;
   onOpenDetails: () => void;
 }
 
-function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, userRating, libraryStateReady, onOpenDetails }: MediaCardActionsProps) {
+function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, userRating, ratingBreakdown, libraryStateReady, onOpenDetails }: MediaCardActionsProps) {
   const watchlistToggle = useWatchlistToggle();
   const watchedToggle = useWatchedMovieToggle();
   const showWatchUndo = useWatchUndo();
@@ -224,7 +227,7 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
           const result = await watchedToggle.mutateAsync({
             ...actionPayload,
             action: "add",
-            userRating,
+            ...(ratingBreakdown ? { ratingBreakdown } : {}),
           });
           showWatchUndo(`Marked as watched · Your rating ${userRating}/100`, result);
         } catch {
@@ -240,11 +243,11 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
       showWatchUndo("Removed from watched", result);
     } catch { toast.error("Failed to update watched status"); }
   };
-  const completeWatchedWithRating = async (rating: number) => {
+  const completeWatchedWithRating = async ({ breakdown }: StructuredRatingResult) => {
     return watchedToggle.mutateAsync({
       ...actionPayload,
       action: "add",
-      userRating: rating,
+      ratingBreakdown: breakdown,
     });
   };
 
@@ -295,16 +298,18 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
         </DropdownMenuContent>
       </DropdownMenu>
       {mediaType === "movie" && ratingOpen && (
-        <RatingDialog
+        <StructuredRatingDialog
           open
           onOpenChange={setRatingOpen}
           title={title}
           poster={imgOrPlaceholder(item.poster_path, "w185")}
+          kind="movie"
           onRate={completeWatchedWithRating}
-          initialRating={userRating}
-          description="Choose your rating out of 100 to mark this movie watched. Closing or cancelling keeps it unwatched."
-          submitLabel="Save rating & mark watched"
-          successMessage={(rating) => `Marked as watched · Your rating ${rating}/100`}
+          initialBreakdown={ratingBreakdown}
+          legacyInitialRating={userRating}
+          description="قيّم المحاور العشرة كاملة. مجموعها الدقيق يصبح تقييمك من 100، وبعد الحفظ فقط يتم اعتبار الفيلم مُشاهَدًا."
+          submitLabel={(score) => `Save rating & mark watched · ${score}/100`}
+          successMessage={(score) => `Marked as watched · Your rating ${score}/100`}
         />
       )}
     </>

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { detectIsArabic, normalizeCountryCodes } from "@/lib/arabic-media";
+import { validatePersonalRatingBreakdown } from "@/lib/personal-rating";
 import {
   LIBRARY_BACKUP_KIND,
   LIBRARY_COLLECTIONS,
@@ -117,6 +118,7 @@ const mediaSchema = z.object({
   watchedAt: nullableIsoDate.default(null),
   userRating: z.preprocess((value) => value === null || value === undefined || value === "" ? null : Number(value),
     z.number().int().min(0).max(100).nullable()).default(null),
+  ratingBreakdown: z.unknown().nullable().default(null),
   rewatch: strictBoolean.default(false),
   runtime: optionalNonNegativeInt.default(null),
   ratingStatus: nullableString(128).default(null),
@@ -249,8 +251,16 @@ export function normalizeImportRecord(record: LibraryTransferRecord): Normalized
       ? shouldPromoteArabic
       : parsed.isArabic || shouldPromoteArabic;
     const isAnime = !isArabic && parsed.isAnime;
-    const requestedSeriesRating = parsed.type === "series" && parsed.userRating !== null;
-    const validWatchedMovie = parsed.type === "movie" && parsed.watched && parsed.userRating !== null;
+    const ratingValidation = parsed.ratingBreakdown == null
+      ? null
+      : validatePersonalRatingBreakdown(parsed.ratingBreakdown, parsed.type);
+    if (ratingValidation && !ratingValidation.ok) {
+      throw new Error(`Invalid structured rating in imported media record: ${ratingValidation.error}`);
+    }
+    const ratingBreakdown = ratingValidation?.ok ? ratingValidation.breakdown : null;
+    const canonicalRating = ratingValidation?.ok ? ratingValidation.score : parsed.userRating;
+    const requestedSeriesRating = parsed.type === "series" && canonicalRating !== null;
+    const validWatchedMovie = parsed.type === "movie" && parsed.watched && canonicalRating !== null;
     return {
       collection: record.collection,
       ordinal: record.ordinal,
@@ -264,7 +274,8 @@ export function normalizeImportRecord(record: LibraryTransferRecord): Normalized
             : parsed.status,
         watched: validWatchedMovie,
         watchedAt: validWatchedMovie ? parsed.watchedAt : null,
-        userRating: parsed.type === "series" ? null : parsed.userRating,
+        userRating: parsed.type === "series" ? null : canonicalRating,
+        ratingBreakdown,
         requestedSeriesRating,
         isArabic,
         isAnime,

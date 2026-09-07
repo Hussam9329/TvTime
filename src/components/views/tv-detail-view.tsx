@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingDialog } from "@/components/media/rating-dialog";
+import { StructuredRatingDialog, type StructuredRatingResult } from "@/components/media/structured-rating-dialog";
 import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
@@ -57,6 +58,7 @@ export function TvDetailView() {
   const tData = detail.data;
   const trackedShow = mediaState.data ?? progress.mediaItem ?? undefined;
   const myRating = trackedShow?.userRating ?? null;
+  const myRatingBreakdown = trackedShow?.ratingBreakdown ?? null;
   // Fix #2: Don't default to "not_started" — use null if show is not tracked
   const showTrackingStatus = (progress.trackingState || trackedShow?.status || null) as TvTrackingState | null;
   const tmdbStatus = tData?.status || "";
@@ -293,7 +295,7 @@ export function TvDetailView() {
     }
   };
 
-  const onRateSubmit = async (rating: number) => {
+  const onRateSubmit = async ({ breakdown }: StructuredRatingResult) => {
     if (!canRateShow) {
       toast.error(isEnded ? "Finish all episodes before rating this show." : "Rating unlocks only after the whole show ends.");
       return;
@@ -302,7 +304,7 @@ export function TvDetailView() {
       action: "set",
       mediaType: "tv",
       tmdbId: t.id,
-      value: rating,
+      ratingBreakdown: breakdown,
       title: displayTitle,
       posterPath: t.poster_path,
       releaseDate: t.first_air_date,
@@ -500,7 +502,7 @@ export function TvDetailView() {
                       <div className="text-2xl font-bold text-muted-foreground">—</div>
                       <span className="text-xs text-muted-foreground">
                         {hasWatchedEveryFinalEpisode && isEnded
-                          ? "Rate to mark this show Finished"
+                          ? "Rate 10 criteria to mark this show Finished"
                           : effectiveLabel === "uptodate"
                             ? "Rate later when show ends"
                             : isArabicShow ? "لم تقيّمه بعد" : "Not rated yet"}
@@ -587,7 +589,7 @@ export function TvDetailView() {
                 setLastAutoPromptedShowId(String(t.id));
                 setPendingCompletionRating(true);
                 setRatingOpen(true);
-                toast.info("All episodes watched. Add your rating to mark this show Finished.");
+                toast.info("All episodes watched. Complete the 10-criteria rating to mark this show Finished.");
               } else if (c.newStatus === "uptodate") {
                 toast.info("You're all caught up! More episodes coming soon.");
               }
@@ -672,8 +674,8 @@ export function TvDetailView() {
         )}
       </Tabs>
 
-      {/* Rating dialog — out of 100. Auto-opens when an Ended show is fully watched and unrated. */}
-      <RatingDialog
+      {/* Structured full-series rating — only after the final completed journey. */}
+      <StructuredRatingDialog
         open={ratingOpen}
         onOpenChange={(open) => {
           setRatingOpen(open);
@@ -684,15 +686,17 @@ export function TvDetailView() {
         }}
         title={displayTitle}
         poster={t.poster_path ? img(t.poster_path, "w185") : null}
+        kind="series"
         onRate={onRateSubmit}
-        initialRating={myRating ?? null}
+        initialBreakdown={myRatingBreakdown}
+        legacyInitialRating={myRating}
         description={myRating == null
-          ? "Choose your rating out of 100 to mark this completed series Finished. Closing or cancelling keeps it Up To Date."
-          : "Update your personal rating out of 100. The series remains Finished after saving."}
-        submitLabel={myRating == null ? "Save rating & mark Finished" : "Update rating"}
-        successMessage={(rating) => myRating == null
-          ? `Marked as Finished · Your rating ${rating}/100`
-          : `Updated your rating to ${rating}/100`}
+          ? "قيّم رحلة المسلسل المكتملة عبر المحاور العشرة كاملة. مجموعها الدقيق يصبح تقييمك من 100، وبعد الحفظ فقط يتحول المسلسل إلى Finished."
+          : "أعد تقييم رحلة المسلسل كاملة عبر المحاور العشرة. مجموعها الدقيق سيستبدل تقييمك الحالي مع بقاء المسلسل Finished."}
+        submitLabel={(score) => myRating == null ? `Save rating & mark Finished · ${score}/100` : `Update rating · ${score}/100`}
+        successMessage={(score) => myRating == null
+          ? `Marked as Finished · Your rating ${score}/100`
+          : `Updated your rating to ${score}/100`}
       />
 
       {showStopDialog && (

@@ -57,6 +57,7 @@ model Media {
   watched        Boolean  @default(false)
   watchedAt      DateTime?
   userRating     Int?     // 0-100
+  ratingBreakdown Json?    // Structured 10-criterion personal rating (v1)
   rewatch        Boolean  @default(false)
   runtime        Int?
   ratingStatus   String?
