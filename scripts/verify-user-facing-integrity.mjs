@@ -386,10 +386,15 @@ check(
   "TV detail buttons stay compact instead of stretching across the hero",
 );
 check(
-  /className="tvtime-tv-detail-hero__meta"/.test(tvDetailView)
-    && !/tvtime-tv-detail-hero__meta[^\n]*\[&>\*\]:h-10/.test(tvDetailView)
-    && /\.tvtime-tv-detail-hero__meta > \*\s*\{[\s\S]*min-height: 2rem[\s\S]*padding: 0\.36rem 0\.62rem[\s\S]*border-radius: 999px[\s\S]*font-size: 0\.7rem/.test(globalStyles),
-  "TV type, state, year, seasons, score and certification render as compact metadata chips",
+  /className="tvtime-tv-detail-hero__eyebrow"/.test(tvDetailView)
+    && /className="tvtime-tv-detail-hero__facts"/.test(tvDetailView)
+    && /className="tvtime-tv-detail-hero__genres"/.test(tvDetailView)
+    && /<Calendar aria-hidden="true" \/> \{year\}/.test(tvDetailView)
+    && /<Layers aria-hidden="true" \/>/.test(tvDetailView)
+    && /className="is-score"/.test(tvDetailView)
+    && /className="is-rating"/.test(tvDetailView)
+    && /\.tvtime-tv-detail-hero__facts > span\s*\{[\s\S]*background: transparent !important[\s\S]*font-size: 0\.72rem/.test(globalStyles),
+  "TV profile uses a cinematic eyebrow plus a compact factual metadata row",
 );
 check(
   (tvTrackingView.match(/\{ value: "/g) ?? []).length === 9

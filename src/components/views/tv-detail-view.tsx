@@ -15,8 +15,8 @@ import { SafeImage } from "@/components/media/safe-image";
 import { OfficialPosterPicker } from "@/components/media/official-poster-picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-  Star, Clock, Play, ListPlus, Check, CheckCircle2, Circle, ArrowLeft,
-  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Zap, Trophy, Lock, Trash2, RotateCcw, ExternalLink, CircleStop,
+  Star, Calendar, Play, ListPlus, Check, CheckCircle2, Circle, ArrowLeft,
+  Tv, Users, Sparkles, Heart, Bell, BellOff, ChevronDown, CheckCheck, Layers, Lock, Trash2, RotateCcw, ExternalLink, CircleStop,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -339,7 +339,7 @@ export function TvDetailView() {
     : "text-rose-400";
 
   return (
-    <div className="tvtime-tv-detail-page space-y-5">
+    <div className="tvtime-tv-detail-page tvtime-cinematic-detail-page space-y-5" data-media-kind="tv">
       <Button variant="ghost" size="sm" onClick={back} className="tvtime-tv-detail-back-button text-muted-foreground">
         <ArrowLeft className="w-4 h-4 mr-1" /> {isArabicShow ? "رجوع" : "Back"}
       </Button>
@@ -349,8 +349,8 @@ export function TvDetailView() {
       <div data-ui-surface="hero" className="absolute inset-0 -z-20 overflow-hidden">
         <div className="absolute inset-0">
           <SafeImage src={img(t.backdrop_path, "w1280")} alt={displayTitle} fill variant="backdrop" priority className="absolute inset-0" />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,9,19,0.84)_0%,rgba(4,12,25,0.7)_45%,rgba(3,8,18,0.54)_100%)]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/95 via-[#07101f]/35 to-[#07101f]/35" />
+          <div className="tvtime-detail-backdrop__side absolute inset-0" />
+          <div className="tvtime-detail-backdrop__fade absolute inset-0" />
         </div>
       </div>
 
@@ -368,46 +368,35 @@ export function TvDetailView() {
         </div>
 
         <div className="tvtime-tv-detail-hero__content min-w-0 space-y-5 md:pt-1">
-          {/* Title and badges */}
+          {/* Cinematic identity */}
           <div className="tvtime-tv-detail-hero__identity">
-            <div className="tvtime-tv-detail-hero__user-state" aria-label={isArabicShow ? "حالة مشاهدتك" : "Your viewing status"}>
-              <span className="tvtime-tv-detail-hero__user-state-label">{isArabicShow ? "حالتك" : "Your status"}</span>
-              {effectiveLabel === "finished" && (
-                <Badge data-status="finished" className="bg-emerald-500/20 text-emerald-400 border-0">
-                  <Trophy className="w-3 h-3 mr-1" /> {isArabicShow ? "مكتمل" : "Finished"}
-                </Badge>
-              )}
-              {effectiveLabel === "uptodate" && (
-                <Badge data-status="uptodate" className="bg-cyan-500/20 text-cyan-400 border-0">
-                  <Zap className="w-3 h-3 mr-1" /> {isArabicShow ? "مواكب للحلقات" : "Up To Date"}
-                </Badge>
-              )}
-              {effectiveLabel === "watching" && (
-                <Badge data-status="watching" className="bg-blue-500/20 text-blue-400 border-0">
-                  <Play className="w-3 h-3 mr-1 fill-current" /> {isArabicShow ? "قيد المشاهدة" : "Watching"}
-                </Badge>
-              )}
-              {effectiveLabel === "not_started" && (
-                <Badge data-status="not_started" className="bg-slate-500/20 text-slate-300 border-0">{isArabicShow ? "لم يبدأ" : "Not Started"}</Badge>
-              )}
-              {effectiveLabel === "planned" && (
-                <Badge data-status="planned" className="bg-violet-500/20 text-violet-300 border-0">{isArabicShow ? "ضمن الخطة" : "Planned"}</Badge>
-              )}
+            <div className="tvtime-tv-detail-hero__eyebrow">
+              <span className="tvtime-tv-detail-hero__kind">{isArabicShow ? "مسلسل" : "TV Show"}</span>
+              {year && <span aria-hidden="true">•</span>}
+              {year && <span>{year}</span>}
+              {isArabicShow && <span className="tvtime-tv-detail-hero__arabic">مسلسل عربي</span>}
             </div>
-            <div className="tvtime-tv-detail-hero__meta">
-              <Badge variant="secondary" className="bg-primary/20 text-primary border-0"><Tv className="w-3 h-3 mr-1" />{isArabicShow ? "مسلسل" : "TV Show"}</Badge>
-              {isArabicShow && <Badge className="border-0 bg-amber-500/20 text-amber-300">مسلسل عربي</Badge>}
-              {year && <Badge variant="secondary" className="border-0">{year}</Badge>}
-              {t.number_of_seasons > 0 && <Badge variant="secondary" className="border-0"><Layers className="w-3 h-3 mr-1" />{isArabicShow ? `${t.number_of_seasons} موسم` : `${t.number_of_seasons} season${t.number_of_seasons > 1 ? "s" : ""}`}</Badge>}
-              {runtime && <Badge variant="secondary" className="border-0"><Clock className="w-3 h-3 mr-1" />{runtime}</Badge>}
-              {t.vote_average > 0 && (
-                <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-0"><Star className="w-3 h-3 mr-1 fill-amber-300" />{t.vote_average.toFixed(1)}</Badge>
-              )}
-              {contentRating && <Badge variant="secondary" className="bg-primary/30 text-primary border-0 font-bold">{contentRating}</Badge>}
-              {t.status && <Badge variant="secondary" className="border-0">{t.status}</Badge>}
-            </div>
-            <h1 className="tvtime-tv-detail-hero__title view-page-title text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.04em] leading-[0.95]">{displayTitle}</h1>
-            {t.tagline && <p className="tvtime-tv-detail-hero__tagline text-base sm:text-lg italic text-foreground/70 mt-5">{t.tagline}</p>}
+            <h1 className="tvtime-tv-detail-hero__title view-page-title">{displayTitle}</h1>
+            {t.tagline && <p className="tvtime-tv-detail-hero__tagline">{t.tagline}</p>}
+          </div>
+
+          <div className="tvtime-tv-detail-hero__genres" aria-label="TV genres">
+            {t.genres?.map((g) => (
+              <Badge key={g.id} variant="outline">{g.name}</Badge>
+            ))}
+          </div>
+          {t.created_by?.length > 0 && (
+            <p className="tvtime-tv-detail-hero__creator">
+              {isArabicShow ? "ابتكره" : "Created by"} <span>{t.created_by.map((c) => c.name).join(", ")}</span>
+            </p>
+          )}
+
+          <div className="tvtime-tv-detail-hero__facts" aria-label="TV show facts">
+            {year && <span><Calendar aria-hidden="true" /> {year}</span>}
+            {t.number_of_seasons > 0 && <span><Layers aria-hidden="true" /> {isArabicShow ? `${t.number_of_seasons} موسم` : `${t.number_of_seasons} season${t.number_of_seasons > 1 ? "s" : ""}`}</span>}
+            {t.vote_average > 0 && <span className="is-score"><Star className="fill-current" aria-hidden="true" /> {t.vote_average.toFixed(1)}</span>}
+            {contentRating && <span className="is-rating">{contentRating}</span>}
+            {t.status && <span><RotateCcw aria-hidden="true" /> {t.status}</span>}
           </div>
           {/* Episode progress and following membership are intentionally separate. */}
           <div className="tvtime-detail-hero__actions tvtime-tv-detail-hero__actions">
@@ -449,7 +438,7 @@ export function TvDetailView() {
             )}
             {trailer && (
               <Button variant="outline" onClick={() => window.open(`https://www.youtube.com/watch?v=${trailer.key}`, "_blank")}>
-                <Play className="fill-current" /> Trailer
+                <Play className="fill-current" /> Trailers
               </Button>
             )}
             <DropdownMenu>
@@ -485,7 +474,8 @@ export function TvDetailView() {
           <Card className="tvtime-tv-detail-hero__rating-card rounded-2xl border-white/15 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
             <div className="tvtime-tv-detail-hero__rating-grid grid grid-cols-1 items-center gap-5 md:grid-cols-[minmax(220px,1fr)_auto] xl:grid-cols-[minmax(260px,1fr)_auto_minmax(220px,auto)]">
               <div className="tvtime-tv-detail-hero__rating-summary flex min-w-0 items-center gap-4">
-                <div>
+                <div className="tvtime-detail-rating__icon" aria-hidden="true"><Star className="fill-current" /></div>
+                <div className="tvtime-detail-rating__body">
                   <p className="text-xs text-muted-foreground mb-1">{isArabicShow ? "تقييمك" : "Your rating"}</p>
                   {displayedShowRating != null ? (
                     <div className="flex items-center gap-2">
@@ -534,11 +524,14 @@ export function TvDetailView() {
                 </Button>
               </div>
               <div className="tvtime-tv-detail-hero__tmdb-rating md:col-span-2 md:justify-self-end xl:col-span-1 xl:text-right">
+                <div className="tvtime-detail-rating__tmdb-mark" aria-hidden="true"><span>TM</span><span>DB</span></div>
+                <div className="tvtime-detail-rating__body">
                 <p className="text-xs text-muted-foreground mb-1">{isArabicShow ? "تقييم TMDB" : "TMDB score"}</p>
                 <div className="flex items-center gap-1 text-amber-400 font-bold text-lg">
                   <Star className="w-5 h-5 fill-amber-400" />
                   {t.vote_average.toFixed(1)}
                   <span className="text-xs text-muted-foreground font-normal">/10 ({t.vote_count.toLocaleString()})</span>
+                </div>
                 </div>
               </div>
               {showRatingLockMessage && (
@@ -550,22 +543,12 @@ export function TvDetailView() {
             </div>
           </Card>
 
-          <div className="tvtime-tv-detail-hero__genres flex flex-wrap gap-2.5 [&>*]:rounded-xl [&>*]:px-4 [&>*]:py-2">
-            {t.genres?.map((g) => (
-              <Badge key={g.id} variant="outline" className="border-primary/30 text-primary/90">{g.name}</Badge>
-            ))}
-          </div>
-          {t.created_by?.length > 0 && (
-            <p className="tvtime-tv-detail-hero__creator text-sm text-muted-foreground">
-              {isArabicShow ? "ابتكره" : "Created by"} <span className="text-foreground font-medium">{t.created_by.map((c) => c.name).join(", ")}</span>
-            </p>
-          )}
         </div>
       </div>
       </section>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList aria-label={isArabicShow ? "أقسام المسلسل" : "TV show sections"} className="tvtime-tv-detail-tabs flex h-14 w-full snap-x snap-proximity justify-start overflow-x-auto rounded-2xl border border-border/70 bg-muted/80 p-1.5 shadow-lg no-scrollbar [&>*]:h-full [&>*]:min-w-[120px] [&>*]:shrink-0 [&>*]:snap-start [&>*]:flex-none [&>*]:rounded-xl">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="tvtime-detail-tabs-shell tvtime-tv-detail-tabs-shell">
+        <TabsList aria-label={isArabicShow ? "أقسام المسلسل" : "TV show sections"} className="tvtime-detail-tabs tvtime-tv-detail-tabs flex h-14 w-full snap-x snap-proximity justify-start overflow-x-auto no-scrollbar">
           <TabsTrigger value="seasons">{isArabicShow ? "المواسم والحلقات" : "Seasons & Episodes"}</TabsTrigger>
           <TabsTrigger value="overview">{isArabicShow ? "نظرة عامة" : "Overview"}</TabsTrigger>
           <TabsTrigger value="cast">{isArabicShow ? "طاقم العمل" : "Cast"}</TabsTrigger>
@@ -990,7 +973,7 @@ function SeasonEpisodes({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="tvtime-season-episodes space-y-4">
       {/* Season selector */}
       <div className="tvtime-season-toolbar flex items-center justify-between gap-3 flex-wrap">
         <div className="tvtime-season-selector relative">
@@ -1054,7 +1037,7 @@ function SeasonEpisodes({
           ))}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="tvtime-episode-grid space-y-2">
           {seasonData.data?.episodes.map((ep, idx) => {
             const futureEpisode = isFutureEpisode(ep.air_date);
             const released = isReleased(ep);
@@ -1067,13 +1050,13 @@ function SeasonEpisodes({
                 transition={{ delay: Math.min(idx * 0.02, 0.3) }}
               >
                 <Card className={cn(
-                  "p-3 flex gap-3 items-start transition-colors",
+                  "tvtime-episode-card p-3 flex gap-3 items-start transition-colors",
                   isWatched ? "border-primary/40 bg-primary/5" : futureEpisode ? "opacity-65 border-dashed" : "hover:border-border/80"
                 )}>
                   <button
                     onClick={() => toggleEpisode(ep)}
                     disabled={!released || (!isWatched && !watchPlanReady)}
-                    className="flex-shrink-0 mt-0.5 disabled:cursor-not-allowed"
+                    className="tvtime-episode-toggle flex-shrink-0 mt-0.5 disabled:cursor-not-allowed"
                     aria-label={!released ? "Episode not released" : isWatched ? "Mark as not watched" : "Mark as watched"}
                   >
                     {isWatched ? (
@@ -1083,7 +1066,7 @@ function SeasonEpisodes({
                     )}
                   </button>
 
-                  <div className="relative w-24 sm:w-32 flex-shrink-0">
+                  <div className="tvtime-episode-still relative w-24 sm:w-32 flex-shrink-0">
                     <div className="relative aspect-video rounded-md overflow-hidden bg-muted">
                       {ep.still_path ? (
                       <SafeImage src={img(ep.still_path, "w300")} alt={ep.name} fill variant="still" />
@@ -1091,19 +1074,19 @@ function SeasonEpisodes({
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Tv className="w-5 h-5" /></div>
                       )}
                     </div>
-                    <span className="absolute -top-1 -left-1 bg-background/90 backdrop-blur text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border border-border">
+                    <span className="tvtime-episode-number absolute -top-1 -left-1 bg-background/90 backdrop-blur text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border border-border">
                       {ep.episode_number}
                     </span>
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
+                  <div className="tvtime-episode-body flex-1 min-w-0">
+                    <div className="tvtime-episode-heading flex items-start justify-between gap-2">
                       <h4 className="font-semibold text-sm line-clamp-1">
                         {ep.name || `Episode ${ep.episode_number}`}
                         {futureEpisode && <Badge variant="outline" className="ml-2 text-[9px]">Upcoming</Badge>}
                       </h4>
                       {ep.air_date && (
-                        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                        <span className="tvtime-episode-date text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                           {new Date(ep.air_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                         </span>
                       )}
@@ -1111,13 +1094,13 @@ function SeasonEpisodes({
                     {ep.runtime ? (
                       <p className="text-xs text-muted-foreground mb-1">{ep.runtime} min</p>
                     ) : null}
-                    <p className="text-xs text-muted-foreground/80 line-clamp-2">{ep.overview || "No description available."}</p>
+                    <p className="tvtime-episode-overview text-xs text-muted-foreground/80 line-clamp-2">{ep.overview || "No description available."}</p>
                     {ep.vote_average > 0 && (
-                      <span className="inline-flex items-center gap-1 mt-1 text-xs text-amber-400">
+                      <span className="tvtime-episode-score inline-flex items-center gap-1 mt-1 text-xs text-amber-400">
                         <Star className="w-3 h-3 fill-amber-400" /> TMDB {ep.vote_average.toFixed(1)}
                       </span>
                     )}
-                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                    <div className="tvtime-episode-actions flex items-center gap-1.5 mt-2 flex-wrap">
                       {isWatched && <Button type="button" variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => void recordEpisodeRewatch(ep)} disabled={episodeToggle.isPending}>Rewatch ({(watched.data?.items ?? []).find((item: any) => item.seasonNumber === ep.season_number && item.episodeNumber === ep.episode_number)?.rewatchCount ?? 0})</Button>}
                       <Button
                         type="button"

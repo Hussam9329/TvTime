@@ -18,7 +18,7 @@ import {
   Layers3,
   Menu,
   Moon,
-  MoreHorizontal,
+  ChevronDown,
   Play,
   Search,
   Sparkles,
@@ -125,6 +125,7 @@ export function Header() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [mobileHeaderHidden, setMobileHeaderHidden] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchTab, setSearchTab] = useState<"all" | "movie" | "tv" | "person">("all");
   const isMobileExperience = useMobileViewport();
@@ -162,6 +163,7 @@ export function Header() {
       ticking = true;
       window.requestAnimationFrame(() => {
         const currentY = window.scrollY;
+        setHeaderScrolled(currentY > 12);
         const mobile = isMobileExperience;
         if (!mobile || mobileSearchOpen || mobileOpen || currentY < 72) {
           setMobileHeaderHidden(false);
@@ -174,6 +176,7 @@ export function Header() {
         ticking = false;
       });
     };
+    setHeaderScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, [isMobileExperience, mobileOpen, mobileSearchOpen]);
@@ -284,9 +287,10 @@ export function Header() {
 
   const currentLabel = getViewLabel(view);
   const isDetailView = view === "movie-detail" || view === "tv-detail" || view === "person-detail";
+  const navActiveView: ViewName = view === "movie-detail" ? "movies" : view === "tv-detail" ? "tv-shows" : view;
 
   const navButton = (item: NavItem, compact = false) => {
-    const active = item.view === view;
+    const active = item.view === navActiveView;
     const label = getViewLabel(item.view);
     return (
       <button
@@ -314,7 +318,7 @@ export function Header() {
     );
   };
 
-  const overflowActive = overflowNavItems.some((item) => item.view === view);
+  const overflowActive = overflowNavItems.some((item) => item.view === navActiveView);
 
   return (
     <>
@@ -322,6 +326,8 @@ export function Header() {
         className="tvtime-app-header sticky top-0 z-40"
         data-mobile-search-open={mobileSearchOpen ? "true" : "false"}
         data-mobile-hidden={mobileHeaderHidden ? "true" : "false"}
+        data-scrolled={headerScrolled ? "true" : "false"}
+        data-detail-view={isDetailView ? "true" : "false"}
       >
         <div className="tvtime-header-inner mx-auto flex h-16 max-w-[1920px] items-center gap-1.5 px-2.5 sm:h-[4.5rem] sm:gap-2 sm:px-4 lg:px-5">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -371,7 +377,7 @@ export function Header() {
               variant="ghost"
               size="icon"
               onClick={back}
-              className="tvtime-header-icon"
+              className="tvtime-header-icon tvtime-header-back"
               aria-label="Go back"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -407,8 +413,8 @@ export function Header() {
                   )}
                   aria-label="More destinations"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
                   More
+                  <ChevronDown className="h-3.5 w-3.5" />
                   {overflowActive && <span className="tvtime-nav-active-indicator" aria-hidden="true" />}
                 </Button>
               </DropdownMenuTrigger>
@@ -670,7 +676,7 @@ export function Header() {
       <nav className="tvtime-mobile-dock md:hidden" aria-label="Quick navigation">
         <div className="tvtime-mobile-dock__surface">
           {mobileDockItems.map((item) => {
-            const active = item.view === view;
+            const active = item.view === navActiveView;
             return (
               <button
                 key={item.view}
