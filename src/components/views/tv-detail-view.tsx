@@ -468,7 +468,7 @@ export function TvDetailView() {
             </DropdownMenu>
           </div>
 
-          <Card className="tvtime-tv-detail-hero__rating-card rounded-2xl border-white/15 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
+          <div className="tvtime-tv-detail-hero__rating-card">
             <div className="tvtime-tv-detail-hero__rating-grid grid grid-cols-1 items-center gap-5 md:grid-cols-[minmax(220px,1fr)_auto] xl:grid-cols-[minmax(260px,1fr)_auto_minmax(220px,auto)]">
               <div className="tvtime-tv-detail-hero__rating-summary flex min-w-0 items-center gap-4">
                 <div className="tvtime-detail-rating__icon" aria-hidden="true"><Star className="fill-current" /></div>
@@ -538,7 +538,7 @@ export function TvDetailView() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
 
         </div>
       </div>

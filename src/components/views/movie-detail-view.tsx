@@ -382,7 +382,7 @@ export function MovieDetailView() {
             </div>
 
             {/* Rating */}
-            <Card className="tvtime-movie-detail-rating">
+            <div className="tvtime-movie-detail-rating">
               <div className="tvtime-movie-detail-rating__grid">
                 <div className="tvtime-movie-detail-rating__user">
                   <div className="tvtime-detail-rating__icon" aria-hidden="true"><Star className="fill-current" /></div>
@@ -431,7 +431,7 @@ export function MovieDetailView() {
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
 
           </div>
         </div>
