@@ -9626,8 +9626,8 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
 
 /* Patch 18 — Poster-Only Premium Media Cards.
    Reference-driven rebuild: the poster IS the card. Titles/type metadata no
-   longer consume space below it; year moves into a centered lower glass chip;
-   score and watchlist become quiet corner marks; movie/TV identity is conveyed
+   longer consume space below it; score and watchlist become quiet corner marks;
+   movie/TV identity is conveyed
    by a restrained hover accent instead of persistent text labels. */
 
 /* The poster is now the complete visible card surface. Keep semantic copy in
@@ -9750,38 +9750,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   stroke-width: 1.9 !important;
 }
 
-/* The year lives inside the artwork, centered in the lower zone, as a subtle
-   smoked-glass capsule with wide tracking. */
-.tvtime-app .tvtime-media-year-badge {
-  position: absolute;
-  z-index: 16;
-  right: auto;
-  bottom: 0.72rem;
-  left: 50%;
-  display: inline-flex;
-  min-width: 2.9rem;
-  height: 1.45rem;
-  align-items: center;
-  justify-content: center;
-  padding-inline: 0.58rem;
-  border: 1px solid rgb(148 163 184 / 0.28);
-  border-radius: 999px;
-  background: rgb(15 20 28 / 0.68);
-  color: rgb(226 232 240 / 0.88);
-  box-shadow:
-    0 5px 14px rgb(0 0 0 / 0.22),
-    inset 0 1px rgb(255 255 255 / 0.055);
-  font-size: 0.61rem;
-  font-weight: 650;
-  line-height: 1;
-  letter-spacing: 0.14em;
-  text-indent: 0.14em;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
-  transform: translateX(-50%);
-  pointer-events: none;
-  backdrop-filter: blur(10px) saturate(108%);
-}
-
 /* Secondary library state chips remain available, but stay out of the year. */
 .tvtime-app .tvtime-media-card .tvtime-media-state-rail {
   left: 0.62rem;
@@ -9887,11 +9855,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   box-shadow: 0 12px 26px rgb(15 23 42 / 0.14) !important;
 }
 
-.light .tvtime-app .tvtime-media-year-badge {
-  border-color: rgb(71 85 105 / 0.22);
-  background: rgb(15 23 42 / 0.68);
-  color: rgb(248 250 252 / 0.92);
-}
 
 /* Small shelves preserve the same reference proportions without crowding. */
 @media (max-width: 639px) {
@@ -9906,11 +9869,75 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     right: 0.56rem !important;
   }
 
-  .tvtime-app .tvtime-media-year-badge {
-    bottom: 0.6rem;
-    min-width: 2.65rem;
-    height: 1.32rem;
-    padding-inline: 0.5rem;
-    font-size: 0.56rem;
+}
+
+
+/* Patch 19 — Remove Year Badges + Recently Watched Poster Sync.
+   Year badges are removed from every Patch 18 poster. Home's Recently Watched
+   cards now reuse the same poster-only visual contract and type-aware hover;
+   only the viewing date remains as a quiet centered caption below the poster. */
+
+.tvtime-app .tvtime-recent-card {
+  width: 130px;
+  scroll-snap-align: start;
+  overflow: visible;
+}
+
+@media (min-width: 640px) {
+  .tvtime-app .tvtime-recent-card {
+    width: 160px;
+  }
+}
+
+/* Recently Watched inherits the same poster frame, image motion, score mark,
+   veil, and movie/TV hover colors through the shared Patch 18 classes. */
+.tvtime-app .tvtime-recent-card .tvtime-recent-poster {
+  border-radius: 1rem !important;
+}
+
+.tvtime-app .tvtime-recent-date {
+  position: relative;
+  z-index: 12;
+  margin: 0.62rem 0 0;
+  overflow: hidden;
+  color: rgb(161 161 170 / 0.78);
+  font-size: 0.69rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.055em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.light .tvtime-app .tvtime-recent-date {
+  color: rgb(82 82 91 / 0.72);
+}
+
+/* The full-card invisible link stays usable, but keyboard focus is expressed
+   on the poster itself so the date caption remains visually independent. */
+.tvtime-app .tvtime-recent-card:focus-within .tvtime-recent-poster {
+  outline: none;
+}
+
+.tvtime-app .tvtime-recent-card[data-media-type="movie"]:focus-within .tvtime-recent-poster {
+  border-color: rgb(240 189 99 / 0.82) !important;
+  box-shadow:
+    0 0 0 3px rgb(240 189 99 / 0.16),
+    0 16px 34px rgb(0 0 0 / 0.32) !important;
+}
+
+.tvtime-app .tvtime-recent-card[data-media-type="tv"]:focus-within .tvtime-recent-poster {
+  border-color: rgb(103 199 255 / 0.84) !important;
+  box-shadow:
+    0 0 0 3px rgb(103 199 255 / 0.16),
+    0 16px 34px rgb(0 0 0 / 0.32) !important;
+}
+
+@media (max-width: 639px) {
+  .tvtime-app .tvtime-recent-date {
+    margin-top: 0.56rem;
+    font-size: 0.64rem;
+    letter-spacing: 0.045em;
   }
 }

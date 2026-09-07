@@ -1022,11 +1022,6 @@ function CollectionMediaCard({
             )}
             {!isCompleted && <TmdbScoreIndicator rating={publicRating} />}
             {tab === "watchlist" && <WatchlistIndicator />}
-            {useHomePresentation && item.year && (
-              <span className="tvtime-media-year-badge" aria-label={`Release year ${item.year}`}>
-                {item.year}
-              </span>
-            )}
 
           </div>
 

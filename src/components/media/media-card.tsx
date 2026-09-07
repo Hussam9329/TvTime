@@ -137,11 +137,6 @@ export const MediaCard = memo(function MediaCard({ item, showMediaType = true, f
 
             {inWatchlist && <WatchlistIndicator />}
 
-            {year && (
-              <span className="tvtime-media-year-badge" aria-label={`Release year ${year}`}>
-                {year}
-              </span>
-            )}
 
             {(isFollowing || (userRating != null && !completed)) && (
               <span className="tvtime-media-state-rail absolute bottom-2 z-10" aria-label="Library status">

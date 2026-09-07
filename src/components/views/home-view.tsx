@@ -465,7 +465,7 @@ function RecentlyWatched() {
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="tvtime-recent-card flex-shrink-0">
               <div className="aspect-[2/3] rounded-2xl shimmer" />
-              <div className="mt-2 h-3 rounded shimmer" />
+              <div className="mx-auto mt-2.5 h-2.5 w-20 rounded shimmer" />
             </div>
           ))}
         </div>
@@ -505,11 +505,33 @@ function RecentlyWatched() {
   );
 }
 
+function formatRecentlyWatchedDate(value: string | number | Date | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const month = ["Jan.", "Feb.", "Mar.", "Apr.", "May", "Jun.", "Jul.", "Aug.", "Sep.", "Oct.", "Nov.", "Dec."][date.getMonth()];
+  const day = date.getDate();
+  const mod100 = day % 100;
+  const suffix = mod100 >= 11 && mod100 <= 13
+    ? "th"
+    : day % 10 === 1
+      ? "st"
+      : day % 10 === 2
+        ? "nd"
+        : day % 10 === 3
+          ? "rd"
+          : "th";
+
+  return `${month} ${day}${suffix}, ${date.getFullYear()}`;
+}
+
 function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; onGo: () => void }) {
   const title = item.title || "Untitled";
   const posterSrc = imgOrPlaceholder(item.posterPath || null, "w342");
   const isMovie = item.kind === "movie";
   const isFinishedShow = !isMovie && item.status === "finished";
+  const watchedDate = formatRecentlyWatchedDate(item.watchedAt);
   const tmdbId = Number(item.tmdbId);
   const detailHref = item.hasProfile && Number.isFinite(tmdbId) && tmdbId > 0
     ? `/${isMovie ? "movie" : "tv"}/${tmdbId}`
@@ -518,14 +540,15 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
   return (
     <div
       aria-disabled={!item.hasProfile}
-      className="tvtime-recent-card group relative flex-shrink-0 cursor-pointer text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+      className="tvtime-media-card tvtime-recent-card group relative flex-shrink-0 cursor-pointer text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+      data-media-type={isMovie ? "movie" : "tv"}
       title={title}
     >
       {detailHref && (
         <a
           href={detailHref}
-          aria-label={`Open ${title}`}
-          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          aria-label={`Open ${title}${watchedDate ? ` · watched ${watchedDate}` : ""}`}
+          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none"
           onClick={(event) => {
             if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
             event.preventDefault();
@@ -533,7 +556,7 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           }}
         />
       )}
-      <div className="tvtime-recent-poster relative aspect-[2/3] overflow-hidden bg-muted transition-[border-color,box-shadow,transform]">
+      <div className="tvtime-media-poster tvtime-recent-poster relative aspect-[2/3] overflow-hidden bg-muted">
         <SafeImage
           src={posterSrc}
           alt={title}
@@ -542,8 +565,9 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           loading={index < 3 ? "eager" : "lazy"}
           decoding="async"
           fetchPriority={index === 0 ? "high" : "auto"}
-          className="transition-opacity duration-200 group-hover:opacity-95"
+          className="tvtime-media-poster__image object-cover"
         />
+        <div className="tvtime-media-poster__veil pointer-events-none absolute inset-0" aria-hidden="true" />
         {(isMovie || isFinishedShow) && (
           <WatchedIndicator
             rating={item.userRating}
@@ -552,10 +576,11 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
         )}
         {!isMovie && !isFinishedShow && <TmdbScoreIndicator rating={item.publicRating} />}
       </div>
-      <p className="mt-2 line-clamp-1 text-xs font-bold">{title}</p>
-      <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
-        {item.subtitle ? `${item.subtitle} • ` : ""}{item.watchedAt ? new Date(item.watchedAt).toLocaleDateString() : "—"}
-      </p>
+      {watchedDate && (
+        <p className="tvtime-recent-date" aria-label={`Watched ${watchedDate}`}>
+          {watchedDate}
+        </p>
+      )}
     </div>
   );
 }
