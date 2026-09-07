@@ -9432,3 +9432,194 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     0 0 0 3px color-mix(in oklab, var(--cinema-gold-bright, #f0bd63) 16%, transparent),
     var(--audit-shadow-4, 0 12px 32px rgb(0 0 0 / 0.3)) !important;
 }
+
+/* Patch 17 — Shelf Cards Polish.
+   Tightens the recurring Home/Discover shelf cards without changing data,
+   sizing logic, or shelf behavior. Focus: quieter poster chrome, more compact
+   score/watchlist chips, cleaner copy rhythm, and a more composed shelf row. */
+
+/* Slightly tighten shelf rhythm so repeated cards read as one polished strip. */
+.tvtime-app .tvtime-media-row-scroller,
+.tvtime-app .tvtime-recent-scroller {
+  gap: 0.82rem;
+}
+
+@media (min-width: 640px) {
+  .tvtime-app .tvtime-media-row-scroller,
+  .tvtime-app .tvtime-recent-scroller {
+    gap: 0.95rem;
+  }
+}
+
+/* Keep the card shell visually quiet so the poster remains the main focal point. */
+.tvtime-app .tvtime-media-card {
+  overflow: visible;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-poster {
+  border-color: rgb(255 255 255 / 0.09) !important;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.2) !important;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-poster__veil {
+  background:
+    linear-gradient(to top, rgb(0 0 0 / 0.26), transparent 36%),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.07), transparent 20%);
+  opacity: 0.52;
+}
+
+/* Compact top chips: same glass language, less visual weight. */
+.tvtime-app .tvtime-media-card :is(.tvtime-user-score, .tvtime-tmdb-score) {
+  top: 0.44rem !important;
+  height: 1.42rem !important;
+  min-width: 0 !important;
+  gap: 0.18rem !important;
+  padding-inline: 0.36rem !important;
+  border-color: rgb(255 255 255 / 0.11) !important;
+  border-radius: 0.46rem !important;
+  background: rgb(8 8 8 / 0.68) !important;
+  box-shadow: 0 5px 14px rgb(0 0 0 / 0.2) !important;
+  backdrop-filter: blur(10px) saturate(104%) !important;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-user-score {
+  left: 0.44rem !important;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-tmdb-score {
+  right: 0.44rem !important;
+}
+
+.tvtime-app .tvtime-media-card :is(.tvtime-user-score, .tvtime-tmdb-score) > span:first-child {
+  width: 0.68rem;
+  height: 0.68rem;
+}
+
+.tvtime-app .tvtime-media-card :is(.tvtime-user-score, .tvtime-tmdb-score) > span:last-child {
+  font-size: 0.56rem !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+}
+
+.tvtime-app .tvtime-media-card :is(.tvtime-user-score, .tvtime-tmdb-score) > span:last-child > span {
+  font-size: 0.4rem !important;
+}
+
+/* Watchlist chip becomes easier to spot without becoming louder. */
+.tvtime-app .tvtime-media-card .tvtime-watchlist-indicator {
+  top: 2.08rem !important;
+  right: 0.44rem !important;
+  width: 1.42rem;
+  height: 1.42rem;
+  border-color: rgb(255 255 255 / 0.11);
+  border-radius: 0.46rem;
+  background: rgb(8 8 8 / 0.68);
+  box-shadow: 0 5px 14px rgb(0 0 0 / 0.2);
+  backdrop-filter: blur(10px) saturate(104%);
+}
+
+.tvtime-app .tvtime-media-card .tvtime-watchlist-indicator svg {
+  width: 0.82rem;
+  height: 0.82rem;
+  fill-opacity: 0.14;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-tmdb-score + .tvtime-watchlist-indicator {
+  top: 2.08rem !important;
+  right: 0.44rem !important;
+}
+
+/* Keep the state rail aligned with the new tighter corner language. */
+.tvtime-app .tvtime-media-card .tvtime-media-state-rail {
+  left: 0.44rem;
+  bottom: 0.44rem !important;
+  gap: 0.22rem;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-state-rail > span {
+  width: 1.42rem;
+  height: 1.42rem;
+  border-color: rgb(255 255 255 / 0.11);
+  border-radius: 0.46rem;
+  background: rgb(8 8 8 / 0.68);
+  box-shadow: 0 5px 14px rgb(0 0 0 / 0.2);
+}
+
+/* Menu stays clear of the title block and follows the same compact geometry. */
+.tvtime-app .tvtime-media-card .tvtime-media-menu {
+  right: 0.44rem !important;
+  bottom: calc(4.22rem + 0.44rem) !important;
+  width: 1.9rem !important;
+  min-width: 1.9rem !important;
+  height: 1.9rem !important;
+  min-height: 1.9rem !important;
+  border-color: rgb(255 255 255 / 0.12) !important;
+  border-radius: 0.52rem !important;
+  background: rgb(8 8 8 / 0.74) !important;
+  box-shadow: 0 7px 18px rgb(0 0 0 / 0.22) !important;
+  transform: translateY(0.12rem);
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-menu svg {
+  width: 0.82rem !important;
+  height: 0.82rem !important;
+}
+
+/* Bottom copy reads denser and more aligned across long/short titles. */
+.tvtime-app .tvtime-media-card .tvtime-media-copy {
+  min-height: 4.22rem;
+  padding: 0.56rem 0.08rem 0.02rem;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-title {
+  min-height: 2.04rem;
+  color: rgb(245 245 245 / 0.96);
+  font-size: 0.87rem;
+  font-weight: 710;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+}
+
+.tvtime-app .tvtime-media-card .tvtime-media-meta {
+  gap: 0.3rem;
+  margin-top: 0.22rem;
+  color: rgb(161 161 170 / 0.8);
+  font-size: 0.645rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Hover remains premium but quieter than the pre-neutral design. */
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-app .tvtime-media-card:hover .tvtime-media-poster {
+    border-color: rgb(255 255 255 / 0.15) !important;
+    box-shadow: 0 16px 32px rgb(0 0 0 / 0.26) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .tvtime-app .tvtime-media-card:hover .tvtime-media-poster__image {
+    filter: saturate(1.02) contrast(1.01);
+    transform: scale(1.018) !important;
+  }
+
+  .tvtime-app .tvtime-media-card:hover .tvtime-media-poster__veil {
+    opacity: 0.58;
+  }
+
+  .tvtime-app .tvtime-media-card:hover .tvtime-media-title {
+    color: color-mix(in oklab, var(--cinema-gold-bright, #f0bd63) 34%, rgb(245 245 245)) !important;
+  }
+}
+
+/* Ultra-compact phones keep the same polish without crowding. */
+@media (max-width: 380px) {
+  .tvtime-app .tvtime-media-row-scroller,
+  .tvtime-app .tvtime-recent-scroller {
+    gap: 0.72rem;
+  }
+
+  .tvtime-app .tvtime-media-card .tvtime-media-copy {
+    min-height: 4.1rem;
+    padding-top: 0.52rem;
+  }
+}
