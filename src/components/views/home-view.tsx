@@ -2,6 +2,7 @@
 
 import { mediaStateKey, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, type MediaBatchState } from "@/hooks/use-tmdb";
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
+import { MEDIA_CARD_ROW_WIDTH_CLASS } from "@/components/media/media-card";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
 import { ArrowRight, ChevronLeft, ChevronRight, Compass, Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages, Globe2 } from "lucide-react";
@@ -463,7 +464,7 @@ function RecentlyWatched() {
         </div>
         <div className="tvtime-recent-scroller no-scrollbar flex overflow-x-auto" aria-hidden="true">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="tvtime-recent-card flex-shrink-0">
+            <div key={index} className={`tvtime-media-row-item tvtime-recent-card flex-shrink-0 ${MEDIA_CARD_ROW_WIDTH_CLASS}`}>
               <div className="aspect-[2/3] rounded-2xl shimmer" />
               <div className="mx-auto mt-2.5 h-2.5 w-20 rounded shimmer" />
             </div>
@@ -540,7 +541,7 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
   return (
     <div
       aria-disabled={!item.hasProfile}
-      className="tvtime-media-card tvtime-recent-card group relative flex-shrink-0 cursor-pointer text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+      className={`tvtime-media-row-item tvtime-media-card tvtime-recent-card group relative flex-shrink-0 cursor-pointer text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-60 ${MEDIA_CARD_ROW_WIDTH_CLASS}`}
       data-media-type={isMovie ? "movie" : "tv"}
       title={title}
     >

@@ -4463,9 +4463,8 @@ body {
   border-radius: 1.1rem;
 }
 
-/* Recently watched follows the same poster language at a smaller scale. */
+/* Recently watched follows the shared poster language and inherits its width from the component sizing contract. */
 .tvtime-recent-card {
-  width: clamp(8rem, 10vw, 9.25rem);
   scroll-snap-align: start;
 }
 
@@ -9878,15 +9877,8 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
    only the viewing date remains as a quiet centered caption below the poster. */
 
 .tvtime-app .tvtime-recent-card {
-  width: 130px;
   scroll-snap-align: start;
   overflow: visible;
-}
-
-@media (min-width: 640px) {
-  .tvtime-app .tvtime-recent-card {
-    width: 160px;
-  }
 }
 
 /* Recently Watched inherits the same poster frame, image motion, score mark,
@@ -9939,5 +9931,236 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     margin-top: 0.56rem;
     font-size: 0.64rem;
     letter-spacing: 0.045em;
+  }
+}
+
+/* Patch 20 — Section Headers + Shelf Controls + Recently Watched Size Sync.
+   Shared shelf headings now match the restrained poster-only card language.
+   Recently Watched no longer owns an independent width; its component uses
+   MEDIA_CARD_ROW_WIDTH_CLASS, the same source of truth as every standard row. */
+
+.tvtime-app .tvtime-section-heading {
+  align-items: center;
+  gap: 0.72rem;
+  margin-bottom: 0.68rem;
+  padding-inline: 0.04rem;
+}
+
+.tvtime-app .tvtime-section-heading > .flex:first-child {
+  gap: 0.62rem !important;
+}
+
+.tvtime-app .tvtime-section-heading__icon {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid rgb(255 255 255 / 0.09);
+  border-radius: 0.65rem;
+  background: rgb(255 255 255 / 0.025);
+  color: color-mix(in oklab, var(--cinema-gold-bright, #f0bd63) 72%, rgb(229 229 229));
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 0.035),
+    0 5px 16px rgb(0 0 0 / 0.12);
+}
+
+.tvtime-app .tvtime-section-heading__icon svg {
+  width: 0.88rem;
+  height: 0.88rem;
+  stroke-width: 1.9;
+}
+
+.tvtime-app .tvtime-section-heading h2 {
+  color: rgb(245 245 245 / 0.96);
+  font-size: 0.98rem;
+  font-weight: 720;
+  line-height: 1.15;
+  letter-spacing: -0.018em;
+}
+
+.tvtime-app .tvtime-section-heading__count {
+  min-width: 1.25rem;
+  height: 1.08rem;
+  padding-inline: 0.31rem;
+  border: 1px solid rgb(255 255 255 / 0.075);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.035);
+  color: rgb(161 161 170 / 0.82);
+  font-size: 0.54rem;
+  font-weight: 760;
+  line-height: 1;
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.025);
+  transform: none;
+}
+
+.tvtime-app .tvtime-section-heading__hint {
+  margin-top: 0.12rem;
+  color: rgb(161 161 170 / 0.7);
+  font-size: 0.64rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.008em;
+}
+
+.tvtime-app .tvtime-section-heading__actions {
+  height: auto;
+  gap: 0.28rem;
+}
+
+.tvtime-app .tvtime-see-all {
+  height: 1.8rem;
+  min-height: 1.8rem;
+  padding-inline: 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.62rem;
+  color: rgb(161 161 170 / 0.76);
+  font-size: 0.66rem;
+  font-weight: 620;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.tvtime-app .tvtime-see-all:hover {
+  border-color: rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.035);
+  color: rgb(244 244 245 / 0.94);
+}
+
+.tvtime-app .tvtime-row-controls {
+  gap: 0.08rem;
+  padding: 0.13rem;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 0.68rem;
+  background: rgb(14 14 14 / 0.7);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 0.025),
+    0 5px 18px rgb(0 0 0 / 0.16);
+  backdrop-filter: blur(10px) saturate(104%);
+}
+
+.tvtime-app .tvtime-row-controls [data-slot="button"] {
+  width: 1.68rem !important;
+  min-width: 1.68rem !important;
+  height: 1.68rem !important;
+  min-height: 1.68rem !important;
+  border: 0 !important;
+  border-radius: 0.52rem !important;
+  background: transparent !important;
+  color: rgb(212 212 216 / 0.74) !important;
+  box-shadow: none !important;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.tvtime-app .tvtime-row-controls [data-slot="button"]:hover {
+  background: rgb(255 255 255 / 0.055) !important;
+  color: rgb(250 250 250 / 0.96) !important;
+  transform: translateY(-1px);
+}
+
+.tvtime-app .tvtime-row-controls [data-slot="button"] svg {
+  width: 0.82rem;
+  height: 0.82rem;
+  stroke-width: 1.9;
+}
+
+/* Poster rows start closer to their heading now that cards have no text block. */
+.tvtime-app .tvtime-media-row-scroller,
+.tvtime-app .tvtime-recent-scroller {
+  gap: 0.88rem;
+  padding-top: 0.12rem;
+  padding-bottom: 0.58rem;
+}
+
+/* Recently Watched keeps only the date as a quiet caption; poster geometry is
+   identical to MEDIA_CARD_ROW_WIDTH_CLASS used by ordinary shelf items. */
+.tvtime-app .tvtime-recent-date {
+  margin-top: 0.58rem;
+  color: rgb(161 161 170 / 0.72);
+  font-size: 0.67rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.light .tvtime-app .tvtime-section-heading__icon {
+  border-color: rgb(15 23 42 / 0.09);
+  background: rgb(15 23 42 / 0.025);
+  color: color-mix(in oklab, var(--cinema-gold-bright, #c58a2b) 70%, rgb(39 39 42));
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 0.65),
+    0 5px 16px rgb(15 23 42 / 0.06);
+}
+
+.light .tvtime-app .tvtime-section-heading h2 {
+  color: rgb(24 24 27 / 0.96);
+}
+
+.light .tvtime-app .tvtime-section-heading__count {
+  border-color: rgb(15 23 42 / 0.08);
+  background: rgb(15 23 42 / 0.035);
+  color: rgb(82 82 91 / 0.78);
+}
+
+.light .tvtime-app .tvtime-section-heading__hint {
+  color: rgb(82 82 91 / 0.66);
+}
+
+.light .tvtime-app .tvtime-row-controls {
+  border-color: rgb(15 23 42 / 0.09);
+  background: rgb(255 255 255 / 0.72);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 0.72),
+    0 5px 18px rgb(15 23 42 / 0.07);
+}
+
+.light .tvtime-app .tvtime-row-controls [data-slot="button"] {
+  color: rgb(63 63 70 / 0.7) !important;
+}
+
+.light .tvtime-app .tvtime-row-controls [data-slot="button"]:hover {
+  background: rgb(15 23 42 / 0.05) !important;
+  color: rgb(24 24 27 / 0.94) !important;
+}
+
+.light .tvtime-app .tvtime-see-all:hover {
+  border-color: rgb(15 23 42 / 0.08);
+  background: rgb(15 23 42 / 0.035);
+  color: rgb(24 24 27 / 0.94);
+}
+
+@media (min-width: 640px) {
+  .tvtime-app .tvtime-section-heading {
+    margin-bottom: 0.72rem;
+  }
+
+  .tvtime-app .tvtime-section-heading__icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .tvtime-app .tvtime-section-heading h2 {
+    font-size: 1.04rem;
+  }
+
+  .tvtime-app .tvtime-section-heading__hint {
+    font-size: 0.66rem;
+  }
+
+  .tvtime-app .tvtime-media-row-scroller,
+  .tvtime-app .tvtime-recent-scroller {
+    gap: 0.96rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .tvtime-app .tvtime-section-heading {
+    margin-bottom: 0.76rem;
+  }
+
+  .tvtime-app .tvtime-section-heading__icon {
+    width: 2.04rem;
+    height: 2.04rem;
   }
 }
