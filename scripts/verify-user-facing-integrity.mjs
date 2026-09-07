@@ -393,7 +393,7 @@ check(
     && /<Layers aria-hidden="true" \/>/.test(tvDetailView)
     && /className="is-score"/.test(tvDetailView)
     && /className="is-rating"/.test(tvDetailView)
-    && /\.tvtime-tv-detail-hero__facts > span\s*\{[\s\S]*background: transparent !important[\s\S]*font-size: 0\.72rem/.test(globalStyles),
+    && /\.tvtime-tv-detail-hero__facts > span\s*\{[\s\S]*background: transparent !important[\s\S]*font-size: 0\.875rem/.test(globalStyles),
   "TV profile uses a cinematic eyebrow plus a compact factual metadata row",
 );
 check(

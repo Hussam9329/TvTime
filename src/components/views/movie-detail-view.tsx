@@ -250,26 +250,24 @@ export function MovieDetailView() {
 
   return (
     <div className="tvtime-movie-detail-page tvtime-cinematic-detail-page space-y-5" data-media-kind="movie">
+      <div data-ui-surface="hero" className="tvtime-detail-backdrop absolute inset-0 -z-20 overflow-hidden" aria-hidden="true">
+        <div className="absolute inset-0">
+          <SafeImage src={img(m.backdrop_path, "original")} alt="" fill variant="backdrop" sizes="100vw" priority className="absolute inset-0" />
+          <div className="tvtime-detail-backdrop__side absolute inset-0" />
+          <div className="tvtime-detail-backdrop__fade absolute inset-0" />
+        </div>
+      </div>
       <Button variant="ghost" size="sm" onClick={back} className="tvtime-detail-back-button text-muted-foreground">
         <ArrowLeft className="w-4 h-4 mr-1" /> {isArabicMovie ? "رجوع" : "Back"}
       </Button>
 
       <section className="tvtime-movie-detail-hero relative isolate overflow-hidden border border-white/15 bg-[#07101f]">
-        {/* Hero backdrop */}
-        <div data-ui-surface="hero" className="absolute inset-0 -z-20 overflow-hidden">
-          <div className="absolute inset-0">
-            <SafeImage src={img(m.backdrop_path, "w1280")} alt={displayTitle} fill variant="backdrop" priority className="absolute inset-0" />
-            <div className="tvtime-detail-backdrop__side absolute inset-0" />
-            <div className="tvtime-detail-backdrop__fade absolute inset-0" />
-          </div>
-        </div>
-
         {/* Poster + title + actions */}
         <div className="tvtime-movie-detail-hero__layout relative z-10">
           <aside className="tvtime-movie-detail-hero__poster">
             <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
               <div className="relative aspect-[2/3]">
-                <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={displayTitle} fill variant="poster" />
+                <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={displayTitle} fill variant="poster" sizes="(max-width: 639px) 144px, (max-width: 1023px) 216px, 280px" priority />
               </div>
             </Card>
             <div className="tvtime-movie-detail-hero__poster-action">

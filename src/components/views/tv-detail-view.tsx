@@ -133,7 +133,6 @@ export function TvDetailView() {
     || ["watching", "uptodate", "finished", "stopped"].includes(String(showTrackingStatus || ""));
 
   const year = t.first_air_date?.slice(0, 4);
-  const runtime = t.episode_run_time?.[0] ? `${t.episode_run_time[0]}m` : null;
   const genreNames = (t.genres ?? []).map((genre) => genre.name);
   const isArabicShow = detectIsArabic({ originalLanguage: t.original_language, originCountry: t.origin_country });
   const collectionWorld = mediaCollectionWorldForItem({
@@ -340,26 +339,24 @@ export function TvDetailView() {
 
   return (
     <div className="tvtime-tv-detail-page tvtime-cinematic-detail-page space-y-5" data-media-kind="tv">
+      <div data-ui-surface="hero" className="tvtime-detail-backdrop absolute inset-0 -z-20 overflow-hidden" aria-hidden="true">
+        <div className="absolute inset-0">
+          <SafeImage src={img(t.backdrop_path, "original")} alt="" fill variant="backdrop" sizes="100vw" priority className="absolute inset-0" />
+          <div className="tvtime-detail-backdrop__side absolute inset-0" />
+          <div className="tvtime-detail-backdrop__fade absolute inset-0" />
+        </div>
+      </div>
       <Button variant="ghost" size="sm" onClick={back} className="tvtime-tv-detail-back-button text-muted-foreground">
         <ArrowLeft className="w-4 h-4 mr-1" /> {isArabicShow ? "رجوع" : "Back"}
       </Button>
 
       <section className="tvtime-tv-detail-hero relative isolate overflow-hidden rounded-[28px] border border-white/15 bg-[#07101f] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
-      {/* Hero */}
-      <div data-ui-surface="hero" className="absolute inset-0 -z-20 overflow-hidden">
-        <div className="absolute inset-0">
-          <SafeImage src={img(t.backdrop_path, "w1280")} alt={displayTitle} fill variant="backdrop" priority className="absolute inset-0" />
-          <div className="tvtime-detail-backdrop__side absolute inset-0" />
-          <div className="tvtime-detail-backdrop__fade absolute inset-0" />
-        </div>
-      </div>
-
       {/* Poster + title + actions */}
       <div className="tvtime-tv-detail-hero__layout relative z-10 grid grid-cols-1 gap-6 p-5 sm:p-7 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8 lg:grid-cols-[270px_minmax(0,1fr)] lg:p-10">
         <div className="tvtime-tv-detail-hero__poster w-36 flex-shrink-0 mx-auto sm:w-52 md:w-full md:mx-0">
           <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
             <div className="relative aspect-[2/3]">
-              <SafeImage src={mediaState.data?.tags?.some((tag) => tag.startsWith("custom-poster:")) ? mediaState.data.poster : mediaState.data?.isArabic ? imgOrPlaceholder(t.poster_path, "w342") : mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={displayTitle} fill variant="poster" />
+              <SafeImage src={mediaState.data?.tags?.some((tag) => tag.startsWith("custom-poster:")) ? mediaState.data.poster : mediaState.data?.isArabic ? imgOrPlaceholder(t.poster_path, "w342") : mediaState.data?.poster || imgOrPlaceholder(t.poster_path, "w342")} alt={displayTitle} fill variant="poster" sizes="(max-width: 639px) 144px, (max-width: 1023px) 216px, 280px" priority />
             </div>
           </Card>
           <div className="tvtime-tv-detail-hero__poster-action">
