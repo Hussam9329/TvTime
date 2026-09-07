@@ -941,6 +941,7 @@ function CollectionMediaCard({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
         className={useHomePresentation ? "tvtime-media-card group relative min-w-0" : "group"}
+        data-media-type={useHomePresentation ? (isMovie ? "movie" : "tv") : undefined}
       >
         {enableSwipe && tab === "watchlist" && (
           <div className="tvtime-swipe-actions" aria-hidden="true">
@@ -1021,6 +1022,11 @@ function CollectionMediaCard({
             )}
             {!isCompleted && <TmdbScoreIndicator rating={publicRating} />}
             {tab === "watchlist" && <WatchlistIndicator />}
+            {useHomePresentation && item.year && (
+              <span className="tvtime-media-year-badge" aria-label={`Release year ${item.year}`}>
+                {item.year}
+              </span>
+            )}
 
           </div>
 

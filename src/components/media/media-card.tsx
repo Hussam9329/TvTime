@@ -93,7 +93,7 @@ export const MediaCard = memo(function MediaCard({ item, showMediaType = true, f
         : (mediaType === "movie" ? "Movie" : "TV");
 
   return (
-      <article className="tvtime-media-card group relative min-w-0">
+      <article className="tvtime-media-card group relative min-w-0" data-media-type={mediaType}>
         <Card>
         <a
           href={enableNativeLink ? detailHref : undefined}
@@ -136,6 +136,12 @@ export const MediaCard = memo(function MediaCard({ item, showMediaType = true, f
             {!completed && <TmdbScoreIndicator rating={item.vote_average} />}
 
             {inWatchlist && <WatchlistIndicator />}
+
+            {year && (
+              <span className="tvtime-media-year-badge" aria-label={`Release year ${year}`}>
+                {year}
+              </span>
+            )}
 
             {(isFollowing || (userRating != null && !completed)) && (
               <span className="tvtime-media-state-rail absolute bottom-2 z-10" aria-label="Library status">
