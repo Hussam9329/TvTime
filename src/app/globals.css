@@ -9035,3 +9035,169 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     0 0 0 3px color-mix(in oklab, var(--primary) 30%, transparent),
     0 3px 10px rgb(0 0 0 / 0.34) !important;
 }
+
+
+/* Patch 15 — raw-extraction Neutral Dark pilot.
+   Dark-mode-only visual pilot based on raw-extraction.json. The extracted
+   values stay audit references here (not Tokens Studio tokens). Layout,
+   responsive behavior, typography, media sizing and application logic remain
+   unchanged. Gold is intentionally retained only as the Trakora brand accent. */
+:root:not(.light) {
+  /* Raw audit values from the supplied extraction. */
+  --audit-color-panel-solid: #191919;
+  --audit-color-panel-translucent: #ffffff09;
+  --audit-color-surface: rgba(0, 0, 0, 0.25);
+  --audit-color-overlay: rgba(0, 0, 0, 0.6);
+  --audit-color-background: #111111;
+  --audit-shadow-1: inset 0 -1px 1px 0 #ffffff12, inset 0 0 0 1px #ffffff12, inset 0 3px 4px 0 rgba(0,0,0,0.3), inset 0 0 0 1px #ffffff1b;
+  --audit-shadow-2: 0 0 0 1px color-mix(in oklab,#ffffff2c,#3a3a3a 25%), 0 0 0 0.5px rgba(0,0,0,0.15), 0 1px 1px 0 rgba(0,0,0,0.4), 0 2px 1px -1px rgba(0,0,0,0.4), 0 1px 3px 0 rgba(0,0,0,0.3);
+  --audit-shadow-3: 0 0 0 1px color-mix(in oklab,#ffffff2c,#3a3a3a 25%), 0 2px 3px -2px rgba(0,0,0,0.15), 0 3px 8px -2px rgba(0,0,0,0.4), 0 4px 12px -4px rgba(0,0,0,0.5);
+  --audit-shadow-4: 0 0 0 1px color-mix(in oklab,#ffffff2c,#3a3a3a 25%), 0 8px 40px rgba(0,0,0,0.15), 0 12px 32px -16px rgba(0,0,0,0.3);
+  --audit-shadow-5: 0 0 0 1px color-mix(in oklab,#ffffff2c,#3a3a3a 25%), 0 12px 60px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.5);
+  --audit-shadow-6: 0 0 0 1px color-mix(in oklab,#ffffff2c,#3a3a3a 25%), 0 12px 60px rgba(0,0,0,0.2), 0 16px 64px rgba(0,0,0,0.4), 0 16px 36px -20px rgba(0,0,0,0.9);
+
+  /* Feed the existing shadcn/Tailwind theme without changing component APIs. */
+  --background: var(--audit-color-background);
+  --card: var(--audit-color-panel-solid);
+  --popover: var(--audit-color-panel-solid);
+  --secondary: #1c1c1c;
+  --muted: #1c1c1c;
+  --accent: color-mix(in oklab, var(--primary) 10%, var(--audit-color-panel-solid));
+  --border: rgb(255 255 255 / 0.11);
+  --input: rgb(255 255 255 / 0.15);
+  --sidebar: #151515;
+  --sidebar-border: rgb(255 255 255 / 0.11);
+  --sidebar-accent: #1c1c1c;
+
+  /* Neutralize cinema enamel while preserving its semantic/brand gold. */
+  --cinema-line: rgb(255 255 255 / 0.10);
+  --cinema-line-strong: rgb(255 255 255 / 0.18);
+  --cinema-black: var(--audit-color-background);
+  --cinema-panel: rgb(25 25 25 / 0.94);
+  --cinema-panel-strong: var(--audit-color-panel-solid);
+
+  --app-surface: var(--audit-color-panel-solid);
+  --app-surface-strong: var(--audit-color-panel-solid);
+  --app-surface-subtle: var(--audit-color-panel-translucent);
+  --app-surface-border: var(--cinema-line);
+  --app-elevated-border: var(--cinema-line-strong);
+  --app-header-background: rgb(25 25 25 / 0.86);
+  --app-nav-active: color-mix(in oklab, var(--cinema-gold-bright) 10%, transparent);
+  --app-page-background: none;
+  --app-hero-background: linear-gradient(145deg, #191919, #141414);
+  --app-shadow-sm: var(--audit-shadow-2);
+  --app-shadow-md: var(--audit-shadow-3);
+  --app-shadow-lg: var(--audit-shadow-5);
+  --app-shadow-poster: var(--audit-shadow-4);
+}
+
+:root:not(.light) body {
+  background-color: var(--audit-color-background);
+  background-image: none !important;
+}
+
+/* Remove the gold dotted wash from the application canvas. */
+:root:not(.light) .tvtime-app::before {
+  background-image: none;
+  opacity: 0;
+}
+
+/* Header stays translucent, but neutral rather than gold-tinted. */
+:root:not(.light) .tvtime-app-header {
+  background: linear-gradient(to bottom, rgb(17 17 17 / 0.94), transparent) !important;
+}
+
+:root:not(.light) :is(.tvtime-header-inner, .tvtime-mobile-search-panel, .tvtime-mobile-dock__surface) {
+  border-color: var(--cinema-line) !important;
+  background: var(--app-header-background) !important;
+  box-shadow: var(--audit-shadow-4) !important;
+}
+
+/* Cards and panels use the extracted solid panel instead of enamel gradients. */
+:root:not(.light) .tvtime-app :is([data-slot="card"], [data-ui-surface="panel"], [data-ui-surface="card"], .feedback-state),
+:root:not(.light) .tvtime-login-page :is([data-slot="card"], [data-ui-surface="panel"], [data-ui-surface="card"]) {
+  border-color: var(--cinema-line) !important;
+  background: var(--audit-color-panel-solid) !important;
+  box-shadow: var(--audit-shadow-2) !important;
+}
+
+/* Elevated/portal surfaces get the deepest extracted shadow. */
+:root:not(.light) .tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="sheet-content"], .tvtime-portal-surface, .tvtime-portal-compact) {
+  border-color: var(--cinema-line-strong) !important;
+  background: var(--audit-color-panel-solid) !important;
+  box-shadow: var(--audit-shadow-6) !important;
+}
+
+:root:not(.light) :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
+  background: var(--audit-color-overlay) !important;
+}
+
+/* Inputs and secondary controls use the raw translucent/surface values. */
+:root:not(.light) .tvtime-app :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"], .tvtime-command-search),
+:root:not(.light) .tvtime-login-page :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"]) {
+  border-color: var(--cinema-line) !important;
+  background: var(--audit-color-surface) !important;
+  box-shadow: var(--audit-shadow-1) !important;
+}
+
+:root:not(.light) .tvtime-app [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]),
+:root:not(.light) .tvtime-login-page [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]) {
+  border-color: var(--cinema-line) !important;
+  background: var(--audit-color-panel-solid) !important;
+  box-shadow: var(--audit-shadow-1) !important;
+}
+
+:root:not(.light) .tvtime-app [data-slot="tabs-list"] {
+  border-color: var(--cinema-line);
+  background: var(--audit-color-surface) !important;
+  box-shadow: var(--audit-shadow-1);
+}
+
+/* Posters remain image-first, with neutral elevation and gold only on hover. */
+:root:not(.light) :is(.tvtime-media-poster, .tvtime-home-hero__poster, .tvtime-movie-detail-hero__poster > [data-slot="card"], .tvtime-tv-detail-hero__poster > [data-slot="card"]) {
+  border-color: var(--cinema-line-strong) !important;
+  background: var(--audit-color-background) !important;
+  box-shadow: var(--audit-shadow-4) !important;
+}
+
+:root:not(.light) .tvtime-media-menu {
+  background: var(--audit-color-overlay) !important;
+  box-shadow: var(--audit-shadow-2) !important;
+}
+
+:root:not(.light) .tvtime-home-hero {
+  border-color: var(--cinema-line-strong) !important;
+  background: var(--audit-color-background);
+  box-shadow: var(--audit-shadow-5) !important;
+}
+
+:root:not(.light) :is(.tvtime-home-hero__carousel-controls, .tvtime-row-controls, .tvtime-section-heading__icon, .tvtime-quick-stat) {
+  border-color: var(--cinema-line) !important;
+  background: var(--audit-color-panel-translucent) !important;
+  box-shadow: var(--audit-shadow-1) !important;
+}
+
+:root:not(.light) .tvtime-filter-panel {
+  border-color: var(--cinema-line-strong) !important;
+  background: var(--audit-color-panel-solid) !important;
+  box-shadow: var(--audit-shadow-4) !important;
+}
+
+:root:not(.light) :is(.tvtime-discover-preset-row > button, .tvtime-discover-status-toggle, .tvtime-tracking-status-option) {
+  border-color: var(--cinema-line) !important;
+  background: var(--audit-color-surface) !important;
+  box-shadow: var(--audit-shadow-1);
+}
+
+:root:not(.light) .tvtime-tv-detail-hero__meta > * {
+  border-color: var(--cinema-line) !important;
+  background: var(--audit-color-panel-translucent) !important;
+  box-shadow: var(--audit-shadow-1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root:not(.light) .tvtime-media-card:hover .tvtime-media-poster {
+    border-color: color-mix(in oklab, var(--cinema-gold-bright) 62%, var(--cinema-line-strong)) !important;
+    box-shadow: var(--audit-shadow-4) !important;
+  }
+}
