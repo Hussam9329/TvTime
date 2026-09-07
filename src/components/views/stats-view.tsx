@@ -89,7 +89,7 @@ export function StatsView() {
           </div>
           <div className="space-y-2.5">
             {d.genreDistribution.items.slice(0, 8).map((item) => (
-              <div key={item.genre} className="grid grid-cols-[120px_minmax(0,1fr)_88px] items-center gap-2 text-xs">
+              <div key={item.genre} className="tvtime-genre-distribution-row grid items-center gap-2 text-xs">
                 <span className="truncate font-medium">{item.genre}</span>
                 <div className="h-2.5 overflow-hidden rounded-full bg-muted">
                   <div className="h-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${Math.max(0, Math.min(100, item.percentage))}%` }} />

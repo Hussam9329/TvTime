@@ -101,10 +101,11 @@ assert.match(
 );
 
 const sheet = read("src/components/ui/sheet.tsx");
-const toast = read("src/components/ui/toast.tsx");
+const toast = read("src/components/ui/sonner.tsx");
 assert.match(sheet, /data-side={side}/);
 assert.match(sheet, /tvtime-sheet-content/);
-assert.match(toast, /tvtime-toast-viewport/);
+assert.match(toast, /Toaster as Sonner/);
+assert.match(css, /\[data-sonner-toaster\]/);
 assert.match(responsiveCss, /\.tvtime-toast-viewport\s*{[^}]*safe-area-inset-top/s);
 
 assert.match(

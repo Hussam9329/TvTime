@@ -5,6 +5,7 @@ import { useTvDetail, useSeasonDetail, useWatchedEpisodes, useEpisodeToggle, use
 import { getTitle, img, imgOrPlaceholder, type MediaItem } from "@/lib/tmdb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RatingDialog } from "@/components/media/rating-dialog";
@@ -679,16 +680,15 @@ export function TvDetailView() {
           : `Updated your rating to ${score}/100`}
       />
 
-      {showStopDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowStopDialog(false)}>
-          <div className="w-full max-w-md space-y-5 rounded-2xl border border-rose-400/20 bg-card p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+      <Dialog open={showStopDialog} onOpenChange={setShowStopDialog}>
+        <DialogContent className="tvtime-tracking-confirmation space-y-4" showCloseButton={false}>
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500/15">
                 <CircleStop className="h-5 w-5 text-rose-300" />
               </div>
               <div>
-                <h3 className="text-lg font-bold">Stop watching “{displayTitle}”?</h3>
-                <p className="mt-1 text-sm text-muted-foreground">All watched episodes, ratings and rewatches will remain saved. The show will leave Watch Next and notifications.</p>
+                <DialogTitle className="text-lg font-bold">Stop watching “{displayTitle}”?</DialogTitle>
+                <DialogDescription className="mt-1 text-sm text-muted-foreground">All watched episodes, ratings and rewatches will remain saved. The show will leave Watch Next and notifications.</DialogDescription>
               </div>
             </div>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -697,24 +697,22 @@ export function TvDetailView() {
                 <CircleStop className="mr-2 h-4 w-4" /> Stop Watching
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Unfollow dialog — shown when user tries to unfollow a show with episode progress.
           Offers two clear options instead of a silent no-op. */}
-      {showUnfollowDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowUnfollowDialog(false)}>
-          <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}>
+      <Dialog open={showUnfollowDialog} onOpenChange={setShowUnfollowDialog}>
+        <DialogContent className="tvtime-tracking-confirmation space-y-4" showCloseButton={false}>
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
                 <BellOff className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <h3 className="font-bold text-lg">Unfollow "{displayTitle}"?</h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <DialogTitle className="font-bold text-lg">Unfollow "{displayTitle}"?</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground mt-1">
                   This show has watched episode progress. Choose how to handle it:
-                </p>
+                </DialogDescription>
               </div>
             </div>
             <div className="space-y-2">
@@ -734,9 +732,8 @@ export function TvDetailView() {
                 Cancel
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

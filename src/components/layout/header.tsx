@@ -115,6 +115,7 @@ export function Header() {
   const userName = useNav((state) => state.userName);
   const { resolvedTheme, setTheme } = useTheme();
   const queryClient = useQueryClient();
+  const headerRef = useRef<HTMLElement>(null);
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -129,6 +130,45 @@ export function Header() {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchTab, setSearchTab] = useState<"all" | "movie" | "tv" | "person">("all");
   const isMobileExperience = useMobileViewport();
+
+  // All sticky surfaces use the measured header, including text zoom and
+  // narrow layouts where the toolbar wraps onto a second row.
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const syncHeight = () => {
+      document.documentElement.style.setProperty("--tvtime-header-height", `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    };
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(header);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty("--tvtime-header-height");
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileExperience) {
+      setMobileSearchOpen(false);
+      setMobileHeaderHidden(false);
+    }
+  }, [isMobileExperience]);
+
+  useEffect(() => {
+    if (mobileSearchOpen || mobileOpen) setMobileHeaderHidden(false);
+  }, [mobileSearchOpen, mobileOpen]);
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 90rem)");
+    const closeDesktopDrawer = () => {
+      if (desktop.matches) setMobileOpen(false);
+    };
+    closeDesktopDrawer();
+    desktop.addEventListener("change", closeDesktopDrawer);
+    return () => desktop.removeEventListener("change", closeDesktopDrawer);
+  }, []);
+
 
   useEffect(() => {
     try {
@@ -323,19 +363,20 @@ export function Header() {
   return (
     <>
       <header
+        ref={headerRef}
         className="tvtime-app-header sticky top-0 z-40"
         data-mobile-search-open={mobileSearchOpen ? "true" : "false"}
         data-mobile-hidden={mobileHeaderHidden ? "true" : "false"}
         data-scrolled={headerScrolled ? "true" : "false"}
         data-detail-view={isDetailView ? "true" : "false"}
       >
-        <div className="tvtime-header-inner mx-auto flex h-16 max-w-[1920px] items-center gap-1.5 px-2.5 sm:h-[4.5rem] sm:gap-2 sm:px-4 lg:px-5">
+        <div className="tvtime-header-inner">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="tvtime-header-icon xl:hidden"
+                className="tvtime-header-icon tvtime-header-menu"
                 aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
                 aria-expanded={mobileOpen}
               >
@@ -389,7 +430,7 @@ export function Header() {
             type="button"
             onClick={() => goTo("home")}
             onPointerEnter={() => prefetchViewModule("home")}
-            className="group flex shrink-0 items-center gap-2 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            className="tvtime-header-brand group flex shrink-0 items-center gap-2 rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
             aria-label={`${APP_NAME} home`}
           >
             <BrandMark />
@@ -398,7 +439,7 @@ export function Header() {
             </span>
           </button>
 
-          <nav className="tvtime-primary-nav ml-1 hidden xl:flex items-center gap-1" aria-label="Primary navigation">
+          <nav className="tvtime-primary-nav" aria-label="Primary navigation">
             {primaryNavItems.map((item) => navButton(item))}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -460,7 +501,7 @@ export function Header() {
 
           <form
             onSubmit={onSubmitSearch}
-            className="tvtime-header-search ml-auto hidden min-w-0 max-w-[320px] flex-1 md:block 2xl:max-w-sm"
+            className="tvtime-header-search"
           >
             <div className="group relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -491,10 +532,11 @@ export function Header() {
             </div>
           </form>
 
-          <span className="hidden max-w-24 truncate text-xs font-semibold text-muted-foreground sm:block md:hidden">
+          <span className="tvtime-header-location hidden max-w-24 truncate text-xs font-semibold text-muted-foreground sm:block md:hidden">
             {currentLabel}
           </span>
 
+          <div className="tvtime-header-tools">
           <Button
             variant="ghost"
             size="icon"
@@ -545,7 +587,7 @@ export function Header() {
                   size="icon"
                   onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                   aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                  className="tvtime-header-icon hidden sm:inline-flex"
+                  className="tvtime-header-icon tvtime-header-theme"
                 >
                   {mounted && resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                 </Button>
@@ -560,7 +602,7 @@ export function Header() {
                   size="icon"
                   onClick={() => setHelpOpen(true)}
                   aria-label="Keyboard shortcuts"
-                  className="tvtime-header-icon hidden 2xl:inline-flex"
+                  className="tvtime-header-icon tvtime-header-shortcuts"
                 >
                   <Keyboard className="h-5 w-5" />
                 </Button>
@@ -581,12 +623,14 @@ export function Header() {
                 {userName.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span className="hidden max-w-24 pr-1 text-left 2xl:block">
+            <span className="tvtime-profile-copy max-w-24 pr-1 text-left">
               <span className="block truncate text-xs font-bold">{userName}</span>
               <span className="block text-[9px] text-muted-foreground">View profile</span>
             </span>
           </button>
+          </div>
         </div>
+      </header>
 
         {mobileSearchOpen && (
           <form
@@ -671,7 +715,6 @@ export function Header() {
             </div>
           </form>
         )}
-      </header>
 
       <nav className="tvtime-mobile-dock md:hidden" aria-label="Quick navigation">
         <div className="tvtime-mobile-dock__surface">

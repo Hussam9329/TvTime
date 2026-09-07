@@ -11517,3 +11517,294 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     transform: none;
   }
 }
+
+/* Responsive shell: one painted header surface, one set of breakpoints.
+   The observed height also covers text zoom and multi-row narrow toolbars. */
+:root {
+  --tvtime-header-height: calc(4rem + env(safe-area-inset-top, 0px));
+}
+
+:root .tvtime-app > .tvtime-app-header {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: env(safe-area-inset-top, 0px) max(0.5rem, env(safe-area-inset-right, 0px)) 0 max(0.5rem, env(safe-area-inset-left, 0px)) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+  will-change: auto !important;
+  overflow: visible;
+  pointer-events: auto;
+}
+
+:root .tvtime-app .tvtime-header-inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 105rem !important;
+  min-width: 0;
+  min-height: 4rem;
+  height: auto !important;
+  margin-inline: auto;
+  gap: 0.25rem !important;
+  padding: 0.35rem 0.5rem !important;
+  border: 1px solid rgb(255 255 255 / 0.16) !important;
+  border-top: 0 !important;
+  border-radius: 0 0 1.25rem 1.25rem !important;
+  background: rgb(10 15 21 / 0.92) !important;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+:root.light .tvtime-app .tvtime-header-inner {
+  background: rgb(255 252 245 / 0.96) !important;
+  border-color: rgb(83 70 48 / 0.2) !important;
+}
+
+:root.light .tvtime-app-header :is(.tvtime-primary-nav-item, .tvtime-header-icon, .tvtime-profile-trigger) {
+  color: #30281d !important;
+}
+
+:root.light .tvtime-app-header .tvtime-command-search {
+  background: rgb(255 255 255 / 0.8) !important;
+  color: #30281d !important;
+  border-color: rgb(83 70 48 / 0.3) !important;
+}
+
+:root.light .tvtime-app-header .tvtime-command-search::placeholder {
+  color: #766952;
+}
+
+:root .tvtime-app-header .tvtime-header-tools {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 0.25rem;
+  margin-inline-start: auto;
+}
+
+:root .tvtime-app-header .tvtime-header-icon {
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+}
+
+:root .tvtime-app-header .tvtime-profile-trigger {
+  max-width: 12rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+:root .tvtime-app-header :is(.tvtime-primary-nav, .tvtime-header-search, .tvtime-header-theme, .tvtime-header-shortcuts, .tvtime-profile-copy) {
+  display: none !important;
+}
+
+:root .tvtime-app-header .tvtime-header-menu {
+  display: inline-flex !important;
+}
+
+:root .tvtime-app-header .tvtime-primary-nav-item {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  min-height: 2.75rem;
+}
+
+:root .tvtime-app-header .tvtime-header-brand {
+  min-width: 0;
+  max-width: 12rem;
+}
+
+:root .tvtime-app .tvtime-main-content {
+  min-width: 0;
+}
+
+:root .tvtime-app .tvtime-main-content:is([data-view="movie-detail"], [data-view="tv-detail"]) {
+  margin-top: calc(-1 * var(--tvtime-header-height));
+}
+
+:root .tvtime-app :is(.tvtime-movie-detail-hero__layout, .tvtime-tv-detail-hero__layout) {
+  padding-top: calc(var(--tvtime-header-height) + 1.25rem) !important;
+}
+
+:root .tvtime-app :is(.tvtime-movie-hub__tabs, .tvtime-world-tabs, .tvtime-world-view > [data-slot="tabs"] > [data-slot="tabs-list"], .tvtime-release-schedule__date-heading, .tvtime-mobile-library-toolbar) {
+  top: calc(var(--tvtime-header-height) + 0.5rem) !important;
+}
+
+:root .tvtime-app .tvtime-mobile-search-panel {
+  position: fixed;
+  z-index: 80;
+  inset: var(--tvtime-header-height) 0 0 !important;
+  width: 100%;
+  height: calc(100dvh - var(--tvtime-header-height)) !important;
+  max-height: calc(100dvh - var(--tvtime-header-height));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* Allow nested grids, translated titles and controls to use their own rail.
+   Shelves keep their native horizontal scroll rather than sizing the page. */
+.tvtime-main-content :is(.flex, .grid, [data-slot="tabs"], [data-slot="tabs-content"]) > * {
+  min-width: 0;
+}
+
+.tvtime-main-content :is(h1, h2, h3, h4, p, dt, dd) {
+  overflow-wrap: anywhere;
+}
+
+.tvtime-main-content :is(.tvtime-filter-panel-header, .tvtime-season-toolbar, .tvtime-season-actions, .tvtime-movie-detail-rating__controls, .tvtime-tv-detail-hero__rating-actions) {
+  flex-wrap: wrap;
+}
+
+.tvtime-main-content :is(.tvtime-filter-panel-header, .tvtime-season-actions, .tvtime-movie-detail-rating__controls, .tvtime-tv-detail-hero__rating-actions) [data-slot="button"] {
+  max-width: 100%;
+  height: auto !important;
+  min-height: 2.75rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.tvtime-genre-distribution-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 0.8fr);
+}
+
+.tvtime-app .tvtime-footer-row,
+.tvtime-app .tvtime-footer-stats,
+.tvtime-app .tvtime-footer-brand > span {
+  flex-wrap: wrap !important;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tvtime-app .tvtime-footer-stat {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+/* Portalled dialogs stay inside the viewport, including short landscape.
+   Headers and footers flow naturally at high zoom rather than covering fields. */
+:root :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+  min-width: 0;
+  max-width: calc(100vw - 2rem) !important;
+  max-height: calc(100dvh - 2rem) !important;
+  overflow-wrap: anywhere;
+}
+
+:root :is([data-slot="dialog-header"], [data-slot="dialog-footer"], [data-slot="alert-dialog-header"], [data-slot="alert-dialog-footer"]) {
+  position: static !important;
+  min-width: 0;
+}
+
+:root :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="sheet-content"]) [data-slot="button"] {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+:root .tvtime-filter-dialog {
+  width: 100%;
+  max-width: 100% !important;
+  max-height: calc(100dvh - 1rem - env(safe-area-inset-top, 0px));
+  min-height: 0;
+  padding: 0;
+  overflow-y: auto;
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+
+:root .tvtime-filter-dialog .tvtime-filter-sheet-content {
+  position: static;
+  max-height: none;
+  overflow: visible;
+  padding: 1rem max(1rem, env(safe-area-inset-right, 0px)) max(1rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px)) !important;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  animation: none;
+}
+
+:root .tvtime-filter-dialog :is(.tvtime-filter-sheet-topbar, .tvtime-filter-sheet-footer, .tvtime-filter-sheet-grabber) {
+  position: static;
+}
+
+:root .tvtime-filter-dialog .tvtime-filter-sheet-footer {
+  padding-inline: 0;
+}
+
+[data-sonner-toaster] {
+  max-width: calc(100vw - 2rem);
+  --offset-top: max(1rem, env(safe-area-inset-top, 0px));
+  --offset-right: max(1rem, env(safe-area-inset-right, 0px));
+  --offset-left: max(1rem, env(safe-area-inset-left, 0px));
+}
+
+@media (min-width: 40rem) {
+  :root { --tvtime-header-height: calc(4.5rem + env(safe-area-inset-top, 0px)); }
+  :root .tvtime-app .tvtime-header-inner { min-height: 4.5rem; gap: 0.5rem !important; padding-inline: 1rem !important; }
+  :root .tvtime-app-header .tvtime-header-theme { display: inline-flex !important; }
+}
+
+@media (min-width: 48rem) {
+  :root .tvtime-app-header .tvtime-header-search {
+    display: block !important;
+    flex: 1 1 12rem;
+    min-width: 12rem;
+    max-width: 28rem !important;
+    margin-inline-start: auto;
+  }
+  :root .tvtime-app-header .tvtime-header-tools { margin-inline-start: 0; }
+}
+
+@media (min-width: 90rem) {
+  :root .tvtime-app-header .tvtime-primary-nav { display: flex !important; align-items: center; flex: 0 0 auto; gap: 0.25rem !important; }
+  :root .tvtime-app-header .tvtime-header-menu { display: none !important; }
+  :root .tvtime-app-header .tvtime-profile-copy { display: block !important; }
+  :root .tvtime-app .tvtime-header-inner { border-radius: 0 0 2.25rem 2.25rem !important; }
+}
+
+@media (min-width: 105rem) {
+  :root .tvtime-app-header .tvtime-header-shortcuts { display: inline-flex !important; }
+}
+
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  :root .tvtime-app-header .tvtime-header-search { display: none !important; }
+  :root .tvtime-app-header .tvtime-header-tools { margin-inline-start: auto; }
+  :root .tvtime-app-header[data-mobile-hidden="true"] { pointer-events: none; }
+  :root .tvtime-app-header[data-mobile-hidden="true"] .tvtime-header-inner { transform: translateY(calc(-100% - env(safe-area-inset-top, 0px))); }
+  :root .tvtime-app-header[data-mobile-search-open="true"] .tvtime-header-inner { transform: none; }
+  :root .tvtime-app .tvtime-mobile-search-panel { display: block !important; }
+}
+
+@media (max-width: 479px) {
+  .tvtime-genre-distribution-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .tvtime-genre-distribution-row > div { grid-row: 2; grid-column: 1 / -1; }
+  :root .tvtime-cinematic-detail-page .tvtime-detail-hero__actions { grid-auto-rows: auto; }
+  :root .tvtime-cinematic-detail-page .tvtime-detail-hero__actions > [data-slot="button"] { grid-column: auto !important; height: auto !important; }
+  :root .tvtime-cinematic-detail-page .tvtime-detail-hero__actions > [data-slot="button"]:last-child:nth-child(odd) { grid-column: 1 / -1 !important; }
+}
+
+@media (max-width: 359px) {
+  :root .tvtime-app .tvtime-header-inner { column-gap: 0 !important; }
+  :root .tvtime-app-header .tvtime-header-tools { gap: 0; }
+  :root .tvtime-app-header .tvtime-header-location { display: none; }
+  :root .tvtime-tv-detail-hero__rating-summary .tvtime-detail-rating__body > div { flex-wrap: wrap; }
+}
+
+@media (max-height: 36rem) {
+  :root .tvtime-structured-rating-dialog {
+    display: block !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root .tvtime-app .tvtime-header-inner { transition: none; }
+}
