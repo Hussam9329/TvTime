@@ -340,7 +340,7 @@ export function TvDetailView() {
 
   return (
     <div className="tvtime-tv-detail-page tvtime-cinematic-detail-page space-y-5" data-media-kind="tv">
-      <div data-ui-surface="hero" className="tvtime-detail-backdrop absolute inset-0 -z-20 overflow-hidden" aria-hidden="true">
+      <div className="tvtime-detail-backdrop absolute inset-0 -z-20 overflow-hidden" aria-hidden="true">
         <div className="absolute inset-0">
           <SafeImage src={img(t.backdrop_path, "original")} alt="" fill variant="backdrop" sizes="100vw" priority className="absolute inset-0" />
           <div className="tvtime-detail-backdrop__side absolute inset-0" />
@@ -556,6 +556,7 @@ export function TvDetailView() {
         <TabsContent value="seasons" className="mt-4">
           <SeasonEpisodes
             tvId={t.id}
+            isArabicShow={isArabicShow}
             seasons={seasons}
             defaultSeason={selectedSeason ?? defaultSeason}
             onSelectSeason={setSelectedSeason}
@@ -740,6 +741,7 @@ export function TvDetailView() {
 
 function SeasonEpisodes({
   tvId,
+  isArabicShow = false,
   seasons,
   defaultSeason,
   onSelectSeason,
@@ -751,6 +753,7 @@ function SeasonEpisodes({
   onCompletion,
 }: {
   tvId: number;
+  isArabicShow?: boolean;
   seasons: { season_number: number; name: string; episode_count: number; air_date: string | null; poster_path: string | null; overview: string }[];
   defaultSeason: number | null;
   onSelectSeason: (n: number) => void;
@@ -1025,9 +1028,9 @@ function SeasonEpisodes({
 
       {/* Episodes */}
       {seasonData.isLoading ? (
-        <div className="space-y-2">
+        <div className="tvtime-episode-grid">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-24 shimmer rounded-lg" />
+            <div key={i} className="h-72 shimmer rounded-xl" />
           ))}
         </div>
       ) : (
@@ -1044,7 +1047,7 @@ function SeasonEpisodes({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: Math.min(idx * 0.02, 0.3) }}
               >
-                <Card className={cn(
+                <article data-watched={isWatched} className={cn(
                   "tvtime-episode-card transition-colors",
                   isWatched ? "border-primary/40 bg-primary/5" : futureEpisode ? "opacity-65 border-dashed" : "hover:border-border/80"
                 )}>
@@ -1080,21 +1083,29 @@ function SeasonEpisodes({
                         {ep.name || `Episode ${ep.episode_number}`}
                         {futureEpisode && <Badge variant="outline" className="ml-2 text-[9px]">Upcoming</Badge>}
                       </h4>
-                      {ep.air_date && (
-                        <span className="tvtime-episode-date text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-                          {new Date(ep.air_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
-                        </span>
-                      )}
                     </div>
-                    {ep.runtime ? (
-                      <p className="text-xs text-muted-foreground mb-1">{ep.runtime} min</p>
-                    ) : null}
-                    <p className="tvtime-episode-overview text-xs text-muted-foreground/80 line-clamp-2">{ep.overview || "No description available."}</p>
-                    {ep.vote_average > 0 && (
-                      <span className="tvtime-episode-score inline-flex items-center gap-1 mt-1 text-xs text-amber-400">
-                        <Star className="w-3 h-3 fill-amber-400" /> TMDB {ep.vote_average.toFixed(1)}
-                      </span>
-                    )}
+                    <details className="tvtime-episode-details">
+                      <summary>
+                        <span>{isArabicShow ? "تفاصيل الحلقة" : "Episode details"}</span>
+                        <ChevronDown aria-hidden="true" />
+                      </summary>
+                      <div className="tvtime-episode-details__content">
+                        {ep.air_date && (
+                          <span className="tvtime-episode-date text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                            {new Date(ep.air_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                          </span>
+                        )}
+                        {ep.runtime ? (
+                          <p className="text-xs text-muted-foreground mb-1">{ep.runtime} min</p>
+                        ) : null}
+                        <p className="tvtime-episode-overview text-xs text-muted-foreground/80">{ep.overview || "No description available."}</p>
+                        {ep.vote_average > 0 && (
+                          <span className="tvtime-episode-score inline-flex items-center gap-1 mt-1 text-xs text-amber-400">
+                            <Star className="w-3 h-3 fill-amber-400" /> TMDB {ep.vote_average.toFixed(1)}
+                          </span>
+                        )}
+                      </div>
+                    </details>
                     <div className="tvtime-episode-actions flex items-center gap-1.5 mt-2 flex-wrap">
                       {isWatched && <Button type="button" variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => void recordEpisodeRewatch(ep)} disabled={episodeToggle.isPending}>Rewatch ({(watched.data?.items ?? []).find((item: any) => item.seasonNumber === ep.season_number && item.episodeNumber === ep.episode_number)?.rewatchCount ?? 0})</Button>}
                       <Button
@@ -1131,7 +1142,7 @@ function SeasonEpisodes({
                       )}
                     </div>
                   </div>
-                </Card>
+                </article>
               </motion.div>
             );
           })}

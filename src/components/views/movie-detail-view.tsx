@@ -250,7 +250,7 @@ export function MovieDetailView() {
 
   return (
     <div className="tvtime-movie-detail-page tvtime-cinematic-detail-page space-y-5" data-media-kind="movie">
-      <div data-ui-surface="hero" className="tvtime-detail-backdrop absolute inset-0 -z-20 overflow-hidden" aria-hidden="true">
+      <div className="tvtime-detail-backdrop absolute inset-0 -z-20 overflow-hidden" aria-hidden="true">
         <div className="absolute inset-0">
           <SafeImage src={img(m.backdrop_path, "original")} alt="" fill variant="backdrop" sizes="100vw" priority className="absolute inset-0" />
           <div className="tvtime-detail-backdrop__side absolute inset-0" />
