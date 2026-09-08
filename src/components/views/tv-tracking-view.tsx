@@ -188,7 +188,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
   };
 
   return (
-    <div className="space-y-4">
+    <div className="tvtime-tracking-library space-y-4">
       <FilterPanel
         title={(
           <span className="flex flex-wrap items-center gap-2">
@@ -282,7 +282,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
         </FilterSection>
       </FilterPanel>
 
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/60 px-3 py-2.5">
+      <div className="tvtime-tracking-layout-toolbar flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/60 px-3 py-2.5">
         <div>
           <p className="text-sm font-bold text-foreground">{isArabic ? "طريقة عرض البطاقات" : "Card layout"}</p>
           <p className="text-[11px] text-muted-foreground">{isArabic ? "يُحفظ اختيارك تلقائياً" : "Your choice is saved automatically"}</p>
@@ -312,7 +312,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       </div>
 
       {tracking.isLoading ? (
-        <div className={cn("grid grid-cols-1 gap-4", layout === "grid" && "lg:grid-cols-2 min-[2100px]:grid-cols-3")}>
+        <div data-layout={layout} className={cn("tvtime-tracking-cards grid grid-cols-1 gap-4", layout === "grid" && "lg:grid-cols-2 min-[2100px]:grid-cols-3")}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="shimmer h-[300px] rounded-[24px] sm:h-[280px]" />
           ))}
@@ -333,7 +333,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
         />
       ) : (
         <>
-          <div className={cn("grid grid-cols-1 gap-4 sm:gap-5", layout === "grid" && "lg:grid-cols-2 min-[2100px]:grid-cols-3")}>
+          <div data-layout={layout} className={cn("tvtime-tracking-cards grid grid-cols-1 gap-4 sm:gap-5", layout === "grid" && "lg:grid-cols-2 min-[2100px]:grid-cols-3")}>
             {items.map((s: any) => (
               <AllShowCard key={s.id} show={{ ...s, _trackingStatus: s._trackingStatus ?? deriveTrackingStatus(s) }} onGo={() => s.tmdbId && onGo(s.tmdbId)} layout={layout} isArabic={isArabic} />
             ))}
@@ -429,16 +429,16 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
       className="block rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
     >
       <Card className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-[24px] border-white/[0.14] bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.07),transparent_30%),linear-gradient(145deg,rgba(21,25,36,0.98),rgba(10,14,23,0.98))] p-3.5 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.03)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_70px_rgba(0,0,0,0.4),0_0_28px_rgba(139,92,246,0.07)] sm:p-5",
+        "tvtime-tracking-card group relative cursor-pointer overflow-hidden rounded-[24px] border-white/[0.14] bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.07),transparent_30%),linear-gradient(145deg,rgba(21,25,36,0.98),rgba(10,14,23,0.98))] p-3.5 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.03)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_70px_rgba(0,0,0,0.4),0_0_28px_rgba(139,92,246,0.07)] sm:p-5",
       )}>
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.018)_48%,transparent_72%)]" />
         <div className={cn(
-          "relative grid grid-cols-[92px_minmax(0,1fr)] items-start gap-3.5 sm:items-center",
+          "tvtime-tracking-card__layout relative grid grid-cols-[92px_minmax(0,1fr)] items-start gap-3.5 sm:items-center",
           compact
             ? "sm:grid-cols-[clamp(105px,23%,135px)_minmax(0,1fr)] sm:gap-5"
             : "sm:grid-cols-[clamp(125px,20%,175px)_minmax(0,1fr)] sm:gap-6",
         )}>
-          <div className="relative aspect-[0.618/1] w-full overflow-hidden rounded-[16px] border border-border/60 bg-muted shadow-md sm:self-center">
+          <div className="tvtime-tracking-card__poster relative aspect-[0.618/1] w-full overflow-hidden rounded-[16px] border border-border/60 bg-muted shadow-md sm:self-center">
           {show.poster ? (
             <SafeImage src={img(show.poster, "w342")} alt={displayTitle} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
           ) : (
@@ -471,7 +471,7 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
             </div>
 
             {releasedEps != null && releasedEps > 0 && (
-              <div className="mt-3 rounded-xl border border-border/60 bg-muted/40 px-3 py-2.5">
+              <div className="tvtime-tracking-card__progress mt-3 rounded-xl border border-border/60 bg-muted/40 px-3 py-2.5">
                 <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-bold text-muted-foreground">
                   <span>{isArabic ? "التقدم" : "Progress"}</span>
                   <span className="tabular-nums text-foreground">{watchedEps}/{releasedEps}</span>

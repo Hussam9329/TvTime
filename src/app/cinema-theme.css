@@ -1,0 +1,146 @@
+/* Shared cinema palette. Keep status/error colors semantic and preserve
+   the dedicated profile and Watch Next compositions. */
+:root:not(.light) {
+  --primary: #edbd70;
+  --primary-foreground: #211707;
+  --background: #0b0f12;
+  --foreground: #f0f2f5;
+  --card: #141a20;
+  --card-foreground: #f0f2f5;
+  --muted: #1c242d;
+  --muted-foreground: #aab4c1;
+  --secondary: #1c242d;
+  --popover: #171e26;
+  --border: rgb(192 202 214 / 0.16);
+  --ring: #edbd70;
+  --audit-color-background: #0b0f12;
+  --audit-color-panel-solid: #141a20;
+  --audit-color-surface: rgb(5 9 13 / 0.3);
+  --audit-shadow-1: none;
+  --audit-shadow-2: 0 6px 18px rgb(0 0 0 / 0.1);
+  --audit-shadow-3: 0 10px 28px rgb(0 0 0 / 0.15);
+  --audit-shadow-4: 0 14px 34px rgb(0 0 0 / 0.2);
+  --audit-shadow-5: 0 18px 44px rgb(0 0 0 / 0.25);
+  --audit-shadow-6: 0 22px 56px rgb(0 0 0 / 0.32);
+  --cinema-line: rgb(192 202 214 / 0.16);
+  --cinema-line-strong: rgb(237 189 112 / 0.3);
+  --app-page-background: radial-gradient(ellipse at 100% 0%, rgb(211 152 57 / 0.12), transparent 35%), radial-gradient(ellipse at 0% 65%, rgb(211 152 57 / 0.05), transparent 38%), linear-gradient(#0b0f12, #0b0f12);
+  --app-hero-background: linear-gradient(145deg, #182027, #10171d);
+}
+
+:root.light {
+  --primary: #8e601c;
+  --primary-foreground: #fff;
+  --ring: #8e601c;
+  --app-page-background: radial-gradient(ellipse at 100% 0%, rgb(211 152 57 / 0.12), transparent 40%), linear-gradient(#fbf8f2, #f7f4ee);
+}
+
+:root .tvtime-app .tvtime-main-content:not([data-view="movie-detail"]):not([data-view="tv-detail"]):not([data-view="watch-next"]) {
+  width: 100%;
+  max-width: none !important;
+  padding-inline: max(clamp(1rem, 5.5vw, 10rem), env(safe-area-inset-left, 0px)) max(clamp(1rem, 5.5vw, 10rem), env(safe-area-inset-right, 0px)) !important;
+}
+
+:root .tvtime-app .tvtime-main-content :is(.tvtime-page-titlebar h1, .view-page-title) {
+  font-size: clamp(1.65rem, 2.6vw, 2.35rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+:root .tvtime-app .tvtime-page-titlebar::before { box-shadow: none; border-radius: 1rem; }
+:root .tvtime-app .tvtime-media-card .tvtime-media-title { font-size: 0.95rem; line-height: 1.35; min-height: 2.55rem; }
+:root .tvtime-app .tvtime-media-card .tvtime-media-meta { font-size: 0.75rem; line-height: 1.4; }
+:root .tvtime-app .tvtime-media-card .tvtime-media-poster { border-radius: 0.85rem; box-shadow: 0 8px 22px rgb(0 0 0 / 0.16) !important; }
+:root .tvtime-app .tvtime-media-card:hover .tvtime-media-poster { border-color: color-mix(in oklab, var(--primary) 55%, transparent) !important; }
+:root .tvtime-app .tvtime-row-controls [data-slot="button"] { border-color: color-mix(in oklab, var(--primary) 30%, var(--border)) !important; box-shadow: none !important; }
+:root .tvtime-app .tvtime-main-content button[data-slot="button"][data-variant="default"] {
+  border-color: color-mix(in oklab, var(--primary) 75%, var(--border));
+  box-shadow: none;
+}
+
+/* Every movie/TV world shares one catalogue shell. */
+:root .tvtime-app .tvtime-movie-hub {
+  --movie-world-accent: var(--primary);
+  --movie-world-accent-soft: color-mix(in oklab, var(--primary) 10%, transparent);
+  min-width: 0;
+}
+:root .tvtime-app .tvtime-movie-hub__titlebar { align-items: center; flex-wrap: wrap; gap: 1rem; padding: 0.25rem 0 1rem; }
+:root .tvtime-app .tvtime-movie-hub__titlebar h1 { font-size: clamp(1.85rem, 3vw, 2.75rem); font-weight: 750; line-height: 1.15; }
+:root .tvtime-app :is(.tvtime-movie-hub__eyebrow, .tvtime-movie-hub__section-kicker) { font-size: 0.75rem; font-weight: 650; letter-spacing: 0.08em; }
+:root .tvtime-app .tvtime-movie-hub__summary { margin-top: 0.45rem; font-size: 0.875rem; line-height: 1.5; }
+:root .tvtime-app .tvtime-movie-hub__browse { min-height: 2.75rem; padding-inline: 1rem; border-radius: 0.7rem; background: var(--primary); color: var(--primary-foreground); box-shadow: none; }
+:root .tvtime-app .tvtime-movie-hub__tabs[data-slot="tabs-list"] {
+  width: min(100%, 48rem);
+  top: calc(var(--tvtime-header-height) + 0.5rem);
+  z-index: 24;
+  height: auto;
+  padding: 0.35rem;
+  gap: 0.35rem;
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--card) !important;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.1) !important;
+}
+:root .tvtime-app .tvtime-movie-hub__tabs [data-slot="tabs-trigger"] { min-height: 2.75rem; height: auto; padding: 0.65rem 0.7rem; font-size: 0.875rem; line-height: 1.3; white-space: normal; overflow: visible; border-radius: 0.6rem; box-shadow: none !important; }
+:root .tvtime-app .tvtime-movie-hub__tabs [data-state="active"] { background: color-mix(in oklab, var(--primary) 17%, var(--card)) !important; color: var(--primary) !important; border-color: color-mix(in oklab, var(--primary) 32%, transparent) !important; }
+:root .tvtime-app .tvtime-movie-hub > [data-slot="tabs"] > [data-slot="tabs-content"] { padding-top: 1.25rem; }
+:root .tvtime-app .tvtime-movie-hub__overview { gap: clamp(1.5rem, 2.5vw, 2.25rem); }
+:root .tvtime-app .tvtime-movie-hub__section-line { flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; }
+:root .tvtime-app .tvtime-movie-hub__quick-picks { gap: 0.5rem; padding-block: 0.25rem; }
+:root .tvtime-app .tvtime-movie-hub__quick-picks button { min-height: 2.75rem; border-radius: 0.7rem; font-size: 0.8125rem; }
+:root .tvtime-app .tvtime-movie-hub-hero { border-radius: 1.1rem; border-color: rgb(203 216 232 / 0.25); box-shadow: 0 14px 36px rgb(0 0 0 / 0.16); }
+:root .tvtime-app .tvtime-movie-hub-hero__content { gap: 0.5rem; padding: clamp(1.25rem, 2.6vw, 2.5rem); }
+:root .tvtime-app .tvtime-movie-hub-hero__content h2 { font-size: clamp(2rem, 3.8vw, 3.6rem); font-weight: 750; line-height: 1.1; }
+:root .tvtime-app .tvtime-movie-hub-hero__meta { flex-wrap: wrap; gap: 0.5rem 0.9rem; font-size: 0.8125rem; }
+:root .tvtime-app .tvtime-movie-hub-hero__actions { flex-wrap: wrap; gap: 0.65rem; }
+
+/* One filter surface: readable fields and quiet section dividers. The mobile
+   sheet keeps its own visibility, positioning and focus management. */
+:root .tvtime-app .tvtime-main-content .tvtime-filter-panel {
+  border: 1px solid var(--border) !important;
+  border-radius: 1rem !important;
+  background: var(--card) !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+:root .tvtime-app .tvtime-main-content .tvtime-filter-panel-header { padding: 1rem; min-height: 0; background: transparent; gap: 0.75rem; }
+:root .tvtime-app .tvtime-filter-panel-header p { font-size: 0.8125rem; line-height: 1.5; }
+:root .tvtime-app .tvtime-filter-panel-content { background: transparent; }
+:root .tvtime-app .tvtime-filter-grid { gap: 0.85rem 1rem; }
+:root :is(.tvtime-app, .tvtime-filter-dialog) .tvtime-filter-section h3 { font-size: 0.75rem; font-weight: 650; letter-spacing: 0.03em; text-transform: none; }
+:root :is(.tvtime-app, .tvtime-filter-dialog) .tvtime-filter-field { min-width: 0; }
+:root :is(.tvtime-app, .tvtime-filter-dialog) .tvtime-filter-field :is(input, [data-slot="select-trigger"]) { min-height: 2.75rem; height: auto; border-radius: 0.65rem; }
+:root .tvtime-app .tvtime-discover-control-section { padding: 1rem; }
+:root .tvtime-app .tvtime-discover-active-filters { flex-wrap: wrap; gap: 0.5rem; padding: 0.85rem 1rem; background: color-mix(in oklab, var(--primary) 5%, var(--card)); }
+:root .tvtime-app .tvtime-discover-results-bar { flex-wrap: wrap; gap: 0.75rem; padding-block: 0.8rem; border-radius: 0.75rem; }
+:root .tvtime-app .tvtime-discover-preset-button { min-height: 2.75rem; font-size: 0.8125rem; border-radius: 0.7rem; }
+:root .tvtime-app .tvtime-tracking-status-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 0.5rem; }
+:root .tvtime-app .tvtime-tracking-status-option { min-height: 2.75rem; border-radius: 0.7rem; text-align: start; box-shadow: none; }
+:root .tvtime-app .tvtime-tracking-status-option[data-active="true"] { transform: none; border-color: color-mix(in oklab, var(--primary) 50%, var(--border)) !important; background: color-mix(in oklab, var(--primary) 12%, var(--card)) !important; color: var(--foreground); }
+:root .tvtime-app .tvtime-tracking-status-option__label { font-size: 0.8125rem; line-height: 1.35; }
+
+/* TV library: align the saved list/grid layouts and remove nested frames. */
+:root .tvtime-app .tvtime-tracking-layout-toolbar { flex-wrap: wrap; gap: 0.75rem; border-width: 0 0 1px; border-radius: 0; padding: 0.5rem 0 1rem; background: transparent; }
+:root .tvtime-app .tvtime-tracking-cards { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+:root .tvtime-app .tvtime-main-content .tvtime-tracking-card { height: 100%; padding: 1rem; border-radius: 1rem; box-shadow: none !important; }
+:root .tvtime-app .tvtime-tracking-card__layout { grid-template-columns: 7rem minmax(0, 1fr); gap: 1.1rem; align-items: start; }
+:root .tvtime-app .tvtime-tracking-card__poster { border-radius: 0.7rem; box-shadow: none; }
+:root .tvtime-app .tvtime-tracking-card__progress { padding: 0; border: 0; background: transparent; box-shadow: none; }
+
+@media (min-width: 1100px) {
+  :root .tvtime-app .tvtime-tracking-cards[data-layout="grid"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1900px) {
+  :root .tvtime-app .tvtime-tracking-cards[data-layout="grid"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 639px) {
+  :root .tvtime-app .tvtime-movie-hub__tabs[data-slot="tabs-list"] { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3rem; }
+  :root .tvtime-app .tvtime-movie-hub__tabs [data-slot="tabs-trigger"] { justify-content: flex-start; }
+  :root .tvtime-app .tvtime-movie-hub__titlebar h1 { font-size: 1.9rem; }
+  :root .tvtime-app .tvtime-tracking-card__layout { grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.75rem; }
+  :root .tvtime-app .tvtime-main-content .tvtime-tracking-card { padding: 0.75rem; }
+}
+@media (max-width: 359px) {
+  :root .tvtime-app .tvtime-tracking-card__layout { grid-template-columns: minmax(0, 1fr); }
+  :root .tvtime-app .tvtime-tracking-card__poster { width: 8rem; justify-self: center; }
+}
