@@ -956,6 +956,9 @@ function UpcomingSection({ items, onOpen }: { items: UpcomingItem[]; onOpen: (id
       <div className="tvtime-watch-upcoming-grid">
         {items.map((item) => (
           <button key={item.tmdbId} type="button" className="tvtime-watch-upcoming-card" onClick={() => onOpen(item.tmdbId)}>
+            <span className="tvtime-watch-upcoming-card__artwork" aria-hidden="true">
+              <SafeImage src={item.poster} alt="" fill variant="backdrop" sizes="(max-width: 767px) 100vw, 70vw" />
+            </span>
             <span className="tvtime-watch-upcoming-card__poster"><SafeImage src={item.poster} alt="" fill variant="poster" sizes="72px" /></span>
             <span className="tvtime-watch-upcoming-card__copy">
               <strong>{item.title}</strong>
