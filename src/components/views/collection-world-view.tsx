@@ -16,6 +16,7 @@ import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { StructuredRatingDialog, type StructuredRatingResult } from "@/components/media/structured-rating-dialog";
+import { CatalogueArtwork } from "@/components/media/catalogue-artwork";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
@@ -319,11 +320,14 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
         <PageTitlebar title={config.title} />
       )}
 
-      <div className={`grid gap-3 ${world === "anime" ? "max-w-3xl grid-cols-2 sm:grid-cols-4" : "max-w-xl grid-cols-2"}`}>
-        <MiniStat label={isArabicWorld ? "قائمة المشاهدة" : "Watchlist"} value={watchlistCount} />
-        {world === "anime" && <MiniStat label="Not started" value={notStartedCount} />}
-        {world === "anime" && <MiniStat label="In progress" value={watchingCount} />}
-        <MiniStat label={isArabicWorld ? "تمت مشاهدتها" : "Watched"} value={watchedCount} />
+      <div className="tvtime-library-masthead">
+        <CatalogueArtwork backdropPath={visibleItems.find((item) => item.poster)?.poster} />
+        <div className={`tvtime-library-stats grid gap-3 ${world === "anime" ? "max-w-3xl grid-cols-2 sm:grid-cols-4" : "max-w-xl grid-cols-2"}`}>
+          <MiniStat label={isArabicWorld ? "قائمة المشاهدة" : "Watchlist"} value={watchlistCount} />
+          {world === "anime" && <MiniStat label="Not started" value={notStartedCount} />}
+          {world === "anime" && <MiniStat label="In progress" value={watchingCount} />}
+          <MiniStat label={isArabicWorld ? "تمت مشاهدتها" : "Watched"} value={watchedCount} watched />
+        </div>
       </div>
 
       <FilterPanel
@@ -333,10 +337,12 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
         onReset={resetFilters}
         resetLabel={isArabicWorld ? "إعادة الضبط" : "Reset all"}
         mobileSheet
+        className="tvtime-library-filter-panel"
         mobileResultLabel={isArabicWorld ? `عرض ${total} فيلم` : `Show ${total} titles`}
       >
+        <div className="tvtime-library-filters">
         {world === "anime" && !isNotStartedTab && !isWatchingTab && (
-          <FilterSection title="Anime type">
+          <FilterSection title="Anime type" className="tvtime-library-filter-type">
             <div
               ref={animeTypeRef}
               {...animeTypeDragHandlers}
@@ -368,7 +374,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           </FilterSection>
         )}
 
-        <FilterSection title={isArabicWorld ? "حالة المجموعة" : "Collection status"}>
+        <FilterSection title={isArabicWorld ? "حالة المجموعة" : "Collection status"} className="tvtime-library-filter-status">
           <Tabs value={tab} onValueChange={(value) => { setTab(value as CollectionTab); setPage(0); }}>
             <TabsList
               ref={statusRef}
@@ -405,7 +411,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
         </FilterSection>
 
         {isMovieWorld && (
-          <FilterSection title={isArabicWorld ? "النوع" : "Genre"} divided>
+          <FilterSection title={isArabicWorld ? "النوع" : "Genre"} divided className="tvtime-library-filter-genre">
             <FilterField label={isArabicWorld ? "نوع الفيلم" : "Movie genre"}>
               <Select value={filterGenre || "all"} onValueChange={(value) => { setFilterGenre(value === "all" ? "" : value); setPage(0); }}>
                 <SelectTrigger className="h-9 w-full max-w-sm text-sm" aria-label={isArabicWorld ? "تصفية الأفلام حسب النوع" : "Filter movies by genre"}>
@@ -422,7 +428,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           </FilterSection>
         )}
 
-        <FilterSection title={isArabicWorld ? "البحث والترتيب" : "Search and sort"} divided>
+        <FilterSection title={isArabicWorld ? "البحث والترتيب" : "Search and sort"} divided className="tvtime-library-filter-search" contentClassName="tvtime-library-filter-search-content">
           <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_auto]">
             <FilterField label={isArabicWorld ? "البحث في المجموعة" : "Search collection"}>
               <div className="relative">
@@ -520,6 +526,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
             />
           )}
         </FilterSection>
+        </div>
       </FilterPanel>
 
       <div className="tvtime-mobile-library-toolbar tvtime-mobile-experience-only" role="toolbar" aria-label={isArabicWorld ? "أدوات المكتبة" : "Library tools"}>
@@ -537,12 +544,15 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
         </Button>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        {isArabicWorld ? "يُعرض" : "Showing"} <span className="font-bold text-foreground">{visibleItems.length}</span> {isArabicWorld ? "من" : "of"} <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "فيلماً عربياً" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : animeMediaKind === "movie" ? "anime movies" : animeMediaKind === "series" ? "anime series" : "anime titles"}
-      </p>
-      <div className="flex justify-end gap-1" aria-label={isArabicWorld ? "طريقة عرض المكتبة" : "Library layout"}>
-        <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("grid")} title={isArabicWorld ? "شبكة البوسترات" : "Poster grid"}><Grid2X2 className="h-4 w-4" /></Button>
-        <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("list")} title={isArabicWorld ? "قائمة مختصرة" : "Compact list"}><List className="h-4 w-4" /></Button>
+      <div className="tvtime-library-results-toolbar">
+        <p className="text-sm text-muted-foreground">
+          {isArabicWorld ? "يُعرض" : "Showing"} <span className="font-bold text-foreground">{visibleItems.length}</span> {isArabicWorld ? "من" : "of"} <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "فيلماً عربياً" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : animeMediaKind === "movie" ? "anime movies" : animeMediaKind === "series" ? "anime series" : "anime titles"}
+        </p>
+        <div className="flex justify-end gap-1" aria-label={isArabicWorld ? "طريقة عرض المكتبة" : "Library layout"}>
+          <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("grid")} title={isArabicWorld ? "شبكة البوسترات" : "Poster grid"}><Grid2X2 className="h-4 w-4" /></Button>
+          <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("list")} title={isArabicWorld ? "قائمة مختصرة" : "Compact list"}><List className="h-4 w-4" /></Button>
+        </div>
+
       </div>
 
       {/* Fix #14: Distinguish loading, error, empty, and success states */}
@@ -688,7 +698,7 @@ function RangeFilter({
   const percentage = (n: number) => max === min ? 0 : ((n - min) / (max - min)) * 100;
 
   return (
-    <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3.5 sm:p-4">
+    <div className="tvtime-library-range mt-4 rounded-xl border border-border/60 bg-muted/20 p-3.5 sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
         <span className="rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-semibold tabular-nums">
@@ -773,9 +783,10 @@ function RangeFilter({
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
+function MiniStat({ label, value, watched = false }: { label: string; value: number; watched?: boolean }) {
   return (
-    <Card className="p-2 text-center">
+    <Card className="tvtime-library-stat p-2 text-center">
+      <span className="tvtime-library-stat__icon" aria-hidden="true">{watched ? <Star /> : <Film />}</span>
       <p className="text-lg font-bold text-primary">{value}</p>
       <p className="text-[9px] text-muted-foreground leading-tight">{label}</p>
     </Card>

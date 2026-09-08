@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { CatalogueArtwork } from "@/components/media/catalogue-artwork";
 import { MediaGrid } from "@/components/media/media-card";
 import { getTitle } from "@/lib/tmdb";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
@@ -126,14 +127,21 @@ export function ReleaseSchedule({
       dir={isRTL ? "rtl" : undefined}
       lang={isRTL ? "ar" : undefined}
     >
-      <div data-ui-surface="panel" className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+      <div className="tvtime-release-masthead">
+        <div className="tvtime-catalogue-banner tvtime-release-banner">
+          <CatalogueArtwork backdropPath={schedule.data?.items.find((item) => item.backdrop_path)?.backdrop_path} />
+          <div className="tvtime-release-banner__copy">
             <h2 className="flex items-center gap-2 text-xl font-extrabold">
               <CalendarDays className={`h-5 w-5 ${accentClass}`} /> {resolvedTitle}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">{resolvedSubtitle}</p>
+            <Badge variant="secondary" className="tvtime-release-schedule__range w-fit px-3 py-1">
+              {seasonal && <span className="mr-1 font-bold text-foreground">{seasonLabel(range.from)} ·</span>}
+              {formatDateOnly(range.from, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")} – {formatDateOnly(range.to, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")}
+            </Badge>
           </div>
+        </div>
+        <div className="tvtime-release-tools">
           <div className="tvtime-release-schedule__window-controls flex items-center gap-2">
             <Button className="tvtime-release-schedule__window-button" variant="outline" size="sm" aria-label={previousWindowLabel} onClick={() => setOffset((value) => value - 1)}>
               <ChevronLeft className="tvtime-release-schedule__window-icon h-4 w-4" aria-hidden="true" />
@@ -150,13 +158,7 @@ export function ReleaseSchedule({
               <ChevronRight className="tvtime-release-schedule__window-icon h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
-        </div>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Badge variant="secondary" className="tvtime-release-schedule__range w-fit px-3 py-1">
-            {seasonal && <span className="mr-1 font-bold text-foreground">{seasonLabel(range.from)} ·</span>}
-            {formatDateOnly(range.from, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")} – {formatDateOnly(range.to, { day: "numeric", month: "short", year: "numeric" }, isRTL ? "ar-IQ" : "en-US")}
-          </Badge>
-          <div className="relative w-full sm:max-w-sm">
+          <div className="tvtime-release-search relative w-full">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isRTL ? "ابحث في جدول الإصدارات..." : "Search this release schedule..."} className="pl-9" />
           </div>
@@ -185,7 +187,7 @@ export function ReleaseSchedule({
             {schedule.data?.truncated && <span>{isRTL ? `تُعرض أول ${schedule.data.pagesFetched} صفحات من TMDB لهذه الفترة.` : `Showing the first ${schedule.data.pagesFetched} TMDB pages for this window.`}</span>}
           </div>
           {groups.map(([date, releases]) => (
-            <section key={date} className="space-y-2">
+            <section key={date} className="tvtime-release-day space-y-2">
               <div className="tvtime-release-schedule__date-heading sticky top-16 z-10 flex items-center gap-2 bg-background/90 py-2 backdrop-blur">
                 <CalendarDays className={`h-4 w-4 ${accentClass}`} />
                 <h3 className="font-bold">{formatDateOnly(date, undefined, isRTL ? "ar-IQ" : "en-US") || (isRTL ? "تاريخ الإصدار غير متاح" : "Release date unavailable")}</h3>

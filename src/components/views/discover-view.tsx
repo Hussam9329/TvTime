@@ -35,6 +35,7 @@ import {
 } from "@/lib/media-world-pipeline";
 import { applyDiscoverPreset, type DiscoverPresetId } from "@/lib/discover-presets";
 import { updateDiscoverRange } from "@/lib/discover-filter-state";
+import { CatalogueArtwork } from "@/components/media/catalogue-artwork";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 
@@ -462,7 +463,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           </div>
         </div>
       ) : (
-        <div data-ui-surface="panel" className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5">
+        <div className="tvtime-catalogue-banner tvtime-discover-banner">
+          <CatalogueArtwork backdropPath={items.find((item) => item.backdrop_path)?.backdrop_path} />
           <div className="view-page-header flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
               <Compass className="w-5 h-5 text-primary" />
