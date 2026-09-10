@@ -13,7 +13,7 @@ import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
 import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronLeft, ChevronRight, Grid2X2, List, CircleStop, Search, ArrowUpDown } from "lucide-react";
-import { img, pickArabicTitle } from "@/lib/tmdb";
+import { imgOrPlaceholder, pickArabicTitle } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -438,19 +438,29 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
             ? "sm:grid-cols-[clamp(105px,23%,135px)_minmax(0,1fr)] sm:gap-5"
             : "sm:grid-cols-[clamp(125px,20%,175px)_minmax(0,1fr)] sm:gap-6",
         )}>
-          <div className="tvtime-tracking-card__poster relative aspect-[0.618/1] w-full overflow-hidden rounded-[16px] border border-border/60 bg-muted shadow-md sm:self-center">
-          {show.poster ? (
-            <SafeImage src={img(show.poster, "w342")} alt={displayTitle} fill variant="poster" className="transition-transform duration-500 group-hover:scale-[1.025]" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center"><Tv className="h-8 w-8 text-muted-foreground" /></div>
-          )}
-          {trackingStatus === "finished" && (
-            <WatchedIndicator rating={userRating} status="finished" />
-          )}
-          {trackingStatus !== "finished" && (
-            <TmdbScoreIndicator rating={tmdbRating} />
-          )}
-          {trackingStatus === "planned" && <WatchlistIndicator />}
+          {/* Scope the poster to the shared media-card theme so Library uses
+              the same frame, score corners and bookmark as the catalogue. */}
+          <div className="tvtime-media-card tvtime-tracking-card__poster relative min-w-0 w-full sm:self-center" data-media-type="tv">
+            <div className="tvtime-media-poster relative aspect-[2/3] overflow-hidden bg-muted">
+              <SafeImage
+                src={imgOrPlaceholder(show.poster, "w342")}
+                alt={displayTitle}
+                fill
+                variant="poster"
+                sizes="(max-width: 359px) 128px, (max-width: 639px) 88px, 112px"
+                loading="lazy"
+                decoding="async"
+                className="tvtime-media-poster__image object-cover"
+              />
+              <div className="tvtime-media-poster__veil pointer-events-none absolute inset-0" aria-hidden="true" />
+              {trackingStatus === "finished" && (
+                <WatchedIndicator rating={userRating} status="finished" />
+              )}
+              {trackingStatus !== "finished" && (
+                <TmdbScoreIndicator rating={tmdbRating} />
+              )}
+              {trackingStatus === "planned" && <WatchlistIndicator />}
+            </div>
           </div>
 
           <div className="flex min-w-0 flex-col">
