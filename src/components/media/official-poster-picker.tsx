@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ImageIcon, Loader2 } from "lucide-react";
+import { Images, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SafeImage } from "@/components/media/safe-image";
 import { img } from "@/lib/tmdb";
 import { userHeaders, withUserId } from "@/lib/client-user";
@@ -45,9 +45,18 @@ export function OfficialPosterPicker({ tmdbId, mediaType, title, posters }: {
   };
 
   if (official.length === 0) return null;
-  return <>
-    <Button variant="outline" size="sm" onClick={() => setOpen(true)}><ImageIcon className="w-4 h-4 mr-1.5" /> Posters</Button>
+  return (
     <Dialog open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <button type="button" className="tvtime-poster-trigger" aria-label={`Change poster for ${title}`}>
+              <Images aria-hidden="true" />
+            </button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="top" sideOffset={6}>Change poster</TooltipContent>
+      </Tooltip>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Choose official poster</DialogTitle><DialogDescription>Only official posters supplied by TMDB are shown.</DialogDescription></DialogHeader>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
@@ -58,5 +67,5 @@ export function OfficialPosterPicker({ tmdbId, mediaType, title, posters }: {
         </div>
       </DialogContent>
     </Dialog>
-  </>;
+  );
 }
