@@ -5,15 +5,16 @@ import { Images, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { SafeImage } from "@/components/media/safe-image";
 import { img } from "@/lib/tmdb";
 import { userHeaders, withUserId } from "@/lib/client-user";
 
-export function OfficialPosterPicker({ tmdbId, mediaType, title, posters }: {
+export function OfficialPosterPicker({ tmdbId, mediaType, title, posters, isArabic = false }: {
   tmdbId: number;
   mediaType: "movie" | "tv";
   title: string;
+  isArabic?: boolean;
   posters: Array<{ file_path?: string | null; vote_average?: number }>;
 }) {
   const [open, setOpen] = useState(false);
@@ -47,16 +48,11 @@ export function OfficialPosterPicker({ tmdbId, mediaType, title, posters }: {
   if (official.length === 0) return null;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <button type="button" className="tvtime-poster-trigger" aria-label={`Change poster for ${title}`}>
-              <Images aria-hidden="true" />
-            </button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="top" sideOffset={6}>Change poster</TooltipContent>
-      </Tooltip>
+      <DialogTrigger asChild>
+        <Button variant="outline" aria-label={isArabic ? `بوسترات ${title}` : `Posters for ${title}`}>
+          <Images aria-hidden="true" /> {isArabic ? "البوسترات" : "Posters"}
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Choose official poster</DialogTitle><DialogDescription>Only official posters supplied by TMDB are shown.</DialogDescription></DialogHeader>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">

@@ -82,10 +82,11 @@ assert.match(
 );
 
 const tvDetail = read("src/components/views/tv-detail-view.tsx");
-assert.match(tvDetail, /tvtime-tv-detail-tabs[^"\n]*justify-start[^"\n]*overflow-x-auto/);
+const profileCss = read("src/app/media-profile.css");
+assert.match(tvDetail, /mp-tabs[^"\n]*justify-start[^"\n]*overflow-x-auto/);
 assert.match(
-  responsiveCss,
-  /\.tvtime-tv-detail-tabs\s*{[^}]*display:\s*flex\s*!important;[^}]*overflow-x:\s*auto\s*!important;/s,
+  profileCss,
+  /\.mp-tabs\s*{[^}]*display:\s*flex\s*!important;[^}]*overflow-x:\s*auto\s*!important;/s,
   "Mobile TV detail tabs must scroll rather than compress labels",
 );
 

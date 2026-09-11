@@ -249,57 +249,54 @@ export function MovieDetailView() {
   const stateLoading = mediaState.isLoading && !stateItem;
 
   return (
-    <div className="tvtime-movie-detail-page tvtime-cinematic-detail-page space-y-5" data-media-kind="movie">
-      <div className="tvtime-detail-backdrop absolute inset-0 -z-20 overflow-hidden" aria-hidden="true">
+    <div className="media-profile" data-media-kind="movie">
+      <div className="mp-backdrop absolute inset-0 -z-20 overflow-hidden" aria-hidden="true">
         <div className="absolute inset-0">
           <SafeImage src={img(m.backdrop_path, "original")} alt="" fill variant="backdrop" sizes="100vw" priority className="absolute inset-0" />
-          <div className="tvtime-detail-backdrop__side absolute inset-0" />
-          <div className="tvtime-detail-backdrop__fade absolute inset-0" />
+          <div className="mp-backdrop-side absolute inset-0" />
+          <div className="mp-backdrop-fade absolute inset-0" />
         </div>
       </div>
-      <Button variant="ghost" size="sm" onClick={back} className="tvtime-detail-back-button text-muted-foreground">
+      <Button variant="ghost" size="sm" onClick={back} className="mp-back text-muted-foreground">
         <ArrowLeft className="w-4 h-4 mr-1" /> {isArabicMovie ? "رجوع" : "Back"}
       </Button>
 
-      <section className="tvtime-movie-detail-hero relative isolate overflow-hidden border border-white/15 bg-[#07101f]">
+      <section className="mp-hero">
         {/* Poster + title + actions */}
-        <div className="tvtime-movie-detail-hero__layout relative z-10">
-          <aside className="tvtime-movie-detail-hero__poster">
-            <Card className="p-0 overflow-hidden rounded-[22px] border-white/25 bg-black/30 shadow-[0_24px_55px_rgba(0,0,0,0.5)]">
+        <div className="mp-layout">
+          <aside className="mp-poster">
+            <Card className="p-0 overflow-hidden">
               <div className="relative aspect-[2/3]">
-                <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={displayTitle} fill variant="poster" sizes="(max-width: 639px) 144px, (max-width: 1023px) 216px, 280px" priority />
+                <SafeImage src={stateItem?.poster || imgOrPlaceholder(m.poster_path, "w342")} alt={displayTitle} fill variant="poster" sizes="(max-width: 767px) 27vw, (max-width: 1023px) 192px, 256px" priority />
               </div>
             </Card>
-            <div className="tvtime-movie-detail-hero__poster-action">
-              <OfficialPosterPicker tmdbId={m.id} mediaType="movie" title={displayTitle} posters={(m as any).images?.posters ?? []} />
-            </div>
           </aside>
 
-          <div className="tvtime-movie-detail-hero__content">
-            <header className="tvtime-movie-detail-hero__identity">
-              <div className="tvtime-movie-detail-hero__eyebrow">
-                <span className="tvtime-movie-detail-hero__kind">
+          <div className="mp-content">
+            <header className="mp-identity">
+              <div className="mp-eyebrow">
+                <span className="mp-kind">
                   <Film aria-hidden="true" /> {isArabicMovie ? "فيلم" : "Movie"}
                 </span>
                 {releaseDate?.year && <span>{releaseDate.year}</span>}
                 {isArabicMovie && (
-                  <span className="tvtime-movie-detail-hero__arabic">
+                  <span className="mp-arabic">
                     فيلم عربي
                   </span>
                 )}
               </div>
-              <h1 className="tvtime-movie-detail-hero__title view-page-title">
+              <h1 className="mp-title" dir="auto">
                 {displayTitle}
               </h1>
-              {m.tagline && <p className="tvtime-movie-detail-hero__tagline">{m.tagline}</p>}
-              <div className="tvtime-movie-detail-genres" aria-label="Movie genres">
+              {m.tagline && <p className="mp-tagline" dir="auto">{m.tagline}</p>}
+              <div className="mp-genres" aria-label="Movie genres">
                 {m.genres?.map((genre) => (
                   <Badge key={genre.id} variant="outline">{genre.name}</Badge>
                 ))}
               </div>
             </header>
 
-            <div className="tvtime-movie-detail-hero__facts" aria-label="Movie facts">
+            <div className="mp-facts" aria-label="Movie facts">
               {releaseDate && (
                 <span>
                   <Calendar aria-hidden="true" /> {releaseDate.dayMonth}
@@ -320,7 +317,7 @@ export function MovieDetailView() {
             </div>
 
             {/* Library actions remain disabled until their canonical state is known. */}
-            <div className="tvtime-detail-hero__actions tvtime-movie-detail-hero__actions">
+            <div className="mp-actions">
               <Button
                 variant={isWatched ? "default" : "secondary"}
                 onClick={onWatched}
@@ -351,11 +348,12 @@ export function MovieDetailView() {
                   <Play className="fill-current" /> Trailers
                 </Button>
               )}
-              <DropdownMenu>
+              <OfficialPosterPicker tmdbId={m.id} mediaType="movie" isArabic={isArabicMovie} title={displayTitle} posters={(m as any).images?.posters ?? []} />
+            <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="tvtime-detail-hero__watch-button tvtime-movie-detail-hero__watch-button">
+                  <Button variant="outline" className="mp-watch">
                     <ExternalLink /> Watch
-                    <ChevronDown className="tvtime-detail-hero__watch-chevron tvtime-movie-detail-hero__watch-chevron" />
+                    <ChevronDown className="mp-watch-chevron" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
@@ -382,42 +380,42 @@ export function MovieDetailView() {
             </div>
 
             {/* Rating */}
-            <div className="tvtime-movie-detail-rating">
-              <div className="tvtime-movie-detail-rating__grid">
-                <div className="tvtime-movie-detail-rating__user">
-                  <div className="tvtime-detail-rating__icon" aria-hidden="true"><Star className="fill-current" /></div>
-                  <div className="tvtime-detail-rating__body">
+            <div className="mp-ratings">
+              <div className="mp-rating-grid">
+                <div className="mp-rating-user">
+                  <div className="mp-rating-icon" aria-hidden="true"><Star className="fill-current" /></div>
+                  <div className="mp-rating-body">
                   <p>{isArabicMovie ? "تقييمك" : "Your rating"}</p>
                   {myRating != null ? (
-                    <div className="tvtime-movie-detail-rating__value">
+                    <div className="mp-rating-value">
                       <strong className={ratingColor}>
                         {myRating}<span>/100</span>
                       </strong>
-                      <span className="tvtime-movie-detail-rating__track" aria-hidden="true">
+                      <span className="mp-rating-track" aria-hidden="true">
                         <span style={{ width: `${myRating}%` }} />
                       </span>
                     </div>
                   ) : (
-                    <div className="tvtime-movie-detail-rating__empty">
+                    <div className="mp-rating-empty">
                       <strong>—</strong>
                       <span>{isArabicMovie ? "لم تقيّمه بعد" : "Not rated yet"}</span>
                     </div>
                   )}
                   </div>
-                  <ChevronRight className="tvtime-detail-rating__chevron" aria-hidden="true" />
+                  <ChevronRight className="mp-rating-chevron" aria-hidden="true" />
                 </div>
-                <div className="tvtime-movie-detail-rating__tmdb">
-                  <div className="tvtime-detail-rating__tmdb-mark" aria-hidden="true"><span>TM</span><span>DB</span></div>
-                  <div className="tvtime-detail-rating__body">
+                <div className="mp-rating-tmdb">
+                  <div className="mp-tmdb-mark" aria-hidden="true"><span>TM</span><span>DB</span></div>
+                  <div className="mp-rating-body">
                   <p>{isArabicMovie ? "تقييم TMDB" : "TMDB score"}</p>
-                  <div className="tvtime-movie-detail-rating__tmdb-score">
+                  <div className="mp-rating-value">
                     <strong>{m.vote_average.toFixed(1)}</strong>
                     <span>/10 ({m.vote_count.toLocaleString()})</span>
                   </div>
                   </div>
-                  <ChevronRight className="tvtime-detail-rating__chevron" aria-hidden="true" />
+                  <ChevronRight className="mp-rating-chevron" aria-hidden="true" />
                 </div>
-                <div className="tvtime-movie-detail-rating__controls">
+                <div className="mp-rating-actions">
                   {isWatched && myRating != null && (
                     <Button variant="outline" size="sm" onClick={onRemoveRating}>
                       Remove rating &amp; watched
@@ -436,18 +434,18 @@ export function MovieDetailView() {
       </section>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="tvtime-detail-tabs-shell tvtime-movie-detail-tabs-shell">
-        <TabsList className="tvtime-detail-tabs tvtime-movie-detail-tabs flex h-14 w-full justify-start overflow-x-auto no-scrollbar">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mp-tabs-shell">
+        <TabsList className="mp-tabs flex h-14 w-full justify-start overflow-x-auto no-scrollbar">
           <TabsTrigger value="overview">{isArabicMovie ? "نظرة عامة" : "Overview"}</TabsTrigger>
           <TabsTrigger value="cast">{isArabicMovie ? "طاقم العمل" : "Cast"}</TabsTrigger>
           {m.budget > 0 && <TabsTrigger value="details">{isArabicMovie ? "التفاصيل" : "Details"}</TabsTrigger>}
           {trailer && <TabsTrigger value="videos">{isArabicMovie ? "الفيديوهات" : "Videos"}</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="overview" className="tvtime-detail-overview space-y-4 mt-4">
+        <TabsContent value="overview" className="mp-overview space-y-4 mt-4">
           <div>
             <h3 className="text-lg font-bold mb-2">{isArabicMovie ? "القصة" : "Synopsis"}</h3>
-            <p className="text-foreground/80 leading-relaxed">{m.overview || "No overview available."}</p>
+            <p className="text-foreground/80 leading-relaxed" dir="auto">{m.overview || "No overview available."}</p>
           </div>
           {recommendations.length > 0 && (
             <MediaRow title={isArabicMovie ? "اقتراحات لك" : "Recommendations"} icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="movie" />
@@ -459,11 +457,12 @@ export function MovieDetailView() {
 
         <TabsContent value="cast" className="mt-4">
           {cast.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="mp-cast-grid">
               {cast.map((c: any) => (
-                <Card
+                <button
+                  type="button"
                   key={c.id}
-                  className="p-3 flex items-center gap-3 hover:border-primary/40 transition-colors cursor-pointer group"
+                  className="mp-cast-card group"
                   onClick={() => goPerson(c.id)}
                 >
                   <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
@@ -477,7 +476,7 @@ export function MovieDetailView() {
                     <p className="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">{c.name}</p>
                     <p className="text-xs text-muted-foreground line-clamp-1">{c.character}</p>
                   </div>
-                </Card>
+                </button>
               ))}
             </div>
           ) : (
@@ -487,7 +486,7 @@ export function MovieDetailView() {
 
         {m.budget > 0 && (
           <TabsContent value="details" className="mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="mp-content-grid">
               <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label={isArabicMovie ? "الميزانية" : "Budget"} value={`$${m.budget.toLocaleString()}`} />
               <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label={isArabicMovie ? "الإيرادات" : "Revenue"} value={`$${m.revenue.toLocaleString()}`} />
               <DetailCard icon={<Calendar className="w-5 h-5 text-primary" />} label={isArabicMovie ? "تاريخ الإصدار" : "Release date"} value={releaseDate?.full || "—"} />
@@ -510,7 +509,7 @@ export function MovieDetailView() {
 
         {trailer && (
           <TabsContent value="videos" className="mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="mp-content-grid">
               {videos.slice(0, 8).map((v: any) => (
                 <button
                   key={v.id}

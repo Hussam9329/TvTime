@@ -10376,68 +10376,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     0 0 28px rgb(74 205 255 / 0.13) !important;
 }
 
-/* One poster control for movie and TV artwork at every viewport size.
-   Its native trigger avoids the old shared rectangular action-button skin. */
-:is(.tvtime-movie-detail-hero__poster-action, .tvtime-tv-detail-hero__poster-action) {
-  position: absolute;
-  inset-inline-end: 0.25rem;
-  bottom: 0.25rem;
-  z-index: 5;
-  margin: 0;
-}
-
-.tvtime-poster-trigger {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #edbd70;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.tvtime-poster-trigger::before {
-  content: "";
-  position: absolute;
-  inset: 0.25rem;
-  border: 1px solid rgb(237 189 112 / 0.35);
-  border-radius: inherit;
-  background: rgb(11 15 18 / 0.9);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.tvtime-poster-trigger svg {
-  position: relative;
-  width: 1.125rem;
-  height: 1.125rem;
-  stroke-width: 1.8;
-  pointer-events: none;
-}
-
-.tvtime-poster-trigger:focus-visible {
-  outline: 2px solid #edbd70;
-  outline-offset: 0;
-}
-
-@media (hover: hover) {
-  .tvtime-poster-trigger:hover::before {
-    border-color: #edbd70;
-    background: #24201a;
-  }
-}
-
-.tvtime-poster-trigger:active::before {
-  background: #362c1d;
-  border-color: #edbd70;
-}
-
 .tvtime-movie-detail-hero__content,
 .tvtime-tv-detail-hero__content {
   display: flex !important;

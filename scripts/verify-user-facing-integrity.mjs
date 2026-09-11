@@ -372,29 +372,30 @@ check(
     && !/Welcome back/.test(statsView),
   "Large duplicate page-identification banners stay removed from catalogue and utility views",
 );
+const profileStyles = read("src/app/media-profile.css");
 check(
-  /className="tvtime-detail-hero__actions tvtime-movie-detail-hero__actions"/.test(movieDetailView)
-    && /className="tvtime-detail-hero__actions tvtime-tv-detail-hero__actions"/.test(tvDetailView)
-    && /tvtime-tv-detail-hero__poster-action[\s\S]*<OfficialPosterPicker/.test(tvDetailView)
-    && /\.tvtime-detail-hero__actions\s*\{[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(9\.5rem, 1fr\)\)[\s\S]*grid-auto-rows: 3rem/.test(globalStyles)
-    && !/tvtime-tv-detail-hero__actions flex flex-wrap/.test(tvDetailView),
-  "Movie and TV detail actions share one responsive button grid",
+  [movieDetailView, tvDetailView].every((source) =>
+    /className="mp-actions">[\s\S]*?<OfficialPosterPicker/.test(source)
+    && !/tvtime-(?:movie|tv)-detail|tvtime-cinematic-detail|poster-action/.test(source))
+    && /\.mp-actions\s*\{[^}]*grid-template-columns: repeat\(auto-fit, minmax\(9rem, 1fr\)\)/.test(profileStyles),
+  "Movie and TV profiles share independent styling with the poster picker in the action grid",
 );
 check(
-  /\.tvtime-tv-detail-hero__actions\s*\{[\s\S]*grid-template-columns: repeat\(auto-fill, minmax\(8\.75rem, 10\.5rem\)\)[\s\S]*grid-auto-rows: 2\.5rem[\s\S]*justify-content: start/.test(globalStyles)
-    && /\.tvtime-tv-detail-hero__actions :is\(\[data-slot="button"\], \.tvtime-tv-detail-hero__watch-button\)\s*\{[\s\S]*max-height: 2\.5rem[\s\S]*font-size: 0\.78rem/.test(globalStyles),
-  "TV detail buttons stay compact instead of stretching across the hero",
+  /min-height: 2\.75rem !important; height: auto !important/.test(profileStyles)
+    && /\.mp-episode-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/.test(profileStyles)
+    && /<DropdownMenu open=\{open\} onOpenChange=\{setOpen\}>/.test(tvDetailView),
+  "Series controls wrap at accessible heights and episodes stack on narrow phones",
 );
 check(
-  /className="tvtime-tv-detail-hero__eyebrow"/.test(tvDetailView)
-    && /className="tvtime-tv-detail-hero__facts"/.test(tvDetailView)
-    && /className="tvtime-tv-detail-hero__genres"/.test(tvDetailView)
+  /className="mp-eyebrow"/.test(tvDetailView)
+    && /className="mp-facts"/.test(tvDetailView)
+    && /className="mp-genres"/.test(tvDetailView)
     && /<Calendar aria-hidden="true" \/> \{year\}/.test(tvDetailView)
     && /<Layers aria-hidden="true" \/>/.test(tvDetailView)
     && /className="is-score"/.test(tvDetailView)
     && /className="is-rating"/.test(tvDetailView)
-    && /\.tvtime-tv-detail-hero__facts > span\s*\{[\s\S]*background: transparent !important[\s\S]*font-size: 0\.875rem/.test(globalStyles),
-  "TV profile uses a cinematic eyebrow plus a compact factual metadata row",
+    && /\.mp-facts > span\s*\{[^}]*font-size: 0\.875rem/.test(profileStyles),
+  "TV profiles preserve identity, genres, dates, season count and classification in the shared design",
 );
 check(
   (tvTrackingView.match(/\{ value: "/g) ?? []).length === 9
