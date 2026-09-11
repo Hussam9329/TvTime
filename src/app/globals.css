@@ -7571,13 +7571,8 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   form.tvtime-mobile-experience-only { display: block !important; }
   .tvtime-pull-refresh,
   .tvtime-mobile-library-toolbar { display: flex !important; }
-  .tvtime-mobile-detail-actions { display: grid !important; }
   .tvtime-filter-sheet-closed { display: none !important; }
   html, body { overscroll-behavior-y: none; }
-
-  .tvtime-movie-detail-page {
-    padding-bottom: calc(4.5rem + var(--tvtime-mobile-dock-offset, 5.5rem) + env(safe-area-inset-bottom, 0px));
-  }
 
   .tvtime-header-search { display: none !important; }
 
@@ -7787,38 +7782,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   }
   .tvtime-range-presets::-webkit-scrollbar { display: none; }
 
-  /* Fixed primary actions live above the persistent navigation dock. */
-  .tvtime-mobile-detail-actions {
-    position: fixed;
-    z-index: 43;
-    inset-inline: max(0.75rem, env(safe-area-inset-left, 0px)) max(0.75rem, env(safe-area-inset-right, 0px));
-    bottom: calc(5.15rem + env(safe-area-inset-bottom, 0px));
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.4rem;
-    width: min(calc(100% - 1.5rem), 30rem);
-    margin-inline: auto;
-    padding: 0.4rem;
-    border: 1px solid color-mix(in oklab, var(--border) 88%, transparent);
-    border-radius: 1.1rem;
-    background: color-mix(in oklab, var(--background) 88%, transparent);
-    box-shadow: 0 16px 44px rgb(0 0 0 / 0.28);
-    backdrop-filter: blur(24px) saturate(150%);
-  }
-
-  .tvtime-mobile-detail-actions [data-slot="button"] {
-    min-width: 0;
-    min-height: 2.75rem;
-    gap: 0.3rem;
-    padding-inline: 0.45rem;
-    font-size: 0.68rem;
-  }
-
-  .tvtime-mobile-detail-actions [data-slot="button"] svg {
-    width: 1rem;
-    height: 1rem;
-  }
-
   /* Footer becomes intentionally quiet because bottom navigation owns mobile navigation. */
   .tvtime-app-footer {
     margin-top: 1rem;
@@ -7933,8 +7896,7 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     border-radius: 0.85rem;
   }
 
-  .tvtime-mobile-library-toolbar__tabs button,
-  .tvtime-mobile-detail-actions [data-slot="button"] {
+  .tvtime-mobile-library-toolbar__tabs button {
     font-size: 0.62rem;
   }
 
@@ -11481,66 +11443,206 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   }
 }
 
-@media (max-width: 639px) {
-  .tvtime-movie-detail-hero__layout,
-  .tvtime-tv-detail-hero__layout {
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 1.25rem !important;
-    padding: 5.25rem 1rem 1.25rem !important;
+/* Phone composition: poster and identity share the first row; every other
+   section spans both tracks. Reset old grid placement rather than mixing it
+   with the desktop flex content wrapper. */
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  :root .tvtime-app {
+    padding-bottom: calc(var(--tvtime-mobile-dock-height, 4.5rem) + max(0.5rem, env(safe-area-inset-bottom, 0px)) + 1rem);
   }
 
-  .tvtime-movie-detail-hero__poster,
-  .tvtime-tv-detail-hero__poster {
-    width: 9rem !important;
+  :root .tvtime-app .tvtime-mobile-dock {
+    inset-inline: max(0.5rem, env(safe-area-inset-left, 0px)) max(0.5rem, env(safe-area-inset-right, 0px));
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   }
 
-  .tvtime-movie-detail-hero__content,
-  .tvtime-tv-detail-hero__content {
-    width: 100%;
+  :root .tvtime-app .tvtime-mobile-dock__surface {
+    padding: 0.25rem;
+    border-radius: 1rem;
+  }
+
+  :root .tvtime-app .tvtime-mobile-dock__item {
+    min-height: 3.5rem;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+
+  :root .tvtime-app .tvtime-mobile-dock__label {
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+
+  :root .tvtime-app :is(.tvtime-movie-detail-hero__layout, .tvtime-tv-detail-hero__layout) {
+    grid-template-columns: clamp(6rem, 27vw, 9rem) minmax(0, 1fr) !important;
+    gap: 1rem !important;
+    padding-inline: max(1rem, env(safe-area-inset-left, 0px)) max(1rem, env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: 1.25rem !important;
+  }
+
+  :root .tvtime-app :is(.tvtime-movie-detail-hero__poster, .tvtime-tv-detail-hero__poster) {
+    grid-area: 1 / 1;
+    width: 100% !important;
+    min-width: 0;
+    margin: 0 !important;
+  }
+
+  :root .tvtime-app :is(.tvtime-movie-detail-hero__content, .tvtime-tv-detail-hero__content) {
+    display: contents !important;
+  }
+
+  :root .tvtime-app :is(.tvtime-movie-detail-hero__content, .tvtime-tv-detail-hero__content) > * {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-width: 0;
+    max-width: 100%;
+    margin-block: 0 !important;
+  }
+
+  :root .tvtime-app :is(.tvtime-movie-detail-hero__identity, .tvtime-tv-detail-hero__identity) {
+    grid-area: 1 / 2;
+    align-self: center;
+    text-align: start;
+  }
+
+  :root .tvtime-app :is(.tvtime-movie-detail-hero__title, .tvtime-tv-detail-hero__title) {
     max-width: none;
+    font-size: clamp(1.5rem, 5.5vw, 2.25rem) !important;
+    line-height: 1.15 !important;
+    overflow-wrap: anywhere;
   }
 
-  .tvtime-movie-detail-hero__title,
-  .tvtime-tv-detail-hero__title {
-    font-size: clamp(2rem, 8vw, 2.75rem) !important;
-    line-height: 1.12 !important;
+  :root .tvtime-app :is(.tvtime-movie-detail-hero__tagline, .tvtime-tv-detail-hero__tagline) {
+    font-size: 1rem !important;
+    line-height: 1.4 !important;
   }
 
-  .tvtime-cinematic-detail-page .tvtime-detail-hero__actions {
+  :root .tvtime-app :is(.tvtime-movie-detail-genres, .tvtime-tv-detail-hero__genres) [data-slot="badge"] {
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.3;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  :root .tvtime-app :is(.tvtime-movie-detail-hero__facts, .tvtime-tv-detail-hero__facts) {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.85rem !important;
+    overflow: visible;
+  }
+
+  :root .tvtime-app .tvtime-cinematic-detail-page .tvtime-detail-hero__actions {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: minmax(2.875rem, auto);
+    grid-auto-rows: auto;
     gap: 0.6rem !important;
   }
 
-  .tvtime-cinematic-detail-page .tvtime-detail-hero__actions > [data-slot="button"] {
+  :root .tvtime-app .tvtime-cinematic-detail-page .tvtime-detail-hero__actions > [data-slot="button"] {
     width: 100% !important;
     min-width: 0 !important;
     min-height: 2.875rem !important;
-    padding-inline: 0.5rem !important;
-    grid-column: auto;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0.65rem 0.5rem !important;
+    grid-column: auto !important;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
   }
 
-  .tvtime-detail-backdrop {
-    height: 44rem;
+  :root .tvtime-app .tvtime-cinematic-detail-page .tvtime-detail-hero__actions > [data-slot="button"]:last-child:nth-child(odd) {
+    grid-column: 1 / -1 !important;
   }
 
-  .tvtime-detail-backdrop__side {
-    background: linear-gradient(90deg, rgb(5 8 11 / 0.72), rgb(5 8 11 / 0.12)) !important;
+  :root .tvtime-app :is(.tvtime-movie-detail-rating__grid, .tvtime-tv-detail-hero__rating-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
-  .tvtime-detail-backdrop__fade {
-    background: linear-gradient(180deg, rgb(5 8 11 / 0.08) 0%, rgb(5 8 11 / 0.3) 25%, #090b0e 65%) !important;
+  :root .tvtime-app .tvtime-tv-detail-hero__rating-grid {
+    grid-template-areas: "user tmdb" "actions actions" "lock lock";
   }
 
-  .tvtime-season-actions {
+  :root .tvtime-app :is(.tvtime-movie-detail-rating__user, .tvtime-movie-detail-rating__tmdb, .tvtime-tv-detail-hero__rating-summary, .tvtime-tv-detail-hero__tmdb-rating) {
+    grid-template-columns: 1.25rem minmax(0, 1fr) !important;
+    min-height: 4.75rem;
+    gap: 0.5rem !important;
+    padding: 0.75rem !important;
+  }
+
+  :root .tvtime-app :is(.tvtime-detail-rating__icon, .tvtime-detail-rating__tmdb-mark) {
+    width: 1.25rem;
+  }
+
+  :root .tvtime-app .tvtime-detail-rating__icon svg { width: 1.25rem; height: 1.25rem; }
+  :root .tvtime-app .tvtime-detail-rating__chevron { display: none; }
+
+  :root .tvtime-app .tvtime-tv-detail-hero__rating-summary .tvtime-detail-rating__body > div {
+    flex-wrap: wrap;
+  }
+
+  :root .tvtime-app .tvtime-tv-detail-hero__rating-summary .text-4xl {
+    font-size: 1.55rem;
+    line-height: 1.3;
+  }
+
+  :root .tvtime-app .tvtime-tv-detail-hero__rating-summary .text-4xl > span { font-size: 0.75rem; }
+  :root .tvtime-app .tvtime-tv-detail-hero__rating-summary .w-24 { max-width: 100%; }
+
+  :root .tvtime-app :is(.tvtime-movie-detail-rating__controls, .tvtime-tv-detail-hero__rating-actions) {
+    display: flex;
+    flex-wrap: wrap;
     width: 100%;
+    gap: 0.6rem !important;
   }
 
-  .tvtime-season-actions [data-slot="button"] {
+  :root .tvtime-app :is(.tvtime-movie-detail-rating__controls, .tvtime-tv-detail-hero__rating-actions) [data-slot="button"] {
+    flex: 1 1 9rem;
+    min-width: 0;
+    max-width: 100%;
     min-height: 2.75rem !important;
-    flex: 1 1 auto;
+    height: auto !important;
+    padding: 0.65rem !important;
     white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 0.875rem !important;
+    line-height: 1.4;
+  }
+
+  :root .tvtime-app .tvtime-detail-tabs-shell {
+    padding-inline: max(1rem, env(safe-area-inset-left, 0px)) max(1rem, env(safe-area-inset-right, 0px));
+  }
+
+  :root .tvtime-app .tvtime-detail-tabs {
+    height: auto !important;
+    min-height: 3rem;
+  }
+
+  :root .tvtime-app .tvtime-detail-tabs [data-slot="tabs-trigger"] {
+    min-height: 3rem;
+    padding: 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  :root .tvtime-app .tvtime-detail-overview p { font-size: 1rem !important; line-height: 1.7 !important; }
+
+  .tvtime-detail-backdrop { height: 32rem; }
+  .tvtime-detail-backdrop__side { background: linear-gradient(90deg, rgb(5 8 11 / 0.72), rgb(5 8 11 / 0.12)) !important; }
+  .tvtime-detail-backdrop__fade { background: linear-gradient(180deg, rgb(5 8 11 / 0.08) 0%, rgb(5 8 11 / 0.3) 25%, #090b0e 85%) !important; }
+
+  .tvtime-season-actions { width: 100%; }
+  .tvtime-season-actions [data-slot="button"] { min-height: 2.75rem !important; flex: 1 1 auto; white-space: normal; }
+}
+
+@media (max-width: 359px) {
+  :root .tvtime-app :is(.tvtime-movie-detail-rating__grid, .tvtime-tv-detail-hero__rating-grid) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  :root .tvtime-app .tvtime-tv-detail-hero__rating-grid {
+    grid-template-areas: "user" "tmdb" "actions" "lock";
   }
 }
 

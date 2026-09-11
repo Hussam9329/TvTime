@@ -417,19 +417,17 @@ export function MovieDetailView() {
                   </div>
                   <ChevronRight className="tvtime-detail-rating__chevron" aria-hidden="true" />
                 </div>
-                {isWatched && (
-                  <div className="tvtime-movie-detail-rating__controls">
-                    {myRating != null && (
-                      <Button variant="outline" size="sm" onClick={onRemoveRating}>
-                        Remove rating &amp; watched
-                      </Button>
-                    )}
-                    <Button size="sm" onClick={() => setRatingIntent("edit")}>
-                      <Star className="fill-current" />
-                      {myRating != null ? "Re-rate" : "Rate with 10 criteria"}
+                <div className="tvtime-movie-detail-rating__controls">
+                  {isWatched && myRating != null && (
+                    <Button variant="outline" size="sm" onClick={onRemoveRating}>
+                      Remove rating &amp; watched
                     </Button>
-                  </div>
-                )}
+                  )}
+                  <Button size="sm" disabled={stateLoading} onClick={() => setRatingIntent(isWatched ? "edit" : "complete")}>
+                    <Star className="fill-current" />
+                    {myRating != null ? "Re-rate" : "Rate with 10 criteria"}
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -539,44 +537,6 @@ export function MovieDetailView() {
           </TabsContent>
         )}
       </Tabs>
-
-      <div className="tvtime-mobile-detail-actions tvtime-mobile-experience-only" role="toolbar" aria-label="Movie actions">
-        <Button
-          type="button"
-          variant={isWatched ? "default" : "outline"}
-          onClick={onWatched}
-          disabled={stateLoading || watchedToggle.isPending}
-          aria-label={isWatched ? "Remove from watched" : "Mark watched"}
-        >
-          {stateLoading ? <Loader2 className="animate-spin" /> : isWatched ? <CheckCircle2 /> : <Circle />}
-          <span>{isWatched ? "Watched" : "Watched"}</span>
-        </Button>
-        {isWatched ? (
-          <Button type="button" variant="outline" onClick={() => void onRewatch()} disabled={watchedToggle.isPending}>
-            <CheckCircle2 />
-            <span>Rewatch</span>
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant={inWatchlist ? "default" : "outline"}
-            onClick={onWatchlist}
-            disabled={stateLoading || watchlistToggle.isPending}
-          >
-            {inWatchlist ? <Check /> : <ListPlus />}
-            <span>Watchlist</span>
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setRatingIntent(isWatched ? "edit" : "complete")}
-          disabled={stateLoading}
-        >
-          <Star className={myRating != null ? "fill-current" : undefined} />
-          <span>{myRating != null ? `${myRating}` : "Rate"}</span>
-        </Button>
-      </div>
 
       {/* Structured personal movie rating — 10 criteria, exact sum = /100. */}
       <StructuredRatingDialog

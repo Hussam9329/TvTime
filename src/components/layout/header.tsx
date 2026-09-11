@@ -116,6 +116,7 @@ export function Header() {
   const { resolvedTheme, setTheme } = useTheme();
   const queryClient = useQueryClient();
   const headerRef = useRef<HTMLElement>(null);
+  const mobileDockRef = useRef<HTMLElement>(null);
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -145,6 +146,25 @@ export function Header() {
     return () => {
       observer.disconnect();
       document.documentElement.style.removeProperty("--tvtime-header-height");
+    };
+  }, []);
+
+  // Reserve the actual dock height when labels wrap or system text is enlarged.
+  useEffect(() => {
+    const dock = mobileDockRef.current;
+    if (!dock) return;
+    const root = document.documentElement;
+    const syncHeight = () => {
+      const height = Math.ceil(dock.getBoundingClientRect().height);
+      if (height > 0) root.style.setProperty("--tvtime-mobile-dock-height", `${height}px`);
+      else root.style.removeProperty("--tvtime-mobile-dock-height");
+    };
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(dock);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--tvtime-mobile-dock-height");
     };
   }, []);
 
@@ -716,7 +736,7 @@ export function Header() {
           </form>
         )}
 
-      <nav className="tvtime-mobile-dock md:hidden" aria-label="Quick navigation">
+      <nav ref={mobileDockRef} className="tvtime-mobile-dock md:hidden" aria-label="Quick navigation">
         <div className="tvtime-mobile-dock__surface">
           {mobileDockItems.map((item) => {
             const active = item.view === navActiveView;
