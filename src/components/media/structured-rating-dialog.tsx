@@ -107,8 +107,8 @@ export function StructuredRatingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="tvtime-structured-rating-dialog grid h-[100dvh] max-h-[100dvh] w-screen max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-none border-x-0 border-y border-white/10 bg-[linear-gradient(155deg,rgba(24,27,40,0.99),rgba(10,13,22,0.99))] p-0 shadow-[0_32px_90px_rgba(0,0,0,0.58)] sm:h-auto sm:max-h-[min(94dvh,58rem)] sm:w-[min(48rem,calc(100vw-2rem))] sm:max-w-[48rem] sm:rounded-[1.6rem] sm:border">
-        <DialogHeader className="static z-20 gap-3 border-b border-border/60 bg-[rgba(16,19,30,0.96)] px-4 py-4 pe-12 backdrop-blur-xl sm:px-6 sm:py-5 sm:pe-14">
+      <DialogContent className="tvtime-structured-rating-dialog grid h-[100dvh] max-h-[100dvh] w-screen max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-none border-x-0 border-y border-border bg-card p-0 shadow-[var(--app-shadow-lg)] sm:h-auto sm:max-h-[min(94dvh,58rem)] sm:w-[min(48rem,calc(100vw-2rem))] sm:max-w-[48rem] sm:rounded-[1.1rem] sm:border">
+        <DialogHeader className="static z-20 gap-3 border-b border-border/60 bg-card/95 px-4 py-4 pe-12 backdrop-blur-xl sm:px-6 sm:py-5 sm:pe-14">
           <div className="flex min-w-0 items-center gap-3.5">
             {poster ? (
               <div className="relative h-[4.7rem] w-[3.2rem] shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted shadow-md sm:h-[5.4rem] sm:w-[3.65rem]">
@@ -211,7 +211,7 @@ export function StructuredRatingDialog({
           </div>
         </div>
 
-        <DialogFooter className="static z-20 grid grid-cols-[0.7fr_1.3fr] gap-2.5 border-t border-border/60 bg-[rgba(16,19,30,0.97)] px-4 py-[max(0.85rem,env(safe-area-inset-bottom))] pt-3.5 backdrop-blur-xl sm:grid-cols-[0.8fr_1.35fr] sm:px-6 sm:py-4 [&>[data-slot=button]]:w-full">
+        <DialogFooter className="static z-20 grid grid-cols-[0.7fr_1.3fr] gap-2.5 border-t border-border/60 bg-card/95 px-4 py-[max(0.85rem,env(safe-area-inset-bottom))] pt-3.5 backdrop-blur-xl sm:grid-cols-[0.8fr_1.35fr] sm:px-6 sm:py-4 [&>[data-slot=button]]:w-full">
           <Button type="button" variant="outline" className="min-h-11" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
