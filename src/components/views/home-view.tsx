@@ -346,54 +346,61 @@ function Hero({ items }: { items: MediaItem[] }) {
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={`content-${slideKey}`}
-          className="tvtime-home-hero__content relative z-10 grid min-h-[clamp(27rem,48vw,35rem)] items-end gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_clamp(10rem,18vw,14rem)] lg:p-12"
+          className="tvtime-home-hero__content relative z-10 flex min-h-[clamp(24rem,42vw,32rem)] items-center p-5 sm:p-8 lg:p-12"
           initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: shouldReduceMotion ? 0 : -8 }}
           transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: "easeOut" }}
         >
-          <div className="min-w-0 self-end">
-            <div className="tvtime-home-hero__meta">
-              <span className="tvtime-home-hero__featured">
+          {/* Media-profile composition: poster column + organized identity
+              block over the page-level cinematic backdrop. */}
+          <div className="tvtime-pin-layout">
+            <div className="tvtime-pin-poster-wrap">
+              <div className="tvtime-pin-poster" aria-hidden="true">
+                <SafeImage
+                  src={imgOrPlaceholder(item.poster_path, "w500")}
+                  alt=""
+                  fill
+                  variant="poster"
+                  priority
+                />
+              </div>
+              <span className="tvtime-pin-poster-caption">
                 <Flame aria-hidden="true" />
-                Featured
+                Trending spotlight
               </span>
-              <span>{mediaType === "movie" ? "Movie" : "TV Show"}</span>
-              {getYear(item) && <span>{getYear(item)}</span>}
-              {item.vote_average > 0 && (
-                <span className="tvtime-home-hero__rating inline-flex items-center gap-1">
-                  <Star className="fill-current" aria-hidden="true" />
-                  {item.vote_average.toFixed(1)}
+            </div>
+
+            <div className="tvtime-pin-content">
+              <div className="tvtime-home-hero__meta">
+                <span className="tvtime-home-hero__featured">
+                  <Flame aria-hidden="true" />
+                  Featured
                 </span>
-              )}
-            </div>
+                <span>{mediaType === "movie" ? "Movie" : "TV Show"}</span>
+                {getYear(item) && <span>{getYear(item)}</span>}
+                {item.vote_average > 0 && (
+                  <span className="tvtime-home-hero__rating inline-flex items-center gap-1">
+                    <Star className="fill-current" aria-hidden="true" />
+                    {item.vote_average.toFixed(1)}
+                  </span>
+                )}
+              </div>
 
-            <h1 className="tvtime-home-hero__title">{title}</h1>
-            <p className="tvtime-home-hero__overview line-clamp-3 text-white/85">{item.overview}</p>
+              <h1 className="tvtime-home-hero__title">{title}</h1>
+              <p className="tvtime-home-hero__overview line-clamp-3 text-white/85">{item.overview}</p>
 
-            <div className="tvtime-home-hero__actions">
-              <Button size="lg" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
-                <Play className="fill-current" aria-hidden="true" />
-                View details
-              </Button>
-              <Button size="lg" variant="secondary" onClick={() => setView("discover")}>
-                <Compass className="h-4 w-4" aria-hidden="true" />
-                Explore more
-              </Button>
+              <div className="tvtime-home-hero__actions">
+                <Button size="lg" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
+                  <Play className="fill-current" aria-hidden="true" />
+                  View details
+                </Button>
+                <Button size="lg" variant="secondary" onClick={() => setView("discover")}>
+                  <Compass className="h-4 w-4" aria-hidden="true" />
+                  Explore more
+                </Button>
+              </div>
             </div>
-          </div>
-
-          <div className="tvtime-home-hero__poster hidden w-full lg:block" aria-hidden="true">
-            <div className="relative aspect-[2/3] overflow-hidden rounded-[1.1rem]">
-              <SafeImage
-                src={imgOrPlaceholder(item.poster_path, "w500")}
-                alt=""
-                fill
-                variant="poster"
-                priority
-              />
-            </div>
-            <span>Trending spotlight</span>
           </div>
         </motion.div>
       </AnimatePresence>
