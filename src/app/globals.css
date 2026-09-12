@@ -1119,21 +1119,44 @@
   box-shadow: 0 0 9px color-mix(in oklab, var(--primary) 70%, transparent);
 }
 
-.tvtime-watch-featured {
+.tvtime-watch-next-page {
   position: relative;
   isolation: isolate;
+}
+
+/* Cinematic page backdrop for the pinned Watch Next card — the artwork bleeds
+   across the entire page behind every section, exactly like the movie/TV
+   profiles (.mp-backdrop). Anchors to .tvtime-watch-next-page. */
+.tvtime-watch-page-backdrop {
+  position: absolute;
+  inset: 0 0 auto;
+  height: min(46rem, 96vh);
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tvtime-watch-page-backdrop__fade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(4 4 4 / 0.88) 0%, rgb(4 4 4 / 0.66) 38%, rgb(4 4 4 / 0.1) 78%),
+    linear-gradient(0deg, var(--background) 0%, rgb(11 15 18 / 0.7) 22%, transparent 62%);
+}
+
+.tvtime-watch-featured {
+  position: static;
+  min-height: clamp(21rem, 42vw, 30rem);
+}
+
+.tvtime-watch-featured__inner {
+  position: relative;
   display: flex;
   min-height: clamp(21rem, 42vw, 30rem);
   align-items: flex-end;
-  overflow: hidden;
-  border: 1px solid color-mix(in oklab, var(--primary) 46%, transparent);
-  border-radius: 1.15rem;
-  background: #080807;
-  box-shadow: 0 22px 58px rgb(0 0 0 / 0.3), inset 0 1px rgb(255 255 255 / 0.07);
 }
 
-.tvtime-watch-featured__backdrop,
-.tvtime-watch-featured__scrim {
+.tvtime-watch-featured__backdrop {
   position: absolute;
   z-index: -2;
   inset: 0;
@@ -1172,13 +1195,6 @@
 
 .tvtime-watch-featured:hover .tvtime-watch-featured__backdrop[data-image-kind="poster-fallback"] img {
   transform: none;
-}
-
-.tvtime-watch-featured__scrim {
-  z-index: -1;
-  background:
-    linear-gradient(90deg, rgb(4 4 4 / 0.96) 0%, rgb(4 4 4 / 0.82) 38%, rgb(4 4 4 / 0.18) 78%),
-    linear-gradient(0deg, rgb(4 4 4 / 0.94) 0%, transparent 68%);
 }
 
 .tvtime-watch-featured__content {
@@ -1924,9 +1940,8 @@
     width: 100%;
   }
 
-  .tvtime-watch-featured {
+  .tvtime-watch-featured__inner {
     min-height: 31rem;
-    border-radius: 1rem;
   }
 
   .tvtime-watch-featured__backdrop img {
@@ -1940,10 +1955,6 @@
   .tvtime-watch-featured__backdrop[data-image-kind="poster-fallback"] img {
     object-position: center top;
     opacity: 0.52;
-  }
-
-  .tvtime-watch-featured__scrim {
-    background: linear-gradient(0deg, rgb(4 4 4 / 0.98) 0%, rgb(4 4 4 / 0.84) 53%, rgb(4 4 4 / 0.18) 100%);
   }
 
   .tvtime-watch-featured__content {
@@ -3732,19 +3743,44 @@ body {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  position: relative;
+  isolation: isolate;
 }
 
 .tvtime-home-view > * {
   margin-block: 0 !important;
 }
 
+/* Cinematic page backdrop for the pinned Home hero — the artwork bleeds
+   across the whole page behind every section, mirroring the movie/TV
+   profiles (.mp-backdrop). Anchored to .tvtime-home-view. */
+.tvtime-home-page-backdrop {
+  position: absolute;
+  inset: 0 0 auto;
+  height: min(48rem, 100vh);
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tvtime-home-page-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, var(--background) 0%, transparent 44%);
+}
+
+/* Frameless hero: the section must never clip or shade the page-level
+   artwork that now lives behind every section of the page. */
+.tvtime-app .tvtime-home-hero[data-ui-surface="hero"] {
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+}
+
 .tvtime-home-hero {
   min-height: clamp(27rem, 48vw, 35rem);
   touch-action: pan-y;
-  border: 1px solid rgb(255 255 255 / 0.14);
-  border-radius: var(--app-radius-hero);
-  background: #070b14;
-  box-shadow: var(--app-shadow-lg), inset 0 1px rgb(255 255 255 / 0.1);
 }
 
 .tvtime-home-hero__backdrop img {
@@ -5429,7 +5465,6 @@ body {
 
   .tvtime-home-hero {
     min-height: 30rem;
-    border-radius: 1.45rem;
   }
 
   .tvtime-home-hero__scrim {
@@ -6580,13 +6615,9 @@ body {
 
 /* Feature, detail and utility pages */
 .tvtime-home-hero {
-  border-color: var(--cinema-line-strong) !important;
-  border-radius: var(--app-radius-hero);
-  background: #070706;
-  box-shadow:
-    var(--app-shadow-lg),
-    0 0 24px rgb(216 163 76 / 0.055),
-    inset 0 1px rgb(240 189 99 / 0.08) !important;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .tvtime-home-hero__scrim {
@@ -7236,10 +7267,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.24), inset 0 1px rgb(240 189 99 / 0.04) !important;
   }
 
-  .tvtime-home-hero {
-    box-shadow: var(--app-shadow-md), inset 0 1px rgb(240 189 99 / 0.06) !important;
-  }
-
   .tvtime-footer-glow {
     display: none;
   }
@@ -7782,14 +7809,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   opacity: 0.5;
 }
 
-.tvtime-watch-featured__scrim {
-  z-index: -1;
-  background:
-    linear-gradient(90deg, rgb(3 3 3 / 0.97) 0%, rgb(3 3 3 / 0.89) 28%, rgb(3 3 3 / 0.58) 52%, rgb(3 3 3 / 0.13) 82%, rgb(3 3 3 / 0.2) 100%),
-    linear-gradient(0deg, rgb(3 3 3 / 0.96) 0%, rgb(3 3 3 / 0.46) 42%, transparent 74%),
-    linear-gradient(180deg, rgb(0 0 0 / 0.24), transparent 32%);
-}
-
 .tvtime-watch-featured__content {
   width: min(100%, 45rem);
 }
@@ -8253,7 +8272,7 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     display: inline-flex;
   }
 
-  .tvtime-watch-featured {
+  .tvtime-watch-featured__inner {
     min-height: 34rem;
   }
 
@@ -8270,12 +8289,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   .tvtime-watch-featured__backdrop[data-image-kind="season-backdrop"] img,
   .tvtime-watch-featured__backdrop[data-image-kind="show-backdrop"] img {
     object-position: center 30% !important;
-  }
-
-  .tvtime-watch-featured__scrim {
-    background:
-      linear-gradient(0deg, rgb(3 3 3 / 0.99) 0%, rgb(3 3 3 / 0.9) 48%, rgb(3 3 3 / 0.42) 70%, rgb(3 3 3 / 0.12) 100%),
-      linear-gradient(90deg, rgb(3 3 3 / 0.38), transparent 75%);
   }
 
   .tvtime-watch-next-episode {
@@ -8645,12 +8658,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
 :root .tvtime-media-menu {
   background: var(--audit-color-overlay) !important;
   box-shadow: var(--audit-shadow-2) !important;
-}
-
-:root .tvtime-home-hero {
-  border-color: var(--cinema-line-strong) !important;
-  background: var(--audit-color-background);
-  box-shadow: var(--audit-shadow-5) !important;
 }
 
 :root :is(.tvtime-home-hero__carousel-controls, .tvtime-row-controls, .tvtime-section-heading__icon, .tvtime-quick-stat) {
