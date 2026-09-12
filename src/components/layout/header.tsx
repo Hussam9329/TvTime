@@ -17,15 +17,12 @@ import {
   Keyboard,
   Layers3,
   Menu,
-  Moon,
   ChevronDown,
   Play,
   Search,
   Sparkles,
-  Sun,
   X,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useNav, type ViewName } from "@/lib/store";
 import { prefetchViewModule } from "@/lib/view-prefetch";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
@@ -113,13 +110,11 @@ export function Header() {
   const back = useNav((state) => state.back);
   const historyLength = useNav((state) => state.history.length);
   const userName = useNav((state) => state.userName);
-  const { resolvedTheme, setTheme } = useTheme();
   const queryClient = useQueryClient();
   const headerRef = useRef<HTMLElement>(null);
   const mobileDockRef = useRef<HTMLElement>(null);
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
-  const [mounted, setMounted] = useState(false);
   const [searchVal, setSearchVal] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -257,10 +252,6 @@ export function Header() {
     refetchOnWindowFocus: false,
   });
   const notifUnread = Math.max(0, Number(notificationSummary.data?.unreadCount || 0));
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!mobileSearchOpen || !isMobileExperience) return;
@@ -598,21 +589,6 @@ export function Header() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Notifications</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                  aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                  className="tvtime-header-icon tvtime-header-theme"
-                >
-                  {mounted && resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{resolvedTheme === "dark" ? "Light mode" : "Dark mode"}</TooltipContent>
             </Tooltip>
 
             <Tooltip>

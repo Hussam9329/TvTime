@@ -1,6 +1,6 @@
 /* Shared cinema palette. Keep status/error colors semantic and preserve
    the dedicated profile and Watch Next compositions. */
-:root:not(.light) {
+:root {
   --primary: #edbd70;
   --primary-foreground: #211707;
   --background: #0b0f12;
@@ -26,13 +26,6 @@
   --cinema-line-strong: rgb(237 189 112 / 0.3);
   --app-page-background: radial-gradient(ellipse at 100% 0%, rgb(211 152 57 / 0.12), transparent 35%), radial-gradient(ellipse at 0% 65%, rgb(211 152 57 / 0.05), transparent 38%), linear-gradient(#0b0f12, #0b0f12);
   --app-hero-background: linear-gradient(145deg, #182027, #10171d);
-}
-
-:root.light {
-  --primary: #8e601c;
-  --primary-foreground: #fff;
-  --ring: #8e601c;
-  --app-page-background: radial-gradient(ellipse at 100% 0%, rgb(211 152 57 / 0.12), transparent 40%), linear-gradient(#fbf8f2, #f7f4ee);
 }
 
 :root .tvtime-app .tvtime-main-content:not([data-view="movie-detail"]):not([data-view="tv-detail"]):not([data-view="watch-next"]) {

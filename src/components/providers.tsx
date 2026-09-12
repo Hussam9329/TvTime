@@ -1,7 +1,6 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "next-themes";
 import { useState, useEffect } from "react";
 import { useNav } from "@/lib/store";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
@@ -211,9 +210,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
     };
   }, [client, userId]);
 
-  return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
-    </ThemeProvider>
-  );
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

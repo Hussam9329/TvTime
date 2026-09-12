@@ -821,41 +821,6 @@
   --sidebar-ring: oklch(0.8 0.14 75);
 }
 
-.light {
-  --background: oklch(0.965 0.018 84);
-  --foreground: oklch(0.19 0.022 68);
-  --card: oklch(0.99 0.01 84);
-  --card-foreground: oklch(0.19 0.022 68);
-  --popover: oklch(0.99 0.01 84);
-  --popover-foreground: oklch(0.19 0.022 68);
-  --primary: oklch(0.61 0.13 70);
-  --primary-foreground: oklch(0.99 0.01 84);
-  --secondary: oklch(0.92 0.025 82);
-  --secondary-foreground: oklch(0.19 0.022 68);
-  --muted: oklch(0.935 0.02 82);
-  --muted-foreground: oklch(0.49 0.03 72);
-  --accent: oklch(0.9 0.04 78);
-  --accent-foreground: oklch(0.19 0.022 68);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.98 0.01 25);
-  --border: oklch(0.68 0.09 72 / 38%);
-  --input: oklch(0.68 0.09 72 / 45%);
-  --ring: oklch(0.61 0.13 70);
-  --chart-1: oklch(0.61 0.13 70);
-  --chart-2: oklch(0.6 0.18 305);
-  --chart-3: oklch(0.62 0.15 160);
-  --chart-4: oklch(0.68 0.16 80);
-  --chart-5: oklch(0.55 0.2 260);
-  --sidebar: oklch(0.96 0.02 82);
-  --sidebar-foreground: oklch(0.19 0.022 68);
-  --sidebar-primary: oklch(0.61 0.13 70);
-  --sidebar-primary-foreground: oklch(0.99 0.01 84);
-  --sidebar-accent: oklch(0.91 0.03 80);
-  --sidebar-accent-foreground: oklch(0.19 0.022 68);
-  --sidebar-border: oklch(0.68 0.09 72 / 38%);
-  --sidebar-ring: oklch(0.61 0.13 70);
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -1033,9 +998,6 @@
 .ui-surface-card:focus-within {
   border-color: color-mix(in oklab, var(--primary) 42%, var(--border));
   box-shadow: 0 14px 36px rgb(0 0 0 / 0.12), 0 0 0 1px color-mix(in oklab, var(--primary) 18%, transparent);
-}
-.light .ui-surface-card {
-  box-shadow: 0 10px 28px rgb(35 24 56 / 0.07);
 }
 @media (max-width: 640px) {
   .ui-surface-card { border-radius: 0.875rem; }
@@ -3102,28 +3064,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"]) .tvtime-release-sch
   --app-skeleton-highlight: color-mix(in oklab, var(--foreground) 7%, var(--app-skeleton-base));
 }
 
-.light {
-  color-scheme: light;
-  --app-surface: color-mix(in oklab, var(--card) 94%, transparent);
-  --app-surface-strong: color-mix(in oklab, var(--card) 98%, var(--background));
-  --app-surface-subtle: color-mix(in oklab, var(--muted) 80%, transparent);
-  --app-surface-border: color-mix(in oklab, var(--border) 92%, transparent);
-  --app-elevated-border: color-mix(in oklab, var(--primary) 18%, var(--border));
-  --app-header-background: color-mix(in oklab, var(--background) 88%, transparent);
-  --app-page-background:
-    radial-gradient(circle at 12% 0%, color-mix(in oklab, var(--primary) 5%, transparent), transparent 34rem),
-    radial-gradient(circle at 88% 100%, color-mix(in oklab, var(--chart-2) 4%, transparent), transparent 40rem),
-    var(--background);
-  --app-hero-background:
-    radial-gradient(circle at 8% 0%, color-mix(in oklab, var(--primary) 8%, transparent), transparent 38%),
-    linear-gradient(135deg, color-mix(in oklab, var(--card) 96%, transparent), color-mix(in oklab, var(--background) 94%, var(--muted)));
-  --app-shadow-sm: 0 5px 16px rgb(15 23 42 / 0.07);
-  --app-shadow-md: 0 14px 38px rgb(15 23 42 / 0.1);
-  --app-shadow-lg: 0 28px 72px rgb(15 23 42 / 0.14);
-  --app-skeleton-base: color-mix(in oklab, var(--muted) 92%, var(--background));
-  --app-skeleton-highlight: color-mix(in oklab, white 60%, var(--app-skeleton-base));
-}
-
 html {
   min-height: 100%;
   background: var(--background);
@@ -3326,11 +3266,6 @@ body {
 }
 
 .tvtime-home-view [data-ui-surface="hero"] h1 {
-  color: white;
-}
-
-.light .tvtime-home-view [data-ui-surface="hero"] h1,
-.light .tvtime-home-view [data-ui-surface="hero"] p {
   color: white;
 }
 
@@ -3621,10 +3556,6 @@ body {
   backdrop-filter: blur(22px) saturate(145%);
 }
 
-.light .tvtime-header-inner {
-  box-shadow: 0 14px 44px rgb(15 23 42 / 0.09), inset 0 1px rgb(255 255 255 / 0.8);
-}
-
 .tvtime-brand-mark {
   isolation: isolate;
   background:
@@ -3738,11 +3669,6 @@ body {
   box-shadow: 0 20px 54px rgb(0 0 0 / 0.3), inset 0 1px color-mix(in oklab, var(--foreground) 7%, transparent);
   backdrop-filter: blur(24px) saturate(155%);
   pointer-events: auto;
-}
-
-.light .tvtime-mobile-dock__surface {
-  background: color-mix(in oklab, white 86%, transparent);
-  box-shadow: 0 20px 54px rgb(15 23 42 / 0.16), inset 0 1px rgb(255 255 255 / 0.8);
 }
 
 .tvtime-mobile-dock__item {
@@ -4308,10 +4234,6 @@ body {
   transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
 }
 
-.light .tvtime-media-poster {
-  box-shadow: 0 13px 30px rgb(15 23 42 / 0.14), inset 0 1px rgb(255 255 255 / 0.75);
-}
-
 .tvtime-media-poster__image {
   transition: filter 260ms ease, opacity 260ms ease, transform 360ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
@@ -4431,10 +4353,6 @@ body {
   border: 1px solid color-mix(in oklab, var(--border) 94%, transparent);
   border-radius: 1.1rem;
   box-shadow: 0 12px 28px rgb(0 0 0 / 0.22);
-}
-
-.light .tvtime-recent-poster {
-  box-shadow: 0 12px 26px rgb(15 23 42 / 0.12);
 }
 
 /* Standard page heroes retain category personality through one controlled accent. */
@@ -4828,11 +4746,6 @@ body {
   background: var(--app-surface-strong);
   color: var(--foreground);
   box-shadow: 0 5px 14px rgb(0 0 0 / 0.09);
-}
-
-.light .tvtime-app :is([data-slot="tabs-trigger"], [role="tab"])[data-state="active"],
-.light .tvtime-app :is([data-slot="tabs-trigger"], [role="tab"])[aria-selected="true"] {
-  box-shadow: 0 5px 14px rgb(15 23 42 / 0.08);
 }
 
 .tvtime-app [data-slot="button"] {
@@ -6418,30 +6331,6 @@ body {
     0 0 18px rgb(216 163 76 / 0.055);
 }
 
-.light {
-  --cinema-line: rgb(154 108 36 / 0.28);
-  --cinema-line-strong: rgb(154 108 36 / 0.56);
-  --cinema-panel: rgb(255 252 245 / 0.96);
-  --cinema-panel-strong: rgb(255 253 248 / 0.99);
-  --app-surface: linear-gradient(145deg, rgb(255 253 248 / 0.98), rgb(246 239 226 / 0.98));
-  --app-surface-strong: rgb(255 253 248 / 0.99);
-  --app-surface-subtle: rgb(238 225 199 / 0.66);
-  --app-header-background: rgb(255 252 245 / 0.9);
-  --app-nav-active: rgb(154 108 36 / 0.1);
-  --app-page-background:
-    radial-gradient(circle at 50% -9rem, rgb(180 128 43 / 0.12), transparent 35rem),
-    linear-gradient(180deg, #fbf6eb 0%, #f7f0e3 42rem, #fbf8f1 100%);
-  --app-hero-background:
-    radial-gradient(circle at 6% 0%, rgb(180 128 43 / 0.1), transparent 42%),
-    linear-gradient(145deg, #fffdf8, #f2e8d5);
-  --app-shadow-sm: 0 10px 30px rgb(73 47 14 / 0.09);
-  --app-shadow-md: 0 20px 52px rgb(73 47 14 / 0.13);
-  --app-shadow-lg: 0 34px 96px rgb(73 47 14 / 0.18);
-  --app-shadow-poster:
-    0 18px 42px rgb(73 47 14 / 0.2),
-    0 0 18px rgb(154 108 36 / 0.07);
-}
-
 body {
   background-color: var(--background);
   background-image: var(--app-page-background) !important;
@@ -6523,10 +6412,6 @@ body {
     inset 0 1px rgb(240 189 99 / 0.08) !important;
 }
 
-.light .tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="sheet-content"], .tvtime-portal-surface, .tvtime-portal-compact) {
-  background: linear-gradient(155deg, #fffdf8, #f3e9d7) !important;
-}
-
 [data-slot="dialog-overlay"],
 [data-slot="alert-dialog-overlay"] {
   background: rgb(0 0 0 / 0.74) !important;
@@ -6538,10 +6423,6 @@ body {
   border-color: var(--cinema-line) !important;
   background: rgb(6 6 5 / 0.58) !important;
   box-shadow: inset 0 1px rgb(240 189 99 / 0.035) !important;
-}
-
-.light .tvtime-app :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"], .tvtime-command-search) {
-  background: rgb(255 252 245 / 0.82) !important;
 }
 
 .tvtime-app :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"], .tvtime-command-search):focus-visible {
@@ -6565,10 +6446,6 @@ body {
   background: rgb(15 14 11 / 0.78) !important;
   color: var(--foreground);
   box-shadow: inset 0 1px rgb(240 189 99 / 0.045);
-}
-
-.light .tvtime-app [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]) {
-  background: rgb(255 252 245 / 0.86) !important;
 }
 
 .tvtime-app [data-slot="tabs-list"] {
@@ -8490,290 +8367,8 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   }
 }
 
-/* TVTIME light-theme completion layer.
-   The cinema layer above hardcodes dark surfaces and bright-gold accents for
-   the default dark theme. In light mode those break readability: near-black
-   chips on cream cards and bright gold text on light tints. This block keeps
-   the cinematic identity (dark image heroes stay dark) while restoring light
-   surfaces and readable dark-gold accents everywhere else. Keep it last so it
-   wins over earlier !important rules. */
-.light {
-  /* Dark readable gold replaces the bright #f0bd63 for text/icon accents. */
-  --cinema-gold-bright: #8a611e;
-}
-
-/* Header band above the floating header card must not stay near-black. */
-.light .tvtime-app-header {
-  background: linear-gradient(to bottom, rgb(251 246 235 / 0.92), transparent) !important;
-}
-
-/* Segmented tab strips were forced onto a near-black rail in both themes. */
-.light .tvtime-app [data-slot="tabs-list"] {
-  border-color: var(--cinema-line) !important;
-  background: rgb(255 252 245 / 0.88) !important;
-  box-shadow: inset 0 1px rgb(240 189 99 / 0.12) !important;
-}
-
-/* Small control chips that share the dark "enamel" background. */
-.light .tvtime-app :is(
-  .tvtime-home-hero__carousel-controls,
-  .tvtime-row-controls,
-  .tvtime-section-heading__icon,
-  .tvtime-quick-stat
-) {
-  border-color: var(--cinema-line) !important;
-  background: rgb(255 252 245 / 0.92) !important;
-  box-shadow: inset 0 1px rgb(240 189 99 / 0.16) !important;
-}
-
-.light .tvtime-app .tvtime-quick-stat__icon {
-  background: color-mix(in oklab, var(--primary) 14%, white) !important;
-}
-
-/* Discover filter sidebar: replace the dark glass panel. */
-.light .tvtime-filter-panel,
-.light .tvtime-filter-panel.glass {
-  border-color: var(--cinema-line) !important;
-  background: linear-gradient(155deg, rgb(255 253 248 / 0.98), rgb(246 239 226 / 0.98)) !important;
-  box-shadow: 0 18px 54px rgb(73 47 14 / 0.1), inset 0 1px rgb(240 189 99 / 0.1) !important;
-}
-
-/* Preset / status / tracking chips: light surfaces with theme text. */
-.light .tvtime-app :is(
-  .tvtime-discover-preset-row > button,
-  .tvtime-discover-status-toggle,
-  .tvtime-tracking-status-option
-) {
-  border-color: var(--cinema-line) !important;
-  background: rgb(255 252 245 / 0.88) !important;
-  box-shadow: inset 0 1px rgb(240 189 99 / 0.12) !important;
-}
-
-.light .tvtime-app :is(
-  .tvtime-discover-preset-row > button[data-active="true"],
-  .tvtime-discover-status-toggle[data-active="true"],
-  .tvtime-tracking-status-option[data-active="true"]
-) {
-  border-color: var(--cinema-line-strong) !important;
-  background: rgb(216 163 76 / 0.14) !important;
-  box-shadow: 0 8px 22px rgb(73 47 14 / 0.1), inset 0 1px rgb(240 189 99 / 0.12) !important;
-}
-
-/* Active tabs/nav inherited a heavy dark shadow; soften for light surfaces. */
-.light .tvtime-app [data-slot="tabs-trigger"][data-state="active"] {
-  box-shadow: 0 7px 18px rgb(73 47 14 / 0.12) !important;
-}
-
-/* The poster overflow menu floats over posters on a dark chip: keep the
-   original bright gold icon there instead of the dark accent. */
-.light .tvtime-app .tvtime-media-menu {
-  color: #f0bd63 !important;
-}
-
-/* Light scrollbar instead of the near-black thumb. */
-.light ::-webkit-scrollbar-thumb {
-  background: oklch(0.78 0.07 82);
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-.light ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.68 0.08 80);
-  background-clip: padding-box;
-}
-
-/* Recharts tooltips default to a dark panel with inline styles; flip to a
-   light card with readable text in light mode. */
-.light .recharts-default-tooltip {
-  background-color: rgb(255 253 248) !important;
-  border: 1px solid rgb(154 108 36 / 0.4) !important;
-  box-shadow: 0 14px 38px rgb(73 47 14 / 0.16) !important;
-}
-.light .recharts-default-tooltip .recharts-tooltip-label {
-  color: #4a3a1d !important;
-}
-.light .recharts-legend-item-text {
-  color: #4a3a1d !important;
-}
-
-/* ============================================================================
-   Light-mode completion layer (2026-09) — finishes the work started above.
-   The cinema layer forces several near-black surfaces with !important and the
-   earlier partial light block missed them. Everything below is scoped to
-   .light only: dark mode is untouched. Image-backed heroes intentionally stay
-   cinematic/dark; page-level surfaces become cream with readable accents.
-   Keep this block last so it wins over earlier !important rules.
-   ========================================================================== */
-
-/* Readable violet accent for text/icon usage in light mode. */
-.light {
-  --cinema-purple: #7c3aed;
-  --cinema-purple-line: rgb(124 58 237 / 0.5);
-}
-
-/* --- Tabs: the shared tab bar was still near-black ----------------------- */
-.light .tvtime-app [data-slot="tabs-list"],
-.light .tvtime-login-page [data-slot="tabs-list"] {
-  background: rgb(255 253 247 / 0.9) !important;
-  box-shadow: inset 0 1px rgb(154 108 36 / 0.1) !important;
-}
-.light .tvtime-movie-hub__tabs[data-slot="tabs-list"] {
-  box-shadow: 0 12px 35px rgb(73 47 14 / 0.1);
-}
-
-/* --- Poster placeholders were near-black blocks -------------------------- */
-.light .tvtime-media-poster,
-.light .tvtime-home-hero__poster,
-.light .tvtime-movie-detail-hero__poster > [data-slot="card"],
-.light .tvtime-tv-detail-hero__poster > [data-slot="card"] {
-  background: #ece3d1 !important;
-}
-.light .tvtime-media-poster__veil {
-  opacity: 0.22;
-}
-
-/* --- Poster corner badges: light chips with saturated readable text ------ */
-.light .tvtime-user-score {
-  border-color: rgb(4 120 87 / 0.45) !important;
-  background: rgb(255 254 250 / 0.96) !important;
-  color: rgb(4 120 87) !important;
-  box-shadow: 0 5px 14px rgb(73 47 14 / 0.14) !important;
-}
-.light .tvtime-tmdb-score {
-  border-color: rgb(180 128 20 / 0.5) !important;
-  background: rgb(255 254 250 / 0.96) !important;
-  color: rgb(146 88 8) !important;
-  box-shadow: 0 5px 14px rgb(73 47 14 / 0.14) !important;
-}
-.light .tvtime-user-score span,
-.light .tvtime-tmdb-score span {
-  color: inherit !important;
-}
-.light .tvtime-user-score svg,
-.light .tvtime-tmdb-score svg {
-  color: inherit !important;
-}
-
-/* Watchlist bookmark: dark violet enamel → light lavender chip. */
-.light .tvtime-watchlist-indicator {
-  border-color: rgb(124 58 237 / 0.45);
-  background: rgb(250 248 255 / 0.95);
-  color: #7c3aed;
-  box-shadow: 0 6px 16px rgb(73 47 14 / 0.14), inset 0 1px rgb(255 255 255 / 0.7);
-}
-
-/* --- Person credit cards were dark with dark text ------------------------ */
-.light .tvtime-person-credit__card {
-  background: rgb(255 253 248 / 0.97) !important;
-  box-shadow: 0 12px 30px rgb(73 47 14 / 0.1), inset 0 1px rgb(255 255 255 / 0.6) !important;
-}
-
-/* --- Rating dialog kept its dark navy gradient --------------------------- */
-.light .tvtime-rating-dialog {
-  border-color: rgb(154 108 36 / 0.35) !important;
-  background: linear-gradient(155deg, #fffdf8, #f3e9d7) !important;
-  box-shadow: 0 32px 90px rgb(73 47 14 / 0.22) !important;
-}
-
-/* --- Watch Next: pale tone accents were unreadable on cream cards -------- */
-.light .tvtime-app .tvtime-watch-card {
-  --watch-card-accent: color-mix(in oklab, var(--primary) 85%, black);
-}
-.light .tvtime-app .tvtime-watch-card[data-tone="new"] {
-  --watch-card-accent: #0e7db8;
-}
-.light .tvtime-app .tvtime-watch-card[data-tone="behind"] {
-  --watch-card-accent: #c05f0f;
-}
-.light .tvtime-app .tvtime-watch-card[data-tone="paused"] {
-  --watch-card-accent: #7c4fd8;
-}
-.light .tvtime-watch-section[data-tone="new"] .tvtime-watch-section__icon {
-  color: #0e7db8;
-  background: rgb(14 125 184 / 0.12);
-}
-.light .tvtime-watch-section[data-tone="behind"] .tvtime-watch-section__icon {
-  color: #c05f0f;
-  background: rgb(192 95 15 / 0.12);
-}
-.light .tvtime-watch-section[data-tone="paused"] .tvtime-watch-section__icon {
-  color: #7c4fd8;
-  background: rgb(124 79 216 / 0.12);
-}
-.light .tvtime-watch-section__icon.is-complete {
-  color: #0d8a5a;
-  background: rgb(13 138 90 / 0.12);
-}
-
-/* Gold accents that mix with white wash out on cream: mix toward black. */
-.light .tvtime-watch-summary__icon,
-.light .tvtime-watch-section__icon,
-.light .tvtime-watch-upcoming-card__copy > span,
-.light .tvtime-watch-upcoming-card__countdown,
-.light .tvtime-watch-progress__copy strong,
-.light .tvtime-watch-card__episode strong {
-  color: color-mix(in oklab, var(--primary) 85%, black);
-}
-
-/* Watch cards: soften black shadows and fix poster placeholders. */
-.light .tvtime-app .tvtime-watch-card {
-  box-shadow: 0 10px 26px rgb(73 47 14 / 0.1), inset 0 1px rgb(255 255 255 / 0.6);
-}
-.light .tvtime-app .tvtime-watch-card:hover {
-  box-shadow: 0 15px 34px rgb(73 47 14 / 0.14), inset 0 1px rgb(255 255 255 / 0.7);
-}
-.light .tvtime-app .tvtime-watch-card > .tvtime-watch-card__poster {
-  background: #ece3d1;
-  box-shadow: 0 8px 18px rgb(73 47 14 / 0.12);
-}
-.light .tvtime-watch-upcoming-card__poster,
-.light .tvtime-watch-complete-row__poster,
-.light .tvtime-watch-order-row__poster {
-  background: #ece3d1;
-}
-.light .tvtime-watch-order-row {
-  box-shadow: 0 7px 20px rgb(73 47 14 / 0.08);
-}
-.light .tvtime-watch-summary {
-  box-shadow: inset 0 1px rgb(255 255 255 / 0.6);
-}
-
-/* Image-backed heroes keep their dark canvas but not black smoke. */
-.light .tvtime-watch-featured,
-.light .tvtime-movie-hub-hero,
-.light .tvtime-watch-season-complete {
-  box-shadow: 0 28px 70px rgb(73 47 14 / 0.24), inset 0 1px rgb(255 255 255 / 0.18);
-}
-
 /* Poster hover glow was near-black; warm it for light surfaces. */
 @media (hover: hover) and (pointer: fine) {
-  .light .tvtime-media-card:hover .tvtime-media-poster {
-    box-shadow:
-      0 24px 52px rgb(73 47 14 / 0.2),
-      0 0 24px rgb(154 108 36 / 0.14),
-      inset 0 0 0 1px rgb(120 84 24 / 0.08) !important;
-  }
-}
-
-/* --- Misc surfaces -------------------------------------------------------- */
-.light .tvtime-login-card {
-  box-shadow: 0 28px 80px rgb(73 47 14 / 0.16), inset 0 1px rgb(255 255 255 / 0.6);
-}
-.light .tvtime-notification-panel {
-  box-shadow: 20px 0 60px rgb(73 47 14 / 0.16);
-}
-.light .glass {
-  background: rgb(255 253 248 / 0.72);
-  border-color: rgb(154 108 36 / 0.25);
-}
-.light .shimmer {
-  background: linear-gradient(90deg, #eee4d0 0%, #f8f1e2 50%, #eee4d0 100%);
-  background-size: 1000px 100%;
-}
-.light .text-gradient {
-  background: linear-gradient(135deg, oklch(0.55 0.15 45), oklch(0.45 0.17 320));
-}
-.light .tvtime-app::before {
-  opacity: 0.16;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -8929,7 +8524,7 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
    values stay audit references here (not Tokens Studio tokens). Layout,
    responsive behavior, typography, media sizing and application logic remain
    unchanged. Gold is intentionally retained only as the Trakora brand accent. */
-:root:not(.light) {
+:root {
   /* Raw audit values from the supplied extraction. */
   --audit-color-panel-solid: #191919;
   --audit-color-panel-translucent: #ffffff09;
@@ -8978,112 +8573,112 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   --app-shadow-poster: var(--audit-shadow-4);
 }
 
-:root:not(.light) body {
+:root body {
   background-color: var(--audit-color-background);
   background-image: none !important;
 }
 
 /* Remove the gold dotted wash from the application canvas. */
-:root:not(.light) .tvtime-app::before {
+:root .tvtime-app::before {
   background-image: none;
   opacity: 0;
 }
 
 /* Header stays translucent, but neutral rather than gold-tinted. */
-:root:not(.light) .tvtime-app-header {
+:root .tvtime-app-header {
   background: linear-gradient(to bottom, rgb(17 17 17 / 0.94), transparent) !important;
 }
 
-:root:not(.light) :is(.tvtime-header-inner, .tvtime-mobile-search-panel, .tvtime-mobile-dock__surface) {
+:root :is(.tvtime-header-inner, .tvtime-mobile-search-panel, .tvtime-mobile-dock__surface) {
   border-color: var(--cinema-line) !important;
   background: var(--app-header-background) !important;
   box-shadow: var(--audit-shadow-4) !important;
 }
 
 /* Cards and panels use the extracted solid panel instead of enamel gradients. */
-:root:not(.light) .tvtime-app :is([data-slot="card"], [data-ui-surface="panel"], [data-ui-surface="card"], .feedback-state),
-:root:not(.light) .tvtime-login-page :is([data-slot="card"], [data-ui-surface="panel"], [data-ui-surface="card"]) {
+:root .tvtime-app :is([data-slot="card"], [data-ui-surface="panel"], [data-ui-surface="card"], .feedback-state),
+:root .tvtime-login-page :is([data-slot="card"], [data-ui-surface="panel"], [data-ui-surface="card"]) {
   border-color: var(--cinema-line) !important;
   background: var(--audit-color-panel-solid) !important;
   box-shadow: var(--audit-shadow-2) !important;
 }
 
 /* Elevated/portal surfaces get the deepest extracted shadow. */
-:root:not(.light) .tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="sheet-content"], .tvtime-portal-surface, .tvtime-portal-compact) {
+:root .tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="sheet-content"], .tvtime-portal-surface, .tvtime-portal-compact) {
   border-color: var(--cinema-line-strong) !important;
   background: var(--audit-color-panel-solid) !important;
   box-shadow: var(--audit-shadow-6) !important;
 }
 
-:root:not(.light) :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
+:root :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
   background: var(--audit-color-overlay) !important;
 }
 
 /* Inputs and secondary controls use the raw translucent/surface values. */
-:root:not(.light) .tvtime-app :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"], .tvtime-command-search),
-:root:not(.light) .tvtime-login-page :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"]) {
+:root .tvtime-app :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"], .tvtime-command-search),
+:root .tvtime-login-page :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"]) {
   border-color: var(--cinema-line) !important;
   background: var(--audit-color-surface) !important;
   box-shadow: var(--audit-shadow-1) !important;
 }
 
-:root:not(.light) .tvtime-app [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]),
-:root:not(.light) .tvtime-login-page [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]) {
+:root .tvtime-app [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]),
+:root .tvtime-login-page [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]) {
   border-color: var(--cinema-line) !important;
   background: var(--audit-color-panel-solid) !important;
   box-shadow: var(--audit-shadow-1) !important;
 }
 
-:root:not(.light) .tvtime-app [data-slot="tabs-list"] {
+:root .tvtime-app [data-slot="tabs-list"] {
   border-color: var(--cinema-line);
   background: var(--audit-color-surface) !important;
   box-shadow: var(--audit-shadow-1);
 }
 
 /* Posters remain image-first, with neutral elevation and gold only on hover. */
-:root:not(.light) :is(.tvtime-media-poster, .tvtime-home-hero__poster, .tvtime-movie-detail-hero__poster > [data-slot="card"], .tvtime-tv-detail-hero__poster > [data-slot="card"]) {
+:root :is(.tvtime-media-poster, .tvtime-home-hero__poster, .tvtime-movie-detail-hero__poster > [data-slot="card"], .tvtime-tv-detail-hero__poster > [data-slot="card"]) {
   border-color: var(--cinema-line-strong) !important;
   background: var(--audit-color-background) !important;
   box-shadow: var(--audit-shadow-4) !important;
 }
 
-:root:not(.light) .tvtime-media-menu {
+:root .tvtime-media-menu {
   background: var(--audit-color-overlay) !important;
   box-shadow: var(--audit-shadow-2) !important;
 }
 
-:root:not(.light) .tvtime-home-hero {
+:root .tvtime-home-hero {
   border-color: var(--cinema-line-strong) !important;
   background: var(--audit-color-background);
   box-shadow: var(--audit-shadow-5) !important;
 }
 
-:root:not(.light) :is(.tvtime-home-hero__carousel-controls, .tvtime-row-controls, .tvtime-section-heading__icon, .tvtime-quick-stat) {
+:root :is(.tvtime-home-hero__carousel-controls, .tvtime-row-controls, .tvtime-section-heading__icon, .tvtime-quick-stat) {
   border-color: var(--cinema-line) !important;
   background: var(--audit-color-panel-translucent) !important;
   box-shadow: var(--audit-shadow-1) !important;
 }
 
-:root:not(.light) .tvtime-filter-panel {
+:root .tvtime-filter-panel {
   border-color: var(--cinema-line-strong) !important;
   background: var(--audit-color-panel-solid) !important;
   box-shadow: var(--audit-shadow-4) !important;
 }
 
-:root:not(.light) :is(.tvtime-discover-preset-row > button, .tvtime-discover-status-toggle, .tvtime-tracking-status-option) {
+:root :is(.tvtime-discover-preset-row > button, .tvtime-discover-status-toggle, .tvtime-tracking-status-option) {
   border-color: var(--cinema-line) !important;
   background: var(--audit-color-surface) !important;
   box-shadow: var(--audit-shadow-1);
 }
 
-:root:not(.light) .tvtime-tv-detail-hero__meta > * {
+:root .tvtime-tv-detail-hero__meta > * {
   border-color: var(--cinema-line) !important;
   background: var(--audit-color-panel-translucent) !important;
   box-shadow: var(--audit-shadow-1);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  :root:not(.light) .tvtime-media-card:hover .tvtime-media-poster {
+  :root .tvtime-media-card:hover .tvtime-media-poster {
     border-color: color-mix(in oklab, var(--cinema-gold-bright) 62%, var(--cinema-line-strong)) !important;
     box-shadow: var(--audit-shadow-4) !important;
   }
@@ -9109,12 +8704,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     border-color 180ms ease,
     box-shadow 220ms ease,
     transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.light .tvtime-app .tvtime-media-card .tvtime-media-poster {
-  border-color: rgb(15 23 42 / 0.11) !important;
-  background: #f8fafc !important;
-  box-shadow: 0 6px 18px rgb(15 23 42 / 0.11) !important;
 }
 
 .tvtime-app .tvtime-media-card .tvtime-media-poster__image {
@@ -9158,12 +8747,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   color: #f5c96a !important;
 }
 
-.light .tvtime-app .tvtime-media-card :is(.tvtime-user-score, .tvtime-tmdb-score) {
-  border-color: rgb(15 23 42 / 0.11) !important;
-  background: rgb(255 255 255 / 0.82) !important;
-  box-shadow: 0 4px 14px rgb(15 23 42 / 0.11) !important;
-}
-
 /* Watchlist becomes a compact neutral glass control with a purple semantic
    icon only. If TMDB score is present, keep it on the next visual row. */
 .tvtime-app .tvtime-media-card .tvtime-watchlist-indicator {
@@ -9190,12 +8773,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   top: 2.35rem !important;
   right: 0.5rem !important;
   border-radius: 0.5rem;
-}
-
-.light .tvtime-app .tvtime-media-card .tvtime-watchlist-indicator {
-  border-color: rgb(15 23 42 / 0.11);
-  background: rgb(255 255 255 / 0.82);
-  box-shadow: 0 4px 14px rgb(15 23 42 / 0.1);
 }
 
 /* Following / rated state rail follows the same quiet glass treatment. */
@@ -9239,13 +8816,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   color: #fff !important;
 }
 
-.light .tvtime-app .tvtime-media-card .tvtime-media-menu {
-  border-color: rgb(15 23 42 / 0.11) !important;
-  background: rgb(255 255 255 / 0.84) !important;
-  color: rgb(15 23 42 / 0.75) !important;
-  box-shadow: 0 4px 14px rgb(15 23 42 / 0.1) !important;
-}
-
 /* Copy hierarchy: slightly tighter poster-to-title gap, quieter metadata and
    no visual badge/icon competition under the poster. */
 .tvtime-app .tvtime-media-card .tvtime-media-copy {
@@ -9263,10 +8833,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   transition: color 180ms ease;
 }
 
-.light .tvtime-app .tvtime-media-card .tvtime-media-title {
-  color: rgb(24 24 27 / 0.96);
-}
-
 .tvtime-app .tvtime-media-card .tvtime-media-meta {
   gap: 0.32rem;
   margin-top: 0.28rem;
@@ -9280,10 +8846,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   display: none;
 }
 
-.light .tvtime-app .tvtime-media-card .tvtime-media-meta {
-  color: rgb(82 82 91 / 0.78);
-}
-
 /* Fine-pointer motion: 2px lift, tiny 1.02 image zoom, deeper neutral shadow.
    Gold survives only as a restrained title accent. */
 @media (hover: hover) and (pointer: fine) {
@@ -9291,11 +8853,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     border-color: rgb(255 255 255 / 0.18) !important;
     box-shadow: var(--audit-shadow-4, 0 12px 32px rgb(0 0 0 / 0.32)) !important;
     transform: translateY(-2px) !important;
-  }
-
-  .light .tvtime-app .tvtime-media-card:hover .tvtime-media-poster {
-    border-color: rgb(15 23 42 / 0.18) !important;
-    box-shadow: 0 12px 28px rgb(15 23 42 / 0.16) !important;
   }
 
   .tvtime-app .tvtime-media-card:hover .tvtime-media-poster__image {
@@ -9734,13 +9291,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     0 16px 34px rgb(0 0 0 / 0.32) !important;
 }
 
-/* Light mode keeps the same geometry while using a cooler translucent frame. */
-.light .tvtime-app .tvtime-media-card .tvtime-media-poster {
-  border-color: rgb(71 85 105 / 0.28) !important;
-  background: #e9eef5 !important;
-  box-shadow: 0 12px 26px rgb(15 23 42 / 0.14) !important;
-}
-
 
 /* Small shelves preserve the same reference proportions without crowding. */
 @media (max-width: 639px) {
@@ -9787,10 +9337,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.light .tvtime-app .tvtime-recent-date {
-  color: rgb(82 82 91 / 0.72);
 }
 
 /* The full-card invisible link stays usable, but keyboard focus is expressed
@@ -9969,52 +9515,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   font-size: 0.67rem;
   font-weight: 500;
   letter-spacing: 0.05em;
-}
-
-.light .tvtime-app .tvtime-section-heading__icon {
-  border-color: rgb(15 23 42 / 0.09);
-  background: rgb(15 23 42 / 0.025);
-  color: color-mix(in oklab, var(--cinema-gold-bright, #c58a2b) 70%, rgb(39 39 42));
-  box-shadow:
-    inset 0 1px rgb(255 255 255 / 0.65),
-    0 5px 16px rgb(15 23 42 / 0.06);
-}
-
-.light .tvtime-app .tvtime-section-heading h2 {
-  color: rgb(24 24 27 / 0.96);
-}
-
-.light .tvtime-app .tvtime-section-heading__count {
-  border-color: rgb(15 23 42 / 0.08);
-  background: rgb(15 23 42 / 0.035);
-  color: rgb(82 82 91 / 0.78);
-}
-
-.light .tvtime-app .tvtime-section-heading__hint {
-  color: rgb(82 82 91 / 0.66);
-}
-
-.light .tvtime-app .tvtime-row-controls {
-  border-color: rgb(15 23 42 / 0.09);
-  background: rgb(255 255 255 / 0.72);
-  box-shadow:
-    inset 0 1px rgb(255 255 255 / 0.72),
-    0 5px 18px rgb(15 23 42 / 0.07);
-}
-
-.light .tvtime-app .tvtime-row-controls [data-slot="button"] {
-  color: rgb(63 63 70 / 0.7) !important;
-}
-
-.light .tvtime-app .tvtime-row-controls [data-slot="button"]:hover {
-  background: rgb(15 23 42 / 0.05) !important;
-  color: rgb(24 24 27 / 0.94) !important;
-}
-
-.light .tvtime-app .tvtime-see-all:hover {
-  border-color: rgb(15 23 42 / 0.08);
-  background: rgb(15 23 42 / 0.035);
-  color: rgb(24 24 27 / 0.94);
 }
 
 @media (min-width: 640px) {
@@ -11611,25 +11111,6 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: transform 180ms ease, background-color 180ms ease;
-}
-
-:root.light .tvtime-app .tvtime-header-inner {
-  background: rgb(255 252 245 / 0.96) !important;
-  border-color: rgb(83 70 48 / 0.2) !important;
-}
-
-:root.light .tvtime-app-header :is(.tvtime-primary-nav-item, .tvtime-header-icon, .tvtime-profile-trigger) {
-  color: #30281d !important;
-}
-
-:root.light .tvtime-app-header .tvtime-command-search {
-  background: rgb(255 255 255 / 0.8) !important;
-  color: #30281d !important;
-  border-color: rgb(83 70 48 / 0.3) !important;
-}
-
-:root.light .tvtime-app-header .tvtime-command-search::placeholder {
-  color: #766952;
 }
 
 :root .tvtime-app-header .tvtime-header-tools {

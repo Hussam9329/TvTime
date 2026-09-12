@@ -33,7 +33,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { APP_NAME } from "@/lib/brand";
-import { useTheme } from "next-themes";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -45,7 +44,6 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const userId = getClientUserId();
   const stats = useStats();
   const qc = useQueryClient();
-  const { theme, setTheme } = useTheme();
   const [name, setName] = useState(userName);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -495,18 +493,6 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                 {notificationBusy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <BellRing className="w-4 h-4 mr-1.5" />}
                 {pushSubscribed ? "Disable notifications" : notificationPermission === "denied" ? "Notifications blocked" : "Enable notifications"}
               </Button>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-            <p className="text-sm font-semibold">Appearance</p>
-            <p className="mb-3 text-xs text-muted-foreground">Choose a persistent theme or follow your device.</p>
-            <div className="grid grid-cols-3 gap-2">
-              {["dark", "light", "system"].map((value) => (
-                <Button key={value} type="button" variant={theme === value ? "default" : "outline"} size="sm" onClick={() => setTheme(value)} className="capitalize">
-                  {value}
-                </Button>
-              ))}
             </div>
           </div>
 
