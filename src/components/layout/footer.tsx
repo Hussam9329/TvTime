@@ -41,7 +41,7 @@ export function Footer() {
               aria-label="Viewing summary"
             >
               <div className="tvtime-footer-stat">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-fuchsia-500/10 text-fuchsia-400" aria-hidden="true">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400" aria-hidden="true">
                   <Film className="h-3.5 w-3.5" />
                 </span>
                 <dt className="sr-only">Watched movies</dt>
@@ -53,7 +53,7 @@ export function Footer() {
                 </span>
               </div>
               <div className="tvtime-footer-stat">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400" aria-hidden="true">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" aria-hidden="true">
                   <Clapperboard className="h-3.5 w-3.5" />
                 </span>
                 <dt className="sr-only">Watched episodes</dt>

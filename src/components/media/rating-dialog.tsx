@@ -73,7 +73,7 @@ export function RatingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="tvtime-rating-dialog gap-0 overflow-hidden rounded-[1.6rem] border-white/10 bg-[linear-gradient(155deg,rgba(24,27,40,0.99),rgba(10,13,22,0.99))] p-0 shadow-[0_32px_90px_rgba(0,0,0,0.58)] sm:max-w-[32rem] sm:p-0">
+      <DialogContent className="tvtime-rating-dialog gap-0 overflow-hidden rounded-[1.1rem] border-border bg-card p-0 shadow-[var(--app-shadow-lg)] sm:max-w-[32rem] sm:p-0">
         <DialogHeader className="relative top-auto z-0 gap-1.5 border-b border-border/60 bg-transparent px-5 py-5 pe-14 backdrop-blur-none supports-[backdrop-filter]:bg-transparent sm:px-6 sm:py-6 sm:pe-16">
           <DialogTitle className="flex items-center gap-3 text-xl leading-tight">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-600 dark:text-amber-300">

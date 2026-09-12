@@ -22,8 +22,8 @@ export function AnimeView() {
 
   const mediaSwitch = (
     <div className="tvtime-anime-media-switch mb-4 inline-flex rounded-xl border border-border/70 bg-card/75 p-1 shadow-sm" role="group" aria-label="Anime media type">
-      <button type="button" aria-pressed={mediaType === "movie"} onClick={() => setMediaType("movie")} className={`flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors ${mediaType === "movie" ? "bg-[var(--movie-world-accent)] text-black shadow-sm" : "text-muted-foreground hover:bg-accent"}`}><Film className="h-4 w-4" /> Movies</button>
-      <button type="button" aria-pressed={mediaType === "tv"} onClick={() => setMediaType("tv")} className={`flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors ${mediaType === "tv" ? "bg-[var(--movie-world-accent)] text-black shadow-sm" : "text-muted-foreground hover:bg-accent"}`}><Tv className="h-4 w-4" /> Series</button>
+      <button type="button" aria-pressed={mediaType === "movie"} onClick={() => setMediaType("movie")} className={`flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors ${mediaType === "movie" ? "bg-[var(--movie-world-accent)] text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent"}`}><Film className="h-4 w-4" /> Movies</button>
+      <button type="button" aria-pressed={mediaType === "tv"} onClick={() => setMediaType("tv")} className={`flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors ${mediaType === "tv" ? "bg-[var(--movie-world-accent)] text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent"}`}><Tv className="h-4 w-4" /> Series</button>
     </div>
   );
 

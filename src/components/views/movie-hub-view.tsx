@@ -188,7 +188,7 @@ export function MovieHubView({ world }: { world: MovieHubWorld }) {
         </TabsContent>
         <TabsContent value="releases" className="mt-0">
           <ReleaseSchedule
-            accentClass={world === "asian-movies" ? "text-red-300" : world === "arabic-movies" ? "text-orange-300" : "text-primary"}
+            accentClass={world === "asian-movies" ? "text-red-600 dark:text-red-300" : world === "arabic-movies" ? "text-amber-700 dark:text-amber-300" : "text-primary"}
             originalLanguage={world === "arabic-movies" ? "ar" : undefined}
             language={world === "arabic-movies" ? "ar" : undefined}
             collectionWorld={world}

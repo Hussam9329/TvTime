@@ -114,10 +114,10 @@ function LoginPageInner() {
   if (!configurationValid) {
     return (
       <div className="tvtime-login-page min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4">
-        <Card className="tvtime-login-card w-full max-w-md border-rose-500/30 shadow-2xl">
+        <Card className="tvtime-login-card w-full max-w-md border-destructive/30 shadow-2xl">
           <CardHeader className="text-center space-y-3">
-            <div className="mx-auto w-12 h-12 rounded-xl bg-rose-500/15 flex items-center justify-center">
-              <ShieldAlert className="w-6 h-6 text-rose-400" />
+            <div className="mx-auto w-12 h-12 rounded-xl bg-destructive/15 flex items-center justify-center">
+              <ShieldAlert className="w-6 h-6 text-destructive" />
             </div>
             <CardTitle role="heading" aria-level={1}>Authentication configuration required</CardTitle>
             <CardDescription>

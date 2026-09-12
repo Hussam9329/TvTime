@@ -14,20 +14,20 @@ type CompactScoreCornerProps = {
 };
 
 const SIDE_STYLES = {
-  left: "-left-px flex-row rounded-[9px]",
-  right: "-right-px flex-row rounded-[9px]",
+  left: "-left-px flex-row rounded-[0.55rem]",
+  right: "-right-px flex-row rounded-[0.55rem]",
 } as const;
 
 const TONE_STYLES = {
   emerald: {
-    surface: "border-emerald-400/75 bg-[#06120e]/90 text-emerald-300 shadow-[0_5px_14px_rgba(0,0,0,0.34),0_0_10px_rgba(52,211,153,0.1)]",
-    icon: "text-emerald-300",
-    suffix: "text-emerald-300/65",
+    surface: "border-emerald-500/70 bg-card/90 text-emerald-700 dark:text-emerald-300 shadow-[var(--app-shadow-sm)]",
+    icon: "text-emerald-600 dark:text-emerald-300",
+    suffix: "text-emerald-700/65 dark:text-emerald-300/65",
   },
   amber: {
-    surface: "border-amber-400/75 bg-[#140f06]/90 text-amber-300 shadow-[0_5px_14px_rgba(0,0,0,0.34),0_0_10px_rgba(251,191,36,0.1)]",
-    icon: "text-amber-300",
-    suffix: "text-amber-300/65",
+    surface: "border-amber-500/70 bg-card/90 text-amber-700 dark:text-amber-300 shadow-[var(--app-shadow-sm)]",
+    icon: "text-amber-600 dark:text-amber-300",
+    suffix: "text-amber-700/65 dark:text-amber-300/65",
   },
 } as const;
 

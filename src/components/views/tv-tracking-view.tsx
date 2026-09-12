@@ -43,22 +43,25 @@ function deriveTrackingStatus(show: any): TrackingStatus {
 }
 
 function TrackingStatusBadge({ status, isArabic = false }: { status: TrackingStatus; isArabic?: boolean }) {
+  // Colors come exclusively from the [data-status] rules in globals.css
+  // (light + dark variants) so every surface renders the same status palette.
+  const badgeClass = "h-8 gap-1.5 px-3 text-xs";
   if (status === "stopped") {
-    return <Badge data-status="stopped" className="h-8 gap-1.5 rounded-full border border-rose-400/20 bg-rose-500/15 px-3 text-xs font-bold text-rose-700 dark:text-rose-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><CircleStop className="h-3.5 w-3.5" /> {isArabic ? "توقفت عن مشاهدته" : "Stopped Watching"}</Badge>;
+    return <Badge data-status="stopped" className={badgeClass}><CircleStop className="h-3.5 w-3.5" /> {isArabic ? "توقفت عن مشاهدته" : "Stopped Watching"}</Badge>;
   }
   if (status === "finished") {
-    return <Badge data-status="finished" className="h-8 gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/15 px-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Trophy className="h-3.5 w-3.5" /> {isArabic ? "مكتمل" : "Finished"}</Badge>;
+    return <Badge data-status="finished" className={badgeClass}><Trophy className="h-3.5 w-3.5" /> {isArabic ? "مكتمل" : "Finished"}</Badge>;
   }
   if (status === "uptodate") {
-    return <Badge data-status="uptodate" className="h-8 gap-1.5 rounded-full border border-cyan-400/20 bg-cyan-500/15 px-3 text-xs font-bold text-cyan-700 dark:text-cyan-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Zap className="h-3.5 w-3.5" /> {isArabic ? "محدّث" : "Up To Date"}</Badge>;
+    return <Badge data-status="uptodate" className={badgeClass}><Zap className="h-3.5 w-3.5" /> {isArabic ? "محدّث" : "Up to Date"}</Badge>;
   }
   if (status === "watching") {
-    return <Badge data-status="watching" className="h-8 gap-1.5 rounded-full border border-blue-400/20 bg-blue-500/15 px-3 text-xs font-bold text-blue-700 dark:text-blue-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Play className="h-3.5 w-3.5 fill-current" /> {isArabic ? "قيد المشاهدة" : "Watching"}</Badge>;
+    return <Badge data-status="watching" className={badgeClass}><Play className="h-3.5 w-3.5 fill-current" /> {isArabic ? "قيد المشاهدة" : "Watching"}</Badge>;
   }
   if (status === "planned") {
-    return <Badge data-status="planned" className="h-8 gap-1.5 rounded-full border border-purple-400/20 bg-purple-500/15 px-3 text-xs font-bold text-purple-700 dark:text-purple-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><BookOpen className="h-3.5 w-3.5" /> {isArabic ? "قائمة المشاهدة" : "Planned"}</Badge>;
+    return <Badge data-status="planned" className={badgeClass}><BookOpen className="h-3.5 w-3.5" /> {isArabic ? "قائمة المشاهدة" : "Planned"}</Badge>;
   }
-  return <Badge data-status="not_started" className="h-8 gap-1.5 rounded-full border border-slate-400/20 bg-slate-500/15 px-3 text-xs font-bold text-slate-600 dark:text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"><Clock className="h-3.5 w-3.5" /> {isArabic ? "لم يبدأ" : "Not Started"}</Badge>;
+  return <Badge data-status="not_started" className={badgeClass}><Clock className="h-3.5 w-3.5" /> {isArabic ? "لم يبدأ" : "Not Started"}</Badge>;
 }
 
 export function TvShowsView({ world = "standard", embedded = false }: { world?: "standard" | "arabic" | "asian"; embedded?: boolean }) {
@@ -155,11 +158,11 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
     color: string;
   }[] = [
     { value: "all", label: isArabic ? "الكل" : "All", count: counts.all, icon: <Layers className="w-3 h-3" />, color: "bg-primary/15 text-primary" },
-    { value: "watchlist", label: isArabic ? "قائمة المشاهدة" : "Watchlist", count: counts.watchlist ?? counts.planned, icon: <BookOpen className="w-3 h-3" />, color: "bg-purple-500/15 text-purple-700 dark:text-purple-400" },
-    { value: "uptodate", label: isArabic ? "محدّث" : "Up To Date", count: counts.uptodate, icon: <Zap className="w-3 h-3" />, color: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400" },
-    { value: "finished", label: isArabic ? "مكتمل" : "Finished", count: counts.finished, icon: <Trophy className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
+    { value: "watchlist", label: isArabic ? "قائمة المشاهدة" : "Watchlist", count: counts.watchlist ?? counts.planned, icon: <BookOpen className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
+    { value: "uptodate", label: isArabic ? "محدّث" : "Up to Date", count: counts.uptodate, icon: <Zap className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
+    { value: "finished", label: isArabic ? "مكتمل" : "Finished", count: counts.finished, icon: <Trophy className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
     { value: "stopped", label: isArabic ? "توقفت عن مشاهدته" : "Stopped Watching", count: counts.stopped ?? 0, icon: <CircleStop className="w-3 h-3" />, color: "bg-rose-500/15 text-rose-700 dark:text-rose-300" },
-    { value: "upcoming", label: isArabic ? "قادم" : "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-700 dark:text-amber-400" },
+    { value: "upcoming", label: isArabic ? "قادم" : "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
     { value: "havent-watched", label: isArabic ? "لم أشاهده" : "Haven't Watched", count: counts.haventWatched, icon: <Play className="w-3 h-3" />, color: "bg-orange-500/15 text-orange-700 dark:text-orange-400" },
     { value: "havent-started", label: isArabic ? "لم أبدأه" : "Haven't Started", count: counts.haventStarted ?? counts.notStarted, icon: <Clock className="w-3 h-3" />, color: "bg-slate-500/15 text-slate-600 dark:text-slate-300" },
     { value: "stale", label: isArabic ? "متوقف منذ 30 يوماً" : "Paused 30+ Days", count: counts.stale ?? 0, icon: <PauseCircle className="w-3 h-3" />, color: "bg-rose-500/15 text-rose-700 dark:text-rose-300" },
@@ -314,7 +317,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       {tracking.isLoading ? (
         <div data-layout={layout} className={cn("tvtime-tracking-cards grid grid-cols-1 gap-4", layout === "grid" && "lg:grid-cols-2 min-[2100px]:grid-cols-3")}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="shimmer h-[300px] rounded-[24px] sm:h-[280px]" />
+            <div key={i} className="shimmer h-[300px] rounded-[1.5rem] sm:h-[280px]" />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -373,7 +376,7 @@ function FilterChip({ active, onClick, label, icon, count, color }: {
       aria-pressed={active}
       className={`tvtime-tracking-status-option ${
         active
-          ? `${color} border-current/30 shadow-[0_8px_22px_rgba(0,0,0,0.16)]`
+          ? `${color} border-current/30 shadow-[var(--app-shadow-sm)]`
           : "border-border/60 bg-background/50 text-muted-foreground hover:border-border hover:bg-muted/55 hover:text-foreground"
       }`}
     >
@@ -426,12 +429,11 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onGo(); }}
-      className="block rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+      className="block rounded-[1.5rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
     >
       <Card className={cn(
-        "tvtime-tracking-card group relative cursor-pointer overflow-hidden rounded-[24px] border-white/[0.14] bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.07),transparent_30%),linear-gradient(145deg,rgba(21,25,36,0.98),rgba(10,14,23,0.98))] p-3.5 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.03)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_70px_rgba(0,0,0,0.4),0_0_28px_rgba(139,92,246,0.07)] sm:p-5",
+        "tvtime-tracking-card group relative cursor-pointer overflow-hidden rounded-[1.5rem] border-border/60 bg-card p-3.5 shadow-[var(--app-shadow-md)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[var(--app-shadow-lg)] sm:p-5",
       )}>
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.018)_48%,transparent_72%)]" />
         <div className={cn(
           "tvtime-tracking-card__layout relative grid grid-cols-[92px_minmax(0,1fr)] items-start gap-3.5 sm:items-center",
           compact

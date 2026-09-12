@@ -41,7 +41,7 @@ export function StatsView() {
 
       {/* Big numbers */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <BigStat icon={<Film className="w-5 h-5" />} label="All movies watched" value={counts.watchedMoviesAll ?? counts.watchedMovies} color="from-rose-500/20 to-rose-500/5" />
+        <BigStat icon={<Film className="w-5 h-5" />} label="All movies watched" value={counts.watchedMoviesAll ?? counts.watchedMovies} color="from-primary/20 to-primary/5" />
         <BigStat icon={<Tv className="w-5 h-5" />} label="Episodes watched" value={counts.watchedEpisodes} color="from-purple-500/20 to-purple-500/5" />
         <BigStat icon={<Bell className="w-5 h-5" />} label="TV shows following" value={counts.following} color="from-amber-500/20 to-amber-500/5" />
         <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic movies" value={counts.arabicMovies ?? (counts.watchedArabicMovies ?? 0) + (counts.watchlistArabicMovies ?? 0)} color="from-emerald-500/20 to-emerald-500/5" />
@@ -74,7 +74,7 @@ export function StatsView() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card className="p-4 bg-gradient-to-br from-primary/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Star className="h-4 w-4 text-primary" /> Most watched genre</p><p className="mt-2 text-2xl font-black">{d.insights?.topGenres?.[0]?.genre ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.topGenres?.[0]?.percentage ?? 0}% of your genre profile · {d.insights?.topGenres?.[0]?.count ?? 0} titles</p></Card>
-        <Card className="p-4 bg-gradient-to-br from-amber-500/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-amber-400" /> Best release year</p><p className="mt-2 text-2xl font-black">{d.insights?.bestYear?.year ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.bestYear?.count ?? 0} watched titles</p></Card>
+        <Card className="p-4 bg-gradient-to-br from-amber-500/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-primary" /> Best release year</p><p className="mt-2 text-2xl font-black">{d.insights?.bestYear?.year ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.bestYear?.count ?? 0} watched titles</p></Card>
         <Card className="p-4 bg-gradient-to-br from-fuchsia-500/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Layers3 className="h-4 w-4 text-fuchsia-400" /> Longest show</p><p className="mt-2 line-clamp-1 text-xl font-black">{d.insights?.longestShow?.title ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.longestShow?.episodes ?? 0} episodes</p></Card>
       </div>
 
@@ -162,7 +162,7 @@ export function StatsView() {
             <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">No ratings yet</div>
           )}
           <p className="text-center text-sm text-muted-foreground mt-2">
-            Average: <span className="text-amber-400 font-bold">{d.avgRating ? d.avgRating.toFixed(1) : "—"}</span> / 100
+            Average: <span className="text-primary font-bold">{d.avgRating ? d.avgRating.toFixed(1) : "—"}</span> / 100
           </p>
         </Card>
       </div>
@@ -274,7 +274,7 @@ function TopShowRow({ showId, count, rank, max, onGo }: { showId: number; count:
           <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">{count} ep</span>
         </div>
         <div className="h-2 rounded-full bg-muted overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-primary to-purple-500 transition-[width] duration-300" style={{ width: `${(count / max) * 100}%` }} />
+          <div className="h-full bg-gradient-to-r from-primary to-chart-2 transition-[width] duration-300" style={{ width: `${(count / max) * 100}%` }} />
         </div>
       </div>
     </button>

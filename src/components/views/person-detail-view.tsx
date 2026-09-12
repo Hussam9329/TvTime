@@ -102,7 +102,7 @@ export function PersonDetailView() {
             )}
           </div>
           <div className="relative flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-            <div className="tvtime-person-profile relative w-36 aspect-[2/3] sm:w-48 overflow-hidden rounded-[1.2rem] border border-primary/35 bg-muted shadow-2xl flex-shrink-0">
+            <div className="tvtime-person-profile relative w-36 aspect-[2/3] sm:w-48 overflow-hidden rounded-[1.1rem] border border-primary/35 bg-muted shadow-2xl flex-shrink-0">
               {p.profile_path ? (
                 <SafeImage
                   src={img(p.profile_path, "w500")}

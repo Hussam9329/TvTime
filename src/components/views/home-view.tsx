@@ -379,7 +379,7 @@ function Hero({ items }: { items: MediaItem[] }) {
           </div>
 
           <div className="tvtime-home-hero__poster hidden w-full lg:block" aria-hidden="true">
-            <div className="relative aspect-[2/3] overflow-hidden rounded-[1.25rem]">
+            <div className="relative aspect-[2/3] overflow-hidden rounded-[1.1rem]">
               <SafeImage
                 src={imgOrPlaceholder(item.poster_path, "w500")}
                 alt=""

@@ -935,7 +935,7 @@ function UpToDateSection({ items, onOpen }: { items: UpToDateItem[]; onOpen: (id
               <strong>{item.title}</strong>
               <small>{item.releasedEpisodes} released episodes watched</small>
             </span>
-            <Check className="h-4 w-4 text-emerald-400" />
+            <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           </button>
         ))}
       </CollapsibleContent>
@@ -1050,7 +1050,7 @@ function SortableOrderRow({ item, index }: { item: EnrichedWatchNextItem; index:
 function EmptyReady() {
   return (
     <EmptyState
-      icon={<CheckCircle2 className="h-9 w-9 text-emerald-400" />}
+      icon={<CheckCircle2 className="h-9 w-9 text-emerald-600 dark:text-emerald-400" />}
       title="You’re all caught up"
       description="New released episodes will appear here automatically."
     />
