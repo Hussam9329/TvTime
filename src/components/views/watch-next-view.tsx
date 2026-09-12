@@ -549,53 +549,36 @@ function FeaturedWatchCard({
       <span className="tvtime-watch-swipe-hint is-right" aria-hidden="true"><CheckCircle2 /> Watched</span>
       <span className="tvtime-watch-swipe-hint is-left" aria-hidden="true"><PauseCircle /> Not now</span>
       <div className="tvtime-watch-featured__content">
-        {/* Media-profile composition: poster column + organized identity
-            block over the page-level cinematic backdrop. */}
-        <div className="tvtime-pin-layout">
-          <div className="tvtime-pin-poster-wrap">
-            <button type="button" className="tvtime-pin-poster" onClick={handleOpen} aria-label={`Open ${item.title}`}>
-              <SafeImage
-                src={item.poster}
-                alt={item.title}
-                fill
-                variant="poster"
-                sizes="(max-width: 767px) 176px, 13rem"
-              />
-              {item.isNewEpisode && <NewEpisodeBadge />}
-            </button>
-            <span className="tvtime-pin-poster-caption">{item.title}</span>
+        <div className="tvtime-watch-featured__intro">
+          <div className="tvtime-watch-featured__eyebrow">
+            <span>Up next</span>
+            {resolvedIsNewEpisode && <NewEpisodeBadge />}
+            <PersonalStatus item={item} />
           </div>
-          <div className="tvtime-watch-featured__intro">
-            <div className="tvtime-watch-featured__eyebrow">
-              <span>Up next</span>
-              {resolvedIsNewEpisode && <NewEpisodeBadge />}
-              <PersonalStatus item={item} />
-            </div>
-            <h2 id={`watch-featured-${item.tmdbId}`}>{item.title}</h2>
-            <p className="tvtime-watch-featured__episode">
-              <strong>{episodeCode(item)}</strong>
-              <span aria-hidden="true">—</span>
-              <span>{episodeName}</span>
-            </p>
-            <div className="tvtime-watch-featured__meta">
-              <span><Clock3 className="h-3.5 w-3.5" />{runtime}m</span>
-              <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(airDate)}</span>
-              <span>{item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}</span>
-              {resolvedIsSeasonFinale && <span className="tvtime-watch-finale-label"><Sparkles /> Season finale</span>}
-            </div>
-            <ProgressBar item={item} progress={progress} runtime={runtime} featured />
-            <div className="tvtime-watch-featured__actions">
-              <Button type="button" onClick={() => onMark({ isSeasonFinale: resolvedIsSeasonFinale, nextSeasonNumber: resolvedNextSeasonNumber })} disabled={disabled} className="tvtime-watch-featured__primary">
-                <CheckCircle2 className={pending ? "animate-pulse" : ""} />
-                {pending ? "Updating…" : "Mark episode watched"}
-              </Button>
-              <Button type="button" variant="outline" onClick={handleOpen} className="tvtime-watch-featured__secondary">
-                <Eye /> View episode
-              </Button>
-              <Button type="button" variant="ghost" onClick={onNotNow} className="tvtime-watch-featured__later">
-                Not now
-              </Button>
-            </div>
+          <h2 id={`watch-featured-${item.tmdbId}`}>{item.title}</h2>
+          <p className="tvtime-watch-featured__episode">
+            <strong>{episodeCode(item)}</strong>
+            <span aria-hidden="true">—</span>
+            <span>{episodeName}</span>
+          </p>
+          <div className="tvtime-watch-featured__meta">
+            <span><Clock3 className="h-3.5 w-3.5" />{runtime}m</span>
+            <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(airDate)}</span>
+            <span>{item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}</span>
+            {resolvedIsSeasonFinale && <span className="tvtime-watch-finale-label"><Sparkles /> Season finale</span>}
+          </div>
+          <ProgressBar item={item} progress={progress} runtime={runtime} featured />
+          <div className="tvtime-watch-featured__actions">
+            <Button type="button" onClick={() => onMark({ isSeasonFinale: resolvedIsSeasonFinale, nextSeasonNumber: resolvedNextSeasonNumber })} disabled={disabled} className="tvtime-watch-featured__primary">
+              <CheckCircle2 className={pending ? "animate-pulse" : ""} />
+              {pending ? "Updating…" : "Mark episode watched"}
+            </Button>
+            <Button type="button" variant="outline" onClick={handleOpen} className="tvtime-watch-featured__secondary">
+              <Eye /> View episode
+            </Button>
+            <Button type="button" variant="ghost" onClick={onNotNow} className="tvtime-watch-featured__later">
+              Not now
+            </Button>
           </div>
         </div>
         <NextEpisodePreview
