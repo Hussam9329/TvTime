@@ -503,51 +503,45 @@ function FeaturedWatchCard({
       aria-labelledby={`watch-featured-${item.tmdbId}`}
       style={isMobile ? { touchAction: "pan-y" } : undefined}
     >
-      {/* Cinematic page backdrop — mirrors the movie/TV profile: the artwork
-          spans the whole page behind every section instead of a framed card.
-          The section itself is position:static so this absolute layer anchors
-          to the page container and sits at z-index -1 under all content. */}
-      <div className="tvtime-watch-page-backdrop" aria-hidden="true">
-        <AnimatePresence initial={false} mode="sync">
-          <motion.div
-            key={backdrop || `poster-${item.tmdbId}`}
-            className="tvtime-watch-featured__backdrop-stage"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.46, ease: "easeOut" }}
-          >
-            <div className="tvtime-watch-featured__backdrop-blur" data-image-kind={imageKind}>
-              <SafeImage
-                src={backdrop}
-                alt=""
-                fill
-                variant="backdrop"
-                priority
-                fetchPriority="high"
-                decoding="async"
-                sizes="(max-width: 768px) 100vw, (max-width: 1440px) 92vw, 1440px"
-              />
-            </div>
-            <div className="tvtime-watch-featured__backdrop" data-image-kind={imageKind}>
-              <SafeImage
-                src={backdrop}
-                alt=""
-                fill
-                variant="backdrop"
-                priority
-                fetchPriority="high"
-                decoding="async"
-                sizes="(max-width: 768px) 100vw, (max-width: 1440px) 92vw, 1440px"
-              />
-            </div>
-          </motion.div>
-        </AnimatePresence>
-        <div className="tvtime-watch-page-backdrop__fade" />
-      </div>
-      <div className="tvtime-watch-featured__inner">
       <span className="tvtime-watch-swipe-hint is-right" aria-hidden="true"><CheckCircle2 /> Watched</span>
       <span className="tvtime-watch-swipe-hint is-left" aria-hidden="true"><PauseCircle /> Not now</span>
+      <AnimatePresence initial={false} mode="sync">
+        <motion.div
+          key={backdrop || `poster-${item.tmdbId}`}
+          className="tvtime-watch-featured__backdrop-stage"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.46, ease: "easeOut" }}
+          aria-hidden="true"
+        >
+          <div className="tvtime-watch-featured__backdrop-blur" data-image-kind={imageKind}>
+            <SafeImage
+              src={backdrop}
+              alt=""
+              fill
+              variant="backdrop"
+              priority
+              fetchPriority="high"
+              decoding="async"
+              sizes="(max-width: 768px) 100vw, (max-width: 1440px) 92vw, 1440px"
+            />
+          </div>
+          <div className="tvtime-watch-featured__backdrop" data-image-kind={imageKind}>
+            <SafeImage
+              src={backdrop}
+              alt=""
+              fill
+              variant="backdrop"
+              priority
+              fetchPriority="high"
+              decoding="async"
+              sizes="(max-width: 768px) 100vw, (max-width: 1440px) 92vw, 1440px"
+            />
+          </div>
+        </motion.div>
+      </AnimatePresence>
+      <div className="tvtime-watch-featured__scrim" />
       <div className="tvtime-watch-featured__content">
         <div className="tvtime-watch-featured__intro">
           <div className="tvtime-watch-featured__eyebrow">
@@ -589,7 +583,6 @@ function FeaturedWatchCard({
           airDate={followingAirDate}
           onOpen={handleOpen}
         />
-      </div>
       </div>
     </motion.section>
   );

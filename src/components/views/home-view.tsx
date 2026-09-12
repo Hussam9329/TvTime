@@ -311,27 +311,23 @@ function Hero({ items }: { items: MediaItem[] }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: shouldReduceMotion ? 0 : 0.6 }}
-      className="tvtime-home-hero"
+      className="tvtime-home-hero relative overflow-hidden"
       aria-label={`Featured ${mediaType === "movie" ? "movie" : "TV show"}: ${title}`}
       aria-roledescription="carousel"
     >
-      {/* Cinematic page backdrop — the artwork bleeds across the whole page
-          behind every section, like the movie/TV profiles. The section is
-          static so this absolute layer anchors to the page container. */}
-      <div className="tvtime-home-page-backdrop" aria-hidden="true">
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={`backdrop-${slideKey}`}
-            className="tvtime-home-hero__backdrop absolute inset-0"
-            initial={{ opacity: 0, scale: shouldReduceMotion ? 1 : 1.025 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: shouldReduceMotion ? 0 : 0.65, ease: "easeOut" }}
-          >
-            <SafeImage
-              src={img(item.backdrop_path, "original")}
-              alt=""
-              fill
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={`backdrop-${slideKey}`}
+          className="tvtime-home-hero__backdrop absolute inset-0"
+          initial={{ opacity: 0, scale: shouldReduceMotion ? 1 : 1.025 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.65, ease: "easeOut" }}
+        >
+          <SafeImage
+            src={img(item.backdrop_path, "original")}
+            alt=""
+            fill
             variant="backdrop"
             priority
             sizes="100vw"
@@ -339,9 +335,8 @@ function Hero({ items }: { items: MediaItem[] }) {
           />
         </motion.div>
       </AnimatePresence>
-        <div className="tvtime-home-hero__scrim absolute inset-0 bg-gradient-to-r from-black/85" />
-        <div className="tvtime-home-hero__glow absolute inset-0" />
-      </div>
+      <div className="tvtime-home-hero__scrim absolute inset-0 bg-gradient-to-r from-black/85" aria-hidden="true" />
+      <div className="tvtime-home-hero__glow absolute inset-0" aria-hidden="true" />
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
