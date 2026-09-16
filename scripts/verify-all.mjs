@@ -18,6 +18,7 @@ const checks = [
   ["Patch 11 behavior tests", ["--experimental-strip-types", "scripts/test-patch-11.ts"]],
   ["Patch 11 source guards", ["scripts/verify-patch-11.mjs"]],
   ["Patch 14 structured rating behavior", ["--experimental-strip-types", "scripts/test-structured-personal-rating.ts"]],
+  ["Direct personal rating requests", ["scripts/test-direct-personal-rating.mjs"]],
   ["Patch 14 structured rating guards", ["scripts/verify-patch-14.mjs"]],
   ["Auth boundary tests", ["--experimental-strip-types", "scripts/test-auth-boundary.ts"]],
   ["Auth boundary source verification", ["scripts/verify-auth-boundary.mjs"]],

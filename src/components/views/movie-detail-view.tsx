@@ -196,7 +196,7 @@ export function MovieDetailView() {
     }
   };
 
-  const onRateSubmit = async ({ breakdown }: StructuredRatingResult) => {
+  const onRateSubmit = async ({ score, breakdown }: StructuredRatingResult) => {
     if (ratingIntent === "complete") {
       return watchedToggle.mutateAsync({
         action: "add",
@@ -211,6 +211,7 @@ export function MovieDetailView() {
         originCountry: originCountries,
         originalLanguage: m.original_language,
         ratingBreakdown: breakdown,
+        userRating: score,
       });
     }
     if (!isWatched) throw new Error("Mark this movie watched before rating it.");
@@ -219,6 +220,7 @@ export function MovieDetailView() {
       mediaType: "movie",
       tmdbId: m.id,
       ratingBreakdown: breakdown,
+      userRating: score,
       title: displayTitle,
       posterPath: m.poster_path,
       releaseDate: m.release_date,
@@ -423,7 +425,7 @@ export function MovieDetailView() {
                   )}
                   <Button size="sm" disabled={stateLoading} onClick={() => setRatingIntent(isWatched ? "edit" : "complete")}>
                     <Star className="fill-current" />
-                    {myRating != null ? "Re-rate" : "Rate with 10 criteria"}
+                    {myRating != null ? "Re-rate" : "Rate this movie"}
                   </Button>
                 </div>
               </div>
@@ -537,7 +539,7 @@ export function MovieDetailView() {
         )}
       </Tabs>
 
-      {/* Structured personal movie rating — 10 criteria, exact sum = /100. */}
+      {/* Personal movie rating: direct /100 or 10 criteria. */}
       <StructuredRatingDialog
         open={ratingIntent !== null}
         onOpenChange={(open) => {
@@ -550,8 +552,8 @@ export function MovieDetailView() {
         initialBreakdown={myRatingBreakdown}
         legacyInitialRating={myRating}
         description={ratingIntent === "complete"
-          ? "قيّم المحاور العشرة كاملة. مجموعها الدقيق يصبح تقييمك من 100، وبعد الحفظ فقط يتم اعتبار الفيلم مُشاهَدًا."
-          : "أعد تقييم الفيلم عبر المحاور العشرة كاملة. مجموعها الدقيق سيستبدل تقييمك الحالي من 100."}
+          ? "قيّم مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتم اعتبار الفيلم مُشاهَدًا."
+          : "عدّل تقييمك مباشرة من 100 أو استخدم الأسئلة العشرة."}
         submitLabel={(score) => ratingIntent === "complete" ? `Save rating & mark watched · ${score}/100` : `Update rating · ${score}/100`}
         successMessage={ratingIntent === "complete"
           ? (score) => `Marked as watched · Your rating ${score}/100`

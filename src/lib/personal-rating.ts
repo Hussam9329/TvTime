@@ -34,6 +34,33 @@ export type PersonalRatingValidation =
   | { ok: true; breakdown: PersonalRatingBreakdown; score: number }
   | { ok: false; error: string };
 
+export function isDirectPersonalRating(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 100;
+}
+
+/** Resolve both rating methods without inventing criteria for a direct score. */
+export function validatePersonalRatingMutation(
+  input: { userRating?: unknown; ratingBreakdown?: unknown },
+  kind: PersonalRatingKind,
+):
+  | { ok: true; score: number | null; breakdown: PersonalRatingBreakdown | null }
+  | { ok: false; error: string; code: string } {
+  if (input.ratingBreakdown != null) {
+    const validation = validatePersonalRatingBreakdown(input.ratingBreakdown, kind);
+    return validation.ok
+      ? validation
+      : { ...validation, code: "INVALID_RATING_BREAKDOWN" };
+  }
+  if (input.userRating === null || (input.userRating === undefined && input.ratingBreakdown === null)) {
+    return { ok: true, score: null, breakdown: null };
+  }
+  if (!isDirectPersonalRating(input.userRating)) {
+    return { ok: false, error: "Enter a whole-number rating from 0 to 100.", code: "INVALID_DIRECT_RATING" };
+  }
+  // Switching to direct rating clears any previous criteria.
+  return { ok: true, score: input.userRating, breakdown: null };
+}
+
 export const MOVIE_RATING_CRITERIA: readonly PersonalRatingCriterion[] = [
   {
     key: "storyIdea",

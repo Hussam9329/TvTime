@@ -125,7 +125,7 @@ export async function saveTvCompletionRating(args: {
   userId: string;
   mediaId: string;
   rating: number;
-  ratingBreakdown: Prisma.InputJsonValue;
+  ratingBreakdown: Prisma.InputJsonValue | Prisma.NullTypes.DbNull;
 }): Promise<{ item: Media | null; eligibility: TvRatingEligibility }> {
   const media = await db.media.findFirst({
     where: { id: args.mediaId, userId: args.userId, type: "series" },

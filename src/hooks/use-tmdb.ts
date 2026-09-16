@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useNav } from "@/lib/store";
 import type { MediaItem, MovieDetail, TvDetail, PaginatedResponse, SeasonDetail, EpisodeImagesResponse, Genre } from "@/lib/tmdb";
 import { getClientUserId, userHeaders, withUserId } from "@/lib/client-user";
-import type { PersonalRatingBreakdown } from "@/lib/personal-rating";
+import { isDirectPersonalRating, type PersonalRatingBreakdown } from "@/lib/personal-rating";
 import {
   deriveTvTrackingState,
   episodeKey,
@@ -734,7 +734,8 @@ export function useWatchedMovieToggle() {
       originalLanguage?: string | null;
       seasons?: number | null;
       episodes?: number | null;
-      ratingBreakdown?: PersonalRatingBreakdown;
+      ratingBreakdown?: PersonalRatingBreakdown | null;
+      userRating?: number;
     }) => {
       if (args.action === "add" || args.action === "rewatch") {
         // Find-or-create, then save first-watch completion and its required
@@ -764,7 +765,8 @@ export function useWatchedMovieToggle() {
                 watched: true,
                 watchedAt: new Date().toISOString(),
                 status: "watched",
-                ...(args.ratingBreakdown ? { ratingBreakdown: args.ratingBreakdown } : {}),
+                ...(args.ratingBreakdown !== undefined ? { ratingBreakdown: args.ratingBreakdown } : {}),
+                ...(args.userRating !== undefined ? { userRating: args.userRating } : {}),
               }),
         });
         await ensureApiOk(patchRes, "Failed to mark movie watched");
@@ -1151,9 +1153,9 @@ export function useEpisodeRatingMutate(showId: number) {
 export function useRatingMutate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; ratingBreakdown?: PersonalRatingBreakdown; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null; genres?: string[]; originCountry?: string[] | null; originalLanguage?: string | null; seasons?: number | null; episodes?: number | null }) => {
+    mutationFn: async (args: { action: "set" | "remove"; mediaType: "movie" | "tv"; tmdbId: number; ratingBreakdown?: PersonalRatingBreakdown | null; userRating?: number; title?: string; posterPath?: string | null; releaseDate?: string; overview?: string; voteAverage?: number; runtime?: number | null; genres?: string[]; originCountry?: string[] | null; originalLanguage?: string | null; seasons?: number | null; episodes?: number | null }) => {
       if (args.action === "set") {
-        if (!args.ratingBreakdown) throw new Error("Complete all 10 personal rating criteria before saving.");
+        if (!args.ratingBreakdown && !isDirectPersonalRating(args.userRating)) throw new Error("Enter a rating from 0 to 100 or complete all 10 criteria.");
         // Find-or-create, then save the personal rating. For an eligible TV
         // series, the server atomically couples this with Finished status.
         const id = await findOrCreateMedia({
@@ -1176,6 +1178,7 @@ export function useRatingMutate() {
           headers: { "Content-Type": "application/json", ...userHeaders() },
           body: JSON.stringify({
             ratingBreakdown: args.ratingBreakdown,
+            userRating: args.userRating,
           }),
         });
         if (!patchRes.ok) {
@@ -1651,6 +1654,7 @@ export function useMediaUpdate() {
     mutationFn: async (args: {
       id: string;
       ratingBreakdown?: PersonalRatingBreakdown | null;
+      userRating?: number;
       watched?: boolean;
       watchedAt?: string | null;
       status?: string | null;

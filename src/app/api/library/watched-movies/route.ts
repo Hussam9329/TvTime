@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getOrCreateUser } from "@/lib/user";
 import { resolveUserId } from "@/lib/auth";
-import { validatePersonalRatingBreakdown } from "@/lib/personal-rating";
+import { validatePersonalRatingMutation } from "@/lib/personal-rating";
 
 function toCompat(item: any) {
   return {
@@ -35,24 +36,14 @@ export async function POST(req: NextRequest) {
     if (!Number.isInteger(tmdbId) || tmdbId <= 0 || !body.title) {
       return NextResponse.json({ error: "tmdbId, title required" }, { status: 400 });
     }
-    if (body.userRating !== undefined) {
-      return NextResponse.json(
-        {
-          error: "Whole-title ratings must be submitted through the 10 personal rating criteria.",
-          code: "STRUCTURED_RATING_REQUIRED",
-        },
-        { status: 400 },
-      );
-    }
-
     const identity = { userId: user.id, type: "movie", tmdbId };
     const existing = await db.media.findUnique({ where: { userId_type_tmdbId: identity } });
-    const ratingValidation = body.ratingBreakdown === undefined
+    const ratingValidation = body.ratingBreakdown === undefined && body.userRating === undefined
       ? null
-      : validatePersonalRatingBreakdown(body.ratingBreakdown, "movie");
+      : validatePersonalRatingMutation(body, "movie");
     if (ratingValidation && !ratingValidation.ok) {
       return NextResponse.json(
-        { error: ratingValidation.error, code: "INVALID_RATING_BREAKDOWN" },
+        { error: ratingValidation.error, code: ratingValidation.code },
         { status: 400 },
       );
     }
@@ -60,7 +51,7 @@ export async function POST(req: NextRequest) {
     if (typeof userRating !== "number" || !Number.isInteger(userRating) || userRating < 0 || userRating > 100) {
       return NextResponse.json(
         {
-          error: "Marking a new movie watched requires all 10 personal rating criteria.",
+          error: "Rate this movie directly out of 100 or complete all 10 criteria before marking it watched.",
           code: "MOVIE_WATCHED_REQUIRES_RATING",
         },
         { status: 400 },
@@ -75,7 +66,7 @@ export async function POST(req: NextRequest) {
       watchedAt: new Date(),
       status: "watched",
       userRating,
-      ...(ratingValidation?.ok ? { ratingBreakdown: ratingValidation.breakdown } : {}),
+      ...(ratingValidation?.ok ? { ratingBreakdown: ratingValidation.breakdown ?? Prisma.DbNull } : {}),
     };
     const item = await db.media.upsert({
       where: { userId_type_tmdbId: identity },

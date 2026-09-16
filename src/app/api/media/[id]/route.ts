@@ -7,7 +7,7 @@ import { normalizeMedia } from "@/lib/media-normalize";
 import { normalizeTvTrackingState } from "@/lib/tv-status-engine";
 import { saveTvCompletionRating, tvRatingEligibilityError } from "@/lib/tv-rating-eligibility";
 import { issueWatchUndoToken, mediaWatchSnapshot } from "@/lib/watch-undo-token";
-import { validatePersonalRatingBreakdown } from "@/lib/personal-rating";
+import { validatePersonalRatingMutation } from "@/lib/personal-rating";
 
 export async function PATCH(
   req: NextRequest,
@@ -51,36 +51,16 @@ export async function PATCH(
 
     const data: any = {};
     const expectedRatingKind = existing.type === "series" ? "series" : "movie";
-    if (body.ratingBreakdown !== undefined) {
-      if (body.ratingBreakdown === null) {
-        data.ratingBreakdown = Prisma.DbNull;
-        data.userRating = null;
-      } else {
-        const validation = validatePersonalRatingBreakdown(body.ratingBreakdown, expectedRatingKind);
-        if (!validation.ok) {
-          return NextResponse.json(
-            { error: validation.error, code: "INVALID_RATING_BREAKDOWN" },
-            { status: 400 },
-          );
-        }
-        data.ratingBreakdown = validation.breakdown;
-        data.userRating = validation.score;
-      }
-    }
-    if (body.userRating !== undefined && body.ratingBreakdown === undefined) {
-      if (body.userRating === null) {
-        // Rating removal clears both the canonical score and its structured detail.
-        data.userRating = null;
-        data.ratingBreakdown = Prisma.DbNull;
-      } else {
+    if (hasRatingMutation) {
+      const validation = validatePersonalRatingMutation(body, expectedRatingKind);
+      if (!validation.ok) {
         return NextResponse.json(
-          {
-            error: "Whole-title ratings must be submitted through the 10 personal rating criteria.",
-            code: "STRUCTURED_RATING_REQUIRED",
-          },
+          { error: validation.error, code: validation.code },
           { status: 400 },
         );
       }
+      data.ratingBreakdown = validation.breakdown ?? Prisma.DbNull;
+      data.userRating = validation.score;
     }
     if (body.tmdbId !== undefined) data.tmdbId = body.tmdbId === null ? null : Number(body.tmdbId);
     if (body.watched !== undefined) data.watched = Boolean(body.watched);
@@ -141,7 +121,7 @@ export async function PATCH(
       if ((finalWatched || finalStatus === "watched") && finalRating == null) {
         return NextResponse.json(
           {
-            error: "A watched movie must include your completed 10-criteria personal rating.",
+            error: "Rate this movie directly out of 100 or complete all 10 criteria before marking it watched.",
             code: "MOVIE_WATCHED_REQUIRES_RATING",
           },
           { status: 409 },
@@ -241,7 +221,7 @@ export async function PATCH(
       if ((finalWatched || finalStatus === "finished") && finalRating == null) {
         return NextResponse.json(
           {
-            error: "A finished TV series must include your completed 10-criteria personal rating.",
+            error: "Rate this series directly out of 100 or complete all 10 criteria before marking it Finished.",
             code: "TV_FINISHED_REQUIRES_RATING",
           },
           { status: 409 },
