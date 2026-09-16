@@ -1,0 +1,196 @@
+/* Keep rating geometry independent of the application's generic portal rules. */
+:global(:root) .dialog[data-slot="dialog-content"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: min(42rem, calc(100vw - 2rem));
+  max-width: min(42rem, calc(100vw - 2rem)) !important;
+  height: auto;
+  min-height: 0;
+  max-height: min(92dvh, 52rem) !important;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.4);
+  text-align: right;
+  backdrop-filter: none;
+}
+
+.dialog { --rating-color: var(--muted-foreground); }
+.dialog[data-score-tone="high"] { --rating-color: #34d399; }
+.dialog[data-score-tone="good"] { --rating-color: #fbbf24; }
+.dialog[data-score-tone="average"] { --rating-color: #fb923c; }
+.dialog[data-score-tone="low"] { --rating-color: #fb7185; }
+.dialog > * { min-width: 0; }
+
+.dialog .header {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 2.5rem;
+  align-items: center;
+  gap: 1rem;
+  flex: none;
+  padding: 1.5rem 1.5rem 1rem;
+}
+.dialog .poster {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 4.25rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: .65rem;
+  background: var(--muted);
+  color: var(--primary);
+}
+.dialog .heading { min-width: 0; }
+.dialog .eyebrow { margin: 0 0 .35rem; color: var(--muted-foreground); font-size: .75rem; font-weight: 500; }
+.dialog .title { margin: 0; font-size: 1.2rem; font-weight: 700; line-height: 1.55; text-align: start; overflow-wrap: anywhere; text-wrap: pretty; }
+.dialog .close {
+  display: grid;
+  place-items: center;
+  align-self: start;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.dialog .close svg { width: 1.1rem; height: 1.1rem; }
+.dialog .close:hover { color: var(--foreground); background: var(--muted); }
+.dialog .close:focus-visible, .dialog .method:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.dialog .close:disabled, .dialog .method:disabled { opacity: .5; cursor: wait; }
+
+.dialog .methodArea { flex: none; padding: 0 1.5rem 1rem; border-bottom: 1px solid var(--border); }
+.dialog .methods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem; padding: .35rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--background); }
+.dialog .method {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  min-width: 0;
+  min-height: 3.5rem;
+  padding: .55rem .65rem;
+  border: 1px solid transparent;
+  border-radius: .75rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  text-align: right;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.dialog .method[aria-pressed="true"] { border-color: color-mix(in srgb, var(--primary) 40%, transparent); background: color-mix(in srgb, var(--primary) 10%, var(--card)); color: var(--foreground); }
+.dialog .method svg { flex: none; width: 1.15rem; height: 1.15rem; }
+.dialog .method[aria-pressed="true"] svg { color: var(--primary); }
+.dialog .method span { min-width: 0; }
+.dialog .method strong, .dialog .method small { display: block; line-height: 1.5; }
+.dialog .method strong { font-size: .875rem; font-weight: 650; }
+.dialog .method small { margin-top: .15rem; font-size: .75rem; font-weight: 400; color: var(--muted-foreground); }
+
+.dialog .body { flex: 1 1 auto; min-height: 0; padding: 1.25rem 1.5rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.dialog .description { margin: 0; font-size: .8rem; line-height: 1.8; text-align: right; color: var(--muted-foreground); }
+.dialog .direct { display: flex; flex-direction: column; align-items: center; padding: 1.5rem 0 .5rem; }
+.dialog .inputLabel { font-size: .9rem; font-weight: 600; }
+.dialog .scoreInput { display: flex; align-items: baseline; justify-content: center; gap: .75rem; margin: 1rem 0 .4rem; }
+.dialog .numberInput {
+  width: 2.75em;
+  height: 1.6em;
+  min-width: 0;
+  padding: .1em;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--background);
+  color: var(--rating-color);
+  font-family: inherit;
+  font-size: 3.75rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.dialog .numberInput::-webkit-inner-spin-button, .dialog .numberInput::-webkit-outer-spin-button { margin: 0; -webkit-appearance: none; }
+.dialog .numberInput::placeholder { color: var(--muted-foreground); }
+.dialog .numberInput:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.dialog .numberInput[aria-invalid="true"] { border-color: #fb7185; }
+.dialog .denominator { color: var(--muted-foreground); font-size: 1.15rem; }
+.dialog .ratingLabel { min-height: 1.5rem; margin: .25rem 0 .8rem; color: var(--rating-color); font-size: .85rem; line-height: 1.5; }
+.dialog .directSlider { width: min(100%, 25rem); padding-inline: .7rem; }
+.dialog .slider { --tvtime-slider-thumb-visual-size: 1.25rem; min-height: 2.75rem; padding-block: .75rem; }
+.dialog .slider :global([data-slot="slider-track"]) { height: .4rem; }
+.dialog .scale { display: flex; justify-content: space-between; margin-top: -.2rem; color: var(--muted-foreground); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.dialog .hint { min-height: 1.5rem; margin: 1rem 0 0; color: var(--muted-foreground); font-size: .8rem; line-height: 1.7; text-align: center; }
+.dialog .hint[data-error="true"] { color: #fb7185; }
+
+.dialog .criteria { display: grid; gap: .85rem; margin-top: 1rem; }
+.dialog .previousRating { margin: 0; padding: .75rem 1rem; border-radius: .75rem; background: var(--muted); color: var(--muted-foreground); font-size: .8rem; line-height: 1.8; }
+.dialog .criterion { min-width: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--background); }
+.dialog .criterionHeader { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr) auto; align-items: start; gap: .65rem; }
+.dialog .criterionNumber { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: .5rem; background: var(--muted); color: var(--muted-foreground); font-size: .75rem; font-weight: 600; }
+.dialog .criterionHeader h3 { margin: .1rem 0 0; font-size: .9rem; font-weight: 650; line-height: 1.6; overflow-wrap: anywhere; }
+.dialog .criterionScore { white-space: nowrap; font-size: 1.1rem; font-weight: 700; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.dialog .criterion[data-rated="true"] .criterionScore { color: var(--primary); }
+.dialog .criterionScore small { margin-left: .15rem; font-size: .75rem; font-weight: 400; color: var(--muted-foreground); }
+.dialog .question { margin: .65rem 0 .5rem; color: var(--muted-foreground); font-size: .8rem; line-height: 1.9; overflow-wrap: anywhere; }
+.dialog .criterionControl { padding-inline: .5rem; }
+
+.dialog .footer { flex: none; padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: var(--card); }
+.dialog .summary { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .85rem; }
+.dialog .progress { display: grid; gap: .5rem; width: min(60%, 15rem); color: var(--muted-foreground); font-size: .8rem; }
+.dialog .progress progress { display: block; width: 100%; height: .3rem; overflow: hidden; border: 0; border-radius: 1rem; background: var(--muted); accent-color: var(--primary); }
+.dialog .progress progress::-webkit-progress-bar { background: var(--muted); }
+.dialog .progress progress::-webkit-progress-value { background: var(--primary); border-radius: 1rem; }
+.dialog .progress progress::-moz-progress-bar { background: var(--primary); border-radius: 1rem; }
+.dialog .total { display: grid; gap: .1rem; text-align: left; }
+.dialog .total > span { color: var(--muted-foreground); font-size: .7rem; }
+.dialog .total strong { color: var(--rating-color); font-size: 1.75rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.dialog .total small { margin-left: .2rem; color: var(--muted-foreground); font-size: .85rem; font-weight: 400; }
+.dialog .actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(5rem, .35fr); gap: .65rem; }
+.dialog .actions > button { width: 100%; min-width: 0; height: auto; min-height: 2.9rem; padding: .7rem 1rem; border-radius: .8rem; font-size: .9rem; line-height: 1.4; }
+.dialog .save { font-weight: 700; }
+.dialog .cancel { color: var(--muted-foreground); }
+
+@media (max-width: 639px) {
+  :global(:root) .dialog[data-slot="dialog-content"] {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100% !important;
+    max-height: 94dvh !important;
+    translate: none;
+    transform: none;
+    border-radius: 1.25rem 1.25rem 0 0;
+    border-bottom: 0;
+  }
+  .dialog .header { grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem; gap: .75rem; padding: 1rem 1rem .85rem; }
+  .dialog .poster { width: 2.5rem; height: 3.5rem; }
+  .dialog .title { font-size: 1.05rem; }
+  .dialog .methodArea { padding: 0 1rem .85rem; }
+  .dialog .method { gap: .45rem; padding: .5rem; }
+  .dialog .body { padding: 1rem; }
+  .dialog .direct { padding-top: 1.25rem; }
+  .dialog .numberInput { font-size: 3.25rem; }
+  .dialog .criterion { padding: .85rem; }
+  .dialog .footer { padding: .85rem 1rem max(.85rem, env(safe-area-inset-bottom)); }
+}
+
+/* At high zoom or in landscape, use one scroll surface for the whole dialog. */
+@media (max-height: 640px) {
+  :global(:root) .dialog[data-slot="dialog-content"] { display: block !important; height: auto; overflow-y: auto; }
+  .dialog .body { overflow: visible; }
+  .dialog .header { padding-block: .85rem; }
+  .dialog .direct { padding-block: .75rem 0; }
+  .dialog .numberInput { font-size: 2.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog .method { transition: none; }
+}

@@ -17,7 +17,9 @@ const migration = read("prisma/migrations/20260907010000_structured_personal_rat
 assert.match(migration, /ADD COLUMN "ratingBreakdown" JSONB/i);
 
 const dialog = read("src/components/media/structured-rating-dialog.tsx");
-assert.match(dialog, /h-\[100dvh\]/, "mobile full-height responsive dialog is required");
+const dialogStyles = read("src/components/media/structured-rating-dialog.module.css");
+assert.match(dialogStyles, /max-height:[^;]*dvh/, "rating dialog must stay inside the viewport");
+assert.match(dialogStyles, /overflow-y: auto/, "rating content must remain scrollable");
 assert.match(dialog, /Complete all criteria/);
 assert.match(dialog, /criterion\.question/, "full criterion question must be visible in the dialog");
 assert.doesNotMatch(dialog, /line-clamp[^\n]*criterion\.question/, "criterion questions must never be truncated");
