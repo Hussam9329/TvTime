@@ -881,17 +881,18 @@ function CollectionMediaCard({
     setRatingOpen(true);
   };
 
-  const handleRate = async ({ breakdown }: StructuredRatingResult) => {
+  const handleRate = async ({ score, breakdown }: StructuredRatingResult) => {
     if (isMovie && !item.watched) {
       return update.mutateAsync({
         id: item.id,
         ratingBreakdown: breakdown,
+        userRating: score,
         watched: true,
         watchedAt: new Date().toISOString(),
         status: "watched",
       });
     }
-    return update.mutateAsync({ id: item.id, ratingBreakdown: breakdown });
+    return update.mutateAsync({ id: item.id, ratingBreakdown: breakdown, userRating: score });
   };
 
   const handleRemoveRating = async () => {
@@ -1107,10 +1108,10 @@ function CollectionMediaCard({
         initialBreakdown={item.ratingBreakdown}
         legacyInitialRating={item.userRating ?? null}
         description={isMovie && !item.watched
-          ? "قيّم المحاور العشرة كاملة. مجموعها الدقيق يصبح تقييمك من 100، وبعد الحفظ فقط يتم اعتبار الفيلم مُشاهَدًا."
+          ? "قيّم مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتم اعتبار الفيلم مُشاهَدًا."
           : isMovie
-            ? "أعد تقييم الفيلم عبر المحاور العشرة كاملة. مجموعها الدقيق سيستبدل تقييمك الحالي من 100."
-            : "أعد تقييم رحلة المسلسل المكتملة عبر المحاور العشرة. مجموعها الدقيق سيستبدل تقييمك الحالي من 100."}
+            ? "عدّل تقييمك مباشرة من 100 أو استخدم الأسئلة العشرة."
+            : "عدّل تقييم المسلسل مباشرة من 100 أو استخدم الأسئلة العشرة."}
         submitLabel={(score) => isMovie && !item.watched ? `Save rating & mark watched · ${score}/100` : `Save rating · ${score}/100`}
         successMessage={isMovie && !item.watched
           ? (score) => `Marked as watched · Your rating ${score}/100`

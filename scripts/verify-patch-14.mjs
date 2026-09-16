@@ -31,8 +31,9 @@ assert.match(mediaCard, /StructuredRatingDialog/);
 assert.match(tvView, /<RatingDialog[\s\S]*episode/i, "simple /100 dialog should remain available for episode ratings");
 
 const mediaApi = read("src/app/api/media/[id]/route.ts");
-assert.match(mediaApi, /validatePersonalRatingBreakdown/);
-assert.match(mediaApi, /STRUCTURED_RATING_REQUIRED/);
+assert.match(mediaApi, /validatePersonalRatingMutation/);
+assert.match(read("src/lib/personal-rating.ts"), /validatePersonalRatingBreakdown/);
+assert.match(read("src/lib/personal-rating.ts"), /INVALID_DIRECT_RATING/);
 assert.match(mediaApi, /validation\.score/, "server must derive canonical score from criteria");
 
 const undo = read("src/lib/watch-undo-token.ts");

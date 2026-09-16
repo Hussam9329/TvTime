@@ -295,7 +295,7 @@ export function TvDetailView() {
     }
   };
 
-  const onRateSubmit = async ({ breakdown }: StructuredRatingResult) => {
+  const onRateSubmit = async ({ score, breakdown }: StructuredRatingResult) => {
     if (!canRateShow) {
       toast.error(isEnded ? "Finish all episodes before rating this show." : "Rating unlocks only after the whole show ends.");
       return;
@@ -305,6 +305,7 @@ export function TvDetailView() {
       mediaType: "tv",
       tmdbId: t.id,
       ratingBreakdown: breakdown,
+      userRating: score,
       title: displayTitle,
       posterPath: t.poster_path,
       releaseDate: t.first_air_date,
@@ -482,7 +483,7 @@ export function TvDetailView() {
                       <div className="text-2xl font-bold text-muted-foreground">—</div>
                       <span className="text-xs text-muted-foreground">
                         {hasWatchedEveryFinalEpisode && isEnded
-                          ? "Rate 10 criteria to mark this show Finished"
+                          ? "Rate this show to mark it Finished"
                           : effectiveLabel === "uptodate"
                             ? "Rate later when show ends"
                             : isArabicShow ? "لم تقيّمه بعد" : "Not rated yet"}
@@ -562,7 +563,7 @@ export function TvDetailView() {
                 setLastAutoPromptedShowId(String(t.id));
                 setPendingCompletionRating(true);
                 setRatingOpen(true);
-                toast.info("All episodes watched. Complete the 10-criteria rating to mark this show Finished.");
+                toast.info("All episodes watched. Rate this show to mark it Finished.");
               } else if (c.newStatus === "uptodate") {
                 toast.info("You're all caught up! More episodes coming soon.");
               }
@@ -648,7 +649,7 @@ export function TvDetailView() {
         )}
       </Tabs>
 
-      {/* Structured full-series rating — only after the final completed journey. */}
+      {/* Personal full-series rating — only after the final completed journey. */}
       <StructuredRatingDialog
         open={ratingOpen}
         onOpenChange={(open) => {
@@ -665,8 +666,8 @@ export function TvDetailView() {
         initialBreakdown={myRatingBreakdown}
         legacyInitialRating={myRating}
         description={myRating == null
-          ? "قيّم رحلة المسلسل المكتملة عبر المحاور العشرة كاملة. مجموعها الدقيق يصبح تقييمك من 100، وبعد الحفظ فقط يتحول المسلسل إلى Finished."
-          : "أعد تقييم رحلة المسلسل كاملة عبر المحاور العشرة. مجموعها الدقيق سيستبدل تقييمك الحالي مع بقاء المسلسل Finished."}
+          ? "قيّم المسلسل مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتحول المسلسل إلى Finished."
+          : "عدّل تقييم المسلسل مباشرة من 100 أو استخدم الأسئلة العشرة. يبقى المسلسل Finished."}
         submitLabel={(score) => myRating == null ? `Save rating & mark Finished · ${score}/100` : `Update rating · ${score}/100`}
         successMessage={(score) => myRating == null
           ? `Marked as Finished · Your rating ${score}/100`

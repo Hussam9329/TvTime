@@ -244,11 +244,12 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
       showWatchUndo("Removed from watched", result);
     } catch { toast.error("Failed to update watched status"); }
   };
-  const completeWatchedWithRating = async ({ breakdown }: StructuredRatingResult) => {
+  const completeWatchedWithRating = async ({ score, breakdown }: StructuredRatingResult) => {
     return watchedToggle.mutateAsync({
       ...actionPayload,
       action: "add",
       ratingBreakdown: breakdown,
+      userRating: score,
     });
   };
 
@@ -308,7 +309,7 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
           onRate={completeWatchedWithRating}
           initialBreakdown={ratingBreakdown}
           legacyInitialRating={userRating}
-          description="قيّم المحاور العشرة كاملة. مجموعها الدقيق يصبح تقييمك من 100، وبعد الحفظ فقط يتم اعتبار الفيلم مُشاهَدًا."
+          description="قيّم مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتم اعتبار الفيلم مُشاهَدًا."
           submitLabel={(score) => `Save rating & mark watched · ${score}/100`}
           successMessage={(score) => `Marked as watched · Your rating ${score}/100`}
         />

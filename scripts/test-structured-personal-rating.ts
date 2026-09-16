@@ -6,6 +6,7 @@ import {
   buildPersonalRatingBreakdown,
   personalRatingScore,
   validatePersonalRatingBreakdown,
+  validatePersonalRatingMutation,
   type PersonalRatingCriteriaValues,
 } from "../src/lib/personal-rating.ts";
 
@@ -45,6 +46,24 @@ const extra = {
 };
 assert.equal(validatePersonalRatingBreakdown(extra, "movie").ok, false, "Unknown criteria must be rejected");
 assert.equal(validatePersonalRatingBreakdown(perfect, "series").ok, false, "Movie breakdown cannot rate a series");
+
+for (const kind of ["movie", "series"] as const) {
+  for (const score of [0, 1, 57, 99, 100]) {
+    for (const input of [{ userRating: score }, { userRating: score, ratingBreakdown: null }]) {
+      assert.deepEqual(validatePersonalRatingMutation(input, kind), { ok: true, score, breakdown: null }, "Direct ratings clear stale criteria and preserve the exact score");
+    }
+  }
+  for (const score of [-1, 101, 75.5, NaN, Infinity, "85", "", true, {}, []]) {
+    assert.equal(validatePersonalRatingMutation({ userRating: score }, kind).ok, false, `Invalid direct score ${String(score)} must be rejected`);
+  }
+  for (const input of [{ userRating: null }, { ratingBreakdown: null }, { userRating: null, ratingBreakdown: null }]) {
+    assert.deepEqual(validatePersonalRatingMutation(input, kind), { ok: true, score: null, breakdown: null }, "Removing either rating method clears score and criteria");
+  }
+  assert.equal(validatePersonalRatingMutation({}, kind).ok, false, "An empty input must not become a zero rating");
+  assert.equal(validatePersonalRatingMutation({ userRating: 85, ratingBreakdown: {} }, kind).ok, false, "A direct score must not bypass invalid criteria");
+}
+assert.deepEqual(validatePersonalRatingMutation({ ratingBreakdown: mixed, userRating: 100 }, "movie"), { ok: true, score: 45, breakdown: mixed }, "The criteria sum remains authoritative for detailed ratings");
+assert.equal(validatePersonalRatingMutation({ ratingBreakdown: perfect }, "series").ok, false, "Rating method changes must retain media-kind validation");
 
 
 const expectedMovieCopy = [
