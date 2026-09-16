@@ -154,10 +154,10 @@ export function StructuredRatingDialog({
           </div>
 
           <div role="group" aria-label="طريقة التقييم" dir="rtl" className="grid grid-cols-2 gap-2">
-            <Button type="button" variant={mode === "direct" ? "default" : "outline"} aria-pressed={mode === "direct"} disabled={submitting} className="min-h-11" onClick={() => setMode("direct")}>
+            <Button type="button" variant={mode === "direct" ? "default" : "outline"} aria-pressed={mode === "direct"} disabled={submitting} className="h-auto min-h-11 whitespace-normal px-2 text-xs leading-5 sm:text-sm" onClick={() => setMode("direct")}>
               تقييم مباشر /100
             </Button>
-            <Button type="button" variant={mode === "criteria" ? "default" : "outline"} aria-pressed={mode === "criteria"} disabled={submitting} className="min-h-11" onClick={() => setMode("criteria")}>
+            <Button type="button" variant={mode === "criteria" ? "default" : "outline"} aria-pressed={mode === "criteria"} disabled={submitting} className="h-auto min-h-11 whitespace-normal px-2 text-xs leading-5 sm:text-sm" onClick={() => setMode("criteria")}>
               الأسئلة العشرة
             </Button>
           </div>
