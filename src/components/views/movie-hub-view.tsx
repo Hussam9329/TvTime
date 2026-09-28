@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/error-state";
 import { SafeImage } from "@/components/media/safe-image";
 import { MediaRow } from "@/components/media/media-row";
+import { HubSkeleton } from "@/components/media/hub-skeleton";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
@@ -63,7 +64,7 @@ const WORLD_COPY: Record<MovieHubWorld, WorldCopy> = {
     title: "Movies",
     eyebrow: "Your movie world",
     tabs: { overview: "Overview", library: "My Library", discover: "Discover", releases: "Releases" },
-    browse: "Browse & Filters",
+    browse: "Browse",
     featured: "Featured for you",
     watchlist: "Your Watchlist",
     tonight: "Pick for Tonight",
@@ -80,7 +81,7 @@ const WORLD_COPY: Record<MovieHubWorld, WorldCopy> = {
     title: "الأفلام العربية",
     eyebrow: "عالم أفلامك العربية",
     tabs: { overview: "نظرة عامة", library: "مكتبتي", discover: "اكتشاف", releases: "الإصدارات" },
-    browse: "التصفح والفلاتر",
+    browse: "تصفّح",
     featured: "مختار لك",
     watchlist: "قائمة مشاهدتك",
     tonight: "اختيار الليلة",
@@ -95,10 +96,10 @@ const WORLD_COPY: Record<MovieHubWorld, WorldCopy> = {
   },
   "asian-movies": {
     title: "Asian Movies",
-    eyebrow: "Cinema across Asia",
+    eyebrow: "Your Asian movie world",
     tabs: { overview: "Overview", library: "My Library", discover: "Discover", releases: "Releases" },
-    browse: "Browse & Filters",
-    featured: "Featured from Asia",
+    browse: "Browse",
+    featured: "Featured for you",
     watchlist: "Your Asian Watchlist",
     tonight: "Pick for Tonight",
     newNoteworthy: "New & Noteworthy",
@@ -142,7 +143,7 @@ export function MovieHubView({ world }: { world: MovieHubWorld }) {
 
   const summaryLine = isArabic
     ? `${summary?.watchlist ?? "…"} في قائمة المشاهدة • ${summary?.watched ?? "…"} تمت مشاهدته • ${summary?.averageRating ?? "—"} متوسط تقييمك`
-    : `${summary?.watchlist ?? "…"} in Watchlist • ${summary?.watched ?? "…"} Watched • ${summary?.averageRating ?? "—"} Average rating`;
+    : `${summary?.watchlist ?? "…"} in Watchlist • ${summary?.watched ?? "…"} Watched • ${summary?.averageRating ?? "—"} Avg rating`;
 
   return (
     <div
@@ -175,7 +176,7 @@ export function MovieHubView({ world }: { world: MovieHubWorld }) {
           <MovieHubOverview world={world} copy={copy} query={hub} onBrowse={() => setTab("discover")} />
         </TabsContent>
         <TabsContent value="library" className="mt-0">
-          <CollectionWorldView world={world} embedded />
+          <CollectionWorldView world={world} embedded onDiscover={() => setTab("discover")} />
         </TabsContent>
         <TabsContent value="discover" className="mt-0">
           <DiscoverView
@@ -192,7 +193,7 @@ export function MovieHubView({ world }: { world: MovieHubWorld }) {
             language={world === "arabic-movies" ? "ar" : undefined}
             collectionWorld={world}
             title={world === "arabic-movies" ? "جدول إصدارات الأفلام العربية" : world === "asian-movies" ? "Asian Movie Release Schedule" : "Movie Release Schedule"}
-            subtitle={world === "arabic-movies" ? "إصدارات الأفلام العربية خلال ستة أشهر، مرتبة بالتاريخ المعلن." : world === "asian-movies" ? "Upcoming Asian films from Korea, Japan, China and the rest of Asia." : "A clean six-month agenda for upcoming films."}
+            subtitle={world === "arabic-movies" ? "إصدارات الأفلام العربية خلال ستة أشهر، مرتبة بالتاريخ المعلن." : world === "asian-movies" ? "A six-month agenda of upcoming Asian movies, with Korea, Japan and China first." : "A six-month agenda of upcoming movies."}
           />
         </TabsContent>
       </Tabs>
@@ -308,6 +309,7 @@ function MovieHubOverview({
 
       <MediaRow title={copy.newNoteworthy} icon={<WandSparkles />} items={data.shelves.newNoteworthy} forcedMediaType="movie" libraryStateSource={sharedStates} />
       <MediaRow title={copy.hiddenGems} icon={<Star />} items={data.shelves.hiddenGems} forcedMediaType="movie" libraryStateSource={sharedStates} />
+      <MediaRow title={copy.comingSoon} icon={<CalendarDays />} items={data.shelves.comingSoon} forcedMediaType="movie" libraryStateSource={sharedStates} />
       <HubRowOrEmpty
         title={copy.recent}
         hint={isArabic ? "سجل مشاهدتك" : "Your viewing history"}
@@ -316,7 +318,6 @@ function MovieHubOverview({
         emptyText={copy.emptyRecent}
         states={sharedStates}
       />
-      <MediaRow title={copy.comingSoon} icon={<CalendarDays />} items={data.shelves.comingSoon} forcedMediaType="movie" libraryStateSource={sharedStates} />
 
       {data.partial && (
         <p className="tvtime-movie-hub__partial" role="status">{isArabic ? "بعض الاقتراحات غير متاحة مؤقتاً، لكن أقسام مكتبتك ما زالت كاملة." : "Some recommendations are temporarily unavailable; your library sections are still complete."}</p>
@@ -469,19 +470,5 @@ function MovieHubHero({
 }
 
 function MovieHubSkeleton({ isArabic }: { isArabic: boolean }) {
-  const label = isArabic ? "جارٍ تحميل عالم الأفلام" : "Loading movie hub";
-  return (
-    <div className="tvtime-movie-hub__skeleton" role="status" aria-busy="true" aria-label={label}>
-      <span className="sr-only">{label}…</span>
-      <div className="h-[clamp(22rem,48vw,34rem)] rounded-3xl shimmer" />
-      {Array.from({ length: 4 }).map((_, section) => (
-        <div key={section}>
-          <div className="mb-3 h-6 w-44 rounded shimmer" />
-          <div className="flex gap-3 overflow-hidden">
-            {Array.from({ length: 7 }).map((__, card) => <div key={card} className="aspect-[2/3] w-36 shrink-0 rounded-2xl shimmer" />)}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <HubSkeleton label={isArabic ? "جارٍ تحميل عالم الأفلام" : "Loading movie hub"} />;
 }

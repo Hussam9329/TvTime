@@ -10,6 +10,7 @@ import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
 import { AnimeHubOverview } from "@/components/views/anime-hub-overview";
 import { useAnimeHub } from "@/hooks/use-tmdb";
+import { useNav, type MovieHubTab } from "@/lib/store";
 
 const ANIMATION_GENRES = [16];
 type AnimeMediaType = "movie" | "tv";
@@ -17,11 +18,13 @@ const ANIME_SWITCH_ITEM_CLASS =
   "flex-none gap-1.5 rounded-xl px-3 text-sm font-semibold text-muted-foreground first:rounded-xl last:rounded-xl hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-[var(--movie-world-accent)] data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm";
 
 export function AnimeView() {
-  const [tab, setTab] = useState<"overview" | "library" | "discover" | "releases">("overview");
+  const tab: MovieHubTab = useNav((state) => state.movieHubTabs.anime) ?? "overview";
+  const setMovieHubTab = useNav((state) => state.setMovieHubTab);
+  const setTab = (next: MovieHubTab) => setMovieHubTab("anime", next);
   const [mediaType, setMediaType] = useState<AnimeMediaType>("tv");
   const hub = useAnimeHub();
   const summary = hub.data?.summary;
-  const summaryLine = `${summary?.titles ?? "…"} titles • ${summary?.inProgress ?? "…"} In Progress • ${summary?.episodesWatched ?? "…"} Episodes Watched`;
+  const summaryLine = `${summary?.titles ?? "…"} in Library • ${summary?.inProgress ?? "…"} In Progress • ${summary?.episodesWatched ?? "…"} Episodes watched`;
 
   const mediaSwitch = (
     <ToggleGroup
@@ -47,7 +50,7 @@ export function AnimeView() {
     <div className="tvtime-world-view tvtime-anime-view tvtime-movie-hub" data-world="anime">
       <header className="tvtime-movie-hub__titlebar">
         <div className="min-w-0">
-          <p className="tvtime-movie-hub__eyebrow">Your Anime world</p>
+          <p className="tvtime-movie-hub__eyebrow">Your anime world</p>
           <h1>Anime</h1>
           <p className="tvtime-movie-hub__summary" aria-live="polite">{summaryLine}</p>
         </div>
@@ -57,7 +60,7 @@ export function AnimeView() {
         </Button>
       </header>
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="min-w-0">
+      <Tabs value={tab} onValueChange={(value) => setTab(value as MovieHubTab)} className="min-w-0">
         <TabsList className="tvtime-movie-hub__tabs">
           <TabsTrigger value="overview"><Grid2X2 /> Overview</TabsTrigger>
           <TabsTrigger value="library"><Library /> My Library</TabsTrigger>

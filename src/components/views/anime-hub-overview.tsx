@@ -87,7 +87,7 @@ export function AnimeHubOverview({ onBrowse }: { onBrowse: () => void }) {
           icon={<Trophy />}
           title="Continue Watching"
           description="Anime episodes you start will appear here without changing your tracking rules."
-          action="Discover Anime"
+          action="Browse"
           onAction={onBrowse}
         />
       )}
@@ -265,7 +265,7 @@ function AnimeHubHero({ items }: { items: AnimeHubItem[] }) {
           transition={{ duration: reduceMotion ? 0 : 0.32, ease: "easeOut" }}
         >
           <div className="tvtime-movie-hub-hero__meta">
-            <span><Sparkles aria-hidden="true" /> Unwatched spotlight</span>
+            <span><Sparkles aria-hidden="true" /> Featured for you</span>
             <span>{mediaType === "movie" ? "Movie" : "Series"}</span>
             {getYear(item) && <span>{getYear(item)}</span>}
             {item.vote_average > 0 && <span><Star className="fill-current" aria-hidden="true" /> {item.vote_average.toFixed(1)}</span>}

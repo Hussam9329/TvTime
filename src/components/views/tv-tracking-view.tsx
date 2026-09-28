@@ -1,6 +1,6 @@
 "use client";
 
-import { useStats, useTvTracking, useTvTrackingCounts, type TvTrackingCategory } from "@/hooks/use-tmdb";
+import { useTvTracking, useTvTrackingCounts, type TvTrackingCategory } from "@/hooks/use-tmdb";
 import { useNav } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { WatchlistIndicator } from "@/components/media/watchlist-indicator";
-import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronLeft, ChevronRight, Grid2X2, List, CircleStop, Search, ArrowUpDown } from "lucide-react";
+import { Play, Tv, Clock, Calendar, Clapperboard, BookOpen, Trophy, Star, Zap, Layers, PauseCircle, CirclePlay, ChevronLeft, ChevronRight, Grid2X2, List, CircleStop, Search, ArrowUpDown, SlidersHorizontal } from "lucide-react";
 import { imgOrPlaceholder, pickArabicTitle } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 
 // Tracking status is calculated by the shared server engine.
@@ -76,8 +77,16 @@ function TrackingStatusBadge({ status, isArabic = false }: { status: TrackingSta
   return <Badge data-status="not_started" className={badgeClass}><Clock className="h-3.5 w-3.5" /> {isArabic ? "لم يبدأ" : "Not Started"}</Badge>;
 }
 
-export function TvShowsView({ world = "standard", embedded = false }: { world?: "standard" | "arabic" | "asian"; embedded?: boolean }) {
-  const stats = useStats();
+type TvSort = "title" | "addedAt" | "watchedAt";
+const DEFAULT_TV_SORT: TvSort = "watchedAt";
+// [value, English label, Arabic label] — mirrors the movie library's segmented sort.
+const TV_SORT_OPTIONS: ReadonlyArray<readonly [TvSort, string, string]> = [
+  ["watchedAt", "Last Watched", "آخر مشاهدة"],
+  ["addedAt", "Recent", "الأحدث إضافة"],
+  ["title", "A-Z", "أ-ي"],
+];
+
+export function TvShowsView({ world = "standard", embedded = false, onDiscover }: { world?: "standard" | "arabic" | "asian"; embedded?: boolean; onDiscover?: () => void }) {
   const trackingCounts = useTvTrackingCounts(world);
   const counts = trackingCounts.data?.counts;
   const goTv = useNav((s) => s.goTv);
@@ -89,25 +98,17 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
         <PageTitlebar title={isArabic ? "المسلسلات العربية" : world === "asian" ? "Asian TV Shows" : "TV Shows"} />
       )}
 
-      {/* TV Shows filters, all backed by full-collection counters. */}
-      <div className="tvtime-tv-library-stats grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon={<Play className="w-5 h-5" />} label={isArabic ? "قيد المشاهدة" : "Watching"} value={counts?.watching ?? "…"} color="from-chart-5/20 to-chart-5/5" />
-        <StatCard icon={<BookOpen className="w-5 h-5" />} label={isArabic ? "قائمة المشاهدة" : "Watchlist"} value={counts?.watchlist ?? counts?.planned ?? "…"} color="from-chart-2/20 to-chart-2/5" />
-        <StatCard icon={<Zap className="w-5 h-5" />} label={isArabic ? "محدّث" : "Up To Date"} value={counts?.uptodate ?? "…"} color="from-chart-3/20 to-chart-3/5" />
-        <StatCard icon={<Trophy className="w-5 h-5" />} label={isArabic ? "مكتمل" : "Finished"} value={counts?.finished ?? "…"} color="from-primary/20 to-primary/5" />
+      {/* Same masthead as the movie and Anime libraries; counts cover the full collection. */}
+      <div className="tvtime-library-masthead">
+        <div className="tvtime-library-stats grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">
+          <LibraryStat icon={<Play />} label={isArabic ? "قيد المشاهدة" : "Watching"} value={counts?.watching ?? "…"} />
+          <LibraryStat icon={<BookOpen />} label={isArabic ? "قائمة المشاهدة" : "Watchlist"} value={counts?.watchlist ?? counts?.planned ?? "…"} />
+          <LibraryStat icon={<Zap />} label={isArabic ? "محدّث" : "Up To Date"} value={counts?.uptodate ?? "…"} />
+          <LibraryStat icon={<Trophy />} label={isArabic ? "مكتمل" : "Finished"} value={counts?.finished ?? "…"} />
+        </div>
       </div>
 
-      {stats.data?.watchTime && (
-        <p className="text-xs text-muted-foreground px-1 -mt-2">
-          {isArabic ? (
-            <>إجمالي وقت المشاهدة: <strong>{stats.data.watchTime.totalHours || 0} ساعة</strong>. العدّادات محسوبة من كامل المجموعة وليست من الصفحة الحالية.</>
-          ) : (
-            <>Total watch time: <strong>{stats.data.watchTime.totalHours || 0}h</strong>. Filter counters below are full-collection counters, not current-page counters.</>
-          )}
-        </p>
-      )}
-
-      <AllShowsTab onGo={goTv} globalCounts={counts} world={world} />
+      <AllShowsTab onGo={goTv} globalCounts={counts} world={world} onDiscover={onDiscover} />
     </div>
   );
 }
@@ -117,13 +118,13 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
 // "All" tab — shows every tracked series, each badged with its current tracking
 // status (Finished / Up To Date / Watching / Not Started / Planned). Includes quick filter chips so the
 // user can drill into a specific status without leaving the tab.
-function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void; globalCounts?: any; world: "standard" | "arabic" | "asian" }) {
+function AllShowsTab({ onGo, globalCounts, world, onDiscover }: { onGo: (id: number) => void; globalCounts?: any; world: "standard" | "arabic" | "asian"; onDiscover?: () => void }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<TvTrackingCategory>("all");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [genre, setGenre] = useState("");
-  const [sortBy, setSortBy] = useState<"title" | "addedAt" | "watchedAt">("title");
+  const [sortBy, setSortBy] = useState<TvSort>(DEFAULT_TV_SORT);
   const [layout, setLayout] = useState<"list" | "grid">("grid");
   const limit = 60;
 
@@ -181,14 +182,14 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
   ];
 
   const activeFilterLabel = filters.find((f) => f.value === filter)?.label ?? (isArabic ? "الكل" : "All");
-  const activeFilterCount = Number(filter !== "all") + Number(search.trim() !== "") + Number(genre !== "") + Number(sortBy !== "title");
+  const activeFilterCount = Number(filter !== "all") + Number(search.trim() !== "") + Number(genre !== "") + Number(sortBy !== DEFAULT_TV_SORT);
 
   const resetFilters = () => {
     setFilter("all");
     setSearch("");
     setDebouncedSearch("");
     setGenre("");
-    setSortBy("title");
+    setSortBy(DEFAULT_TV_SORT);
     setPage(0);
   };
 
@@ -205,82 +206,20 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
   return (
     <div className="tvtime-tracking-library space-y-4">
       <FilterPanel
-        title={(
-          <span className="flex flex-wrap items-center gap-2">
-            <span>{isArabic ? "كل المسلسلات العربية" : world === "asian" ? "All Asian TV Shows" : "All TV Shows"}</span>
-            <span className="text-xs font-normal text-muted-foreground">({total})</span>
-            <Badge variant="secondary" className="h-6 text-xs">{isArabic ? "عدّادات المجموعة" : "Global counters"}</Badge>
-          </span>
-        )}
+        title={isArabic ? "فلاتر المكتبة" : "Library filters"}
         description={isArabic
-          ? "استخدم هذه الفلاتر داخل مكتبتك العربية. كل رقم محسوب من كامل مجموعة المسلسلات العربية فقط، وليس من الصفحة الحالية أو بقية الأقسام."
+          ? "تصفّح مسلسلاتك العربية حسب حالة المتابعة والنوع والبحث. كل رقم محسوب من كامل مجموعة المسلسلات العربية."
           : world === "asian"
-            ? "Every number is calculated across your Asian TV collection only, separate from standard TV, Arabic TV and Anime."
-            : "Use these filters from inside All. Every number is calculated across your complete TV Shows collection, never from Arabic TV, Asian TV, Anime or only the visible page."}
+            ? "Browse your Asian TV shows by tracking status, genre and search. Every number is calculated across your Asian TV collection only."
+            : "Browse your TV shows by tracking status, genre and search. Every number is calculated across your complete TV Shows collection."}
         activeCount={activeFilterCount}
         onReset={resetFilters}
         resetLabel={isArabic ? "إعادة الضبط" : "Reset all"}
+        mobileSheet
+        className="tvtime-library-filter-panel"
+        mobileResultLabel={isArabic ? `عرض ${total} مسلسل` : `Show ${total} shows`}
       >
-        <FilterSection title={isArabic ? "البحث والنوع والترتيب" : "Search, genre and sort"}>
-          <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_220px_260px]">
-            <FilterField label={isArabic ? "البحث في المسلسلات" : "Search TV Shows"}>
-              <div className="relative">
-                <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={search}
-                  onChange={(event) => { setSearch(event.target.value); setPage(0); }}
-                  placeholder={isArabic ? "ابحث باسم المسلسل..." : "Search your shows..."}
-                  className="h-10 ps-9"
-                  aria-label={isArabic ? "البحث في المسلسلات" : "Search TV Shows"}
-                />
-              </div>
-            </FilterField>
-
-            <FilterField label={isArabic ? "النوع" : "Genre"}>
-              <Select
-                value={genre || "all"}
-                onValueChange={(value) => {
-                  setGenre(value === "all" ? "" : value);
-                  setPage(0);
-                }}
-              >
-                <SelectTrigger className="h-10 w-full rounded-xl" aria-label={isArabic ? "فلتر نوع المسلسلات" : "Filter TV Shows by genre"}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{isArabic ? "كل الأنواع" : "All Genres"}</SelectItem>
-                  {TV_GENRES.map((item) => (
-                    <SelectItem key={item} value={item}>{item}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FilterField>
-
-            <FilterField label={isArabic ? "الترتيب حسب" : "Sort by"}>
-              <div className="relative">
-                <ArrowUpDown className="pointer-events-none absolute start-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Select
-                  value={sortBy}
-                  onValueChange={(value) => {
-                    setSortBy(value as "title" | "addedAt" | "watchedAt");
-                    setPage(0);
-                  }}
-                >
-                  <SelectTrigger className="h-10 w-full rounded-xl ps-9" aria-label={isArabic ? "ترتيب المسلسلات" : "Sort TV Shows"}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="title">{isArabic ? "العنوان أ-ي" : "Title A-Z"}</SelectItem>
-                    <SelectItem value="addedAt">{isArabic ? "المضافة حديثاً" : "Recently Added"}</SelectItem>
-                    <SelectItem value="watchedAt">{isArabic ? "آخر مشاهدة" : "Last Watched"}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FilterField>
-          </FilterGrid>
-        </FilterSection>
-
-        <FilterSection title={isArabic ? "حالة المتابعة" : "Tracking status"} divided>
+        <FilterSection title={isArabic ? "حالة المتابعة" : "Tracking status"}>
           <div className="tvtime-tracking-status-grid">
             {filters.map((item) => (
               <FilterChip
@@ -295,34 +234,89 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
             ))}
           </div>
         </FilterSection>
+
+        <FilterSection title={isArabic ? "النوع" : "Genre"} divided>
+          <FilterField label={isArabic ? "نوع المسلسل" : "TV genre"}>
+            <Select
+              value={genre || "all"}
+              onValueChange={(value) => {
+                setGenre(value === "all" ? "" : value);
+                setPage(0);
+              }}
+            >
+              <SelectTrigger className="h-10 w-full max-w-sm rounded-xl text-sm" aria-label={isArabic ? "فلتر نوع المسلسلات" : "Filter TV Shows by genre"}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isArabic ? "كل الأنواع" : "All genres"}</SelectItem>
+                {TV_GENRES.map((item) => (
+                  <SelectItem key={item} value={item}>{item}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
+        </FilterSection>
+
+        <FilterSection title={isArabic ? "البحث والترتيب" : "Search and sort"} divided>
+          <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_auto]">
+            <FilterField label={isArabic ? "البحث في المجموعة" : "Search collection"}>
+              <div className="relative">
+                <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => { setSearch(event.target.value); setPage(0); }}
+                  placeholder={isArabic ? "ابحث باسم المسلسل..." : "Search your shows..."}
+                  className="h-10 ps-9"
+                  aria-label={isArabic ? "البحث في المسلسلات" : "Search TV Shows"}
+                />
+              </div>
+            </FilterField>
+
+            <FilterField label={isArabic ? "الترتيب حسب" : "Sort by"}>
+              <div className="tvtime-collection-sort-options flex min-h-10 flex-wrap items-center gap-1 rounded-xl border border-border/50 bg-muted/25 p-1">
+                <ArrowUpDown aria-hidden="true" className="ms-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                {TV_SORT_OPTIONS.map(([value, english, arabic]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={sortBy === value}
+                    onClick={() => { setSortBy(value); setPage(0); }}
+                    className={`min-h-8 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                      sortBy === value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {isArabic ? arabic : english}
+                  </button>
+                ))}
+              </div>
+            </FilterField>
+          </FilterGrid>
+        </FilterSection>
       </FilterPanel>
 
-      <div className="tvtime-tracking-layout-toolbar flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/60 px-3 py-2.5">
-        <div>
-          <p className="text-sm font-bold text-foreground">{isArabic ? "طريقة عرض البطاقات" : "Card layout"}</p>
-          <p className="text-xs text-muted-foreground">{isArabic ? "يُحفظ اختيارك تلقائياً" : "Your choice is saved automatically"}</p>
+      <div className="tvtime-mobile-library-toolbar tvtime-mobile-experience-only" role="toolbar" aria-label={isArabic ? "أدوات المكتبة" : "Library tools"}>
+        <div className="tvtime-mobile-library-toolbar__tabs">
+          <button type="button" data-active={filter === "all" ? "true" : "false"} onClick={() => { setFilter("all"); setPage(0); }}>
+            {isArabic ? "الكل" : "All"}
+          </button>
+          <button type="button" data-active={filter === "watchlist" ? "true" : "false"} onClick={() => { setFilter("watchlist"); setPage(0); }}>
+            {isArabic ? "القائمة" : "Watchlist"}
+          </button>
         </div>
-        <div className="flex items-center rounded-xl border border-border/70 bg-background/60 p-1" role="group" aria-label={isArabic ? "طريقة عرض بطاقات المسلسلات" : "TV card layout"}>
-          <Button
-            type="button"
-            size="sm"
-            variant={layout === "list" ? "default" : "ghost"}
-            className="h-10 gap-1.5 rounded-lg px-3"
-            onClick={() => changeLayout("list")}
-            aria-pressed={layout === "list"}
-          >
-            <List className="h-3.5 w-3.5" /> {isArabic ? "قائمة" : "List"}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={layout === "grid" ? "default" : "ghost"}
-            className="h-10 gap-1.5 rounded-lg px-3"
-            onClick={() => changeLayout("grid")}
-            aria-pressed={layout === "grid"}
-          >
-            <Grid2X2 className="h-3.5 w-3.5" /> {isArabic ? "شبكة" : "Grid"}
-          </Button>
+        <Button type="button" variant="outline" className="h-10" onClick={() => window.dispatchEvent(new Event("tvtime:open-filters"))}>
+          <SlidersHorizontal className="h-4 w-4" />
+          {isArabic ? `فلتر${activeFilterCount ? ` · ${activeFilterCount}` : ""}` : `Filters${activeFilterCount ? ` · ${activeFilterCount}` : ""}`}
+        </Button>
+      </div>
+
+      <div className="tvtime-library-results-toolbar">
+        <p className="text-sm text-muted-foreground">
+          {isArabic ? "يُعرض" : "Showing"} <span className="font-bold text-foreground">{items.length}</span> {isArabic ? "من" : "of"} <span className="font-bold text-foreground">{total}</span> {isArabic ? "مسلسلاً" : world === "asian" ? "Asian shows" : "shows"}
+          {filter !== "all" && <> · <span className="font-semibold text-foreground">{activeFilterLabel}</span></>}
+        </p>
+        <div className="flex justify-end gap-1" role="group" aria-label={isArabic ? "طريقة عرض المكتبة" : "Library layout"}>
+          <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="size-10" onClick={() => changeLayout("grid")} aria-pressed={layout === "grid"} title={isArabic ? "شبكة" : "Grid"}><Grid2X2 className="h-4 w-4" /></Button>
+          <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="size-10" onClick={() => changeLayout("list")} aria-pressed={layout === "list"} title={isArabic ? "قائمة" : "List"}><List className="h-4 w-4" /></Button>
         </div>
       </div>
 
@@ -332,6 +326,12 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
             <div key={i} className="shimmer h-[300px] rounded-2xl sm:h-[280px]" />
           ))}
         </div>
+      ) : tracking.isError ? (
+        <ErrorState
+          arabic={isArabic}
+          title={isArabic ? "تعذّر تحميل مكتبتك" : "Couldn’t load your TV collection"}
+          onRetry={() => void tracking.refetch()}
+        />
       ) : items.length === 0 ? (
         <EmptyState
           icon={<Layers className="size-8" />}
@@ -345,6 +345,11 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
             : filter === "all"
               ? (isArabic ? "أضف مسلسلاً عربياً إلى مكتبتك لتبدأ المتابعة" : world === "asian" ? "Follow an Asian TV show to start tracking" : "Follow TV shows to start tracking")
               : (isArabic ? "هذا الفلتر فارغ ضمن كامل مجموعة المسلسلات العربية" : `This filter is empty across your full ${world === "asian" ? "Asian TV" : "TV Shows"} collection`)}
+          action={search.trim() || filter !== "all" || genre ? (
+            <Button type="button" variant="outline" onClick={resetFilters}>{isArabic ? "إعادة الضبط" : "Reset filters"}</Button>
+          ) : onDiscover ? (
+            <Button type="button" onClick={onDiscover}>{isArabic ? "تصفّح" : "Browse"}</Button>
+          ) : undefined}
         />
       ) : (
         <>
@@ -556,14 +561,12 @@ function ShowMetric({ icon: Icon, value, label, compact = false }: { icon: React
 
 // ============ SHARED COMPONENTS ============
 
-function StatCard({ icon, label, value, suffix, color }: { icon: React.ReactNode; label: string; value: number | string; suffix?: string; color: string }) {
+function LibraryStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | string }) {
   return (
-    <Card className={`p-4 relative overflow-hidden bg-gradient-to-br ${color}`}>
-      <div className="relative">
-        <div className="w-9 h-9 rounded-xl bg-background/50 backdrop-blur flex items-center justify-center text-primary mb-2">{icon}</div>
-        <p className="text-2xl font-extrabold">{value}{suffix && value !== "…" && <span className="text-sm text-muted-foreground font-normal">{suffix}</span>}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
+    <Card className="tvtime-library-stat p-2 text-center">
+      <span className="tvtime-library-stat__icon" aria-hidden="true">{icon}</span>
+      <p className="text-lg font-bold text-primary">{value}</p>
+      <p className="text-xs text-muted-foreground leading-tight">{label}</p>
     </Card>
   );
 }
