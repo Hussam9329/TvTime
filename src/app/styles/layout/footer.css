@@ -1,0 +1,149 @@
+/* Application footer and its statistics. */
+
+.tvtime-app-footer {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-color: var(--app-surface-border);
+  background: var(--app-header-background);
+}
+
+.tvtime-footer-mark {
+  box-shadow: 0 9px 22px color-mix(in oklab, var(--primary) 19%, transparent);
+}
+
+.tvtime-footer-stats {
+  padding: 0.28rem;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 0.9rem;
+  background: var(--app-surface-subtle);
+}
+
+.tvtime-footer-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.55rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.tvtime-footer-stat + .tvtime-footer-stat {
+  border-inline-start: 1px solid var(--app-surface-border);
+}
+
+.tvtime-footer-stat dd {
+  color: var(--foreground);
+  font-weight: 800;
+}
+
+@media (max-width: 767px) {
+  .tvtime-app-footer {
+    margin-bottom: 0;
+  }
+
+  .tvtime-footer-inner > div {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 479px) {
+  .tvtime-footer-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+.tvtime-footer-inner {
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+}
+
+@media (min-width: 640px) {
+  .tvtime-footer-inner {
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .tvtime-footer-row {
+    justify-content: center;
+  }
+
+  .tvtime-footer-brand {
+    flex: 1 1 15rem;
+  }
+
+  .tvtime-footer-attribution {
+    flex: 0 0 auto;
+  }
+
+  .tvtime-footer-stats {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 767px) {
+  .tvtime-app-footer {
+    padding-bottom: 0;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  .tvtime-app-footer {
+    padding-bottom: 0;
+  }
+}
+
+@media (max-width: 767px), (hover: none) and (pointer: coarse) {
+  .tvtime-footer-glow {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .tvtime-footer-glow,
+  .tvtime-app::before {
+    display: none;
+  }
+}
+
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  /* Footer becomes intentionally quiet because bottom navigation owns mobile navigation. */
+  .tvtime-app-footer {
+    margin-top: 1rem;
+  }
+
+  .tvtime-footer-inner {
+    padding-block: 0.85rem !important;
+  }
+
+  .tvtime-footer-row {
+    gap: 0.5rem !important;
+  }
+
+  .tvtime-footer-stats,
+  .tvtime-footer-attribution,
+  .tvtime-footer-glow {
+    display: none !important;
+  }
+
+  .tvtime-footer-brand {
+    opacity: 0.68;
+    transform: scale(0.92);
+  }
+}
+
+.tvtime-app .tvtime-footer-row,
+.tvtime-app .tvtime-footer-stats,
+.tvtime-app .tvtime-footer-brand > span {
+  flex-wrap: wrap !important;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tvtime-app .tvtime-footer-stat {
+  min-width: 0;
+  flex-wrap: wrap;
+}

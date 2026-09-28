@@ -1,0 +1,257 @@
+/* Buttons, inputs, selects, tabs, toggles and sliders. */
+
+.tvtime-app [data-slot="button"][data-size="icon"] {
+  aspect-ratio: 1;
+}
+
+.tvtime-app [data-slot="button"]:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
+.tvtime-app [data-slot="button"][data-variant="ghost"] {
+  box-shadow: none;
+}
+
+.tvtime-app [data-slot="button"][data-variant="link"] {
+  min-height: auto;
+  padding-inline: 0.25rem;
+}
+
+.tvtime-app [data-slot="card"]:not(a):not(button) {
+  transition-property: border-color, box-shadow, background-color;
+  transition-duration: 180ms;
+}
+
+.tvtime-app a[data-slot="card"],
+.tvtime-app button[data-slot="card"],
+.tvtime-app [data-slot="card"]:has(> a[aria-label]),
+.tvtime-app [data-slot="card"]:has(> button[aria-label]) {
+  transition-property: transform, border-color, box-shadow, background-color;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-app a[data-slot="card"]:hover,
+  .tvtime-app button[data-slot="card"]:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.tvtime-app :is(a, button, input, textarea, select, [role="button"], [role="tab"]):focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 72%, white 8%);
+  outline-offset: 2px;
+}
+
+@media (prefers-contrast: more) {
+  .tvtime-app :is(a, button, input, textarea, select, [role="button"], [role="tab"]):focus-visible {
+    outline-width: 3px;
+  }
+}
+
+@layer components {
+  .tvtime-app [data-slot="tabs-trigger"] {
+    min-height: 3rem;
+    border-radius: 0.8rem;
+    font-weight: 700;
+    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  [data-ui-action] {
+    font: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 160ms;
+    transition-timing-function: ease-out;
+  }
+
+  [data-ui-action]:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--ring) 72%, transparent);
+    outline-offset: 2px;
+  }
+
+  [data-ui-action]:disabled {
+    cursor: not-allowed;
+    opacity: .5;
+  }
+
+  [data-ui-action="secondary"],
+  [data-ui-action="choice"] {
+    border-color: color-mix(in oklab, var(--border) 82%, transparent);
+  }
+
+  [data-ui-action="primary"] {
+    box-shadow: 0 8px 18px color-mix(in oklab, var(--primary) 18%, transparent);
+  }
+
+  [data-ui-action="danger"],
+  [data-ui-action="danger-icon"],
+  [data-ui-action="danger-link"] {
+    color: color-mix(in oklab, var(--destructive) 88%, white 12%);
+  }
+
+  [data-ui-action="danger-icon"]:hover,
+  [data-ui-action="danger"]:hover {
+    background: color-mix(in oklab, var(--destructive) 14%, transparent);
+    border-color: color-mix(in oklab, var(--destructive) 34%, transparent);
+  }
+
+  [data-ui-action="link"],
+  [data-ui-action="danger-link"] {
+    text-underline-offset: .2em;
+  }
+
+  [data-ui-action="link"]:hover,
+  [data-ui-action="danger-link"]:hover {
+    text-decoration: underline;
+  }
+
+  [data-ui-action="surface"]:focus-visible {
+    border-radius: .75rem;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 22%, transparent);
+  }
+}
+
+@media (max-width: 640px) {
+  [data-ui-action="icon"], [data-ui-action$="-icon"] { min-width: 2.5rem; min-height: 2.5rem; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-app :is([data-slot="card"], [data-ui-surface="card"]):is([role="button"], .cursor-pointer):hover {
+    box-shadow: 0 14px 34px rgb(0 0 0 / .12);
+  }
+}
+
+.group:focus-within [data-ui-action][class*="opacity-0"] {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  [data-ui-action="primary"], [data-ui-action="secondary"] {
+    min-height: 2.5rem;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  [data-ui-action][class*="opacity-0"] { opacity: 1; }
+}
+
+@layer base {
+  :where(button, input, textarea, select) {
+    font: inherit;
+  }
+}
+
+.tvtime-app :is(input, textarea, select, [data-slot="select-trigger"]) {
+  border-color: var(--app-surface-border);
+  background-color: var(--app-surface-strong);
+  box-shadow: inset 0 1px color-mix(in oklab, var(--foreground) 3%, transparent);
+}
+
+.tvtime-app :is(input, textarea, select, [data-slot="select-trigger"]):focus-visible {
+  border-color: color-mix(in oklab, var(--primary) 62%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 18%, transparent);
+}
+
+.tvtime-app [data-slot="button"]:disabled,
+.tvtime-app [data-slot="button"][aria-disabled="true"] {
+  transform: none;
+  box-shadow: none;
+}
+
+.tvtime-app [data-slot="button"] {
+  line-height: 1.2;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tvtime-app :is(
+    [data-slot="button"],
+    [data-slot="tabs-trigger"],
+    [data-slot="select-trigger"],
+    button[data-ui-action]
+  ) {
+    min-height: 2.75rem;
+  }
+
+  .tvtime-app [data-slot="button"][data-size="icon"],
+  .tvtime-app button[data-ui-action="icon"] {
+    min-width: 2.75rem;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-app [data-slot="button"]:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+}
+
+@media (forced-colors: active) {
+  :where(button, [role="button"], a, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 3px;
+  }
+}
+
+.tvtime-app [data-slot="button"][data-variant="ghost"] {
+  box-shadow: none;
+}
+
+.tvtime-app [data-slot="tabs-trigger"][data-state="active"] {
+  border-color: rgb(216 163 76 / 0.34) !important;
+  background: rgb(216 163 76 / 0.12) !important;
+  color: var(--cinema-gold-bright) !important;
+  box-shadow: 0 7px 18px rgb(0 0 0 / 0.2) !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+  [data-slot="slider-thumb"] {
+    position: relative;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  [data-slot="slider-thumb"]::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--tvtime-slider-thumb-visual-size, 1rem);
+    height: var(--tvtime-slider-thumb-visual-size, 1rem);
+    border: 1px solid var(--primary);
+    border-radius: 999px;
+    background: var(--background);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+    content: "";
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  button.tvtime-mobile-experience-only { display: inline-flex !important; }
+}
+
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  /* Range controls are deliberately larger on touch screens. */
+  .tvtime-range-slider {
+    padding-block: 0.6rem;
+  }
+
+  .tvtime-range-slider [data-slot="slider-track"] {
+    height: 0.48rem;
+  }
+
+  .tvtime-range-slider [data-slot="slider-thumb"] {
+    width: 1.35rem;
+    height: 1.35rem;
+    border-width: 2px;
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 9%, transparent);
+  }
+
+  .tvtime-range-slider { padding-top: 1.75rem; }
+}

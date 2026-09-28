@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { readStyles } from "./lib/read-styles.mjs";
 
 const root = process.cwd();
 const failures = [];
@@ -9,7 +10,7 @@ const requireCheck = (condition, message) => {
   if (!condition) failures.push(message);
 };
 
-const css = read("src/app/globals.css");
+const css = readStyles();
 const layout = read("src/app/layout.tsx");
 const shell = read("src/components/app-shell.tsx");
 const header = read("src/components/layout/header.tsx");
@@ -24,8 +25,8 @@ const viewMetadata = read("src/lib/view-metadata.ts");
 const manifest = JSON.parse(read("public/manifest.webmanifest"));
 const pkg = JSON.parse(read("package.json"));
 const verifyAll = read("scripts/verify-all.mjs");
-const patchPlan = read("PATCH_PLAN.md");
-const patchNotes = read("PATCH_11.md");
+const patchPlan = read("docs/history/PATCH_PLAN.md");
+const patchNotes = read("docs/history/PATCH_11.md");
 const readme = read("README.md");
 
 requireCheck(!css.includes("TVTime Ultra"), "legacy dark-only Ultra overrides remain in globals.css");

@@ -1,0 +1,77 @@
+/* Notification center. */
+
+@layer components {
+  .tvtime-notification-center { overscroll-behavior: contain; }
+
+  .tvtime-notification-backdrop { animation: tvtime-fade-in 160ms ease-out both; }
+
+  .tvtime-notification-panel {
+    isolation: isolate;
+    max-width: min(92vw, 28rem);
+    background: color-mix(in oklab, var(--card) 95%, transparent);
+    box-shadow: 20px 0 60px rgb(0 0 0 / 0.34);
+    animation: tvtime-notification-enter 190ms cubic-bezier(.2,.8,.2,1) both;
+    overscroll-behavior: contain;
+  }
+
+  .tvtime-notification-header {
+    min-height: 4.5rem;
+    background: color-mix(in oklab, var(--card) 92%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .tvtime-notification-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-inline: contain;
+  }
+
+  .tvtime-notification-tab { min-height: 2.25rem; white-space: nowrap; }
+
+  .tvtime-notification-tab[aria-pressed="true"] {
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 32%, transparent);
+  }
+
+  .tvtime-notification-actions { flex-wrap: wrap; row-gap: .4rem; }
+
+  .tvtime-notification-list {
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+  }
+
+  .tvtime-notification-item { min-height: 5.25rem; }
+
+  .tvtime-notification-item:focus-within {
+    background: color-mix(in oklab, var(--accent) 72%, transparent);
+    outline: 2px solid color-mix(in oklab, var(--primary) 48%, transparent);
+    outline-offset: -2px;
+  }
+
+  .tvtime-notification-icon-button { min-width: 2.25rem; min-height: 2.25rem; }
+}
+
+@media (max-width: 640px) {
+  .tvtime-notification-panel { max-width: 100%; border-left-width: 0; }
+
+  .tvtime-notification-header { padding-inline: 1rem; }
+
+  .tvtime-notification-tabs, .tvtime-notification-actions { padding-inline: .75rem; }
+
+  .tvtime-notification-item { padding-inline: .75rem; }
+
+  .tvtime-notification-item .tvtime-notification-icon-button { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tvtime-notification-backdrop, .tvtime-notification-panel { animation: none !important; }
+}
+
+/* Full-screen custom surfaces stay inside notches and home indicators. */
+.tvtime-notification-center {
+  box-sizing: border-box;
+  padding:
+    env(safe-area-inset-top, 0px)
+    env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
+}

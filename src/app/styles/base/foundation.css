@@ -1,0 +1,113 @@
+/* Element defaults: html, body, focus, selection and typography baseline. */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at 15% 0%, oklch(0.62 0.23 16 / 0.08), transparent 40%),
+      radial-gradient(circle at 85% 5%, oklch(0.6 0.18 320 / 0.06), transparent 35%);
+    background-attachment: fixed;
+  }
+}
+
+/* Patch 11 — theme-aware UI foundation.
+   This final layer deliberately uses semantic tokens so light/dark themes,
+   shared components, Arabic content and portal surfaces stay consistent. */
+:root {
+  color-scheme: dark;
+  --font-arabic: "Noto Sans Arabic", "Noto Kufi Arabic", Tahoma, Arial, sans-serif;
+  --app-surface: color-mix(in oklab, var(--card) 90%, transparent);
+  --app-surface-strong: color-mix(in oklab, var(--card) 96%, var(--background));
+  --app-surface-subtle: color-mix(in oklab, var(--muted) 72%, transparent);
+  --app-surface-border: color-mix(in oklab, var(--border) 88%, transparent);
+  --app-elevated-border: color-mix(in oklab, var(--primary) 22%, var(--border));
+  --app-header-background: color-mix(in oklab, var(--background) 84%, transparent);
+  --app-page-background:
+    radial-gradient(circle at 12% 0%, color-mix(in oklab, var(--primary) 8%, transparent), transparent 36rem),
+    radial-gradient(circle at 88% 100%, color-mix(in oklab, var(--chart-2) 6%, transparent), transparent 42rem),
+    var(--background);
+  --app-hero-background:
+    radial-gradient(circle at 8% 0%, color-mix(in oklab, var(--primary) 13%, transparent), transparent 38%),
+    linear-gradient(135deg, color-mix(in oklab, var(--card) 92%, transparent), color-mix(in oklab, var(--background) 88%, var(--card)));
+  --app-shadow-sm: 0 6px 18px rgb(0 0 0 / 0.14);
+  --app-shadow-md: 0 14px 38px rgb(0 0 0 / 0.2);
+  --app-shadow-lg: 0 28px 72px rgb(0 0 0 / 0.28);
+  --app-skeleton-base: color-mix(in oklab, var(--muted) 86%, var(--background));
+  --app-skeleton-highlight: color-mix(in oklab, var(--foreground) 7%, var(--app-skeleton-base));
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+  scrollbar-gutter: stable;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: clip;
+  background: var(--app-page-background);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 32%, transparent);
+  color: var(--foreground);
+}
+
+@media (max-width: 640px) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+body {
+  background-color: var(--background);
+  background-image: var(--app-page-background);
+  background-repeat: no-repeat;
+}
+
+body {
+  background-color: var(--background);
+  background-image: var(--app-page-background) !important;
+}
+
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  html, body { overscroll-behavior-y: none; }
+}
+
+:root body {
+  background-color: var(--audit-color-background);
+  background-image: none !important;
+}
+
+/* Portalled dialogs stay inside the viewport, including short landscape.
+   Headers and footers flow naturally at high zoom rather than covering fields. */
+:root :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+  min-width: 0;
+  max-width: calc(100vw - 2rem) !important;
+  max-height: calc(100dvh - 2rem) !important;
+  overflow-wrap: anywhere;
+}
+
+:root :is([data-slot="dialog-header"], [data-slot="dialog-footer"], [data-slot="alert-dialog-header"], [data-slot="alert-dialog-footer"]) {
+  position: static !important;
+  min-width: 0;
+}
+
+:root :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="sheet-content"]) [data-slot="button"] {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

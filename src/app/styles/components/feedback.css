@@ -1,0 +1,62 @@
+/* Loading, empty and error states. */
+
+/* Unified loading, empty, and error feedback surfaces. */
+.feedback-state {
+  width: 100%;
+  min-height: 15rem;
+  border: 1px solid color-mix(in oklab, var(--border) 82%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+}
+
+.feedback-state__icon {
+  border: 1px solid color-mix(in oklab, var(--border) 75%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+.feedback-state--loading {
+  padding-inline: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.feedback-state--error {
+  border-color: color-mix(in oklab, var(--destructive) 30%, var(--border));
+}
+
+.feedback-state--empty {
+  border-style: dashed;
+}
+
+@media (max-width: 640px) {
+  .feedback-state {
+    min-height: 12rem;
+    border-radius: 0.875rem;
+  }
+}
+
+/* UIUX QA 12: complete the shared loading, empty, and error language. */
+.feedback-skeleton {
+  pointer-events: none;
+  box-shadow: none !important;
+}
+
+.feedback-state--compact {
+  min-height: 6.25rem;
+  border-style: solid;
+}
+
+.feedback-state__spinner {
+  flex: 0 0 auto;
+  color: color-mix(in oklab, var(--primary) 72%, var(--muted-foreground));
+}
+
+.feedback-state[role="alert"] { color: var(--foreground); }
+
+.feedback-state[aria-busy="true"] { cursor: progress; }
+
+@media (max-width: 640px) {
+  .feedback-state--compact { min-height: 5.5rem; }
+}
+
+.feedback-state--loading {
+  color: var(--muted-foreground);
+}

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { readStyles } from "./lib/read-styles.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
-const styles = read("src/app/globals.css");
+const styles = readStyles();
 const row = read("src/components/media/media-row.tsx");
 const anime = read("src/components/views/anime-hub-overview.tsx");
 const movieHub = read("src/components/views/movie-hub-view.tsx");

@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { relative, resolve } from "node:path";
+import { LATE_LAYERS, readStyles } from "./lib/read-styles.mjs";
 
 const root = process.cwd();
 const require = createRequire(import.meta.url);
@@ -47,7 +48,9 @@ const compactScoreCorner = read("src/components/media/compact-score-corner.tsx")
 const watchedIndicator = read("src/components/media/watched-indicator.tsx");
 const tmdbIndicator = read("src/components/media/tmdb-score-indicator.tsx");
 const watchlistIndicator = read("src/components/media/watchlist-indicator.tsx");
-const globalStyles = read("src/app/globals.css");
+const globalStyles = readStyles();
+// The former globals.css only, without the late layers that were separate files.
+const coreStyles = readStyles("src/app/globals.css", { skip: LATE_LAYERS });
 const tvTrackingView = read("src/components/views/tv-tracking-view.tsx");
 const movieDetailView = read("src/components/views/movie-detail-view.tsx");
 const tvDetailView = read("src/components/views/tv-detail-view.tsx");
@@ -328,7 +331,7 @@ check(
     && /\.tvtime-movie-hub \.tvtime-release-schedule__window-controls\s*\{[\s\S]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/.test(globalStyles)
     && /\.tvtime-movie-hub__tonight,[\s\S]*\.tvtime-media-row,[\s\S]*\.tvtime-media-row-viewport\s*\{[\s\S]*width: 100%;[\s\S]*max-width: 100%;[\s\S]*min-width: 0;/.test(globalStyles)
     && /tvtime-media-row-scroller no-scrollbar flex overflow-x-auto scroll-smooth/.test(mediaRow)
-    && !/\.tvtime-movie-hub \.tvtime-media-row-scroller\s*\{/.test(globalStyles)
+    && !/\.tvtime-movie-hub \.tvtime-media-row-scroller\s*\{/.test(coreStyles)
     && /tvtime-home-hero__carousel-controls/.test(movieHubView)
     && /tvtime-home-hero__carousel-dot/.test(movieHubView)
     && !/tvtime-movie-hub-hero__controls/.test(movieHubView)
@@ -373,7 +376,7 @@ check(
     && !/Welcome back/.test(statsView),
   "Large duplicate page-identification banners stay removed from catalogue and utility views",
 );
-const profileStyles = read("src/app/media-profile.css");
+const profileStyles = read("src/app/styles/pages/media-profile.css");
 check(
   [movieDetailView, tvDetailView].every((source) =>
     /className="mp-actions">[\s\S]*?<OfficialPosterPicker/.test(source)

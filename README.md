@@ -60,7 +60,7 @@ Items can be moved between worlds via the `Move to Anime` / `To Movies` / `To TV
 - **Provider**: PostgreSQL (Neon)
 - **DATABASE_URL**: Set in Vercel environment variables (must be `postgresql://...`)
 - **Reviewed migrations only**: destructive `db push`/`reset` commands remain blocked. Production schema changes are delivered as reviewed Prisma migrations.
-- **Migration deployment**: new databases are built completely from `prisma/migrations`; existing db-push installations must follow `MIGRATION_BASELINE.md` on a verified clone before the baseline is recorded. Run `npm run db:migrate:status`, take a verified backup, then run `npm run db:migrate:deploy` in the approved maintenance window.
+- **Migration deployment**: new databases are built completely from `prisma/migrations`; existing db-push installations must follow `docs/MIGRATION_BASELINE.md` on a verified clone before the baseline is recorded. Run `npm run db:migrate:status`, take a verified backup, then run `npm run db:migrate:deploy` in the approved maintenance window.
 
 ### Safe read-only database audit
 
@@ -114,7 +114,7 @@ Changes to these files require explicit review and must be delivered with verifi
 | `scripts/assert-production-db.mjs` | PostgreSQL build guard |
 | `scripts/verify-required-schema.mjs` | Read-only schema, migration and RLS compatibility guard |
 | `scripts/verify-migration-history.mjs` | Static coverage guard for every Prisma model |
-| `MIGRATION_BASELINE.md` | Existing-database baseline reconciliation runbook |
+| `docs/MIGRATION_BASELINE.md` | Existing-database baseline reconciliation runbook |
 | `next.config.ts` | Next.js runtime/build configuration |
 
 ## Development
@@ -176,7 +176,7 @@ Run the focused gate with:
 npm run verify:patch-11
 ```
 
-See `PATCH_11.md` for scope, acceptance criteria and rollback details.
+See `docs/history/PATCH_11.md` for scope, acceptance criteria and rollback details.
 
 ### Database Verification (Read-Only)
 
@@ -191,7 +191,7 @@ npm run db:verify:readonly
 # Counts rows in the canonical/legacy tables without modifying anything
 ```
 
-For a database that predates the baseline, read `MIGRATION_BASELINE.md` before running any migration command.
+For a database that predates the baseline, read `docs/MIGRATION_BASELINE.md` before running any migration command.
 
 ## API Overview
 
@@ -304,7 +304,7 @@ npm run verify:patch-10
 ## Deployment (Vercel)
 
 1. Push to GitHub `main` branch
-2. For an existing db-push database, complete the clone procedure in `MIGRATION_BASELINE.md`. Before every deployment containing a migration, run `npm run db:migrate:status`, take a verified backup, and run `npm run db:migrate:deploy` from an approved maintenance environment.
+2. For an existing db-push database, complete the clone procedure in `docs/MIGRATION_BASELINE.md`. Before every deployment containing a migration, run `npm run db:migrate:status`, take a verified backup, and run `npm run db:migrate:deploy` from an approved maintenance environment.
 3. GitHub runs strict ESLint, TypeScript and maintained behavior suites as independent jobs. The migration workflow also performs a production build against an empty migrated PostgreSQL database. Vercel auto-deploys only after those required checks and the migration are ready.
 4. Environment variables:
    - `DATABASE_URL` — PostgreSQL connection string (must be `postgresql://`)

@@ -1,0 +1,161 @@
+/* Library / collection and TV tracking views. */
+
+.tvtime-tv-tracking-page [class*="overflow-x-auto"] { scrollbar-gutter: stable; }
+
+.tvtime-tv-tracking-page [data-slot="card"] { scroll-margin-top: 6rem; }
+
+.tvtime-tv-tracking-page [class*="grid"], .tvtime-collection-world-page [class*="grid"] { align-items: stretch; }
+
+.tvtime-collection-world-page [data-slot="card"] { min-width: 0; height: 100%; }
+
+@media (max-width: 640px) {
+  .tvtime-tv-tracking-page { gap: 1rem; }
+}
+
+/* Movie detail: one stable hierarchy instead of independently wrapping
+   poster, metadata, actions and scores. */
+.tvtime-tracking-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.tvtime-tracking-status-option {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 3rem;
+  grid-template-columns: 1.55rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.48rem 0.58rem;
+  border-width: 1px;
+  border-radius: 0.85rem;
+  text-align: left;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.tvtime-tracking-status-option__icon {
+  display: grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border-radius: 0.55rem;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.tvtime-tracking-status-option__icon svg {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
+.tvtime-tracking-status-option[data-active="true"] {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 767px) {
+  .tvtime-tracking-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .tvtime-tracking-status-option {
+    min-height: 2.75rem;
+    grid-template-columns: 1.4rem minmax(0, 1fr) auto;
+    gap: 0.4rem;
+    padding: 0.4rem 0.45rem;
+    border-radius: 0.75rem;
+  }
+
+  .tvtime-tracking-status-option__icon {
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 0.48rem;
+  }
+
+  .tvtime-tracking-status-option__label {
+    font-size: 0.75rem;
+  }
+
+  .tvtime-tracking-status-option__count {
+    min-width: 1.45rem;
+    height: 1.25rem;
+    padding-inline: 0.25rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  .tvtime-pull-refresh,
+  .tvtime-mobile-library-toolbar { display: flex !important; }
+}
+
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  /* Always-available compact controls after the large library header scrolls away. */
+  .tvtime-mobile-library-toolbar {
+    position: sticky;
+    z-index: 32;
+    top: calc(4.15rem + env(safe-area-inset-top, 0px));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.42rem;
+    border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--background) 87%, transparent);
+    box-shadow: 0 10px 28px rgb(0 0 0 / 0.14);
+    backdrop-filter: blur(20px) saturate(145%);
+  }
+
+  .tvtime-mobile-library-toolbar__tabs {
+    display: grid;
+    min-width: 0;
+    flex: 1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+
+  .tvtime-mobile-library-toolbar__tabs button {
+    min-height: 2.25rem;
+    min-width: 0;
+    border-radius: 0.75rem;
+    padding-inline: 0.55rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .tvtime-mobile-library-toolbar__tabs button[data-active="true"] {
+    background: color-mix(in oklab, var(--primary) 14%, transparent);
+    color: var(--foreground);
+  }
+}
+
+@media (max-width: 359px) {
+  .tvtime-collection-world-page {
+    --app-section-gap: 0.8rem;
+  }
+
+  .tvtime-mobile-library-toolbar {
+    padding: 0.32rem;
+    border-radius: 0.85rem;
+  }
+
+  .tvtime-mobile-library-toolbar__tabs button {
+    font-size: 0.75rem;
+  }
+}
+
+.tvtime-genre-distribution-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 0.8fr);
+}
+
+@media (max-width: 479px) {
+  .tvtime-genre-distribution-row { grid-template-columns: minmax(0, 1fr) auto; }
+
+  .tvtime-genre-distribution-row > div { grid-row: 2; grid-column: 1 / -1; }
+}

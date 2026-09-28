@@ -148,13 +148,6 @@ export function useHomeFeed() {
   });
 }
 
-export function useOnTheAirTv(page = 1) {
-  return useQuery({
-    queryKey: ["tmdb", "tv", "on-the-air", page],
-    queryFn: () => tmdbGet<PaginatedResponse<MediaItem>>("tv/on-the-air", { page }),
-  });
-}
-
 export function useMovieGenres(language?: "ar" | "ja" | "en-US") {
   return useQuery({
     queryKey: ["tmdb", "movies", "genres", language || "default"],

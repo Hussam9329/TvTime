@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
+import { readStyles } from "./lib/read-styles.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
 const counts = read("src/lib/library-counts.ts");
 const home = read("src/components/views/home-view.tsx");
-const css = read("src/app/globals.css");
+const css = readStyles();
 
 const checks = [
   [/const movieWatchlistAll = count\(\(entry\) => entry\.item\.type === "movie" && isPlanned\(entry\)\)/, "All-world movie watchlist counter is missing"],

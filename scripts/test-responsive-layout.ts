@@ -1,16 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readStyles } from "./lib/read-styles.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const read = (relativePath: string) => readFileSync(`${root}${relativePath}`, "utf8");
 
-const css = read("src/app/globals.css");
-const responsiveMarker = "/* TVTIME responsive hardening:";
-const responsiveStart = css.indexOf(responsiveMarker);
-
-assert.notEqual(responsiveStart, -1, "The final responsive hardening layer must exist");
-const responsiveCss = css.slice(responsiveStart);
+const css = readStyles();
+// The stylesheet is split into topic partials (see src/app/styles/README.md);
+// responsive guarantees are checked across the whole cascade.
+const responsiveCss = css;
 
 const layout = read("src/app/layout.tsx");
 assert.match(layout, /viewportFit:\s*"cover"/, "Standalone mode must opt into safe-area viewport coverage");
@@ -82,7 +81,7 @@ assert.match(
 );
 
 const tvDetail = read("src/components/views/tv-detail-view.tsx");
-const profileCss = read("src/app/media-profile.css");
+const profileCss = read("src/app/styles/pages/media-profile.css");
 assert.match(tvDetail, /mp-tabs[^"\n]*justify-start[^"\n]*overflow-x-auto/);
 assert.match(
   profileCss,

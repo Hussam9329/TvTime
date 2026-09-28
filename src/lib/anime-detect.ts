@@ -93,21 +93,3 @@ function normalizeGenres(genres: Array<string | number | { id?: number; name: st
   }
   return [];
 }
-
-export function isAnimeMediaItem(item: {
-  title?: string;
-  name?: string;
-  original_title?: string;
-  original_name?: string;
-  original_language?: string;
-  origin_country?: string[];
-  genre_ids?: number[];
-  genres?: Array<string | number | { id?: number; name: string }>;
-}): boolean {
-  return detectIsAnime({
-    title: item.title || item.name || item.original_title || item.original_name,
-    originalLanguage: item.original_language,
-    originCountry: item.origin_country,
-    genres: item.genre_ids ?? item.genres,
-  });
-}

@@ -24,9 +24,3 @@ export function standardMediaCountryPriority(item: StandardMediaPriorityInput) {
   if (String(item.originalLanguage || item.original_language || "").toLowerCase().split("-")[0] === "en") return 6;
   return 7;
 }
-
-export function sortByStandardMediaPriority<T extends StandardMediaPriorityInput>(items: readonly T[]): T[] {
-  return [...items].sort(
-    (left, right) => standardMediaCountryPriority(left) - standardMediaCountryPriority(right),
-  );
-}
