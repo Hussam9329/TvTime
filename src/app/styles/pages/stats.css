@@ -1,0 +1,10 @@
+/* Statistics. */
+
+/* TVTIME UIUX 29–34: supporting page layouts. */
+.tvtime-stats-page > .grid { align-items: stretch; }
+
+.tvtime-stats-page [data-slot="card"] > * { min-width: 0; }
+
+.tvtime-stats-page {
+  --page-accent: var(--chart-5);
+}

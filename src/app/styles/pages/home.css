@@ -1,0 +1,752 @@
+/* Home: stage hero, collection overview, Recently Watched. */
+
+@layer components {
+  .tvtime-home-view { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .tvtime-home-view > * { min-width: 0; }
+
+  .tvtime-home-view section, .tvtime-home-view [data-section] { scroll-margin-top: 6rem; }
+
+  .tvtime-home-view a[href]:has(svg) { white-space: nowrap; }
+}
+
+@media (max-width: 767px) {
+  .tvtime-home-view { gap: 1.1rem; }
+
+  .tvtime-home-view > :first-child { gap: 0.75rem; }
+}
+
+/* Home keeps a cinematic identity without forcing dark mode or oversized spacing. */
+.tvtime-home-view {
+  position: relative;
+  isolation: isolate;
+  min-height: auto;
+  padding: clamp(0.25rem, 1vw, 1rem);
+  border: 1px solid var(--app-surface-border);
+  border-radius: clamp(1rem, 2vw, 1.5rem);
+  background: var(--app-hero-background);
+}
+
+@media (max-width: 640px) {
+  .tvtime-home-view {
+    padding: 0.5rem;
+    border-radius: 1rem;
+  }
+}
+
+/* Home: premium editorial hero and grouped library overview */
+.tvtime-home-view {
+  display: flex;
+  min-height: auto;
+  flex-direction: column;
+  gap: var(--app-section-gap);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tvtime-home-view > * {
+  margin-block: 0 !important;
+}
+
+.tvtime-home-hero {
+  min-height: clamp(27rem, 48vw, 35rem);
+  touch-action: pan-y;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: var(--app-radius-hero);
+  background: #070b14;
+  box-shadow: var(--app-shadow-lg), inset 0 1px rgb(255 255 255 / 0.1);
+}
+
+.tvtime-home-hero__carousel-controls {
+  position: absolute;
+  top: clamp(1rem, 2vw, 1.5rem);
+  right: clamp(1rem, 2vw, 1.5rem);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+  background: rgb(7 11 20 / 0.58);
+  box-shadow: 0 12px 34px rgb(0 0 0 / 0.28), inset 0 1px rgb(255 255 255 / 0.08);
+  direction: ltr;
+  backdrop-filter: blur(14px);
+}
+
+.tvtime-home-hero__carousel-arrow {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  color: rgb(255 255 255 / 0.78);
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.tvtime-home-hero__carousel-arrow:hover {
+  background: rgb(255 255 255 / 0.16);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.tvtime-home-hero__carousel-arrow:focus-visible,
+.tvtime-home-hero__carousel-dot:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 82%, white);
+  outline-offset: 2px;
+}
+
+.tvtime-home-hero__carousel-arrow svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.tvtime-home-hero__carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tvtime-home-hero__carousel-dot {
+  position: relative;
+  width: 0.45rem;
+  height: 0.45rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.34);
+  transition: width 220ms ease, background-color 220ms ease;
+}
+
+.tvtime-home-hero__carousel-dot[data-active="true"] {
+  width: 1.7rem;
+  background: rgb(255 255 255 / 0.22);
+}
+
+.tvtime-home-hero__carousel-dot[data-active="true"]::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--primary) 82%, white);
+  content: "";
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: tvtime-hero-slide-progress var(--tvtime-carousel-duration, 7s) linear forwards;
+  animation-play-state: var(--tvtime-carousel-play-state, running);
+}
+
+.tvtime-library-overview {
+  padding: clamp(1.1rem, 2.2vw, 1.65rem);
+  border: 1px solid var(--app-surface-border);
+  border-radius: var(--app-radius-card);
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--primary) 5%, transparent), transparent 42%),
+    var(--app-surface);
+  box-shadow: var(--app-shadow-sm), inset 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+.tvtime-library-overview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.tvtime-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.tvtime-quick-stat {
+  display: flex;
+  min-width: 0;
+  min-height: 5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem;
+  border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--card) 78%, transparent);
+  color: var(--foreground);
+  text-align: start;
+  box-shadow: inset 0 1px color-mix(in oklab, var(--foreground) 4%, transparent);
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.tvtime-quick-stat__icon {
+  display: inline-flex;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.85rem;
+  background: color-mix(in oklab, var(--primary) 11%, var(--muted));
+  color: var(--primary);
+}
+
+.tvtime-quick-stat__icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.tvtime-quick-stat__label {
+  display: block;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tvtime-quick-stat__value {
+  display: block;
+  margin-top: 0.18rem;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.tvtime-quick-stat__value > span {
+  margin-inline-start: 0.16rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.tvtime-quick-stat__arrow {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+  opacity: 0.42;
+  transition: color 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+/* Discover and release catalogues retain Home's deliberate poster width
+   instead of stretching cards to fill every available grid column. */
+.tvtime-home-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(8.75rem, 100%), 10rem));
+  justify-content: start;
+  gap: 0.78rem;
+}
+
+@media (min-width: 768px) {
+  .tvtime-home-media-grid {
+    grid-template-columns: repeat(auto-fill, clamp(9.4rem, 12vw, 11.25rem));
+    gap: 0.95rem;
+  }
+}
+
+@media (max-width: 319px) {
+  .tvtime-home-media-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Recently watched follows the shared poster language and inherits its width from the component sizing contract. */
+.tvtime-recent-card {
+  scroll-snap-align: start;
+}
+
+.tvtime-recent-poster {
+  border: 1px solid color-mix(in oklab, var(--border) 94%, transparent);
+  border-radius: 1.1rem;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.22);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tvtime-quick-stat:hover {
+    border-color: color-mix(in oklab, var(--primary) 28%, var(--border));
+    background: color-mix(in oklab, var(--primary) 5%, var(--card));
+    box-shadow: 0 12px 28px color-mix(in oklab, var(--primary) 8%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .tvtime-quick-stat:hover .tvtime-quick-stat__arrow {
+    color: var(--primary);
+    opacity: 1;
+    transform: translateX(0.15rem);
+  }
+
+  [dir="rtl"] .tvtime-quick-stat:hover .tvtime-quick-stat__arrow {
+    transform: translateX(-0.15rem) rotate(180deg);
+  }
+}
+
+@media (max-width: 1023px) {
+  .tvtime-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tvtime-library-overview__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 767px) {
+  .tvtime-home-view {
+    gap: 1.65rem;
+  }
+
+  .tvtime-home-hero {
+    min-height: 30rem;
+    border-radius: 1.45rem;
+  }
+
+  .tvtime-home-hero__carousel-controls {
+    top: 0.85rem;
+    right: 0.85rem;
+  }
+
+  .tvtime-library-overview {
+    padding: 1rem;
+    border-radius: 1.2rem;
+  }
+
+  .tvtime-stat-grid {
+    display: grid;
+    grid-auto-columns: minmax(11.75rem, 72vw);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    margin-inline: -0.25rem;
+    padding: 0.2rem 0.25rem 0.45rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Horizontal stat chips are narrow; let labels wrap to two lines instead of
+       truncating library names like "All Movie Watchlists" into ellipses. */
+  .tvtime-quick-stat__label {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.3;
+    white-space: normal;
+  }
+
+  .tvtime-recent-card {
+    width: clamp(7.8rem, 35vw, 8.8rem);
+  }
+}
+
+@media (max-width: 479px) {
+  .tvtime-home-hero__carousel-controls {
+    top: 0.7rem;
+    right: 0.7rem;
+    gap: 0;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .tvtime-home-hero__carousel-arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 479px) {
+  /* Keep the spotlight pagination compact on touch screens. The global 44px
+       touch-target rule otherwise turns every visual dot into a large circle. */
+  .tvtime-home-hero__carousel-dots {
+    gap: 0.32rem;
+  }
+
+  .tvtime-home-hero__carousel-dot {
+    width: 0.42rem !important;
+    min-width: 0 !important;
+    height: 0.42rem !important;
+    min-height: 0 !important;
+  }
+
+  .tvtime-home-hero__carousel-dot[data-active="true"] {
+    width: 1.35rem !important;
+  }
+
+  .tvtime-library-overview__header > div:first-child p:last-child {
+    display: none;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tvtime-quick-stat__arrow {
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tvtime-home-hero__carousel-dot[data-active="true"]::after {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
+/* Feature, detail and utility pages */
+.tvtime-home-hero {
+  border-color: var(--cinema-line-strong) !important;
+  border-radius: var(--app-radius-hero);
+  background: #070706;
+  box-shadow:
+    var(--app-shadow-lg),
+    0 0 24px rgb(216 163 76 / 0.055),
+    inset 0 1px rgb(240 189 99 / 0.08) !important;
+}
+
+.tvtime-home-hero__carousel-controls,
+.tvtime-row-controls,
+.tvtime-section-heading__icon,
+.tvtime-quick-stat {
+  border-color: var(--cinema-line) !important;
+  background: rgb(13 12 9 / 0.75) !important;
+  box-shadow: inset 0 1px rgb(240 189 99 / 0.045) !important;
+}
+
+.tvtime-home-hero,
+.tvtime-movie-hub-hero {
+  touch-action: pan-y pinch-zoom;
+}
+
+/* Carousel controls keep a full-size target on desktop, tablets in landscape,
+   and coarse pointers above the phone breakpoint. The pseudo-elements retain
+   the compact visual treatment while the button owns the 44px hit area. */
+.tvtime-home-hero__carousel-controls {
+  max-width: calc(100% - 1.4rem);
+  padding: 0.2rem;
+}
+
+.tvtime-home-hero__carousel-arrow {
+  display: grid !important;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+
+.tvtime-home-hero__carousel-dots {
+  max-width: min(17rem, calc(100vw - 3rem));
+  gap: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+
+.tvtime-home-hero__carousel-dot,
+.tvtime-home-hero__carousel-dot[data-active="true"] {
+  position: relative;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  flex: 0 0 44px;
+  overflow: visible;
+  background: transparent;
+}
+
+.tvtime-home-hero__carousel-dot::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.4);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.tvtime-home-hero__carousel-dot[data-active="true"]::before {
+  width: 1.5rem;
+  height: 0.375rem;
+  background: rgb(255 255 255 / 0.22);
+}
+
+.tvtime-home-hero__carousel-dot[data-active="true"]::after {
+  inset: auto;
+  top: 19px;
+  left: 10px;
+  width: 24px;
+  height: 6px;
+}
+
+@media (max-width: 767px) {
+  /* Preserve the tabs' intrinsic labels and make overflow reachable. */
+  /* Every carousel affordance gets a 44px hit area. The visible dot remains
+       compact, but it is no longer the hit target itself. */
+  .tvtime-home-hero__carousel-controls {
+    max-width: calc(100% - 1.4rem);
+    padding: 0.2rem;
+  }
+
+  .tvtime-home-hero__carousel-arrow {
+    display: grid !important;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .tvtime-home-hero__carousel-dots {
+    max-width: min(17rem, calc(100vw - 3rem));
+    gap: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .tvtime-home-hero__carousel-dot,
+  .tvtime-home-hero__carousel-dot[data-active="true"] {
+    position: relative;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    flex: 0 0 44px;
+    overflow: visible;
+    background: transparent;
+  }
+
+  .tvtime-home-hero__carousel-dot::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.4);
+    content: "";
+    transform: translate(-50%, -50%);
+  }
+
+  .tvtime-home-hero__carousel-dot[data-active="true"]::before {
+    width: 1.5rem;
+    height: 0.375rem;
+    background: rgb(255 255 255 / 0.22);
+  }
+
+  .tvtime-home-hero__carousel-dot[data-active="true"]::after {
+    inset: auto;
+    top: 19px;
+    left: 10px;
+    width: 24px;
+    height: 6px;
+    animation-duration: var(--tvtime-carousel-duration, 7s);
+    animation-play-state: var(--tvtime-carousel-play-state, running);
+  }
+}
+
+@media (max-width: 479px) {
+  /* Override the old tiny-dot exception while retaining the 44px hit area. */
+  .tvtime-home-hero__carousel-dot,
+  .tvtime-home-hero__carousel-dot[data-active="true"] {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  .tvtime-home-hero,
+  .tvtime-movie-hub-hero,
+  .tvtime-movie-hub-hero__content,
+  .tvtime-watch-featured,
+  .tvtime-watch-skeleton__featured {
+    min-height: clamp(17.5rem, calc(100dvh - 4.5rem), 24rem) !important;
+  }
+}
+
+@media (max-width: 767px), (hover: none) and (pointer: coarse) {
+  .tvtime-home-hero {
+    box-shadow: var(--app-shadow-md), inset 0 1px rgb(240 189 99 / 0.06) !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .tvtime-home-media-grid {
+    gap: 0.65rem;
+  }
+
+  .tvtime-media-row-scroller,
+  .tvtime-recent-scroller {
+    gap: 0.72rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 480px) {
+  .tvtime-home-hero,
+  .tvtime-movie-hub-hero {
+    min-height: 15rem;
+  }
+}
+
+/* Posters remain image-first, with neutral elevation and gold only on hover. */
+:root :is(.tvtime-media-poster, .tvtime-home-hero__poster, .tvtime-movie-detail-hero__poster > [data-slot="card"], .tvtime-tv-detail-hero__poster > [data-slot="card"]) {
+  border-color: var(--cinema-line-strong) !important;
+  background: var(--audit-color-background) !important;
+  box-shadow: var(--audit-shadow-4) !important;
+}
+
+:root .tvtime-home-hero {
+  border-color: var(--cinema-line-strong) !important;
+  background: var(--audit-color-background);
+  box-shadow: var(--audit-shadow-5) !important;
+}
+
+:root :is(.tvtime-home-hero__carousel-controls, .tvtime-row-controls, .tvtime-section-heading__icon, .tvtime-quick-stat) {
+  border-color: var(--cinema-line) !important;
+  background: var(--audit-color-panel-translucent) !important;
+  box-shadow: var(--audit-shadow-1) !important;
+}
+
+@media (max-width: 380px) {
+  .tvtime-app .tvtime-media-row-scroller,
+  .tvtime-app .tvtime-recent-scroller {
+    gap: 0.72rem;
+  }
+}
+
+/* Patch 19 — Remove Year Badges + Recently Watched Poster Sync.
+   Year badges are removed from every Patch 18 poster. Home's Recently Watched
+   cards now reuse the same poster-only visual contract and type-aware hover;
+   only the viewing date remains as a quiet centered caption below the poster. */
+.tvtime-app .tvtime-recent-card {
+  scroll-snap-align: start;
+  overflow: visible;
+}
+
+/* The full-card invisible link stays usable, but keyboard focus is expressed
+   on the poster itself so the date caption remains visually independent. */
+.tvtime-app .tvtime-recent-card:focus-within .tvtime-recent-poster {
+  outline: none;
+}
+
+/* ── Home: collection overview and section headings ────────────────────────
+   Four primary totals in a grid, world collections as compact chips, and
+   quiet section headings that split Home into Personal / Browse / For you. */
+.tvtime-collection-overview .tvtime-library-overview__header {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.tvtime-collection-overview__worlds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.tvtime-world-chip {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.45rem;
+  border: 1px solid var(--cinema-line, var(--border));
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 70%, transparent);
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.tvtime-world-chip:hover {
+  border-color: color-mix(in oklab, var(--primary) 45%, transparent);
+  background: color-mix(in oklab, var(--primary) 9%, var(--card));
+}
+
+.tvtime-world-chip:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.tvtime-world-chip__icon {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--primary) 12%, var(--muted));
+  color: var(--primary);
+}
+
+.tvtime-world-chip__icon svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.tvtime-world-chip__label {
+  color: var(--muted-foreground);
+}
+
+.tvtime-world-chip__value {
+  color: var(--foreground);
+  font-weight: 800;
+}
+
+.tvtime-home-section-heading {
+  margin-top: clamp(0.75rem, 2vw, 1.5rem);
+  padding-top: clamp(1rem, 2vw, 1.5rem);
+  border-top: 1px solid var(--cinema-line, var(--border));
+}
+
+@media (max-width: 767px) {
+  .tvtime-collection-overview .tvtime-stat-grid {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-inline: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .tvtime-collection-overview .tvtime-quick-stat {
+    min-height: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.75rem;
+  }
+
+  .tvtime-collection-overview .tvtime-quick-stat__icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.7rem;
+  }
+
+  .tvtime-collection-overview .tvtime-quick-stat__label {
+    display: block;
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .tvtime-collection-overview .tvtime-quick-stat__arrow {
+    display: none;
+  }
+
+  .tvtime-collection-overview .tvtime-library-overview__header h2 {
+    white-space: nowrap;
+  }
+
+  .tvtime-collection-overview__worlds {
+    flex-wrap: nowrap;
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tvtime-world-chip {
+    flex: 0 0 auto;
+  }
+}

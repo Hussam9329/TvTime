@@ -1,0 +1,85 @@
+/* Page title bars and view headings. */
+
+/* Shared page-heading rhythm for top-level views. */
+.view-page-header {
+  position: relative;
+  padding-block: 0.25rem 0.5rem;
+}
+
+.view-page-header::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: 0;
+  width: 3rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), transparent);
+  opacity: 0.8;
+}
+
+.view-page-title {
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+@media (max-width: 640px) {
+  .view-page-header { padding-bottom: 0.625rem; }
+}
+
+@media (max-width: 767px) {
+  .tvtime-app .view-page-header { gap: 0.75rem; }
+
+  .tvtime-app .view-page-header > * { min-width: 0; }
+
+  .tvtime-app :is(.view-page-header, [data-ui-surface="hero"]) {
+    overflow: hidden;
+  }
+}
+
+/* Top-level views are already identified by the persistent app header. Keep
+   the in-page heading compact, modern and free from repeated descriptions. */
+.tvtime-page-titlebar {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0.35rem 0.4rem 0.35rem 1rem;
+}
+
+[dir="rtl"] .tvtime-page-titlebar {
+  padding-right: 1rem;
+  padding-left: 0.4rem;
+}
+
+.tvtime-page-titlebar::before {
+  position: absolute;
+  inset-inline-start: 0;
+  width: 0.22rem;
+  height: 1.65rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--page-accent, var(--primary)) 90%, white),
+    var(--page-accent, var(--primary))
+  );
+  box-shadow: 0 0 1rem color-mix(in oklab, var(--page-accent, var(--primary)) 34%, transparent);
+  content: "";
+}
+
+@media (max-width: 640px) {
+  .tvtime-page-titlebar {
+    min-height: 2.4rem;
+    padding-block: 0.25rem;
+  }
+
+  .tvtime-page-titlebar::before {
+    height: 1.4rem;
+  }
+}
+
+.tvtime-page-titlebar::before {
+  background: linear-gradient(to bottom, #f2c46d, #a96718);
+  box-shadow: 0 0 1rem rgb(216 163 76 / 0.34);
+}

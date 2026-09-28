@@ -380,14 +380,6 @@ export const tmdb = {
     tmdbFetch<PaginatedResponse<MediaItem>>(`/tv/on_the_air`, { page }),
 };
 
-export function pickArabicPoster(profile: any): string | null {
-  const posters = Array.isArray(profile?.images?.posters) ? profile.images.posters : [];
-  const arabic = posters
-    .filter((poster: any) => poster?.iso_639_1 === "ar" && poster?.file_path)
-    .sort((left: any, right: any) => Number(right.vote_average || 0) - Number(left.vote_average || 0));
-  return arabic[0]?.file_path || profile?.poster_path || null;
-}
-
 const HAS_ARABIC_TEXT = /[\u0600-\u06FF]/;
 
 export function pickArabicTitle(profile: any, mediaType: "movie" | "tv", fallback: string): string {

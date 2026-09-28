@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readStyles } from "./lib/read-styles.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const read = (relativePath: string) => readFileSync(`${root}${relativePath}`, "utf8");
@@ -118,7 +119,7 @@ assert.match(
 );
 assert.match(watchNextRoute, /episodeName:[\s\S]*episodeAirDate:[\s\S]*episodeRuntime:/);
 
-const globalStyles = read("src/app/globals.css");
+const globalStyles = readStyles();
 assert.doesNotMatch(
   globalStyles,
   /\.tvtime-media-poster\s*\{[^}]*transform:\s*translateZ\(0\)/s,

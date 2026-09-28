@@ -1,0 +1,585 @@
+/* Floating command header, primary navigation, search and account menu. */
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .tvtime-primary-nav { gap: 0.125rem; }
+
+  .tvtime-primary-nav-item {
+    gap: 0.375rem !important;
+    padding-inline: 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .tvtime-primary-nav-item svg { width: 0.875rem; height: 0.875rem; }
+
+  .tvtime-header-search { max-width: 15rem !important; }
+
+  .tvtime-brand-copy { margin-right: 0.125rem; }
+}
+
+@media (min-width: 1360px) and (max-width: 1535px) {
+  .tvtime-header-search { max-width: 17rem !important; }
+}
+
+/* UIUX QA 05: complete the shared page-heading language across remaining top-level views. */
+.tvtime-app-header .tvtime-primary-nav-item {
+  min-height: 2.75rem;
+  border-radius: 0.9rem;
+}
+
+.tvtime-app-header .tvtime-brand-copy {
+  font-size: 1.15rem;
+}
+
+body:has(.tvtime-app-header[data-mobile-search-open="true"]) .tvtime-release-schedule section > .sticky {
+  top: calc(8rem + env(safe-area-inset-top, 0px));
+}
+
+@media (max-width: 640px) {
+  .tvtime-app-header [data-ui-action="icon"] {
+    min-width: 2rem;
+    min-height: 2rem;
+  }
+}
+
+.tvtime-app-header {
+  padding-top: env(safe-area-inset-top, 0px);
+  border-color: var(--app-surface-border);
+  background: var(--app-header-background);
+  box-shadow: 0 10px 32px rgb(0 0 0 / 0.12);
+}
+
+/* Floating command header */
+.tvtime-app-header {
+  padding: max(0.5rem, env(safe-area-inset-top, 0px)) 0.75rem 0;
+  border: 0;
+  background: linear-gradient(to bottom, color-mix(in oklab, var(--background) 72%, transparent), transparent);
+  box-shadow: none;
+}
+
+.tvtime-header-inner {
+  border: 1px solid var(--app-surface-border);
+  border-radius: 1.5rem;
+  background: var(--app-header-background);
+  box-shadow: 0 14px 44px rgb(0 0 0 / 0.18), inset 0 1px color-mix(in oklab, var(--foreground) 6%, transparent);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.tvtime-brand-mark {
+  isolation: isolate;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in oklab, var(--primary) 82%, white),
+      color-mix(in oklab, var(--primary) 72%, var(--chart-2))
+    );
+  box-shadow:
+    0 9px 24px color-mix(in oklab, var(--primary) 22%, transparent),
+    inset 0 1px rgb(255 255 255 / 0.26);
+}
+
+.tvtime-brand-copy {
+  min-width: 0;
+}
+
+.tvtime-brand-wordmark {
+  color: var(--foreground);
+  text-shadow: 0 0 1.4rem color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
+.tvtime-primary-nav-item {
+  min-height: 2.5rem;
+}
+
+.tvtime-primary-nav-item[data-active="true"],
+.tvtime-app-header [data-ui-action="nav"][data-active="true"],
+.tvtime-app-header [data-ui-action="nav-more"][data-active="true"] {
+  background: var(--app-nav-active);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 13%, transparent);
+}
+
+.tvtime-nav-active-indicator {
+  position: absolute;
+  inset-inline: 50%;
+  bottom: 0.22rem;
+  width: 1.05rem;
+  height: 0.14rem;
+  border-radius: 999px;
+  background: var(--primary);
+  transform: translateX(-50%);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--primary) 55%, transparent);
+}
+
+[dir="rtl"] .tvtime-nav-active-indicator {
+  transform: translateX(50%);
+}
+
+.tvtime-mobile-search-panel {
+  border: 1px solid var(--app-surface-border);
+  border-top: 0;
+  border-radius: 0 0 1.5rem 1.5rem;
+  background: var(--app-header-background);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.16);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.tvtime-app-header[data-mobile-search-open="true"] .tvtime-header-inner {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .tvtime-primary-nav {
+    gap: 0.05rem;
+  }
+
+  .tvtime-primary-nav-item {
+    gap: 0.32rem !important;
+    padding-inline: 0.55rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .tvtime-primary-nav-item svg {
+    width: 0.84rem;
+    height: 0.84rem;
+  }
+
+  .tvtime-header-search {
+    max-width: 14rem !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .tvtime-app-header {
+    padding: env(safe-area-inset-top, 0px) 0 0;
+    background: transparent;
+  }
+
+  .tvtime-header-inner {
+    border-top: 0;
+    border-inline: 0;
+    border-radius: 0 0 1.1rem 1.1rem;
+  }
+
+  .tvtime-app-header[data-mobile-search-open="true"] .tvtime-header-inner {
+    border-radius: 0;
+  }
+
+  .tvtime-mobile-search-panel {
+    border-inline: 0;
+    border-radius: 0 0 1.1rem 1.1rem;
+  }
+}
+
+/* Header, navigation and brand */
+.tvtime-app-header {
+  background: linear-gradient(to bottom, rgb(4 4 3 / 0.9), transparent) !important;
+}
+
+.tvtime-brand-mark {
+  background: linear-gradient(145deg, #f1c46f, #bf7d21) !important;
+  color: #100c05 !important;
+  box-shadow:
+    0 8px 24px rgb(216 163 76 / 0.24),
+    inset 0 1px rgb(255 244 207 / 0.48) !important;
+}
+
+.tvtime-brand-wordmark {
+  text-shadow: 0 0 1.5rem rgb(216 163 76 / 0.16) !important;
+}
+
+.tvtime-primary-nav-item[data-active="true"],
+.tvtime-app-header [data-ui-action="nav"][data-active="true"],
+.tvtime-app-header [data-ui-action="nav-more"][data-active="true"],
+.tvtime-mobile-dock__item.is-active {
+  border-color: var(--cinema-line) !important;
+  background: rgb(216 163 76 / 0.1) !important;
+  color: var(--cinema-gold-bright) !important;
+  box-shadow: inset 0 0 0 1px rgb(216 163 76 / 0.06) !important;
+}
+
+.tvtime-nav-active-indicator {
+  background: var(--cinema-gold-bright);
+  box-shadow: 0 0 13px rgb(240 189 99 / 0.52);
+}
+
+/* TVTIME responsive hardening: one final override layer for rails, safe areas,
+   compact viewports and touch input. Keep this block last so older patch layers
+   cannot silently restore the fixed-width/mobile rules corrected here. */
+.tvtime-header-inner,
+.tvtime-main-content,
+.tvtime-footer-inner {
+  width: 100%;
+  max-width: var(--app-content-width) !important;
+}
+
+/* `viewport-fit=cover` exposes the landscape notch area. Replace each rail's
+   normal inline gutter with the larger safe inset instead of adding both. */
+.tvtime-app-header {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+
+body:has(.tvtime-app-header[data-mobile-search-open="true"])
+  :is(
+    .tvtime-movie-hub__tabs,
+    .tvtime-world-tabs,
+    .tvtime-world-view > [data-slot="tabs"] > [data-slot="tabs-list"],
+    .tvtime-release-schedule__date-heading
+  ) {
+  top: calc(8rem + env(safe-area-inset-top, 0px)) !important;
+}
+
+@media (max-width: 767px) {
+  .tvtime-app-header {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .tvtime-header-inner,
+  .tvtime-mobile-search-panel,
+  .tvtime-mobile-dock__surface,
+  .tvtime-app-footer,
+  .tvtime-notification-backdrop,
+  .tvtime-notification-header,
+  .tvtime-home-hero__carousel-controls,
+  .tvtime-watch-featured__secondary,
+  .tvtime-sheet-header,
+  .tvtime-sheet-footer,
+  [data-slot="dialog-overlay"],
+  [data-slot="alert-dialog-overlay"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .tvtime-header-inner,
+  .tvtime-mobile-search-panel,
+  .tvtime-mobile-dock__surface,
+  .tvtime-app-footer,
+  .tvtime-notification-header,
+  .tvtime-sheet-header,
+  .tvtime-sheet-footer {
+    background: var(--background) !important;
+  }
+}
+
+.tvtime-app-header {
+  transition: transform 220ms cubic-bezier(.22,.61,.36,1), opacity 180ms ease;
+  will-change: transform;
+}
+
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  .tvtime-header-search { display: none !important; }
+
+  .tvtime-app-header[data-mobile-hidden="true"] {
+    transform: translateY(calc(-100% - env(safe-area-inset-top, 0px) - 0.25rem));
+    pointer-events: none;
+  }
+
+  .tvtime-app-header[data-mobile-search-open="true"] {
+    transform: none !important;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .tvtime-mobile-search-panel > div {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-width: 38rem;
+  }
+
+  .tvtime-app-header[data-mobile-search-open="true"] {
+    z-index: 80;
+  }
+
+  html.tvtime-mobile-search-active,
+  html.tvtime-mobile-search-active body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .tvtime-mobile-search-shell { display: flex; min-height: 0; flex-direction: column; gap: 0.9rem; overflow: hidden; }
+
+  .tvtime-mobile-search-tabs { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; }
+
+  .tvtime-mobile-search-section {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    padding-top: 0.85rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .tvtime-mobile-search-section__heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.55rem; font-size: 0.75rem; font-weight: 800; color: var(--muted-foreground); }
+
+  .tvtime-mobile-search-section__heading button { color: var(--primary); }
+
+  .tvtime-mobile-search-recents { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+
+  .tvtime-mobile-search-recents button { display: inline-flex; min-height: 2.4rem; align-items: center; gap: 0.35rem; border: 1px solid var(--border); border-radius: 999px; padding: 0.45rem 0.75rem; font-size: 0.75rem; }
+
+  .tvtime-mobile-search-suggestions { display: grid; gap: 0.3rem; }
+
+  .tvtime-mobile-search-suggestions button { display: flex; min-height: 2.8rem; align-items: center; gap: 0.75rem; border-radius: 0.8rem; padding: 0.55rem 0.7rem; text-align: start; background: color-mix(in oklab, var(--muted) 34%, transparent); }
+
+  .tvtime-mobile-search-suggestions button > span:last-child { flex: 0 0 auto; font-size: 0.75rem; color: var(--muted-foreground); }
+}
+
+/* Header stays translucent, but neutral rather than gold-tinted. */
+:root .tvtime-app-header {
+  background: linear-gradient(to bottom, rgb(17 17 17 / 0.94), transparent) !important;
+}
+
+/* Patch 21 — Cinematic Profiles + Premium Header.
+   Applies the movie/TV profile language from the approved references while
+   preserving all existing tracking, ratings, watchlist, following, episode,
+   TMDB and navigation behavior. Mobile-first; larger layouts only scale up. */
+/* ── Premium global header ─────────────────────────────────────────────── */
+.tvtime-app-header {
+  border-bottom: 1px solid rgb(255 255 255 / 0.07) !important;
+  background: linear-gradient(180deg, rgb(8 10 14 / 0.84), rgb(8 10 14 / 0.62)) !important;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.12) !important;
+  backdrop-filter: blur(18px) saturate(118%);
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    backdrop-filter 220ms ease;
+}
+
+.tvtime-app-header[data-detail-view="true"][data-scrolled="false"] {
+  border-bottom-color: rgb(255 255 255 / 0.09) !important;
+  background: linear-gradient(180deg, rgb(4 7 11 / 0.64), rgb(4 7 11 / 0.34)) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(14px) saturate(112%);
+}
+
+.tvtime-app-header[data-scrolled="true"] {
+  border-bottom-color: rgb(255 255 255 / 0.1) !important;
+  background: rgb(12 13 15 / 0.9) !important;
+  box-shadow: 0 10px 32px rgb(0 0 0 / 0.24) !important;
+  backdrop-filter: blur(22px) saturate(122%);
+}
+
+.tvtime-app-header .tvtime-brand-wordmark {
+  color: #f2c169 !important;
+  font-size: 1.36rem !important;
+  font-weight: 780 !important;
+  letter-spacing: -0.035em !important;
+  text-shadow: 0 3px 18px rgb(240 189 99 / 0.12);
+}
+
+.tvtime-app-header .tvtime-brand-wordmark .text-primary {
+  color: inherit !important;
+}
+
+.tvtime-app-header .tvtime-primary-nav {
+  gap: 0.18rem !important;
+}
+
+.tvtime-app-header .tvtime-primary-nav-item,
+.tvtime-app-header [data-ui-action="nav"] {
+  min-height: 2.35rem;
+  padding-inline: 0.78rem !important;
+  border: 1px solid transparent;
+  border-radius: 0.72rem !important;
+  background: transparent !important;
+  color: rgb(229 229 229 / 0.74) !important;
+  font-size: 0.875rem !important;
+  font-weight: 560 !important;
+  box-shadow: none !important;
+}
+
+.tvtime-app-header :is(.tvtime-primary-nav-item, [data-ui-action="nav"]):hover {
+  border-color: rgb(255 255 255 / 0.06);
+  background: rgb(255 255 255 / 0.045) !important;
+  color: rgb(250 250 250 / 0.96) !important;
+}
+
+.tvtime-app-header [data-ui-action="nav"][data-active="true"],
+.tvtime-app-header [data-ui-action="nav-more"][data-active="true"] {
+  border-color: rgb(255 255 255 / 0.08) !important;
+  background: rgb(255 255 255 / 0.085) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 0.04),
+    0 5px 18px rgb(0 0 0 / 0.14) !important;
+}
+
+.tvtime-app-header .tvtime-nav-active-indicator {
+  display: none !important;
+}
+
+.tvtime-app-header .tvtime-command-search::placeholder {
+  color: rgb(212 212 216 / 0.52);
+}
+
+.tvtime-app-header .tvtime-profile-trigger [data-slot="avatar"] {
+  border-color: rgb(240 189 99 / 0.58) !important;
+  box-shadow:
+    0 0 0 2px rgb(240 189 99 / 0.07),
+    0 5px 18px rgb(0 0 0 / 0.22) !important;
+}
+
+@media (min-width: 640px) {
+  .tvtime-app-header .tvtime-brand-mark {
+    display: none !important;
+  }
+
+  .tvtime-app-header .tvtime-brand-wordmark {
+    font-size: 1.52rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .tvtime-app-header .tvtime-header-search {
+    max-width: 21rem !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .tvtime-app-header .tvtime-header-back {
+    display: inline-flex !important;
+  }
+
+  .tvtime-app-header .tvtime-header-search {
+    max-width: 24rem !important;
+  }
+
+  .tvtime-app-header .tvtime-profile-trigger > span {
+    display: block !important;
+  }
+}
+
+@media (min-width: 1536px) {
+  .tvtime-app-header .tvtime-header-search {
+    max-width: 26rem !important;
+  }
+}
+
+/* Reference composition: a curved glass header and clear, generously sized
+   content. Keep every existing control reachable across input methods. */
+.tvtime-app-header {
+  padding-block: env(safe-area-inset-top, 0px) 0;
+}
+
+@media (min-width: 1024px) {
+  .tvtime-app-header {
+    width: calc(100% - 2rem);
+    margin-inline: auto;
+    border: 1px solid rgb(255 255 255 / 0.18) !important;
+    border-top: 0 !important;
+    border-radius: 0 0 2.75rem 2.75rem !important;
+  }
+
+  .tvtime-app-header .tvtime-brand-wordmark {
+    font-family: inherit;
+    font-size: 2rem !important;
+    letter-spacing: -0.025em !important;
+  }
+}
+
+:root .tvtime-app > .tvtime-app-header {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: env(safe-area-inset-top, 0px) max(0.5rem, env(safe-area-inset-right, 0px)) 0 max(0.5rem, env(safe-area-inset-left, 0px)) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+  will-change: auto !important;
+  overflow: visible;
+  pointer-events: auto;
+}
+
+:root .tvtime-app-header .tvtime-header-tools {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 0.25rem;
+  margin-inline-start: auto;
+}
+
+:root .tvtime-app-header :is(.tvtime-primary-nav, .tvtime-header-search, .tvtime-header-theme, .tvtime-header-shortcuts, .tvtime-profile-copy) {
+  display: none !important;
+}
+
+:root .tvtime-app-header .tvtime-header-menu {
+  display: inline-flex !important;
+}
+
+:root .tvtime-app-header .tvtime-primary-nav-item {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  min-height: 2.75rem;
+}
+
+:root .tvtime-app-header .tvtime-header-brand {
+  min-width: 0;
+  max-width: 12rem;
+}
+
+@media (min-width: 48rem) {
+  :root .tvtime-app-header .tvtime-header-search {
+    display: block !important;
+    flex: 1 1 12rem;
+    min-width: 12rem;
+    max-width: 28rem !important;
+    margin-inline-start: auto;
+  }
+
+  :root .tvtime-app-header .tvtime-header-tools { margin-inline-start: 0; }
+}
+
+@media (min-width: 90rem) {
+  :root .tvtime-app-header .tvtime-primary-nav { display: flex !important; align-items: center; flex: 0 0 auto; gap: 0.25rem !important; }
+
+  :root .tvtime-app-header .tvtime-header-menu { display: none !important; }
+
+  :root .tvtime-app-header .tvtime-profile-copy { display: block !important; }
+}
+
+@media (min-width: 105rem) {
+  :root .tvtime-app-header .tvtime-header-shortcuts { display: inline-flex !important; }
+}
+
+@media (max-width: 767px), (orientation: landscape) and (max-width: 932px) and (max-height: 500px) and (pointer: coarse) {
+  :root .tvtime-app-header .tvtime-header-search { display: none !important; }
+
+  :root .tvtime-app-header .tvtime-header-tools { margin-inline-start: auto; }
+
+  :root .tvtime-app-header[data-mobile-hidden="true"] { pointer-events: none; }
+
+  :root .tvtime-app-header[data-mobile-hidden="true"] .tvtime-header-inner { transform: translateY(calc(-100% - env(safe-area-inset-top, 0px))); }
+
+  :root .tvtime-app-header[data-mobile-search-open="true"] .tvtime-header-inner { transform: none; }
+
+  :root .tvtime-app .tvtime-mobile-search-panel { display: block !important; }
+}
+
+@media (max-width: 359px) {
+  :root .tvtime-app .tvtime-header-inner { column-gap: 0 !important; }
+
+  :root .tvtime-app-header .tvtime-header-tools { gap: 0; }
+
+  :root .tvtime-app-header .tvtime-header-location { display: none; }
+}
+
+/* Editorial serif wordmark, shared with the Home display headings. */
+.tvtime-app-header .tvtime-brand-wordmark {
+  font-family: var(--font-display), Georgia, serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}

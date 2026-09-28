@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
+import { readStyles } from "./lib/read-styles.mjs";
 
 const mediaCard = readFileSync("src/components/media/media-card.tsx", "utf8");
-const css = readFileSync("src/app/globals.css", "utf8");
+const css = readStyles();
 const safeImage = readFileSync("src/components/media/safe-image.tsx", "utf8");
 const failures = [];
 

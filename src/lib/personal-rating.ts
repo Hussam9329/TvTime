@@ -236,13 +236,3 @@ export function validatePersonalRatingBreakdown(
   };
   return { ok: true, breakdown, score: personalRatingScore(criteria) };
 }
-
-export function personalRatingLabel(score: number): string {
-  if (score >= 90) return "Masterpiece!";
-  if (score >= 80) return "Excellent";
-  if (score >= 70) return "Very good";
-  if (score >= 60) return "Good";
-  if (score >= 40) return "Average";
-  if (score >= 20) return "Poor";
-  return "Very bad";
-}

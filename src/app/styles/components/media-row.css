@@ -1,0 +1,251 @@
+/* Section headings and horizontal shelves, including carousel controls. */
+
+.tvtime-section-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+  padding-inline: 0.15rem;
+}
+
+.tvtime-section-heading__icon {
+  display: inline-flex;
+  width: 2.2rem;
+  height: 2.2rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in oklab, var(--primary) 15%, var(--border));
+  border-radius: 0.8rem;
+  background: color-mix(in oklab, var(--primary) 9%, var(--card));
+  color: var(--primary);
+  box-shadow: inset 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+.tvtime-section-heading__icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.tvtime-section-heading__count {
+  display: inline-flex;
+  min-width: 1.55rem;
+  height: 1.35rem;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.38rem;
+  border-radius: 999px;
+  background: var(--app-surface-subtle);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.tvtime-section-heading__hint {
+  margin-top: 0.15rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.tvtime-section-heading__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tvtime-row-controls {
+  padding: 0.18rem;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 0.8rem;
+  background: var(--app-surface-subtle);
+}
+
+.tvtime-see-all {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.tvtime-media-row-viewport {
+  position: relative;
+}
+
+.tvtime-media-row-item {
+  width: clamp(9.4rem, 12vw, 11.25rem);
+  scroll-snap-align: start;
+}
+
+@media (max-width: 767px) {
+  .tvtime-section-heading {
+    align-items: flex-end;
+  }
+
+  .tvtime-section-heading__hint {
+    display: none;
+  }
+
+  .tvtime-media-row-item {
+    width: clamp(8.9rem, 42vw, 10rem);
+  }
+}
+
+@media (max-width: 479px) {
+  .tvtime-section-heading__icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .tvtime-section-heading__actions .tvtime-see-all {
+    padding-inline: 0.5rem;
+  }
+}
+
+@supports (content-visibility: auto) {
+  .tvtime-media-row {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 21rem;
+  }
+}
+
+/* Section headers: keep the action cluster on the icon's centerline so the
+   arrows no longer droop below the title, and lift the count pill by 1px
+   to compensate for the title's descender space (optical baseline). */
+.tvtime-section-heading__actions {
+  align-self: center;
+  height: 2.2rem;
+}
+
+.tvtime-section-heading__count {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 380px) {
+  .tvtime-section-heading {
+    gap: 0.7rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .tvtime-section-heading__icon {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .tvtime-section-heading {
+    margin-bottom: 1.05rem;
+  }
+
+  .tvtime-section-heading__icon {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+}
+
+/* Patch 20 — Section Headers + Shelf Controls + Recently Watched Size Sync.
+   Shared shelf headings now match the restrained poster-only card language.
+   Recently Watched no longer owns an independent width; its component uses
+   MEDIA_CARD_ROW_WIDTH_CLASS, the same source of truth as every standard row. */
+.tvtime-app .tvtime-section-heading {
+  align-items: center;
+  gap: 0.72rem;
+  margin-bottom: 0.68rem;
+  padding-inline: 0.04rem;
+}
+
+.tvtime-app .tvtime-section-heading > .flex:first-child {
+  gap: 0.62rem !important;
+}
+
+.tvtime-app .tvtime-section-heading__icon {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid rgb(255 255 255 / 0.09);
+  border-radius: 0.65rem;
+  background: rgb(255 255 255 / 0.025);
+  color: color-mix(in oklab, var(--cinema-gold-bright, #f0bd63) 72%, rgb(229 229 229));
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 0.035),
+    0 5px 16px rgb(0 0 0 / 0.12);
+}
+
+.tvtime-app .tvtime-section-heading__icon svg {
+  width: 0.88rem;
+  height: 0.88rem;
+  stroke-width: 1.9;
+}
+
+.tvtime-app .tvtime-section-heading__count {
+  min-width: 1.25rem;
+  height: 1.08rem;
+  padding-inline: 0.31rem;
+  border: 1px solid rgb(255 255 255 / 0.075);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.035);
+  color: rgb(161 161 170 / 0.82);
+  font-size: 0.75rem;
+  font-weight: 760;
+  line-height: 1;
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.025);
+  transform: none;
+}
+
+.tvtime-app .tvtime-section-heading__hint {
+  margin-top: 0.12rem;
+  color: rgb(161 161 170 / 0.7);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.008em;
+}
+
+.tvtime-app .tvtime-section-heading__actions {
+  height: auto;
+  gap: 0.28rem;
+}
+
+.tvtime-app .tvtime-row-controls {
+  gap: 0.08rem;
+  padding: 0.13rem;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 0.68rem;
+  background: rgb(14 14 14 / 0.7);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 0.025),
+    0 5px 18px rgb(0 0 0 / 0.16);
+  backdrop-filter: blur(10px) saturate(104%);
+}
+
+.tvtime-app .tvtime-row-controls [data-slot="button"] svg {
+  width: 0.82rem;
+  height: 0.82rem;
+  stroke-width: 1.9;
+}
+
+@media (min-width: 640px) {
+  .tvtime-app .tvtime-section-heading {
+    margin-bottom: 0.72rem;
+  }
+
+  .tvtime-app .tvtime-section-heading__icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .tvtime-app .tvtime-section-heading__hint {
+    font-size: 0.75rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .tvtime-app .tvtime-section-heading {
+    margin-bottom: 0.76rem;
+  }
+
+  .tvtime-app .tvtime-section-heading__icon {
+    width: 2.04rem;
+    height: 2.04rem;
+  }
+}

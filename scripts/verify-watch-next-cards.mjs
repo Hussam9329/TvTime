@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
+import { readStyles } from "./lib/read-styles.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
 const view = read("src/components/views/watch-next-view.tsx");
-const styles = read("src/app/globals.css");
+const styles = readStyles();
 const route = read("src/app/api/watch-next/route.ts");
 const tmdb = read("src/lib/tmdb.ts");
 const tmdbHook = read("src/hooks/use-tmdb.ts");

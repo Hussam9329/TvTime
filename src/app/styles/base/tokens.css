@@ -1,0 +1,99 @@
+/* Design tokens: Tailwind @theme mapping, CSS custom properties and theme values. */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Default = dark cinema theme */
+:root {
+  --radius: 0.8rem;
+  --background: oklch(0.105 0.012 72);
+  --foreground: oklch(0.965 0.012 84);
+  --card: oklch(0.145 0.014 72);
+  --card-foreground: oklch(0.965 0.012 84);
+  --popover: oklch(0.125 0.014 72);
+  --popover-foreground: oklch(0.965 0.012 84);
+  --primary: oklch(0.76 0.135 72);
+  --primary-foreground: oklch(0.115 0.018 66);
+  --secondary: oklch(0.19 0.018 72);
+  --secondary-foreground: oklch(0.95 0.014 84);
+  --muted: oklch(0.185 0.016 72);
+  --muted-foreground: oklch(0.7 0.022 78);
+  --accent: oklch(0.23 0.03 72);
+  --accent-foreground: oklch(0.965 0.012 84);
+  --destructive: oklch(0.65 0.22 25);
+  --destructive-foreground: oklch(0.97 0.01 84);
+  --border: oklch(0.76 0.115 72 / 22%);
+  --input: oklch(0.76 0.115 72 / 28%);
+  --ring: oklch(0.8 0.14 75);
+  --chart-1: oklch(0.76 0.135 72);
+  --chart-2: oklch(0.67 0.18 305);
+  --chart-3: oklch(0.72 0.15 160);
+  --chart-4: oklch(0.78 0.15 80);
+  --chart-5: oklch(0.6 0.2 260);
+  --sidebar: oklch(0.125 0.014 72);
+  --sidebar-foreground: oklch(0.965 0.012 84);
+  --sidebar-primary: oklch(0.76 0.135 72);
+  --sidebar-primary-foreground: oklch(0.115 0.018 66);
+  --sidebar-accent: oklch(0.2 0.022 72);
+  --sidebar-accent-foreground: oklch(0.965 0.012 84);
+  --sidebar-border: oklch(0.76 0.115 72 / 22%);
+  --sidebar-ring: oklch(0.8 0.14 75);
+}
+
+/* Patch 12 layout tokens. The radius/surface/shadow values this block once
+   defined are superseded by the Trakora cinema-gold layer further below —
+   only the layout metrics that layer does not re-declare live here. */
+:root {
+  --app-content-width: 90rem;
+  --app-section-gap: clamp(1.75rem, 3vw, 2.75rem);
+}
+
+/* Responsive shell: one painted header surface, one set of breakpoints.
+   The observed height also covers text zoom and multi-row narrow toolbars. */
+:root {
+  --tvtime-header-height: calc(4rem + env(safe-area-inset-top, 0px));
+}
+
+@media (min-width: 40rem) {
+  :root { --tvtime-header-height: calc(4.5rem + env(safe-area-inset-top, 0px)); }
+}

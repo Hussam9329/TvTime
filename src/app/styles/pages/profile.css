@@ -1,0 +1,24 @@
+/* Profile and rating dialogs. */
+
+.tvtime-profile-dialog [data-slot="dialog-header"] { padding-bottom: .75rem; border-bottom: 1px solid color-mix(in oklab, var(--border) 65%, transparent); }
+
+.tvtime-profile-dialog [data-slot="dialog-footer"] { padding-top: .75rem; border-top: 1px solid color-mix(in oklab, var(--border) 65%, transparent); }
+
+@media (max-width: 640px) {
+  .tvtime-profile-dialog button { min-height: 2.75rem; }
+}
+
+.tvtime-rating-dialog {
+  border-color: var(--cinema-line-strong) !important;
+}
+
+.tvtime-rating-dialog input[type="range"] {
+  accent-color: var(--cinema-gold-bright);
+}
+
+@media (max-height: 36rem) {
+  :root .tvtime-structured-rating-dialog {
+    display: block !important;
+    overflow-y: auto !important;
+  }
+}

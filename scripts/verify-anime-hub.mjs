@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
+import { readStyles } from "./lib/read-styles.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
 const page = read("src/components/views/anime-view.tsx");
@@ -10,7 +11,7 @@ const hooks = read("src/hooks/use-tmdb.ts");
 const collection = read("src/components/views/collection-world-view.tsx");
 const discover = read("src/components/views/discover-view.tsx");
 const releases = read("src/components/views/movie-release-schedule.tsx");
-const styles = read("src/app/globals.css");
+const styles = readStyles();
 
 const checks = [];
 const check = (condition, message) => checks.push({ condition, message });

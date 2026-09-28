@@ -1,0 +1,23 @@
+/* Search. */
+
+@layer components {
+  .tvtime-search-view button.group { min-width: 0; }
+
+  .tvtime-search-view button.group > div:first-child { box-shadow: 0 10px 30px rgb(0 0 0 / 0.08); }
+
+  .tvtime-search-view button.group:focus-visible > div:first-child { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent); }
+}
+
+@media (max-width: 639px) {
+  .tvtime-search-view { gap: 1rem; }
+}
+
+:is(.tvtime-search-view, .tvtime-stats-page) > .view-page-header:first-child > svg:first-child {
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0.68rem;
+  border: 1px solid color-mix(in oklab, var(--page-accent, var(--primary)) 18%, var(--border));
+  border-radius: 0.95rem;
+  background: color-mix(in oklab, var(--page-accent, var(--primary)) 10%, var(--card));
+  color: var(--page-accent, var(--primary));
+}

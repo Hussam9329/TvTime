@@ -1,0 +1,165 @@
+/* Dialogs, sheets, dropdowns, tooltips and toasts. */
+
+:is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[dir="rtl"] :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"]) {
+  align-items: stretch;
+}
+
+:is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[dir="rtl"] :is([data-slot="dialog-title"], [data-slot="dialog-description"], [data-slot="alert-dialog-title"], [data-slot="alert-dialog-description"]) {
+  text-align: right;
+}
+
+@media (max-width: 639px) {
+  [data-slot="alert-dialog-footer"] > [data-slot="button"] {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+}
+
+/* Portals and forms remain usable on short screens and with large text. */
+:is(
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="sheet-content"],
+  [data-slot="drawer-content"]
+) {
+  max-height: calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overscroll-behavior: contain;
+}
+
+.tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+  width: min(calc(100vw - 1.5rem), 42rem);
+}
+
+@media (hover: none), (pointer: coarse) {
+  :is(
+    button,
+    [role="button"],
+    [data-slot="button"],
+    [data-slot="tabs-trigger"],
+    [data-slot="select-trigger"],
+    [data-slot="dialog-close"],
+    [data-slot="sheet-close"],
+    [data-ui-action="icon"],
+    [data-ui-action$="-icon"]
+  ) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 640px) {
+  :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+    width: calc(100vw - 1rem);
+    max-width: calc(100vw - 1rem);
+  }
+}
+
+.tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="sheet-content"], .tvtime-portal-surface, .tvtime-portal-compact) {
+  border-color: var(--cinema-line-strong) !important;
+  background: linear-gradient(155deg, rgb(18 17 13 / 0.99), rgb(7 7 6 / 0.995)) !important;
+  box-shadow:
+    0 28px 84px rgb(0 0 0 / 0.62),
+    0 0 0 1px rgb(240 189 99 / 0.035),
+    inset 0 1px rgb(240 189 99 / 0.08) !important;
+}
+
+[data-slot="dialog-overlay"],
+[data-slot="alert-dialog-overlay"] {
+  background: rgb(0 0 0 / 0.74) !important;
+  backdrop-filter: blur(8px);
+}
+
+.tvtime-sheet-content[data-side="right"],
+.tvtime-sheet-content[data-side="left"] {
+  top: env(safe-area-inset-top, 0px) !important;
+  bottom: env(safe-area-inset-bottom, 0px) !important;
+  height: auto !important;
+  max-height: none;
+}
+
+.tvtime-sheet-content[data-side="right"] {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.tvtime-sheet-content[data-side="left"] {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.tvtime-sheet-content[data-side="top"],
+.tvtime-sheet-content[data-side="bottom"] {
+  right: env(safe-area-inset-right, 0px) !important;
+  left: env(safe-area-inset-left, 0px) !important;
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+}
+
+.tvtime-sheet-content[data-side="top"] {
+  top: env(safe-area-inset-top, 0px) !important;
+}
+
+.tvtime-sheet-content[data-side="bottom"] {
+  bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+
+.tvtime-sheet-content[data-side="right"] > .tvtime-sheet-close,
+.tvtime-sheet-content[data-side="top"] > .tvtime-sheet-close,
+.tvtime-sheet-content[data-side="bottom"] > .tvtime-sheet-close {
+  right: max(1rem, calc(0.5rem + env(safe-area-inset-right, 0px)));
+}
+
+.tvtime-toast-viewport {
+  top: env(safe-area-inset-top, 0px) !important;
+  right: env(safe-area-inset-right, 0px) !important;
+  left: env(safe-area-inset-left, 0px) !important;
+  width: auto !important;
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+}
+
+[data-sonner-toaster][data-y-position="top"] {
+  top: max(var(--offset, 1rem), calc(0.5rem + env(safe-area-inset-top, 0px))) !important;
+}
+
+[data-sonner-toaster][data-y-position="bottom"] {
+  bottom: max(var(--offset, 1rem), calc(0.5rem + env(safe-area-inset-bottom, 0px))) !important;
+}
+
+@media (min-width: 640px) {
+  .tvtime-toast-viewport {
+    top: auto !important;
+    right: env(safe-area-inset-right, 0px) !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    left: auto !important;
+    width: min(100%, 420px) !important;
+  }
+}
+
+/* Portal surfaces follow the card radius so dialogs, sheets and menus share
+   the poster language instead of a mix of ad-hoc corners. */
+.tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+  border-radius: 1.2rem !important;
+}
+
+.tvtime-app .tvtime-sheet-content[data-side="bottom"] {
+  border-radius: 1.2rem 1.2rem 0 0 !important;
+}
+
+.tvtime-app .tvtime-sheet-content[data-side="left"] {
+  border-radius: 0 1.2rem 1.2rem 0 !important;
+}
+
+.tvtime-app .tvtime-sheet-content[data-side="right"] {
+  border-radius: 1.2rem 0 0 1.2rem !important;
+}
+
+/* Elevated/portal surfaces get the deepest extracted shadow. */
+:root .tvtime-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="sheet-content"], .tvtime-portal-surface, .tvtime-portal-compact) {
+  border-color: var(--cinema-line-strong) !important;
+  background: var(--audit-color-panel-solid) !important;
+  box-shadow: var(--audit-shadow-6) !important;
+}
+
+[data-sonner-toaster] {
+  max-width: calc(100vw - 2rem);
+  --offset-top: max(1rem, env(safe-area-inset-top, 0px));
+  --offset-right: max(1rem, env(safe-area-inset-right, 0px));
+  --offset-left: max(1rem, env(safe-area-inset-left, 0px));
+}
