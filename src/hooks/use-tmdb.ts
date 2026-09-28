@@ -695,6 +695,10 @@ type RecentlyWatchedItem = {
   status?: string | null;
   userRating?: number | null;
   publicRating?: number | null;
+  year?: string | null;
+  isAnime?: boolean;
+  watchedEpisodeCount?: number | null;
+  totalEpisodes?: number | null;
 };
 
 export function useRecentlyWatched(limit = 12) {

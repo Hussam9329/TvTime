@@ -11472,3 +11472,10 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
     flex: 0 0 auto;
   }
 }
+
+/* Editorial serif wordmark, shared with the Home display headings. */
+.tvtime-app-header .tvtime-brand-wordmark {
+  font-family: var(--font-display), Georgia, serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}

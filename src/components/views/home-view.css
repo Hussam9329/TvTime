@@ -1,0 +1,536 @@
+/* ── Home: full-bleed cinematic stage ───────────────────────────────────────
+   The stage breaks out of the centred content column so the backdrop spans
+   the whole viewport and runs up behind the floating header. Content stays
+   aligned to the same column as the rest of the page. */
+
+.tvtime-stage {
+  --stage-header-offset: calc(4.5rem + 1.5rem);
+  --stage-gutter: 2rem;
+  position: relative;
+  isolation: isolate;
+  min-height: clamp(36rem, 78vh, 48rem);
+  margin-top: calc(-1 * var(--stage-header-offset));
+  touch-action: pan-y;
+  color: #fff;
+}
+
+/* Only the artwork layers bleed to the viewport edges; the copy stays in the
+   page column so it lines up with every section below. */
+.tvtime-stage__backdrop,
+.tvtime-stage__scrim,
+.tvtime-stage__fade {
+  left: calc(50% - 50vw) !important;
+  right: auto !important;
+  width: 100vw;
+}
+
+/* Global section/surface rules cap width, zero Home child margins and round
+   every surface; the stage is the one deliberate exception. */
+.tvtime-app .tvtime-home-view > .tvtime-stage {
+  max-width: none;
+  margin-top: calc(-1 * var(--stage-header-offset)) !important;
+  margin-bottom: 0 !important;
+  border: 0;
+  border-radius: 0;
+  overflow: visible !important;
+  contain: none !important;
+}
+
+.tvtime-stage__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  overflow: hidden;
+  background: #07080a;
+}
+
+.tvtime-stage__backdrop img {
+  object-position: center 22%;
+}
+
+/* Left-to-right scrim keeps the copy readable over any artwork. */
+.tvtime-stage__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(90deg, rgb(5 6 8 / 0.94) 0%, rgb(5 6 8 / 0.78) 30%, rgb(5 6 8 / 0.28) 62%, rgb(5 6 8 / 0.45) 100%),
+    linear-gradient(180deg, rgb(5 6 8 / 0.7) 0%, transparent 22%);
+}
+
+/* Bottom fade melts the artwork into the page background. */
+.tvtime-stage__fade {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: -1;
+  height: 42%;
+  background: linear-gradient(180deg, transparent 0%, color-mix(in oklab, var(--background) 70%, transparent) 55%, var(--background) 100%);
+}
+
+.tvtime-stage__inner {
+  position: relative;
+  display: flex;
+  min-height: inherit;
+  width: 100%;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: calc(var(--stage-header-offset) + 2.5rem) 0 clamp(2.5rem, 6vh, 4.5rem);
+}
+
+.tvtime-stage__controls {
+  position: absolute !important;
+  top: calc(var(--stage-header-offset) + 1.25rem) !important;
+  right: 0 !important;
+  left: auto !important;
+  bottom: auto !important;
+}
+
+.tvtime-stage__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 2.5rem;
+}
+
+.tvtime-stage__copy {
+  min-width: 0;
+  max-width: 44rem;
+}
+
+.tvtime-stage__eyebrow {
+  margin-bottom: 1rem;
+  color: rgb(255 255 255 / 0.72);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+}
+
+.tvtime-stage__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.tvtime-stage__chip {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 0.65rem;
+  background: rgb(10 10 12 / 0.55);
+  backdrop-filter: blur(10px);
+  color: rgb(255 255 255 / 0.9);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.tvtime-stage__chip svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.tvtime-stage__chip.is-featured {
+  border-color: transparent;
+  background: linear-gradient(180deg, #f5cf85, #e0a94d);
+  color: #1a1206;
+  font-weight: 800;
+  box-shadow: 0 6px 22px rgb(224 169 77 / 0.28);
+}
+
+.tvtime-stage__chip.is-rating svg {
+  color: #f5c451;
+}
+
+.tvtime-stage__chip.is-network img {
+  width: auto;
+  height: 1rem;
+  filter: brightness(0) invert(1);
+}
+
+.tvtime-stage__title {
+  margin: 0;
+  color: #fff8ec;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(2.75rem, 6.2vw, 6rem);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  text-shadow: 0 10px 40px rgb(0 0 0 / 0.45);
+}
+
+.tvtime-stage__tagline {
+  margin-top: 1rem;
+  color: rgb(255 255 255 / 0.86);
+  font-size: clamp(0.75rem, 1.1vw, 0.95rem);
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+}
+
+.tvtime-stage__overview {
+  max-width: 38rem;
+  margin-top: 1.25rem;
+  font-size: clamp(0.95rem, 1.15vw, 1.075rem);
+  line-height: 1.6;
+}
+
+.tvtime-stage__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.tvtime-stage__actions [data-slot="button"] {
+  height: 3.25rem;
+  border-radius: 0.9rem;
+  font-size: 1rem;
+}
+
+.tvtime-stage__primary {
+  padding-inline: 1.75rem !important;
+  background: linear-gradient(180deg, #f5cf85, #e0a94d) !important;
+  color: #1a1206 !important;
+  box-shadow: 0 10px 30px rgb(224 169 77 / 0.3) !important;
+}
+
+.tvtime-stage__secondary,
+.tvtime-stage__icon-button {
+  border-color: rgb(255 255 255 / 0.22) !important;
+  background: rgb(10 10 12 / 0.45) !important;
+  color: #fff !important;
+  backdrop-filter: blur(10px);
+}
+
+.tvtime-stage__secondary {
+  padding-inline: 1.5rem !important;
+}
+
+.tvtime-stage__secondary[aria-pressed="true"] {
+  border-color: rgb(245 207 133 / 0.55) !important;
+  color: #f5cf85 !important;
+}
+
+.tvtime-stage__icon-button {
+  width: 3.25rem !important;
+  color: #f5cf85 !important;
+}
+
+.tvtime-stage__aside {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5rem;
+}
+
+.tvtime-stage__counter {
+  margin-bottom: 0.5rem;
+  color: rgb(255 255 255 / 0.6);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.tvtime-stage__counter strong {
+  color: #f5cf85;
+  font-weight: 700;
+}
+
+.tvtime-stage__poster {
+  display: flex;
+  width: clamp(12rem, 15vw, 14.5rem);
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.9rem 0.9rem 1.1rem;
+  border: 1px solid rgb(245 207 133 / 0.55);
+  border-radius: 1.25rem;
+  background: rgb(8 8 10 / 0.6);
+  backdrop-filter: blur(14px);
+  color: #fff;
+  text-align: start;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), 0 20px 50px rgb(0 0 0 / 0.5), 0 0 40px rgb(224 169 77 / 0.12);
+  transition: transform 220ms ease, border-color 220ms ease;
+}
+
+.tvtime-stage__poster:hover {
+  border-color: #f5cf85;
+  transform: translateY(-3px);
+}
+
+.tvtime-stage__poster:focus-visible {
+  outline: 2px solid #f5cf85;
+  outline-offset: 3px;
+}
+
+.tvtime-stage__poster-label {
+  color: rgb(255 255 255 / 0.62);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.tvtime-stage__poster-art {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 0.75rem;
+}
+
+.tvtime-stage__poster-title {
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tvtime-stage__poster-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: -0.35rem;
+  color: rgb(255 255 255 / 0.72);
+  font-size: 0.875rem;
+}
+
+.tvtime-stage__poster-trend svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: #f5cf85;
+}
+
+@media (max-width: 1023px) {
+  .tvtime-stage {
+    --stage-gutter: 1.25rem;
+    min-height: clamp(34rem, 82vh, 42rem);
+  }
+
+  .tvtime-stage__content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tvtime-stage__aside {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .tvtime-stage {
+    --stage-header-offset: calc(4rem + 1rem);
+    --stage-gutter: 1rem;
+    min-height: 38rem;
+  }
+
+  .tvtime-stage__backdrop img {
+    object-position: 62% 20%;
+  }
+
+  .tvtime-stage__scrim {
+    background:
+      linear-gradient(0deg, rgb(5 6 8 / 0.96) 0%, rgb(5 6 8 / 0.72) 45%, rgb(5 6 8 / 0.2) 75%),
+      linear-gradient(180deg, rgb(5 6 8 / 0.7) 0%, transparent 25%);
+  }
+
+  .tvtime-stage__controls {
+    top: calc(var(--stage-header-offset) + 0.75rem) !important;
+    right: 50% !important;
+    transform: translateX(50%);
+  }
+
+  .tvtime-stage__eyebrow {
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.3em;
+  }
+
+  .tvtime-stage__chip {
+    min-height: 2rem;
+    padding-inline: 0.65rem;
+    font-size: 0.75rem;
+  }
+
+  .tvtime-stage__tagline {
+    letter-spacing: 0.22em;
+  }
+
+  .tvtime-stage__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem;
+  }
+
+  .tvtime-stage__primary {
+    grid-column: 1 / -1;
+  }
+
+  .tvtime-stage__actions [data-slot="button"] {
+    height: 3rem;
+    padding-inline: 0.75rem !important;
+    font-size: 0.9rem;
+  }
+
+  .tvtime-stage__icon-button {
+    width: 3rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tvtime-stage__poster,
+  .tvtime-stage__poster:hover {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ── Display headings for Home sections ─────────────────────────────────── */
+.tvtime-display-heading,
+.tvtime-home-view .tvtime-section-heading h2,
+.tvtime-home-view .tvtime-home-section-heading h2 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ── Recently Watched ───────────────────────────────────────────────────── */
+.tvtime-recent__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.1rem;
+}
+
+.tvtime-recent__header h2 {
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  line-height: 1.1;
+}
+
+.tvtime-recent__header p {
+  margin-top: 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.tvtime-recent__filters {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 70%, transparent);
+}
+
+.tvtime-recent__filter {
+  height: 2.25rem !important;
+  min-width: 0 !important;
+  padding-inline: 1rem !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.tvtime-recent__filter[data-state="on"] {
+  border-color: color-mix(in oklab, var(--primary) 60%, transparent) !important;
+  background: color-mix(in oklab, var(--primary) 16%, transparent) !important;
+  color: var(--foreground) !important;
+  box-shadow: 0 0 18px rgb(224 169 77 / 0.18);
+}
+
+.tvtime-recent-card .tvtime-recent-poster {
+  border-radius: 1rem;
+}
+
+.tvtime-recent-card__veil {
+  background: linear-gradient(180deg, transparent 38%, rgb(5 6 8 / 0.55) 62%, rgb(5 6 8 / 0.94) 100%);
+}
+
+.tvtime-recent-card__info {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 0.8rem 0.8rem;
+  color: #fff;
+  pointer-events: none;
+}
+
+.tvtime-recent-card__title {
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.tvtime-recent-card__meta {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  color: rgb(255 255 255 / 0.72);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tvtime-recent-card__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  color: rgb(255 255 255 / 0.8);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.tvtime-recent-card__track {
+  position: relative;
+  height: 0.25rem;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.2);
+}
+
+.tvtime-recent-card__track > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #e0a94d, #f5cf85);
+}
+
+.tvtime-recent-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  color: rgb(255 255 255 / 0.78);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tvtime-recent-card__status svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: #f5cf85;
+}
+
+.tvtime-recent-card__status {
+  overflow: hidden;
+  white-space: nowrap;
+}
