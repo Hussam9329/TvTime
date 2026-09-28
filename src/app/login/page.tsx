@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Lock, User, ShieldAlert } from "lucide-react";
 import { safeNextPath } from "@/lib/safe-next-path";
@@ -127,7 +128,7 @@ function LoginPageInner() {
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <p>Set a strong APP_PASSWORD and an independent SESSION_SECRET, then redeploy.</p>
             {configurationCode && (
-              <p className="font-mono text-xs rounded-md bg-muted px-3 py-2" role="status">
+              <p className="font-mono text-xs rounded-xl bg-muted px-3 py-2" role="status">
                 {configurationCode}
               </p>
             )}
@@ -160,12 +161,12 @@ function LoginPageInner() {
           <form onSubmit={handleSubmit} className="tvtime-login-form space-y-4" aria-busy={loading}>
             {requiresUsername && (
               <div className="tvtime-login-field space-y-2">
-                <label
+                <Label
                   htmlFor="username"
                   className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
                 >
                   Username
-                </label>
+                </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                   <Input
@@ -186,12 +187,12 @@ function LoginPageInner() {
             )}
 
             <div className="tvtime-login-field space-y-2">
-              <label
+              <Label
                 htmlFor="password"
                 className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
               >
                 Password
-              </label>
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                 <Input
@@ -212,18 +213,18 @@ function LoginPageInner() {
             </div>
 
             {error && (
-              <p id="login-error" className="tvtime-login-error rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+              <p id="login-error" className="tvtime-login-error rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
                 {error}
               </p>
             )}
 
             <Button type="submit" className="tvtime-login-submit w-full" aria-busy={loading} disabled={loading || !password || (requiresUsername && !username)}>
-              {loading ? <Loader2 aria-hidden="true" className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {loading ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : null}
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 
-          <p className="tvtime-login-footnote text-[11px] text-muted-foreground text-center mt-4">
+          <p className="tvtime-login-footnote text-xs text-muted-foreground text-center mt-4">
             Your session stays valid for 30 days on this device.
           </p>
         </CardContent>

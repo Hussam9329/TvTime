@@ -3084,8 +3084,11 @@ body {
   color: var(--foreground);
 }
 
-:where(button, input, textarea, select) {
-  font: inherit;
+/* Layered so component text utilities (text-xs, font-semibold…) still win. */
+@layer base {
+  :where(button, input, textarea, select) {
+    font: inherit;
+  }
 }
 
 :where(button, [role="button"], a, input, textarea, select, [tabindex]):focus-visible {

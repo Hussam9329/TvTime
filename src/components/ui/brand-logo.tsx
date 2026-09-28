@@ -9,7 +9,7 @@ export function BrandMark({ className }: BrandLogoProps) {
   return (
     <span
       className={cn(
-        "tvtime-brand-mark relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-white transition-[box-shadow,filter] duration-200 group-hover:brightness-105 sm:h-10 sm:w-10",
+        "tvtime-brand-mark relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-primary-foreground transition-[box-shadow,filter] duration-200 group-hover:brightness-105 sm:h-10 sm:w-10",
         className,
       )}
       aria-hidden="true"

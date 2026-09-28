@@ -186,7 +186,7 @@ export function ShortcutsHelpDialog({ open, onOpenChange }: { open: boolean; onO
                       {item.keys.map((k, i) => (
                         <span key={i} className="flex items-center gap-1">
                           {i > 0 && <span className="text-muted-foreground text-xs">then</span>}
-                          <kbd className="min-w-[28px] h-7 px-2 inline-flex items-center justify-center rounded-md border border-border bg-muted text-xs font-semibold font-mono shadow-sm">
+                          <kbd className="min-w-7 h-7 px-2 inline-flex items-center justify-center rounded-md border border-border bg-muted text-xs font-semibold font-mono shadow-sm">
                             {k}
                           </kbd>
                         </span>

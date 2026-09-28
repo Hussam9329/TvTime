@@ -409,10 +409,10 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="h-9"
+                  className="h-10"
                   maxLength={30}
                 />
-                <Button size="sm" className="h-9" onClick={onSaveName} disabled={saving || name === userName || !name.trim()}>
+                <Button size="icon" aria-label="Save display name" onClick={onSaveName} disabled={saving || name === userName || !name.trim()}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 </Button>
               </div>
@@ -454,12 +454,12 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <Button variant="outline" size="sm" onClick={onExport} disabled={exporting || importing}>
+              <Button variant="outline" onClick={onExport} disabled={exporting || importing}>
                 {exporting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
                 JSON Backup
               </Button>
-              <Button variant="outline" size="sm" onClick={onExportCsv} disabled={exporting || importing}><Download className="w-4 h-4 mr-1" />CSV</Button>
-              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing || exporting}>
+              <Button variant="outline" onClick={onExportCsv} disabled={exporting || importing}><Download className="w-4 h-4 mr-1" />CSV</Button>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing || exporting}>
                 {importing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
                 Import
               </Button>
@@ -472,7 +472,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               className="hidden"
             />
             {transferProgress && (
-              <p className="mt-2 text-[11px] text-muted-foreground" role="status" aria-live="polite">
+              <p className="mt-2 text-xs text-muted-foreground" role="status" aria-live="polite">
                 {transferProgress}
               </p>
             )}
@@ -481,12 +481,11 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
             <div className="flex items-start gap-2"><Smartphone className="w-4 h-4 text-primary mt-0.5" /><div className="flex-1"><p className="text-sm font-semibold">Install & notifications</p><p className="text-xs text-muted-foreground">Install {APP_NAME} as a PWA and receive alerts for released episodes.</p></div></div>
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Button variant="outline" size="sm" onClick={() => void installPwa()} disabled={installedPwa}>
+              <Button variant="outline" onClick={() => void installPwa()} disabled={installedPwa}>
                 <Smartphone className="w-4 h-4 mr-1.5" />{installedPwa ? "Installed" : installPrompt ? "Install app" : "Install help"}
               </Button>
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => void (pushSubscribed ? disableNotifications() : enableNotifications())}
                 disabled={notificationBusy || notificationPermission === "unsupported" || (!pushSubscribed && notificationPermission === "denied")}
               >
@@ -511,7 +510,6 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               </div>
               <Button
                 variant="outline"
-                size="sm"
                 className="w-full"
                 onClick={onSignOut}
                 disabled={signingOut}
@@ -533,7 +531,7 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="w-full" disabled={clearing}>
+                <Button variant="destructive" className="w-full" disabled={clearing}>
                   {clearing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}
                   Clear all data
                 </Button>
@@ -562,9 +560,9 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
 function StatBox({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md bg-card border border-border/40 p-2.5">
+    <div className="rounded-xl bg-card border border-border/40 p-2.5">
       <p className="text-lg font-bold text-primary">{value}</p>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -611,18 +609,18 @@ function PreferencesSection() {
           <Settings className="w-4 h-4 text-primary" />
           <p className="text-sm font-semibold">Preferences</p>
         </div>
-        {(loading || savingPreference) && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-label="Synchronizing preferences" />}
+        {(loading || savingPreference) && <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Synchronizing preferences" />}
       </div>
 
       <div className="space-y-1.5">
         <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> Timezone</Label>
         <Select value={prefs.timezone} onValueChange={(value) => updatePref("timezone", value)} disabled={savingPreference}>
-          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
             {TIMEZONE_OPTIONS.map((timezone) => <SelectItem key={timezone.value} value={timezone.value}>{timezone.label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <p className="text-[10px] text-muted-foreground">Dates and times display in this timezone and sync across devices.</p>
+        <p className="text-xs text-muted-foreground">Dates and times display in this timezone and sync across devices.</p>
       </div>
     </div>
   );

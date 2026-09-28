@@ -5,7 +5,8 @@ import { useSearchAccumulated } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search as SearchIcon, Loader2, AlertCircle, Users, ChevronDown, Languages } from "lucide-react";
+import { ErrorState } from "@/components/ui/error-state";
+import { Search as SearchIcon, Loader2, Users, ChevronDown, Languages } from "lucide-react";
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { img } from "@/lib/tmdb";
@@ -106,16 +107,12 @@ export function SearchView() {
 
           {/* TVM-30: Error state */}
           {search.isError && (
-            <div className="feedback-state feedback-state--error flex flex-col items-center justify-center px-4 py-14 text-center" role="alert">
-              <div className="feedback-state__icon mb-4 flex size-20 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-                <AlertCircle className="h-9 w-9" aria-hidden="true" />
-              </div>
-              <h2 className="feedback-state__title text-lg font-bold">Search is temporarily unavailable</h2>
-              <p className="feedback-state__description mt-1 max-w-md text-sm text-muted-foreground">TMDB did not respond. Your library is safe; check your connection and try again.</p>
-              <Button variant="outline" className="mt-4" onClick={() => void search.refetch()}>
-                Retry
-              </Button>
-            </div>
+            <ErrorState
+              title="Search is temporarily unavailable"
+              description="TMDB did not respond. Your collection is safe; check your connection and try again."
+              onRetry={() => void search.refetch()}
+              retryLabel="Retry"
+            />
           )}
 
           {/* TVM-30: Loading state (initial) */}
@@ -150,18 +147,18 @@ export function SearchView() {
             <div className="flex items-center justify-center pt-4">
               <Button
                 variant="outline"
-                size="sm"
                 onClick={search.loadMore}
                 disabled={search.isFetching}
-                className="min-w-[160px]"
+                aria-busy={search.isFetching}
+                className="min-w-40"
               >
                 {search.isFetching ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Loading…
                   </>
                 ) : (
                   <>
-                    Load More <ChevronDown className="w-4 h-4 ml-1" />
+                    Load more <ChevronDown className="size-4" aria-hidden="true" />
                   </>
                 )}
               </Button>
@@ -173,18 +170,18 @@ export function SearchView() {
             <div className="flex items-center justify-center pt-4">
               <Button
                 variant="outline"
-                size="sm"
                 onClick={search.loadMore}
                 disabled={search.isFetching}
-                className="min-w-[160px]"
+                aria-busy={search.isFetching}
+                className="min-w-40"
               >
                 {search.isFetching ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Loading…
                   </>
                 ) : (
                   <>
-                    Load More <ChevronDown className="w-4 h-4 ml-1" />
+                    Load more <ChevronDown className="size-4" aria-hidden="true" />
                   </>
                 )}
               </Button>
@@ -207,6 +204,7 @@ function PersonCard({ person, index, onGo }: { person: any; index: number; onGo:
 
   return (
     <button
+      type="button"
       onClick={onGo}
       className="group text-left"
       style={{ animationDelay: `${Math.min(index * 0.02, 0.3)}s` }}
@@ -226,7 +224,7 @@ function PersonCard({ person, index, onGo }: { person: any; index: number; onGo:
         )}
       </div>
       <p className="mt-1.5 text-xs font-medium line-clamp-1 group-hover:text-primary transition-colors">{name}</p>
-      {knownFor && <p className="text-[10px] text-muted-foreground line-clamp-1">{knownFor}</p>}
+      {knownFor && <p className="text-xs text-muted-foreground line-clamp-1">{knownFor}</p>}
     </button>
   );
 }
