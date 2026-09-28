@@ -99,7 +99,7 @@ function GenreRecommendationContent() {
               genre={movieGenre1}
               sortBy="vote_average.desc"
               rating={7}
-              title={isPersonalized ? `Top ${movieGenre1.name} Movies • For You` : `Top ${movieGenre1.name} Movies`}
+              title={`Top ${movieGenre1.name} Movies`}
               personalized={isPersonalized}
             />
           )}
@@ -110,7 +110,7 @@ function GenreRecommendationContent() {
           {tvGenre1 && (
             <TvGenreRow
               genre={tvGenre1}
-              title={isPersonalized ? `Popular ${tvGenre1.name} Shows • For You` : `Popular ${tvGenre1.name} Shows`}
+              title={`Popular ${tvGenre1.name} Shows`}
               personalized={isPersonalized}
             />
           )}
@@ -122,7 +122,7 @@ function GenreRecommendationContent() {
             <MovieGenreRow
               genre={movieGenre2}
               sortBy="popularity.desc"
-              title={isPersonalized ? `Trending ${movieGenre2.name} Movies • For You` : `Trending ${movieGenre2.name} Movies`}
+              title={`Trending ${movieGenre2.name} Movies`}
               personalized={isPersonalized}
             />
           )}
@@ -192,6 +192,8 @@ function MovieGenreRow({ genre, sortBy, rating, title, personalized }: {
     <MediaRow
       title={title}
       icon={<RecommendationIcon personalized={personalized} />}
+      hint={personalized ? "Based on the genres you rate highest" : "Today’s genre pick"}
+      showCount={false}
       items={items}
       loading={recommendation.isLoading}
       libraryStateSource={libraryStateSource}
@@ -222,6 +224,8 @@ function TvGenreRow({ genre, title, personalized }: {
     <MediaRow
       title={title}
       icon={<RecommendationIcon personalized={personalized} />}
+      hint={personalized ? "Based on the genres you rate highest" : "Today’s genre pick"}
+      showCount={false}
       items={items}
       loading={recommendation.isLoading}
       forcedMediaType="tv"

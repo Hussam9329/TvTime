@@ -11341,3 +11341,134 @@ body:has(.tvtime-app-header[data-mobile-search-open="true"])
 @media (prefers-reduced-motion: reduce) {
   :root .tvtime-app .tvtime-header-inner { transition: none; }
 }
+
+/* ── Home: collection overview and section headings ────────────────────────
+   Four primary totals in a grid, world collections as compact chips, and
+   quiet section headings that split Home into Personal / Browse / For you. */
+.tvtime-collection-overview .tvtime-library-overview__header {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.tvtime-collection-overview__worlds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.tvtime-world-chip {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.45rem;
+  border: 1px solid var(--cinema-line, var(--border));
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 70%, transparent);
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.tvtime-world-chip:hover {
+  border-color: color-mix(in oklab, var(--primary) 45%, transparent);
+  background: color-mix(in oklab, var(--primary) 9%, var(--card));
+}
+
+.tvtime-world-chip:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.tvtime-world-chip__icon {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--primary) 12%, var(--muted));
+  color: var(--primary);
+}
+
+.tvtime-world-chip__icon svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.tvtime-world-chip__label {
+  color: var(--muted-foreground);
+}
+
+.tvtime-world-chip__value {
+  color: var(--foreground);
+  font-weight: 800;
+}
+
+.tvtime-home-section-heading {
+  margin-top: clamp(0.75rem, 2vw, 1.5rem);
+  padding-top: clamp(1rem, 2vw, 1.5rem);
+  border-top: 1px solid var(--cinema-line, var(--border));
+}
+
+.tvtime-home-section-heading .tvtime-eyebrow {
+  margin-bottom: 0.25rem;
+}
+
+@media (max-width: 767px) {
+  .tvtime-collection-overview .tvtime-stat-grid {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-inline: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .tvtime-collection-overview .tvtime-quick-stat {
+    min-height: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.75rem;
+  }
+
+  .tvtime-collection-overview .tvtime-quick-stat__icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.7rem;
+  }
+
+  .tvtime-collection-overview .tvtime-quick-stat__label {
+    display: block;
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .tvtime-collection-overview .tvtime-quick-stat__arrow {
+    display: none;
+  }
+
+  .tvtime-collection-overview .tvtime-library-overview__header h2 {
+    white-space: nowrap;
+  }
+
+  .tvtime-collection-overview__worlds {
+    flex-wrap: nowrap;
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tvtime-collection-overview__worlds::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tvtime-world-chip {
+    flex: 0 0 auto;
+  }
+}

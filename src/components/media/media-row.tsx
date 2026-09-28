@@ -5,6 +5,7 @@ import { MEDIA_CARD_ROW_WIDTH_CLASS, MediaCard, MediaCardSkeleton } from "./medi
 import type { MediaItem } from "@/lib/tmdb";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { mediaStateKey, useMediaStates, type MediaBatchState } from "@/hooks/use-tmdb";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import { useReducedMotion } from "framer-motion";
@@ -22,6 +23,13 @@ interface MediaRowProps {
   hideHeading?: boolean;
   priorityCount?: number;
   scrollKey?: string;
+  /** Subheading under the title. `null` hides it; omitted uses the default hint. */
+  hint?: string | null;
+  showCount?: boolean;
+  /** Optional chip tabs rendered under the heading (e.g. Popular / Top rated). */
+  tabs?: readonly { value: string; label: string }[];
+  activeTab?: string;
+  onTabChange?: (value: string) => void;
 }
 
 export function MediaRow({
@@ -36,6 +44,11 @@ export function MediaRow({
   hideHeading = false,
   priorityCount = 0,
   scrollKey,
+  hint,
+  showCount = true,
+  tabs,
+  activeTab,
+  onTabChange,
 }: MediaRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentRouteKey = useNav((state) => [
@@ -49,6 +62,7 @@ export function MediaRow({
     currentRouteKey,
     forcedMediaType ?? "mixed",
     title,
+    activeTab ?? "",
   ].join(":");
   const dragHandlers = useHorizontalDragScroll({
     scrollKey: loading ? undefined : resolvedScrollKey,
@@ -88,11 +102,13 @@ export function MediaRow({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="truncate text-lg font-extrabold tracking-tight sm:text-xl">{title}</h2>
-              {!loading && items.length > 0 && (
+              {showCount && !loading && items.length > 0 && (
                 <span className="tvtime-section-heading__count tabular-nums">{items.length}</span>
               )}
             </div>
-            <p className="tvtime-section-heading__hint">{isArabic ? "مختارة لك" : "Curated for you"}</p>
+            {hint !== null && (
+              <p className="tvtime-section-heading__hint">{hint ?? (isArabic ? "مختارة لك" : "Curated for you")}</p>
+            )}
           </div>
         </div>
         <div className="tvtime-section-heading__actions">
@@ -123,6 +139,21 @@ export function MediaRow({
           </div>
         </div>
       </div>}
+      {tabs && tabs.length > 1 && (
+        <ToggleGroup
+          type="single"
+          value={activeTab}
+          onValueChange={(value) => { if (value) onTabChange?.(value); }}
+          className="tvtime-row-tabs no-scrollbar mb-3 flex w-full max-w-full justify-start gap-2 overflow-x-auto rounded-none"
+          aria-label={isArabic ? `تصنيفات ${title}` : `${title} categories`}
+        >
+          {tabs.map((tab) => (
+            <ToggleGroupItem key={tab.value} value={tab.value} className="tvtime-row-tab h-9 flex-none rounded-full border border-border bg-card/60 px-4 text-sm font-semibold text-muted-foreground first:rounded-full last:rounded-full hover:bg-muted hover:text-foreground data-[state=on]:border-primary/50 data-[state=on]:bg-primary/15 data-[state=on]:text-primary">
+              {tab.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      )}
       <div className="tvtime-media-row-viewport">
         <div
           ref={scrollRef}
