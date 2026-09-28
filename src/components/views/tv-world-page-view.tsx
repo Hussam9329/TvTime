@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useNav, type MovieHubTab } from "@/lib/store";
 import { CalendarDays, Grid2X2, Library, ListFilter, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -53,14 +53,17 @@ export function TvWorldPageView({
   releaseCollectionWorld,
   locale = "en",
 }: TvWorldPageViewProps) {
-  const [tab, setTab] = useState<"overview" | "library" | "discover" | "releases">("overview");
+  // The active tab is remembered per world, the same way every movie world does it.
+  const tab: MovieHubTab = useNav((state) => state.movieHubTabs[discoverWorld]) ?? "overview";
+  const setMovieHubTab = useNav((state) => state.setMovieHubTab);
+  const setTab = (next: MovieHubTab) => setMovieHubTab(discoverWorld, next);
   const isArabic = locale === "ar";
   const trackingCounts = useTvTrackingCounts(trackingWorld);
   const counts = trackingCounts.data?.counts;
-  const eyebrow = isArabic ? "عالم مسلسلاتك" : trackingWorld === "asian" ? "Your Asian series world" : "Your series world";
+  const eyebrow = isArabic ? "عالم مسلسلاتك العربية" : trackingWorld === "asian" ? "Your Asian TV world" : "Your TV world";
   const summary = isArabic
-    ? `${counts?.all ?? "…"} مسلسل • ${counts?.watching ?? "…"} قيد المشاهدة • ${counts?.upcoming ?? "…"} قادم`
-    : `${counts?.all ?? "…"} series • ${counts?.watching ?? "…"} Watching • ${counts?.upcoming ?? "…"} Upcoming`;
+    ? `${counts?.all ?? "…"} في مكتبتك • ${counts?.watching ?? "…"} قيد المشاهدة • ${counts?.upcoming ?? "…"} قادم`
+    : `${counts?.all ?? "…"} in Library • ${counts?.watching ?? "…"} Watching • ${counts?.upcoming ?? "…"} Upcoming`;
 
   return (
     <div
@@ -81,7 +84,7 @@ export function TvWorldPageView({
         </Button>
       </header>
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="min-w-0">
+      <Tabs value={tab} onValueChange={(value) => setTab(value as MovieHubTab)} className="min-w-0">
         <TabsList className="tvtime-movie-hub__tabs">
           <TabsTrigger value="overview"><Grid2X2 /> {isArabic ? "نظرة عامة" : "Overview"}</TabsTrigger>
           <TabsTrigger value="library"><Library /> {isArabic ? "مكتبتي" : "My Library"}</TabsTrigger>
@@ -93,14 +96,14 @@ export function TvWorldPageView({
           <TvHubOverview world={trackingWorld} onBrowse={() => setTab("discover")} />
         </TabsContent>
         <TabsContent value="library" className="mt-0">
-          <TvShowsView world={trackingWorld} embedded />
+          <TvShowsView world={trackingWorld} embedded onDiscover={() => setTab("discover")} />
         </TabsContent>
         <TabsContent value="discover" className="mt-0">
           <DiscoverView
             world={discoverWorld}
             embedded
-            title={discoverTitle}
-            subtitle={discoverSubtitle}
+            title={discoverTitle ?? (trackingWorld === "asian" ? "Discover Asian TV Shows" : "Discover TV Shows")}
+            subtitle={discoverSubtitle ?? "Choose what to see first, then refine the catalogue without visual clutter."}
           />
         </TabsContent>
         <TabsContent value="releases" className="mt-0">

@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { MediaRow } from "@/components/media/media-row";
+import { HubSkeleton } from "@/components/media/hub-skeleton";
 import { SafeImage } from "@/components/media/safe-image";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/error-state";
@@ -66,7 +67,7 @@ function copyFor(world: TvHubWorld): TvHubCopy {
     };
   }
   return {
-    featured: world === "asian" ? "Asian spotlight" : "Series spotlight",
+    featured: "Featured for you",
     viewDetails: "View details",
     continueWatching: "Continue Watching",
     airingToday: "Airing Today",
@@ -208,6 +209,10 @@ export function TvHubOverview({ world, onBrowse }: { world: TvHubWorld; onBrowse
     );
   }
 
+  if (catalogue.isLoading && tracking.isLoading) {
+    return <HubSkeleton label={isArabic ? "جارٍ تحميل عالم المسلسلات" : "Loading TV hub"} />;
+  }
+
   return (
     <div className="tvtime-movie-hub__overview tvtime-tv-hub__overview">
       {featured.length > 0 ? (
@@ -231,15 +236,15 @@ export function TvHubOverview({ world, onBrowse }: { world: TvHubWorld; onBrowse
         <section className="tvtime-movie-hub__empty-row">
           <span aria-hidden="true"><Trophy /></span>
           <div className="min-w-0 flex-1"><h2>{copy.continueWatching}</h2><p>{copy.emptyContinue}</p></div>
-          <Button variant="outline" onClick={onBrowse}>{isArabic ? "اكتشف" : "Discover"}</Button>
+          <Button variant="outline" onClick={onBrowse}>{isArabic ? "تصفّح" : "Browse"}</Button>
         </section>
       ) : null}
 
       {airingItems.length > 0 && <MediaRow title={copy.airingToday} icon={<CalendarDays />} items={airingItems} forcedMediaType="tv" libraryStateSource={sharedStates} />}
-      {upToDateItems.length > 0 && <MediaRow title={copy.upToDate} icon={<Zap />} items={upToDateItems} forcedMediaType="tv" libraryStateSource={sharedStates} />}
       {newItems.length > 0 && <MediaRow title={copy.newNoteworthy} icon={<WandSparkles />} items={newItems} forcedMediaType="tv" libraryStateSource={sharedStates} />}
-      {returningItems.length > 0 && <MediaRow title={copy.returningSoon} icon={<Clock3 />} items={returningItems} forcedMediaType="tv" libraryStateSource={sharedStates} />}
       {hiddenItems.length > 0 && <MediaRow title={copy.hiddenGems} icon={<Star />} items={hiddenItems} forcedMediaType="tv" libraryStateSource={sharedStates} />}
+      {returningItems.length > 0 && <MediaRow title={copy.returningSoon} icon={<Clock3 />} items={returningItems} forcedMediaType="tv" libraryStateSource={sharedStates} />}
+      {upToDateItems.length > 0 && <MediaRow title={copy.upToDate} icon={<Zap />} items={upToDateItems} forcedMediaType="tv" libraryStateSource={sharedStates} />}
       {recentItems.length > 0 && <MediaRow title={copy.recentlyWatched} icon={<Clock3 />} items={recentItems} forcedMediaType="tv" libraryStateSource={sharedStates} />}
 
       {(catalogue.isError || catalogue.data?.partial) && (

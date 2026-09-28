@@ -10,7 +10,7 @@ export function TVShowsPageView() {
       releaseExcludedOriginalLanguage="ar"
       releaseCollectionWorld="standard-tv"
       releaseTitle="TV Release Schedule"
-      releaseSubtitle="A six-month agenda for new TV show premieres, kept separate from Anime and Arabic TV."
+      releaseSubtitle="A six-month agenda of upcoming TV premieres."
     />
   );
 }

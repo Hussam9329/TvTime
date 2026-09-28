@@ -336,7 +336,8 @@ check(
   "All movie worlds share the cinematic overview, smart shelves, unwatched spotlight and saved library layout",
 );
 check(
-  /useState<"overview" \| "library" \| "discover" \| "releases">\("overview"\)/.test(tvWorldPageView)
+  (/useState<"overview" \| "library" \| "discover" \| "releases">\("overview"\)/.test(tvWorldPageView)
+    || /state\.movieHubTabs\[/.test(tvWorldPageView))
     && /<TabsTrigger value="overview">/.test(tvWorldPageView)
     && /<TabsTrigger value="library">/.test(tvWorldPageView)
     && /<TabsTrigger value="discover">/.test(tvWorldPageView)

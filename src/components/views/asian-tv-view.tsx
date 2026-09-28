@@ -10,7 +10,7 @@ export function AsianTvView() {
       releaseCollectionWorld="asian-tv"
       releaseAccentClass="text-chart-3"
       releaseTitle="Asian TV Release Schedule"
-      releaseSubtitle="Upcoming Asian series, ordered with Korea, Japan and China first."
+      releaseSubtitle="A six-month agenda of upcoming Asian TV, with Korea, Japan and China first."
     />
   );
 }
