@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-  Film,
   Grid2X2,
   Library,
   ListFilter,
@@ -19,7 +18,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { ErrorState } from "@/components/ui/error-state";
 import { SafeImage } from "@/components/media/safe-image";
 import { MediaRow } from "@/components/media/media-row";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
@@ -188,7 +187,7 @@ export function MovieHubView({ world }: { world: MovieHubWorld }) {
         </TabsContent>
         <TabsContent value="releases" className="mt-0">
           <ReleaseSchedule
-            accentClass={world === "asian-movies" ? "text-red-600 dark:text-red-300" : world === "arabic-movies" ? "text-amber-700 dark:text-amber-300" : "text-primary"}
+            accentClass={world === "asian-movies" ? "text-chart-2" : world === "arabic-movies" ? "text-chart-4" : "text-primary"}
             originalLanguage={world === "arabic-movies" ? "ar" : undefined}
             language={world === "arabic-movies" ? "ar" : undefined}
             collectionWorld={world}
@@ -238,15 +237,16 @@ function MovieHubOverview({
   });
   const sharedStates = { data: states.data };
 
-  if (query.isLoading) return <MovieHubSkeleton />;
+  if (query.isLoading) return <MovieHubSkeleton isArabic={isArabic} />;
   if (query.isError || !data) {
     return (
-      <Card className="tvtime-movie-hub__error" role="alert">
-        <Film aria-hidden="true" />
-        <h2>{isArabic ? "تعذر تحميل واجهة الأفلام العربية" : "Could not load this movie world"}</h2>
-        <p>{isArabic ? "مكتبتك آمنة. قد تكون خدمة الكتالوج غير متاحة مؤقتاً." : "Your library is safe. The catalogue service may be temporarily unavailable."}</p>
-        <Button variant="outline" onClick={() => query.refetch()}>{copy.retry}</Button>
-      </Card>
+      <ErrorState
+        arabic={isArabic}
+        title={isArabic ? "تعذر تحميل واجهة الأفلام العربية" : "Could not load this movie world"}
+        description={isArabic ? "مكتبتك آمنة. قد تكون خدمة الكتالوج غير متاحة مؤقتاً." : "Your library is safe. The catalogue service may be temporarily unavailable."}
+        retryLabel={copy.retry}
+        onRetry={() => void query.refetch()}
+      />
     );
   }
 
@@ -354,7 +354,7 @@ function HubRowOrEmpty({
         <h2>{title}</h2>
         <p>{emptyText || hint}</p>
       </div>
-      {actionLabel && onAction && <Button size="sm" variant="outline" onClick={onAction}>{actionLabel}</Button>}
+      {actionLabel && onAction && <Button variant="outline" onClick={onAction}>{actionLabel}</Button>}
     </section>
   );
 }
@@ -414,15 +414,15 @@ function MovieHubHero({
           transition={{ duration: reduceMotion ? 0 : 0.32, ease: "easeOut" }}
         >
           <div className="tvtime-movie-hub-hero__meta">
-            <span><Sparkles /> {copy.featured}</span>
+            <span><Sparkles aria-hidden="true" /> {copy.featured}</span>
             {getYear(item) && <span>{getYear(item)}</span>}
-            {item.runtime ? <span>{item.runtime} min</span> : null}
-            {item.vote_average > 0 && <span><Star className="fill-current" /> {item.vote_average.toFixed(1)}</span>}
+            {item.runtime ? <span>{item.runtime} {isArabic ? "دقيقة" : "min"}</span> : null}
+            {item.vote_average > 0 && <span><Star className="fill-current" aria-hidden="true" /> {item.vote_average.toFixed(1)}</span>}
           </div>
           <h2>{title}</h2>
           <p className="line-clamp-2">{item.overview}</p>
           <div className="tvtime-movie-hub-hero__actions">
-            <Button size="lg" onClick={() => goMovie(item.id)}><Play className="fill-current" /> {copy.viewDetails}</Button>
+            <Button size="lg" onClick={() => goMovie(item.id)}><Play className="fill-current" aria-hidden="true" /> {copy.viewDetails}</Button>
           </div>
         </motion.div>
       </AnimatePresence>
@@ -468,11 +468,12 @@ function MovieHubHero({
   );
 }
 
-function MovieHubSkeleton() {
+function MovieHubSkeleton({ isArabic }: { isArabic: boolean }) {
+  const label = isArabic ? "جارٍ تحميل عالم الأفلام" : "Loading movie hub";
   return (
-    <div className="tvtime-movie-hub__skeleton" role="status" aria-busy="true" aria-label="Loading movie hub">
-      <span className="sr-only">Loading movie hub…</span>
-      <div className="h-[clamp(22rem,48vw,34rem)] rounded-[1.5rem] shimmer" />
+    <div className="tvtime-movie-hub__skeleton" role="status" aria-busy="true" aria-label={label}>
+      <span className="sr-only">{label}…</span>
+      <div className="h-[clamp(22rem,48vw,34rem)] rounded-3xl shimmer" />
       {Array.from({ length: 4 }).map((_, section) => (
         <div key={section}>
           <div className="mb-3 h-6 w-44 rounded shimmer" />

@@ -76,6 +76,10 @@ export function MediaRow({
     });
   };
 
+  // A finished load with nothing to show would render a heading, a "0" badge
+  // and an empty strip; hide the row instead. Callers own failure messaging.
+  if (!loading && items.length === 0) return null;
+
   return (
     <section className="tvtime-media-row">
       {!hideHeading && <div className="tvtime-section-heading">
@@ -84,7 +88,7 @@ export function MediaRow({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="truncate text-lg font-extrabold tracking-tight sm:text-xl">{title}</h2>
-              {!loading && (
+              {!loading && items.length > 0 && (
                 <span className="tvtime-section-heading__count tabular-nums">{items.length}</span>
               )}
             </div>
@@ -93,7 +97,7 @@ export function MediaRow({
         </div>
         <div className="tvtime-section-heading__actions">
           {onSeeAll && (
-            <Button variant="ghost" size="sm" className="tvtime-see-all" onClick={onSeeAll}>
+            <Button variant="ghost" className="tvtime-see-all" onClick={onSeeAll}>
               {isArabic ? "عرض الكل" : "See all"}
             </Button>
           )}
@@ -101,20 +105,20 @@ export function MediaRow({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="size-10 rounded-xl"
               onClick={() => scroll("left")}
               aria-label={isArabic ? `مرّر ${title} إلى اليسار` : `Scroll ${title} left`}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="size-10 rounded-xl"
               onClick={() => scroll("right")}
               aria-label={isArabic ? `مرّر ${title} إلى اليمين` : `Scroll ${title} right`}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </div>

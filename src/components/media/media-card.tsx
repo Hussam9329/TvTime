@@ -184,6 +184,7 @@ export const MediaCard = memo(function MediaCard({ item, showMediaType = true, f
             userRating={userRating}
             ratingBreakdown={libraryState?.ratingBreakdown ?? null}
             libraryStateReady={libraryStateReady}
+            isArabic={collectionWorld === "arabic-movies" || collectionWorld === "arabic-tv"}
             onOpenDetails={handleClick}
           />
         )}
@@ -201,10 +202,13 @@ interface MediaCardActionsProps {
   userRating: number | null;
   ratingBreakdown: PersonalRatingBreakdown | null;
   libraryStateReady: boolean;
+  /** Arabic titles get Arabic feedback and an Arabic rating dialog. */
+  isArabic: boolean;
   onOpenDetails: () => void;
 }
 
-function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, userRating, ratingBreakdown, libraryStateReady, onOpenDetails }: MediaCardActionsProps) {
+function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, userRating, ratingBreakdown, libraryStateReady, isArabic, onOpenDetails }: MediaCardActionsProps) {
+  const L = (en: string, ar: string) => (isArabic ? ar : en);
   const watchlistToggle = useWatchlistToggle();
   const watchedToggle = useWatchedMovieToggle();
   const showWatchUndo = useWatchUndo();
@@ -217,8 +221,8 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
     if (!libraryStateReady) return;
     try {
       await watchlistToggle.mutateAsync({ ...actionPayload, mediaType, action: inWatchlist ? "remove" : "add" });
-      toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
-    } catch { toast.error("Failed to update watchlist"); }
+      toast.success(inWatchlist ? L("Removed from watchlist", "أُزيل من قائمة المشاهدة") : L("Added to watchlist", "أُضيف إلى قائمة المشاهدة"));
+    } catch { toast.error(L("Failed to update watchlist", "تعذّر تحديث قائمة المشاهدة")); }
   };
   const toggleWatched = async () => {
     if (!libraryStateReady) return;
@@ -230,9 +234,9 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
             action: "add",
             ...(ratingBreakdown ? { ratingBreakdown } : {}),
           });
-          showWatchUndo(`Marked as watched · Your rating ${userRating}/100`, result);
+          showWatchUndo(L(`Marked as watched · Your rating ${userRating}/100`, `تمت المشاهدة · تقييمك ${userRating}/100`), result);
         } catch {
-          toast.error("Failed to update watched status");
+          toast.error(L("Failed to update watched status", "تعذّر تحديث حالة المشاهدة"));
         }
         return;
       }
@@ -241,8 +245,8 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
     }
     try {
       const result = await watchedToggle.mutateAsync({ ...actionPayload, action: "remove" });
-      showWatchUndo("Removed from watched", result);
-    } catch { toast.error("Failed to update watched status"); }
+      showWatchUndo(L("Removed from watched", "أُزيل من المُشاهَدة"), result);
+    } catch { toast.error(L("Failed to update watched status", "تعذّر تحديث حالة المشاهدة")); }
   };
   const completeWatchedWithRating = async ({ score, breakdown }: StructuredRatingResult) => {
     return watchedToggle.mutateAsync({
@@ -260,7 +264,7 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
           <Button
             variant="outline"
             size="icon"
-            className="tvtime-media-menu absolute top-2 z-20 h-8 w-8 p-0"
+            className="tvtime-media-menu absolute top-2 z-20 size-9 p-0 after:absolute after:-inset-2.5 after:content-['']"
             aria-label={`More actions for ${title}`}
             onPointerDown={(event) => {
               // Radix opens on pointerdown, before the shelf's 5px drag
@@ -309,9 +313,13 @@ function MediaCardActions({ item, id, title, mediaType, inWatchlist, watched, us
           onRate={completeWatchedWithRating}
           initialBreakdown={ratingBreakdown}
           legacyInitialRating={userRating}
-          description="قيّم مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتم اعتبار الفيلم مُشاهَدًا."
-          submitLabel={(score) => `Save rating & mark watched · ${score}/100`}
-          successMessage={(score) => `Marked as watched · Your rating ${score}/100`}
+          locale={isArabic ? "ar" : "en"}
+          description={L(
+            "Rate directly out of 100 or answer the ten questions. Saving marks the movie as watched.",
+            "قيّم مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتم اعتبار الفيلم مُشاهَدًا.",
+          )}
+          submitLabel={(score) => L(`Save rating & mark watched · ${score}/100`, `حفظ التقييم واعتباره مُشاهَدًا · ${score}/100`)}
+          successMessage={(score) => L(`Marked as watched · Your rating ${score}/100`, `تمت المشاهدة · تقييمك ${score}/100`)}
         />
       )}
     </>

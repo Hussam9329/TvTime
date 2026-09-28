@@ -50,7 +50,7 @@ export function StatsView() {
         <Card>
           <ErrorState
             title="Couldn’t load your statistics"
-            description="Your library is safe. The statistics service didn’t respond — try again in a moment."
+            description="Your collection is safe. The statistics service didn’t respond — try again in a moment."
             onRetry={() => void stats.refetch()}
           />
         </Card>
@@ -210,7 +210,7 @@ export function StatsView() {
           <EmptyState
             icon={<Film className="size-8" />}
             title="You haven’t tracked anything yet"
-            description="Add movies and shows to your library and your statistics will appear here."
+            description="Add movies and shows to your collection and your statistics will appear here."
             action={<Button type="button" onClick={() => setView("discover")}>Go to Discover</Button>}
           />
         </Card>

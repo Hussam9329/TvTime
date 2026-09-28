@@ -8,6 +8,40 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { SafeImage } from "@/components/media/safe-image";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
+import { ratingToneClass } from "@/lib/rating-tone";
+
+const COPY = {
+  en: {
+    description: "This saves only your rating out of 100. It does not change Watchlist or Watched status.",
+    submit: "Save Rating",
+    success: (rating: number) => `Rated ${rating}/100`,
+    failed: "Failed to save rating",
+    heading: "Rate this title",
+    nowRating: "Now rating",
+    current: (rating: number) => `Current rating: ${rating}/100`,
+    yourScore: "Your score",
+    hint: "Drag the slider or choose a quick value.",
+    quickValues: "Quick rating values",
+    cancel: "Cancel",
+    saving: "Saving...",
+    labels: ["Masterpiece!", "Excellent", "Very good", "Good", "Average", "Poor", "Very bad"],
+  },
+  ar: {
+    description: "يحفظ هذا تقييمك من 100 فقط، ولا يغيّر حالة قائمة المشاهدة أو المشاهدة.",
+    submit: "حفظ التقييم",
+    success: (rating: number) => `تم التقييم ${rating}/100`,
+    failed: "تعذّر حفظ التقييم",
+    heading: "قيّم هذا العمل",
+    nowRating: "تقييم",
+    current: (rating: number) => `تقييمك الحالي: ${rating}/100`,
+    yourScore: "درجتك",
+    hint: "حرّك المؤشر أو اختر قيمة سريعة.",
+    quickValues: "قيم تقييم سريعة",
+    cancel: "إلغاء",
+    saving: "جارٍ الحفظ…",
+    labels: ["تحفة!", "ممتاز", "جيد جدًا", "جيد", "متوسط", "ضعيف", "سيئ جدًا"],
+  },
+} as const;
 
 interface RatingDialogProps {
   open: boolean;
@@ -19,6 +53,8 @@ interface RatingDialogProps {
   description?: string;
   submitLabel?: string;
   successMessage?: (rating: number) => string;
+  /** Copy language and text direction. Arabic titles pass "ar". */
+  locale?: "en" | "ar";
 }
 
 export function RatingDialog({
@@ -28,10 +64,12 @@ export function RatingDialog({
   poster,
   onRate,
   initialRating = null,
-  description = "This saves only your rating out of 100. It does not change Watchlist or Watched status.",
-  submitLabel = "Save Rating",
-  successMessage = (rating) => `Rated ${rating}/100`,
+  description,
+  submitLabel,
+  successMessage,
+  locale = "en",
 }: RatingDialogProps) {
+  const copy = COPY[locale];
   // Default to 50 (neutral) instead of 75 — the old default of 75 made it too
   // easy to accidentally save a high rating by just clicking "Save Rating"
   // without moving the slider. 50 forces the user to actively choose a rating.
@@ -59,30 +97,30 @@ export function RatingDialog({
     setSubmitting(true);
     try {
       const result = await onRate(rating);
-      showWatchUndo(successMessage(rating), result as { undoToken?: string | null } | null | undefined);
+      showWatchUndo((successMessage ?? copy.success)(rating), result as { undoToken?: string | null } | null | undefined);
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save rating");
+      toast.error(error instanceof Error ? error.message : copy.failed);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const ratingColor = rating >= 80 ? "text-emerald-600 dark:text-emerald-400" : rating >= 60 ? "text-amber-600 dark:text-amber-400" : rating >= 40 ? "text-orange-600 dark:text-orange-400" : "text-rose-600 dark:text-rose-400";
-  const ratingLabel = rating >= 90 ? "Masterpiece!" : rating >= 80 ? "Excellent" : rating >= 70 ? "Very good" : rating >= 60 ? "Good" : rating >= 40 ? "Average" : rating >= 20 ? "Poor" : "Very bad";
+  const ratingColor = ratingToneClass(rating);
+  const ratingLabel = copy.labels[rating >= 90 ? 0 : rating >= 80 ? 1 : rating >= 70 ? 2 : rating >= 60 ? 3 : rating >= 40 ? 4 : rating >= 20 ? 5 : 6];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="tvtime-rating-dialog gap-0 overflow-hidden rounded-[1.1rem] border-border bg-card p-0 shadow-[var(--app-shadow-lg)] sm:max-w-[32rem] sm:p-0">
+      <DialogContent dir={locale === "ar" ? "rtl" : "ltr"} lang={locale} className="tvtime-rating-dialog gap-0 overflow-hidden rounded-2xl border-border bg-card p-0 shadow-[var(--app-shadow-lg)] sm:max-w-[32rem] sm:p-0">
         <DialogHeader className="relative top-auto z-0 gap-1.5 border-b border-border/60 bg-transparent px-5 py-5 pe-14 backdrop-blur-none supports-[backdrop-filter]:bg-transparent sm:px-6 sm:py-6 sm:pe-16">
           <DialogTitle className="flex items-center gap-3 text-xl leading-tight">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-600 dark:text-amber-300">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Star className="h-5 w-5 fill-current" />
             </span>
-            Rate this title
+            {copy.heading}
           </DialogTitle>
           <DialogDescription className="ps-[3.25rem] text-sm leading-relaxed">
-            {description}
+            {description ?? copy.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -98,16 +136,16 @@ export function RatingDialog({
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Now rating</p>
-              <h4 className="line-clamp-2 text-base font-bold leading-snug text-foreground">{title}</h4>
+              <p className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{copy.nowRating}</p>
+              <h4 dir="auto" className="line-clamp-2 text-base font-bold leading-snug text-foreground">{title}</h4>
               {isRerating && (
-                <p className="mt-1.5 text-xs font-semibold text-amber-600 dark:text-amber-300">Current rating: {safeInitialRating}/100</p>
+                <p className="mt-1.5 text-xs font-semibold text-primary">{copy.current(safeInitialRating)}</p>
               )}
             </div>
           </div>
 
           <div className="py-2 text-center" aria-live="polite">
-            <div className={`flex items-baseline justify-center font-black tracking-[-0.055em] ${ratingColor}`}>
+            <div dir="ltr" className={`flex items-baseline justify-center font-black tracking-[-0.055em] ${ratingColor}`}>
               <span className="text-6xl sm:text-7xl">{rating}</span>
               <span className="ms-1.5 text-xl tracking-tight text-muted-foreground sm:text-2xl">/100</span>
             </div>
@@ -119,13 +157,13 @@ export function RatingDialog({
           <div className="space-y-4">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <p className="text-sm font-bold text-foreground">Your score</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">Drag the slider or choose a quick value.</p>
+                <p className="text-sm font-bold text-foreground">{copy.yourScore}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{copy.hint}</p>
               </div>
-              <span className={`shrink-0 text-sm font-extrabold tabular-nums ${ratingColor}`}>{rating}/100</span>
+              <span dir="ltr" className={`shrink-0 text-sm font-extrabold tabular-nums ${ratingColor}`}>{rating}/100</span>
             </div>
 
-            <div className="px-1">
+            <div className="px-1" dir="ltr">
               <Slider
                 value={[rating]}
                 onValueChange={(value) => setRating(value[0])}
@@ -135,21 +173,21 @@ export function RatingDialog({
                 aria-label="Personal rating out of 100"
                 className="w-full [--tvtime-slider-thumb-visual-size:1.25rem] [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
               />
-              <div className="mt-2 flex justify-between text-[11px] font-medium tabular-nums text-muted-foreground">
+              <div className="mt-2 flex justify-between text-xs font-medium tabular-nums text-muted-foreground">
                 <span>0</span>
                 <span>50</span>
                 <span>100</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-5 gap-2" aria-label="Quick rating values">
+            <div className="grid grid-cols-5 gap-2" aria-label={copy.quickValues} dir="ltr">
               {[20, 40, 60, 80, 100].map((value) => (
                 <Button
                   key={value}
                   type="button"
                   variant={rating === value ? "default" : "outline"}
                   size="sm"
-                  className="h-9 min-w-0 rounded-xl px-0 text-sm tabular-nums"
+                  className="h-10 min-w-0 rounded-xl px-0 text-sm tabular-nums"
                   onClick={() => setRating(value)}
                   aria-pressed={rating === value}
                 >
@@ -162,10 +200,10 @@ export function RatingDialog({
 
         <DialogFooter className="static z-0 grid grid-cols-[0.8fr_1.35fr] gap-3 border-t border-border/60 bg-muted/30 px-5 py-4 pt-4 backdrop-blur-none supports-[backdrop-filter]:bg-muted/30 sm:grid-cols-[0.8fr_1.35fr] sm:px-6 [&>[data-slot=button]]:w-full">
           <Button type="button" variant="outline" className="min-h-11" onClick={() => onOpenChange(false)}>
-            Cancel
+            {copy.cancel}
           </Button>
           <Button type="button" className="h-auto min-h-11 whitespace-normal px-4 text-center leading-tight" onClick={handleSubmit} disabled={submitting} aria-busy={submitting}>
-            {submitting ? "Saving..." : submitLabel}
+            {submitting ? copy.saving : submitLabel ?? copy.submit}
           </Button>
         </DialogFooter>
       </DialogContent>

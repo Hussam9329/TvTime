@@ -7,6 +7,7 @@ import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
 import { ArrowRight, ChevronLeft, ChevronRight, Compass, Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
 import { useNav } from "@/lib/store";
 import { img, imgOrPlaceholder, getYear, getTitle, type MediaItem } from "@/lib/tmdb";
 import { SafeImage } from "@/components/media/safe-image";
@@ -100,6 +101,7 @@ export function HomeView() {
     ...unseenHeroCandidates.filter((media) => (media.overview?.length || 0) <= 100),
   ]).slice(0, 5);
   const sharedLibraryStateSource = { data: homeLibraryStates.data };
+  const homeFeedFailed = homeFeed.isError && !homeFeed.data;
 
   return (
     <div className="tvtime-home-view">
@@ -194,60 +196,70 @@ export function HomeView() {
       {/* Recently watched movies and shows */}
       <RecentlyWatched />
 
-      <MediaRow
-        title="Trending Now"
-        icon={<Flame className="w-5 h-5" />}
-        items={standardTrending}
-        loading={homeFeed.isLoading}
-        libraryStateSource={sharedLibraryStateSource}
-      />
-      <MediaRow
-        title="Popular Movies"
-        icon={<TrendingUp className="w-5 h-5" />}
-        items={popularMovieItems}
-        loading={homeFeed.isLoading}
-        onSeeAll={() => setView("discover")}
-        libraryStateSource={sharedLibraryStateSource}
-      />
-      <MediaRow
-        title="On The Air"
-        icon={<Tv className="w-5 h-5" />}
-        items={onAirTvItems}
-        loading={homeFeed.isLoading}
-        forcedMediaType="tv"
-        libraryStateSource={sharedLibraryStateSource}
-      />
-      <MediaRow
-        title="Popular TV Shows"
-        icon={<Tv className="w-5 h-5" />}
-        items={popularTvItems}
-        loading={homeFeed.isLoading}
-        onSeeAll={() => setView("discover")}
-        forcedMediaType="tv"
-        libraryStateSource={sharedLibraryStateSource}
-      />
-      <MediaRow
-        title="Top Rated Movies"
-        icon={<Star className="w-5 h-5" />}
-        items={topMovieItems}
-        loading={homeFeed.isLoading}
-        libraryStateSource={sharedLibraryStateSource}
-      />
-      <MediaRow
-        title="Top Rated TV Shows"
-        icon={<Star className="w-5 h-5" />}
-        items={topTvItems}
-        loading={homeFeed.isLoading}
-        forcedMediaType="tv"
-        libraryStateSource={sharedLibraryStateSource}
-      />
-      <MediaRow
-        title="Upcoming Movies"
-        icon={<Calendar className="w-5 h-5" />}
-        items={upcomingMovieItems}
-        loading={homeFeed.isLoading}
-        libraryStateSource={sharedLibraryStateSource}
-      />
+      {homeFeedFailed ? (
+        <ErrorState
+          title="Couldn’t load Home"
+          description="Trending, popular and upcoming titles didn’t load. Check your connection and try again."
+          onRetry={() => void homeFeed.refetch()}
+        />
+      ) : (
+        <>
+          <MediaRow
+            title="Trending Now"
+            icon={<Flame className="w-5 h-5" />}
+            items={standardTrending}
+            loading={homeFeed.isLoading}
+            libraryStateSource={sharedLibraryStateSource}
+          />
+          <MediaRow
+            title="Popular Movies"
+            icon={<TrendingUp className="w-5 h-5" />}
+            items={popularMovieItems}
+            loading={homeFeed.isLoading}
+            onSeeAll={() => setView("discover")}
+            libraryStateSource={sharedLibraryStateSource}
+          />
+          <MediaRow
+            title="On The Air"
+            icon={<Tv className="w-5 h-5" />}
+            items={onAirTvItems}
+            loading={homeFeed.isLoading}
+            forcedMediaType="tv"
+            libraryStateSource={sharedLibraryStateSource}
+          />
+          <MediaRow
+            title="Popular TV Shows"
+            icon={<Tv className="w-5 h-5" />}
+            items={popularTvItems}
+            loading={homeFeed.isLoading}
+            onSeeAll={() => setView("discover")}
+            forcedMediaType="tv"
+            libraryStateSource={sharedLibraryStateSource}
+          />
+          <MediaRow
+            title="Top Rated Movies"
+            icon={<Star className="w-5 h-5" />}
+            items={topMovieItems}
+            loading={homeFeed.isLoading}
+            libraryStateSource={sharedLibraryStateSource}
+          />
+          <MediaRow
+            title="Top Rated TV Shows"
+            icon={<Star className="w-5 h-5" />}
+            items={topTvItems}
+            loading={homeFeed.isLoading}
+            forcedMediaType="tv"
+            libraryStateSource={sharedLibraryStateSource}
+          />
+          <MediaRow
+            title="Upcoming Movies"
+            icon={<Calendar className="w-5 h-5" />}
+            items={upcomingMovieItems}
+            loading={homeFeed.isLoading}
+            libraryStateSource={sharedLibraryStateSource}
+          />
+        </>
+      )}
 
       {/* Genre-based recommendations */}
       <GenreRecommendations />
@@ -379,7 +391,7 @@ function Hero({ items }: { items: MediaItem[] }) {
           </div>
 
           <div className="tvtime-home-hero__poster hidden w-full lg:block" aria-hidden="true">
-            <div className="relative aspect-[2/3] overflow-hidden rounded-[1.1rem]">
+            <div className="relative aspect-[2/3] overflow-hidden rounded-2xl">
               <SafeImage
                 src={imgOrPlaceholder(item.poster_path, "w500")}
                 alt=""

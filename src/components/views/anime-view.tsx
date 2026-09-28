@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CalendarDays, Film, Grid2X2, Library, ListFilter, Sparkles, Tv } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CollectionWorldView } from "@/components/views/collection-world-view";
 import { DiscoverView } from "@/components/views/discover-view";
 import { ReleaseSchedule } from "@/components/views/movie-release-schedule";
@@ -12,6 +13,8 @@ import { useAnimeHub } from "@/hooks/use-tmdb";
 
 const ANIMATION_GENRES = [16];
 type AnimeMediaType = "movie" | "tv";
+const ANIME_SWITCH_ITEM_CLASS =
+  "flex-none gap-1.5 rounded-xl px-3 text-sm font-semibold text-muted-foreground first:rounded-xl last:rounded-xl hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-[var(--movie-world-accent)] data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm";
 
 export function AnimeView() {
   const [tab, setTab] = useState<"overview" | "library" | "discover" | "releases">("overview");
@@ -21,10 +24,23 @@ export function AnimeView() {
   const summaryLine = `${summary?.titles ?? "…"} titles • ${summary?.inProgress ?? "…"} In Progress • ${summary?.episodesWatched ?? "…"} Episodes Watched`;
 
   const mediaSwitch = (
-    <div className="tvtime-anime-media-switch mb-4 inline-flex rounded-xl border border-border/70 bg-card/75 p-1 shadow-sm" role="group" aria-label="Anime media type">
-      <button type="button" aria-pressed={mediaType === "movie"} onClick={() => setMediaType("movie")} className={`flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors ${mediaType === "movie" ? "bg-[var(--movie-world-accent)] text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent"}`}><Film className="h-4 w-4" /> Movies</button>
-      <button type="button" aria-pressed={mediaType === "tv"} onClick={() => setMediaType("tv")} className={`flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors ${mediaType === "tv" ? "bg-[var(--movie-world-accent)] text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent"}`}><Tv className="h-4 w-4" /> Series</button>
-    </div>
+    <ToggleGroup
+      type="single"
+      size="lg"
+      value={mediaType}
+      onValueChange={(value) => {
+        if (value === "movie" || value === "tv") setMediaType(value);
+      }}
+      className="tvtime-anime-media-switch mb-4 inline-flex gap-1 rounded-xl border border-border/70 bg-card/75 p-1 shadow-sm"
+      aria-label="Anime media type"
+    >
+      <ToggleGroupItem value="movie" className={ANIME_SWITCH_ITEM_CLASS}>
+        <Film aria-hidden="true" /> Movies
+      </ToggleGroupItem>
+      <ToggleGroupItem value="tv" className={ANIME_SWITCH_ITEM_CLASS}>
+        <Tv aria-hidden="true" /> Series
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 
   return (
@@ -36,7 +52,8 @@ export function AnimeView() {
           <p className="tvtime-movie-hub__summary" aria-live="polite">{summaryLine}</p>
         </div>
         <Button className="tvtime-movie-hub__browse" onClick={() => setTab("discover")}>
-          <ListFilter aria-hidden="true" /> Browse
+          <ListFilter aria-hidden="true" />
+          Browse
         </Button>
       </header>
 
@@ -73,7 +90,7 @@ export function AnimeView() {
             language="en-US"
             collectionWorld="anime"
             seasonal
-            accentClass="text-fuchsia-400"
+            accentClass="text-chart-2"
             title={`Anime ${mediaType === "movie" ? "Movie" : "Series"} Seasonal Calendar`}
             subtitle={`A Winter, Spring, Summer and Fall calendar for Japanese anime ${mediaType === "movie" ? "film" : "series"} premieres.`}
           />

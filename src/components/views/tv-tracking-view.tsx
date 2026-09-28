@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
+import { EmptyState } from "@/components/ui/empty-state";
 
 
 // Tracking status is calculated by the shared server engine.
@@ -28,6 +29,17 @@ const TV_GENRES = [
   "Family", "Kids", "Mystery", "News", "Reality", "Sci-Fi & Fantasy",
   "Soap", "Talk", "War & Politics", "Western",
 ] as const;
+
+// One consistent status palette: success (emerald), warning (amber),
+// destructive for stopped/stale, primary for neutral selections and muted
+// for not-started states.
+const STATUS_TONE = {
+  primary: "bg-primary/15 text-primary",
+  success: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  warning: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  danger: "bg-destructive/15 text-destructive",
+  muted: "bg-muted text-muted-foreground",
+} as const;
 
 function deriveTrackingStatus(show: any): TrackingStatus {
   const value = String(show?._trackingStatus || show?.status || "not_started").toLowerCase();
@@ -79,10 +91,10 @@ export function TvShowsView({ world = "standard", embedded = false }: { world?: 
 
       {/* TV Shows filters, all backed by full-collection counters. */}
       <div className="tvtime-tv-library-stats grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon={<Play className="w-5 h-5" />} label={isArabic ? "قيد المشاهدة" : "Watching"} value={counts?.watching ?? "…"} color="from-blue-500/20 to-blue-500/5" />
-        <StatCard icon={<BookOpen className="w-5 h-5" />} label={isArabic ? "قائمة المشاهدة" : "Watchlist"} value={counts?.watchlist ?? counts?.planned ?? "…"} color="from-violet-500/20 to-violet-500/5" />
-        <StatCard icon={<Zap className="w-5 h-5" />} label={isArabic ? "محدّث" : "Up To Date"} value={counts?.uptodate ?? "…"} color="from-cyan-500/20 to-cyan-500/5" />
-        <StatCard icon={<Trophy className="w-5 h-5" />} label={isArabic ? "مكتمل" : "Finished"} value={counts?.finished ?? "…"} color="from-emerald-500/20 to-emerald-500/5" />
+        <StatCard icon={<Play className="w-5 h-5" />} label={isArabic ? "قيد المشاهدة" : "Watching"} value={counts?.watching ?? "…"} color="from-chart-5/20 to-chart-5/5" />
+        <StatCard icon={<BookOpen className="w-5 h-5" />} label={isArabic ? "قائمة المشاهدة" : "Watchlist"} value={counts?.watchlist ?? counts?.planned ?? "…"} color="from-chart-2/20 to-chart-2/5" />
+        <StatCard icon={<Zap className="w-5 h-5" />} label={isArabic ? "محدّث" : "Up To Date"} value={counts?.uptodate ?? "…"} color="from-chart-3/20 to-chart-3/5" />
+        <StatCard icon={<Trophy className="w-5 h-5" />} label={isArabic ? "مكتمل" : "Finished"} value={counts?.finished ?? "…"} color="from-primary/20 to-primary/5" />
       </div>
 
       {stats.data?.watchTime && (
@@ -157,15 +169,15 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
     icon?: React.ReactNode;
     color: string;
   }[] = [
-    { value: "all", label: isArabic ? "الكل" : "All", count: counts.all, icon: <Layers className="w-3 h-3" />, color: "bg-primary/15 text-primary" },
-    { value: "watchlist", label: isArabic ? "قائمة المشاهدة" : "Watchlist", count: counts.watchlist ?? counts.planned, icon: <BookOpen className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
-    { value: "uptodate", label: isArabic ? "محدّث" : "Up to Date", count: counts.uptodate, icon: <Zap className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
-    { value: "finished", label: isArabic ? "مكتمل" : "Finished", count: counts.finished, icon: <Trophy className="w-3 h-3" />, color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
-    { value: "stopped", label: isArabic ? "توقفت عن مشاهدته" : "Stopped Watching", count: counts.stopped ?? 0, icon: <CircleStop className="w-3 h-3" />, color: "bg-rose-500/15 text-rose-700 dark:text-rose-300" },
-    { value: "upcoming", label: isArabic ? "قادم" : "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
-    { value: "havent-watched", label: isArabic ? "لم أشاهده" : "Haven't Watched", count: counts.haventWatched, icon: <Play className="w-3 h-3" />, color: "bg-orange-500/15 text-orange-700 dark:text-orange-400" },
-    { value: "havent-started", label: isArabic ? "لم أبدأه" : "Haven't Started", count: counts.haventStarted ?? counts.notStarted, icon: <Clock className="w-3 h-3" />, color: "bg-slate-500/15 text-slate-600 dark:text-slate-300" },
-    { value: "stale", label: isArabic ? "متوقف منذ 30 يوماً" : "Paused 30+ Days", count: counts.stale ?? 0, icon: <PauseCircle className="w-3 h-3" />, color: "bg-rose-500/15 text-rose-700 dark:text-rose-300" },
+    { value: "all", label: isArabic ? "الكل" : "All", count: counts.all, icon: <Layers className="w-3 h-3" />, color: STATUS_TONE.primary },
+    { value: "watchlist", label: isArabic ? "قائمة المشاهدة" : "Watchlist", count: counts.watchlist ?? counts.planned, icon: <BookOpen className="w-3 h-3" />, color: STATUS_TONE.primary },
+    { value: "uptodate", label: isArabic ? "محدّث" : "Up To Date", count: counts.uptodate, icon: <Zap className="w-3 h-3" />, color: STATUS_TONE.success },
+    { value: "finished", label: isArabic ? "مكتمل" : "Finished", count: counts.finished, icon: <Trophy className="w-3 h-3" />, color: STATUS_TONE.success },
+    { value: "stopped", label: isArabic ? "توقفت عن مشاهدته" : "Stopped Watching", count: counts.stopped ?? 0, icon: <CircleStop className="w-3 h-3" />, color: STATUS_TONE.danger },
+    { value: "upcoming", label: isArabic ? "قادم" : "Upcoming", count: counts.upcoming, icon: <Calendar className="w-3 h-3" />, color: STATUS_TONE.warning },
+    { value: "havent-watched", label: isArabic ? "لم أشاهده" : "Haven't Watched", count: counts.haventWatched, icon: <Play className="w-3 h-3" />, color: STATUS_TONE.warning },
+    { value: "havent-started", label: isArabic ? "لم أبدأه" : "Haven't Started", count: counts.haventStarted ?? counts.notStarted, icon: <Clock className="w-3 h-3" />, color: STATUS_TONE.muted },
+    { value: "stale", label: isArabic ? "متوقف منذ 30 يوماً" : "Paused 30+ Days", count: counts.stale ?? 0, icon: <PauseCircle className="w-3 h-3" />, color: STATUS_TONE.danger },
   ];
 
   const activeFilterLabel = filters.find((f) => f.value === filter)?.label ?? (isArabic ? "الكل" : "All");
@@ -197,7 +209,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
           <span className="flex flex-wrap items-center gap-2">
             <span>{isArabic ? "كل المسلسلات العربية" : world === "asian" ? "All Asian TV Shows" : "All TV Shows"}</span>
             <span className="text-xs font-normal text-muted-foreground">({total})</span>
-            <Badge variant="secondary" className="h-5 text-[10px]">{isArabic ? "عدّادات المجموعة" : "Global counters"}</Badge>
+            <Badge variant="secondary" className="h-6 text-xs">{isArabic ? "عدّادات المجموعة" : "Global counters"}</Badge>
           </span>
         )}
         description={isArabic
@@ -213,12 +225,12 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
           <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_220px_260px]">
             <FilterField label={isArabic ? "البحث في المسلسلات" : "Search TV Shows"}>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(event) => { setSearch(event.target.value); setPage(0); }}
                   placeholder={isArabic ? "ابحث باسم المسلسل..." : "Search your shows..."}
-                  className="h-9 pl-9"
+                  className="h-10 ps-9"
                   aria-label={isArabic ? "البحث في المسلسلات" : "Search TV Shows"}
                 />
               </div>
@@ -232,7 +244,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
                   setPage(0);
                 }}
               >
-                <SelectTrigger className="h-9 w-full" aria-label={isArabic ? "فلتر نوع المسلسلات" : "Filter TV Shows by genre"}>
+                <SelectTrigger className="h-10 w-full rounded-xl" aria-label={isArabic ? "فلتر نوع المسلسلات" : "Filter TV Shows by genre"}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -246,7 +258,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
 
             <FilterField label={isArabic ? "الترتيب حسب" : "Sort by"}>
               <div className="relative">
-                <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <ArrowUpDown className="pointer-events-none absolute start-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Select
                   value={sortBy}
                   onValueChange={(value) => {
@@ -254,7 +266,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
                     setPage(0);
                   }}
                 >
-                  <SelectTrigger className="h-9 w-full pl-9" aria-label={isArabic ? "ترتيب المسلسلات" : "Sort TV Shows"}>
+                  <SelectTrigger className="h-10 w-full rounded-xl ps-9" aria-label={isArabic ? "ترتيب المسلسلات" : "Sort TV Shows"}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -288,14 +300,14 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       <div className="tvtime-tracking-layout-toolbar flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/60 px-3 py-2.5">
         <div>
           <p className="text-sm font-bold text-foreground">{isArabic ? "طريقة عرض البطاقات" : "Card layout"}</p>
-          <p className="text-[11px] text-muted-foreground">{isArabic ? "يُحفظ اختيارك تلقائياً" : "Your choice is saved automatically"}</p>
+          <p className="text-xs text-muted-foreground">{isArabic ? "يُحفظ اختيارك تلقائياً" : "Your choice is saved automatically"}</p>
         </div>
         <div className="flex items-center rounded-xl border border-border/70 bg-background/60 p-1" role="group" aria-label={isArabic ? "طريقة عرض بطاقات المسلسلات" : "TV card layout"}>
           <Button
             type="button"
             size="sm"
             variant={layout === "list" ? "default" : "ghost"}
-            className="h-8 gap-1.5 rounded-lg px-3"
+            className="h-10 gap-1.5 rounded-lg px-3"
             onClick={() => changeLayout("list")}
             aria-pressed={layout === "list"}
           >
@@ -305,7 +317,7 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
             type="button"
             size="sm"
             variant={layout === "grid" ? "default" : "ghost"}
-            className="h-8 gap-1.5 rounded-lg px-3"
+            className="h-10 gap-1.5 rounded-lg px-3"
             onClick={() => changeLayout("grid")}
             aria-pressed={layout === "grid"}
           >
@@ -317,18 +329,18 @@ function AllShowsTab({ onGo, globalCounts, world }: { onGo: (id: number) => void
       {tracking.isLoading ? (
         <div data-layout={layout} className={cn("tvtime-tracking-cards grid grid-cols-1 gap-4", layout === "grid" && "lg:grid-cols-2 min-[2100px]:grid-cols-3")}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="shimmer h-[300px] rounded-[1.5rem] sm:h-[280px]" />
+            <div key={i} className="shimmer h-[300px] rounded-2xl sm:h-[280px]" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <EmptyTab
-          icon={<Layers className="w-10 h-10" />}
+        <EmptyState
+          icon={<Layers className="size-8" />}
           title={search.trim()
             ? (isArabic ? `لا توجد نتائج لـ «${search.trim()}»` : `No results for “${search.trim()}”`)
             : filter === "all"
               ? (isArabic ? "لا توجد مسلسلات عربية متابَعة بعد" : world === "asian" ? "No tracked Asian shows yet" : "No tracked shows yet")
               : (isArabic ? `لا توجد مسلسلات ضمن «${activeFilterLabel}»` : `No ${activeFilterLabel} shows`)}
-          subtitle={search.trim()
+          description={search.trim()
             ? (isArabic ? "جرّب اسماً مختلفاً أو أعد ضبط الفلاتر." : "Try another title or reset the filters.")
             : filter === "all"
               ? (isArabic ? "أضف مسلسلاً عربياً إلى مكتبتك لتبدأ المتابعة" : world === "asian" ? "Follow an Asian TV show to start tracking" : "Follow TV shows to start tracking")
@@ -401,26 +413,26 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
   const releasedEps = show._airedEpisodeCount ?? totalEps ?? null;
 
   const activity = trackingStatus === "stopped"
-    ? { tone: "rose", text: isArabic ? "توقفت عن المشاهدة — تم حفظ تقدمك" : "Stopped watching — progress saved", icon: CircleStop }
+    ? { tone: "danger", text: isArabic ? "توقفت عن المشاهدة — تم حفظ تقدمك" : "Stopped watching — progress saved", icon: CircleStop }
     : show._hasUnwatchedReleasedEpisode
-      ? { tone: "orange", text: isArabic ? "توجد حلقة صادرة بانتظارك — تابع المشاهدة" : "Released episode waiting — continue watching", icon: CirclePlay }
+      ? { tone: "warning", text: isArabic ? "توجد حلقة صادرة بانتظارك — تابع المشاهدة" : "Released episode waiting — continue watching", icon: CirclePlay }
     : show._nextEpisodeAirDate
       ? {
-          tone: "amber",
+          tone: "info",
           text: `${isArabic ? "القادمة" : "Upcoming"}: ${show._nextEpisodeSeasonNumber ? `S${show._nextEpisodeSeasonNumber}` : ""}${show._nextEpisodeNumber ? `E${show._nextEpisodeNumber}` : ""}${show._nextEpisodeName ? ` · ${show._nextEpisodeName}` : ""} · ${new Date(show._nextEpisodeAirDate).toLocaleDateString(isArabic ? "ar-IQ" : "en-US", { month: "short", day: "numeric", year: "numeric" })}`,
           icon: Calendar,
         }
       : show._daysSinceLastWatch != null && show._daysSinceLastWatch >= 30 && trackingStatus !== "finished"
-        ? { tone: "rose", text: isArabic ? `آخر مشاهدة قبل ${show._daysSinceLastWatch} يوماً` : `Last watched ${show._daysSinceLastWatch} days ago`, icon: PauseCircle }
+        ? { tone: "danger", text: isArabic ? `آخر مشاهدة قبل ${show._daysSinceLastWatch} يوماً` : `Last watched ${show._daysSinceLastWatch} days ago`, icon: PauseCircle }
         : { tone: "primary", text: isArabic ? "فتح تفاصيل المسلسل" : "Open series details", icon: Tv };
   const ActivityIcon = activity.icon;
-  const activityTone = activity.tone === "orange"
-    ? "border-orange-400/15 bg-orange-500/[0.035] text-orange-600 dark:text-orange-400 group-hover:bg-orange-500/[0.07]"
-    : activity.tone === "amber"
-      ? "border-amber-400/15 bg-amber-500/[0.035] text-amber-600 dark:text-amber-300 group-hover:bg-amber-500/[0.07]"
-      : activity.tone === "rose"
-        ? "border-rose-400/15 bg-rose-500/[0.035] text-rose-600 dark:text-rose-300 group-hover:bg-rose-500/[0.07]"
-        : "border-primary/15 bg-primary/[0.035] text-primary group-hover:bg-primary/[0.07]";
+  const activityTone = activity.tone === "warning"
+    ? "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-300 group-hover:bg-amber-500/10"
+    : activity.tone === "info"
+      ? "border-chart-5/20 bg-chart-5/5 text-chart-5 group-hover:bg-chart-5/10"
+      : activity.tone === "danger"
+        ? "border-destructive/20 bg-destructive/5 text-destructive group-hover:bg-destructive/10"
+        : "border-primary/15 bg-primary/5 text-primary group-hover:bg-primary/10";
 
   return (
     <motion.a
@@ -429,10 +441,10 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onGo(); }}
-      className="block rounded-[1.5rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+      className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
     >
       <Card className={cn(
-        "tvtime-tracking-card group relative cursor-pointer overflow-hidden rounded-[1.5rem] border-border/60 bg-card p-3.5 shadow-[var(--app-shadow-md)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[var(--app-shadow-lg)] sm:p-5",
+        "tvtime-tracking-card group relative cursor-pointer overflow-hidden rounded-2xl border-border/60 bg-card p-3.5 shadow-[var(--app-shadow-md)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[var(--app-shadow-lg)] sm:p-5",
       )}>
         <div className={cn(
           "tvtime-tracking-card__layout relative grid grid-cols-[92px_minmax(0,1fr)] items-start gap-3.5 sm:items-center",
@@ -474,7 +486,7 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
 
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <TrackingStatusBadge status={trackingStatus} isArabic={isArabic} />
-              {show.isAnime && <Badge className="h-8 rounded-full border border-purple-400/20 bg-purple-500/15 px-3 text-xs font-bold text-purple-700 dark:text-purple-300">Anime</Badge>}
+              {show.isAnime && <Badge className="h-8 rounded-full border border-chart-2/25 bg-chart-2/15 px-3 text-xs font-bold text-chart-2">{isArabic ? "أنمي" : "Anime"}</Badge>}
               {seasons != null && seasons > 0 && (
                 <Badge variant="secondary" className="h-8 rounded-full border border-border/70 bg-secondary/60 px-3 text-xs font-semibold text-foreground/90">
                   {isArabic ? `${seasons} موسم` : `${seasons} season${seasons > 1 ? "s" : ""}`}
@@ -484,7 +496,7 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
 
             {releasedEps != null && releasedEps > 0 && (
               <div className="tvtime-tracking-card__progress mt-3 rounded-xl border border-border/60 bg-muted/40 px-3 py-2.5">
-                <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-bold text-muted-foreground">
+                <div className="mb-1.5 flex items-center justify-between gap-3 text-xs font-bold text-muted-foreground">
                   <span>{isArabic ? "التقدم" : "Progress"}</span>
                   <span className="tabular-nums text-foreground">{watchedEps}/{releasedEps}</span>
                 </div>
@@ -503,11 +515,11 @@ function AllShowCard({ show, onGo, layout, isArabic = false }: { show: any; onGo
             </div>
 
             {userRating != null && (
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] px-3 py-2">
-                <Star className="h-4 w-4 fill-emerald-400 text-emerald-400" />
-                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{isArabic ? "تقييمك" : "Your rating"}: {userRating}/100</span>
+              <div className="mt-3 flex items-center gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2">
+                <Star className="h-4 w-4 fill-primary text-primary" />
+                <span className="text-xs font-bold text-primary">{isArabic ? "تقييمك" : "Your rating"}: {userRating}/100</span>
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-emerald-400" style={{ width: `${userRating}%` }} />
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${userRating}%` }} />
                 </div>
               </div>
             )}
@@ -535,22 +547,10 @@ function ShowMetric({ icon: Icon, value, label, compact = false }: { icon: React
     <div className="flex min-w-0 items-center justify-center gap-1.5 px-1.5 first:pl-0 last:pr-0 sm:gap-2 sm:px-3">
       <Icon className={cn("h-3.5 w-3.5 shrink-0 text-primary", compact ? "sm:h-4 sm:w-4" : "sm:h-4 sm:w-4")} />
       <div className="min-w-0">
-        <p className="truncate text-[10px] font-bold text-foreground/95 sm:text-xs">{value}</p>
-        <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-[0.08em] text-muted-foreground sm:text-[9px]">{label}</p>
+        <p className="truncate text-xs font-bold text-foreground/95">{value}</p>
+        <p className="mt-0.5 truncate text-xs font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
       </div>
     </div>
-  );
-}
-
-function EmptyTab({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
-  return (
-    <Card className="p-12 text-center text-muted-foreground">
-      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 mx-auto mb-3 flex items-center justify-center text-primary border border-primary/20">
-        {icon}
-      </div>
-      <p className="font-semibold text-foreground text-lg">{title}</p>
-      <p className="text-sm mt-1">{subtitle}</p>
-    </Card>
   );
 }
 
@@ -560,7 +560,7 @@ function StatCard({ icon, label, value, suffix, color }: { icon: React.ReactNode
   return (
     <Card className={`p-4 relative overflow-hidden bg-gradient-to-br ${color}`}>
       <div className="relative">
-        <div className="w-9 h-9 rounded-lg bg-background/50 backdrop-blur flex items-center justify-center text-primary mb-2">{icon}</div>
+        <div className="w-9 h-9 rounded-xl bg-background/50 backdrop-blur flex items-center justify-center text-primary mb-2">{icon}</div>
         <p className="text-2xl font-extrabold">{value}{suffix && value !== "…" && <span className="text-sm text-muted-foreground font-normal">{suffix}</span>}</p>
         <p className="text-xs text-muted-foreground">{label}</p>
       </div>

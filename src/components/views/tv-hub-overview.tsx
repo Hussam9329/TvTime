@@ -18,7 +18,7 @@ import {
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { ErrorState } from "@/components/ui/error-state";
 import {
   mediaStateKey,
   useMediaStates,
@@ -198,14 +198,13 @@ export function TvHubOverview({ world, onBrowse }: { world: TvHubWorld; onBrowse
   const allFailed = tracking.isError && catalogue.isError;
   if (allFailed) {
     return (
-      <Card className="tvtime-movie-hub__error" role="alert">
-        <Zap aria-hidden="true" />
-        <h2>{isArabic ? "تعذر تحميل واجهة المسلسلات" : "Could not load this TV world"}</h2>
-        <p>{isArabic ? "مكتبتك آمنة. حاول مرة أخرى بعد قليل." : "Your library is safe. Please try again in a moment."}</p>
-        <Button variant="outline" onClick={() => { void tracking.refetch(); void catalogue.refetch(); }}>
-          {isArabic ? "إعادة المحاولة" : "Retry"}
-        </Button>
-      </Card>
+      <ErrorState
+        arabic={isArabic}
+        title={isArabic ? "تعذر تحميل واجهة المسلسلات" : "Could not load this TV world"}
+        description={isArabic ? "مكتبتك آمنة. حاول مرة أخرى بعد قليل." : "Your library is safe. Please try again in a moment."}
+        retryLabel={isArabic ? "إعادة المحاولة" : "Retry"}
+        onRetry={() => { void tracking.refetch(); void catalogue.refetch(); }}
+      />
     );
   }
 
@@ -214,16 +213,25 @@ export function TvHubOverview({ world, onBrowse }: { world: TvHubWorld; onBrowse
       {featured.length > 0 ? (
         <TvHubHero items={featured} trackingById={trackedById} copy={copy} isArabic={isArabic} />
       ) : publicLoading ? (
-        <div className="h-[clamp(22rem,48vw,34rem)] rounded-[1.5rem] shimmer" aria-hidden="true" />
+        <div className="h-[clamp(22rem,48vw,34rem)] rounded-3xl shimmer" aria-hidden="true" />
       ) : null}
 
       {continueItems.length > 0 ? (
         <MediaRow title={copy.continueWatching} icon={<CirclePlay />} items={continueItems} forcedMediaType="tv" libraryStateSource={sharedStates} />
+      ) : tracking.isError ? (
+        <ErrorState
+          compact
+          arabic={isArabic}
+          title={isArabic ? "تعذر تحميل رفوف مكتبتك" : "Couldn’t load your library shelves"}
+          description={isArabic ? "لم نتمكن من جلب متابعة المسلسلات. الكتالوج أدناه ما زال متاحاً." : "Your tracked series didn’t load. The catalogue below is still available."}
+          retryLabel={isArabic ? "إعادة المحاولة" : "Retry"}
+          onRetry={() => void tracking.refetch()}
+        />
       ) : !tracking.isLoading ? (
         <section className="tvtime-movie-hub__empty-row">
           <span aria-hidden="true"><Trophy /></span>
           <div className="min-w-0 flex-1"><h2>{copy.continueWatching}</h2><p>{copy.emptyContinue}</p></div>
-          <Button size="sm" variant="outline" onClick={onBrowse}>{isArabic ? "اكتشف" : "Discover"}</Button>
+          <Button variant="outline" onClick={onBrowse}>{isArabic ? "اكتشف" : "Discover"}</Button>
         </section>
       ) : null}
 
@@ -300,24 +308,29 @@ function TvHubHero({
           transition={{ duration: reduceMotion ? 0 : 0.32, ease: "easeOut" }}
         >
           <div className="tvtime-movie-hub-hero__meta">
-            <span><Sparkles /> {copy.featured}</span>
+            <span><Sparkles aria-hidden="true" /> {copy.featured}</span>
             {mediaYear(item) && <span>{mediaYear(item)}</span>}
-            {item.vote_average > 0 && <span><Star className="fill-current" /> {item.vote_average.toFixed(1)}</span>}
-            {aired > 0 && <span><CirclePlay /> {watched}/{aired}</span>}
+            {item.vote_average > 0 && <span><Star className="fill-current" aria-hidden="true" /> {item.vote_average.toFixed(1)}</span>}
+            {aired > 0 && <span><CirclePlay aria-hidden="true" /> {watched}/{aired}</span>}
           </div>
           <h2>{mediaTitle(item)}</h2>
           <p className="line-clamp-2">{tracked?._nextEpisodeAirDate
-            ? `${isArabic ? "الحلقة القادمة" : "Next episode"}: ${tracked._nextEpisodeSeasonNumber ? `S${tracked._nextEpisodeSeasonNumber}` : ""}${tracked._nextEpisodeNumber ? `E${tracked._nextEpisodeNumber}` : ""}${tracked._nextEpisodeName ? ` · ${tracked._nextEpisodeName}` : ""}`
+            ? isArabic
+              ? `الحلقة القادمة: ${[
+                tracked._nextEpisodeSeasonNumber ? `الموسم ${tracked._nextEpisodeSeasonNumber}` : "",
+                tracked._nextEpisodeNumber ? `الحلقة ${tracked._nextEpisodeNumber}` : "",
+              ].filter(Boolean).join(" ")}${tracked._nextEpisodeName ? ` · ${tracked._nextEpisodeName}` : ""}`
+              : `Next episode: ${tracked._nextEpisodeSeasonNumber ? `S${tracked._nextEpisodeSeasonNumber}` : ""}${tracked._nextEpisodeNumber ? `E${tracked._nextEpisodeNumber}` : ""}${tracked._nextEpisodeName ? ` · ${tracked._nextEpisodeName}` : ""}`
             : item.overview}</p>
           <div className="tvtime-movie-hub-hero__actions">
-            <Button size="lg" onClick={() => goTv(item.id)}><Play className="fill-current" /> {copy.viewDetails}</Button>
+            <Button size="lg" onClick={() => goTv(item.id)}><Play className="fill-current" aria-hidden="true" /> {copy.viewDetails}</Button>
           </div>
         </motion.div>
       </AnimatePresence>
 
       {items.length > 1 && (
         <div data-carousel-controls className="tvtime-home-hero__carousel-controls relative z-20" aria-label={isArabic ? "شرائح المسلسلات المميزة" : "Featured TV slides"}>
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(-1)} aria-label={isArabic ? "السابق" : "Previous featured series"}><ChevronLeft /></button>
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(-1)} aria-label={isArabic ? "المسلسل المميز السابق" : "Previous featured series"}><ChevronLeft aria-hidden="true" /></button>
           <div className="tvtime-home-hero__carousel-dots">
             {items.map((candidate, index) => (
               <button
@@ -331,7 +344,7 @@ function TvHubHero({
               />
             ))}
           </div>
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(1)} aria-label={isArabic ? "التالي" : "Next featured series"}><ChevronRight /></button>
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(1)} aria-label={isArabic ? "المسلسل المميز التالي" : "Next featured series"}><ChevronRight aria-hidden="true" /></button>
         </div>
       )}
     </motion.section>

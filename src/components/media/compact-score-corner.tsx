@@ -14,8 +14,8 @@ type CompactScoreCornerProps = {
 };
 
 const SIDE_STYLES = {
-  left: "-left-px flex-row rounded-[0.55rem]",
-  right: "-right-px flex-row rounded-[0.55rem]",
+  left: "-left-px flex-row rounded-md",
+  right: "-right-px flex-row rounded-md",
 } as const;
 
 const TONE_STYLES = {
@@ -58,9 +58,9 @@ export function CompactScoreCorner({
         {icon}
       </span>
       {value != null && (
-        <span className="whitespace-nowrap text-[10px] font-bold tabular-nums leading-none tracking-[0.01em]">
+        <span className="whitespace-nowrap text-xs font-bold tabular-nums leading-none">
           {value}
-          <span className={`ml-px text-[7px] font-semibold ${colors.suffix}`}>{suffix}</span>
+          <span className={`ml-px text-xs font-medium ${colors.suffix}`}>{suffix}</span>
         </span>
       )}
     </span>

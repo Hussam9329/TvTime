@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SafeImage } from "@/components/media/safe-image";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
@@ -235,12 +236,10 @@ export function WatchNextView() {
       <PageTitlebar title="Watch Next" />
 
       {query.isLoading ? <WatchNextSkeleton /> : query.isError ? (
-        <EmptyState
-          className="feedback-state--error"
-          icon={<Clock3 className="h-9 w-9" />}
-          title="Your queue couldn't be loaded"
+        <ErrorState
+          title="Your queue couldn’t be loaded"
           description="Your progress is safe. Check your connection and try loading Watch Next again."
-          action={<Button variant="outline" size="sm" onClick={() => void query.refetch()}>Try again</Button>}
+          onRetry={() => void query.refetch()}
         />
       ) : (
         <>
@@ -1050,7 +1049,7 @@ function SortableOrderRow({ item, index }: { item: EnrichedWatchNextItem; index:
 function EmptyReady() {
   return (
     <EmptyState
-      icon={<CheckCircle2 className="h-9 w-9 text-emerald-600 dark:text-emerald-400" />}
+      icon={<CheckCircle2 className="size-8 text-emerald-600 dark:text-emerald-400" />}
       title="You’re all caught up"
       description="New released episodes will appear here automatically."
     />

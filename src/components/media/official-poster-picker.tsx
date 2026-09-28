@@ -23,6 +23,8 @@ export function OfficialPosterPicker({ tmdbId, mediaType, title, posters, isArab
   const official = [...new Map(posters.filter((p) => p.file_path).map((p) => [p.file_path!, p])).values()]
     .sort((a, b) => Number(b.vote_average || 0) - Number(a.vote_average || 0));
 
+  const failedMessage = isArabic ? "تعذّر حفظ البوستر" : "Failed to save poster";
+
   const choose = async (posterPath: string) => {
     setSaving(posterPath);
     try {
@@ -31,15 +33,15 @@ export function OfficialPosterPicker({ tmdbId, mediaType, title, posters, isArab
         headers: { "Content-Type": "application/json", ...userHeaders() },
         body: JSON.stringify({ tmdbId, mediaType, title, posterPath }),
       });
-      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || "Failed to save poster");
+      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || failedMessage);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["media-state"] }),
         qc.invalidateQueries({ queryKey: ["media"] }),
       ]);
-      toast.success("Official poster saved");
+      toast.success(isArabic ? "تم حفظ البوستر الرسمي" : "Official poster saved");
       setOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save poster");
+      toast.error(error instanceof Error ? error.message : failedMessage);
     } finally {
       setSaving(null);
     }
@@ -53,11 +55,14 @@ export function OfficialPosterPicker({ tmdbId, mediaType, title, posters, isArab
           <Images aria-hidden="true" /> {isArabic ? "البوسترات" : "Posters"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Choose official poster</DialogTitle><DialogDescription>Only official posters supplied by TMDB are shown.</DialogDescription></DialogHeader>
+      <DialogContent dir={isArabic ? "rtl" : undefined} className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isArabic ? "اختر البوستر الرسمي" : "Choose official poster"}</DialogTitle>
+          <DialogDescription>{isArabic ? "تُعرض فقط البوسترات الرسمية المقدّمة من TMDB." : "Only official posters supplied by TMDB are shown."}</DialogDescription>
+        </DialogHeader>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-          {official.map((poster) => <button key={poster.file_path} type="button" disabled={saving !== null} onClick={() => void choose(poster.file_path!)} className="relative aspect-[2/3] overflow-hidden rounded-lg border border-border hover:border-primary focus-visible:ring-2 focus-visible:ring-primary">
-            <SafeImage src={img(poster.file_path!, "w342")} alt={`${title} official poster`} fill variant="poster" loading="lazy" />
+          {official.map((poster) => <button key={poster.file_path} type="button" disabled={saving !== null} onClick={() => void choose(poster.file_path!)} className="relative aspect-[2/3] overflow-hidden rounded-xl border border-border outline-none transition-colors hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait">
+            <SafeImage src={img(poster.file_path!, "w342")} alt={isArabic ? `البوستر الرسمي لـ ${title}` : `${title} official poster`} fill variant="poster" loading="lazy" />
             {saving === poster.file_path && <span className="absolute inset-0 grid place-items-center bg-black/65"><Loader2 className="animate-spin text-white" /></span>}
           </button>)}
         </div>

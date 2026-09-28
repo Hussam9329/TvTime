@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { StructuredRatingDialog, type StructuredRatingResult } from "@/components/media/structured-rating-dialog";
 import { EpisodeWatchConfirmationDialog } from "@/components/media/episode-watch-confirmation-dialog";
@@ -37,6 +39,7 @@ import {
   mediaCollectionWorldForItem,
 } from "@/lib/media-world-pipeline";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
+import { ratingToneClass } from "@/lib/rating-tone";
 
 export function TvDetailView() {
   const { tvId, back, goPerson } = useNav();
@@ -109,11 +112,22 @@ export function TvDetailView() {
   }
 
   if (detail.isError || !detail.data) {
+    const arabicError = mediaState.data?.isArabic === true;
     return (
-      <div className="text-center py-20 text-muted-foreground">
-        <p>Failed to load TV show.</p>
-        <Button variant="outline" className="mt-4" onClick={back}>Go back</Button>
-      </div>
+      <ErrorState
+        arabic={arabicError}
+        title={arabicError ? "تعذّر تحميل المسلسل" : "Couldn’t load this show"}
+        description={arabicError
+          ? "حدث خطأ أثناء جلب تفاصيل المسلسل. تحقق من الاتصال ثم أعد المحاولة."
+          : "Something went wrong while loading the show details. Check your connection and try again."}
+        onRetry={() => void detail.refetch()}
+        action={(
+          <Button variant="ghost" onClick={back}>
+            <ArrowLeft className="rtl:rotate-180" aria-hidden="true" /> {arabicError ? "رجوع" : "Go back"}
+          </Button>
+        )}
+        className="py-20"
+      />
     );
   }
 
@@ -147,6 +161,7 @@ export function TvDetailView() {
   const filmweenSearchTitle = isArabicShow ? ((t as any).english_name || displayTitle) : displayTitle;
   const voduSearchTitle = displayTitle;
   const cinemanaSearchTitle = displayTitle;
+  const L = (en: string, ar: string) => (isArabicShow ? ar : en);
 
   const cast = (t as any).credits?.cast?.slice(0, 16) ?? [];
   const recommendationCandidates = (((t as any).recommendations?.results ?? []) as MediaItem[])
@@ -193,9 +208,9 @@ export function TvDetailView() {
         seasons: t.number_of_seasons,
         episodes: t.number_of_episodes,
       });
-      toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
+      toast.success(inWatchlist ? L("Removed from watchlist", "أُزيل من قائمة المشاهدة") : L("Added to watchlist", "أُضيف إلى قائمة المشاهدة"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update watchlist");
+      toast.error(error instanceof Error ? error.message : L("Failed to update watchlist", "تعذّر تحديث قائمة المشاهدة"));
     }
   };
 
@@ -216,10 +231,10 @@ export function TvDetailView() {
           seasons: t.number_of_seasons,
           episodes: t.number_of_episodes,
         });
-        if (result.changed) toast.success(isStopped ? "Watching resumed — the next episode is active again." : "Following — track episodes!");
-        else toast.info("This show is already followed.");
+        if (result.changed) toast.success(isStopped ? L("Watching resumed — the next episode is active again.", "استُؤنفت المشاهدة — الحلقة التالية نشطة من جديد.") : L("Following — track episodes!", "تتم متابعة المسلسل — تتبّع الحلقات!"));
+        else toast.info(L("This show is already followed.", "هذا المسلسل متابَع بالفعل."));
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to follow");
+        toast.error(error instanceof Error ? error.message : L("Failed to follow", "تعذّرت المتابعة"));
       }
       return;
     }
@@ -236,10 +251,10 @@ export function TvDetailView() {
         title: displayTitle,
         keepProgress: true,
       });
-      if (result.changed) toast.success("Unfollowed");
-      else toast.info("This show was already unfollowed.");
+      if (result.changed) toast.success(L("Unfollowed", "أُلغيت المتابعة"));
+      else toast.info(L("This show was already unfollowed.", "المتابعة ملغاة بالفعل لهذا المسلسل."));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to unfollow");
+      toast.error(error instanceof Error ? error.message : L("Failed to unfollow", "تعذّر إلغاء المتابعة"));
     }
   };
 
@@ -252,11 +267,11 @@ export function TvDetailView() {
         keepProgress: true,
         stopWatching: true,
       });
-      if (result.changed) toast.success("Stopped watching. Your episode progress was kept.");
-      else toast.info("This show is already stopped.");
+      if (result.changed) toast.success(L("Stopped watching. Your episode progress was kept.", "أُوقفت المشاهدة. تم الاحتفاظ بتقدّمك في الحلقات."));
+      else toast.info(L("This show is already stopped.", "المشاهدة متوقفة بالفعل لهذا المسلسل."));
       setShowStopDialog(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to stop watching");
+      toast.error(error instanceof Error ? error.message : L("Failed to stop watching", "تعذّر إيقاف المشاهدة"));
     }
   };
 
@@ -268,11 +283,11 @@ export function TvDetailView() {
         title: displayTitle,
         keepProgress: true,
       });
-      if (result.changed) toast.success("Unfollowed. Episode progress was kept.");
-      else toast.info("This show was already unfollowed. Progress is unchanged.");
+      if (result.changed) toast.success(L("Unfollowed. Episode progress was kept.", "أُلغيت المتابعة. تم الاحتفاظ بتقدّم الحلقات."));
+      else toast.info(L("This show was already unfollowed. Progress is unchanged.", "المتابعة ملغاة بالفعل. لم يتغيّر التقدّم."));
       setShowUnfollowDialog(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to unfollow");
+      toast.error(error instanceof Error ? error.message : L("Failed to unfollow", "تعذّر إلغاء المتابعة"));
     }
   };
 
@@ -285,19 +300,19 @@ export function TvDetailView() {
         keepProgress: false,
       });
       if (result.changed) {
-        toast.success(`Unfollowed. ${result.deletedEpisodes || 0} watched episodes and ${result.deletedRatings || 0} episode ratings cleared.`);
+        toast.success(L(`Unfollowed. ${result.deletedEpisodes || 0} watched episodes and ${result.deletedRatings || 0} episode ratings cleared.`, `أُلغيت المتابعة. حُذفت ${result.deletedEpisodes || 0} حلقة مُشاهَدة و${result.deletedRatings || 0} تقييم حلقات.`));
       } else {
-        toast.info("This show was already unfollowed with no saved progress.");
+        toast.info(L("This show was already unfollowed with no saved progress.", "المتابعة ملغاة بالفعل ولا يوجد تقدّم محفوظ."));
       }
       setShowUnfollowDialog(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to unfollow");
+      toast.error(error instanceof Error ? error.message : L("Failed to unfollow", "تعذّر إلغاء المتابعة"));
     }
   };
 
   const onRateSubmit = async ({ score, breakdown }: StructuredRatingResult) => {
     if (!canRateShow) {
-      toast.error(isEnded ? "Finish all episodes before rating this show." : "Rating unlocks only after the whole show ends.");
+      toast.error(isEnded ? L("Finish all episodes before rating this show.", "أكمل جميع الحلقات قبل تقييم المسلسل.") : L("Rating unlocks only after the whole show ends.", "يُفتح التقييم فقط بعد انتهاء المسلسل بالكامل."));
       return;
     }
     await ratingMutate.mutateAsync({
@@ -326,18 +341,13 @@ export function TvDetailView() {
       await ratingMutate.mutateAsync({ action: "remove", mediaType: "tv", tmdbId: t.id });
       setLastAutoPromptedShowId(String(t.id));
       setRatingOpen(false);
-      toast.success("Rating removed and Finished status cleared");
+      toast.success(L("Rating removed and Finished status cleared", "حُذف التقييم وأُلغيت حالة Finished"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove rating");
+      toast.error(error instanceof Error ? error.message : L("Failed to remove rating", "تعذّر حذف التقييم"));
     }
   };
 
-  const ratingColor = displayedShowRating == null
-    ? "text-muted-foreground"
-    : displayedShowRating >= 80 ? "text-emerald-400"
-    : displayedShowRating >= 60 ? "text-amber-400"
-    : displayedShowRating >= 40 ? "text-orange-400"
-    : "text-rose-400";
+  const ratingColor = ratingToneClass(displayedShowRating);
 
   return (
     <div className="media-profile" data-media-kind="tv">
@@ -349,7 +359,7 @@ export function TvDetailView() {
         </div>
       </div>
       <Button variant="ghost" size="sm" onClick={back} className="mp-back text-muted-foreground">
-        <ArrowLeft className="w-4 h-4 mr-1" /> {isArabicShow ? "رجوع" : "Back"}
+        <ArrowLeft className="w-4 h-4 me-1 rtl:rotate-180" /> {isArabicShow ? "رجوع" : "Back"}
       </Button>
 
       <section className="mp-hero">
@@ -405,7 +415,7 @@ export function TvDetailView() {
                 <Button variant="default" onClick={onFollow} disabled={followingToggle.isPending}>
                   <Bell /> Following
                 </Button>
-                <Button variant="outline" onClick={() => setShowStopDialog(true)} className="border-rose-400/30 text-rose-300 hover:bg-rose-500/10 hover:text-rose-200" disabled={followingToggle.isPending}>
+                <Button variant="outline" onClick={() => setShowStopDialog(true)} className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={followingToggle.isPending}>
                   <CircleStop /> Stop Watching
                 </Button>
               </>
@@ -503,14 +513,14 @@ export function TvDetailView() {
                   disabled={!canRateShow}
                   onClick={() => {
                     if (!canRateShow) {
-                      toast.info(isEnded ? "Finish all episodes before rating this show." : "Rating unlocks only after the whole show ends.");
+                      toast.info(isEnded ? L("Finish all episodes before rating this show.", "أكمل جميع الحلقات قبل تقييم المسلسل.") : L("Rating unlocks only after the whole show ends.", "يُفتح التقييم فقط بعد انتهاء المسلسل بالكامل."));
                       return;
                     }
                     setRatingOpen(true);
                   }}
                   title={!canRateShow ? (isEnded ? "Finish all episodes first" : "Rating unlocks after the show ends") : undefined}
                 >
-                  <Star className="w-4 h-4 mr-1 fill-current" />
+                  <Star className="w-4 h-4 me-1 fill-current" />
                   {displayedShowRating != null ? "Re-rate" : canRateShow ? "Rate & finish" : "Rating locked"}
                 </Button>
               </div>
@@ -563,9 +573,9 @@ export function TvDetailView() {
                 setLastAutoPromptedShowId(String(t.id));
                 setPendingCompletionRating(true);
                 setRatingOpen(true);
-                toast.info("All episodes watched. Rate this show to mark it Finished.");
+                toast.info(L("All episodes watched. Rate this show to mark it Finished.", "شاهدت جميع الحلقات. قيّم المسلسل لتحويله إلى Finished."));
               } else if (c.newStatus === "uptodate") {
-                toast.info("You're all caught up! More episodes coming soon.");
+                toast.info(L("You're all caught up! More episodes coming soon.", "أنت متابع لآخر حلقة! المزيد من الحلقات قريبًا."));
               }
             }}
           />
@@ -619,7 +629,11 @@ export function TvDetailView() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">{isArabicShow ? "لا تتوفر معلومات عن طاقم العمل." : "No cast information available."}</p>
+            <EmptyState
+              icon={<Users className="size-8" />}
+              title={isArabicShow ? "لا تتوفر معلومات عن طاقم العمل." : "No cast information available."}
+              className="py-8"
+            />
           )}
         </TabsContent>
 
@@ -627,7 +641,7 @@ export function TvDetailView() {
           <TabsContent value="videos" className="mt-4">
             <div className="mp-content-grid">
               {videos.slice(0, 8).map((v: any) => (
-                <button key={v.id} onClick={() => window.open(`https://www.youtube.com/watch?v=${v.key}`, "_blank")} className="group text-left">
+                <button key={v.id} onClick={() => window.open(`https://www.youtube.com/watch?v=${v.key}`, "_blank")} className="group text-start">
                   <Card className="overflow-hidden p-0 hover:border-primary/40 transition-colors">
                     <div className="relative aspect-video bg-black">
                       <SafeImage src={`https://img.youtube.com/vi/${v.key}/hqdefault.jpg`} alt={v.name} fill variant="youtube" className="opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -665,20 +679,23 @@ export function TvDetailView() {
         onRate={onRateSubmit}
         initialBreakdown={myRatingBreakdown}
         legacyInitialRating={myRating}
+        locale={isArabicShow ? "ar" : "en"}
         description={myRating == null
-          ? "قيّم المسلسل مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتحول المسلسل إلى Finished."
-          : "عدّل تقييم المسلسل مباشرة من 100 أو استخدم الأسئلة العشرة. يبقى المسلسل Finished."}
-        submitLabel={(score) => myRating == null ? `Save rating & mark Finished · ${score}/100` : `Update rating · ${score}/100`}
+          ? L("Rate the series directly out of 100 or answer the ten questions. Saving marks it Finished. Closing or cancelling keeps it Up To Date.", "قيّم المسلسل مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتحول المسلسل إلى Finished. الإغلاق أو الإلغاء يبقيه Up To Date.")
+          : L("Update the series rating directly out of 100 or use the ten questions. The series stays Finished.", "عدّل تقييم المسلسل مباشرة من 100 أو استخدم الأسئلة العشرة. يبقى المسلسل Finished.")}
+        submitLabel={(score) => myRating == null
+          ? L(`Save rating & mark Finished · ${score}/100`, `حفظ التقييم وتحويله إلى Finished · ${score}/100`)
+          : L(`Update rating · ${score}/100`, `تحديث التقييم · ${score}/100`)}
         successMessage={(score) => myRating == null
-          ? `Marked as Finished · Your rating ${score}/100`
-          : `Updated your rating to ${score}/100`}
+          ? L(`Marked as Finished · Your rating ${score}/100`, `أصبح Finished · تقييمك ${score}/100`)
+          : L(`Updated your rating to ${score}/100`, `تم تحديث تقييمك إلى ${score}/100`)}
       />
 
       <Dialog open={showStopDialog} onOpenChange={setShowStopDialog}>
         <DialogContent className="tvtime-tracking-confirmation space-y-4" showCloseButton={false}>
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500/15">
-                <CircleStop className="h-5 w-5 text-rose-300" />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-destructive/15">
+                <CircleStop className="h-5 w-5 text-destructive" />
               </div>
               <div>
                 <DialogTitle className="text-lg font-bold">Stop watching “{displayTitle}”?</DialogTitle>
@@ -688,7 +705,7 @@ export function TvDetailView() {
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button variant="ghost" onClick={() => setShowStopDialog(false)}>Cancel</Button>
               <Button variant="destructive" onClick={onStopWatching} disabled={followingToggle.isPending}>
-                <CircleStop className="mr-2 h-4 w-4" /> Stop Watching
+                <CircleStop className="me-2 h-4 w-4" /> Stop Watching
               </Button>
             </div>
         </DialogContent>
@@ -710,13 +727,13 @@ export function TvDetailView() {
               </div>
             </div>
             <div className="space-y-2">
-              <Button variant="secondary" className="w-full h-auto py-3 justify-start text-left" onClick={onUnfollowKeepProgress}>
+              <Button variant="secondary" className="w-full h-auto py-3 justify-start text-start" onClick={onUnfollowKeepProgress}>
                 <div>
                   <p className="font-medium">Unfollow, keep progress</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Remove from Following. Watched episodes stay intact.</p>
                 </div>
               </Button>
-              <Button variant="destructive" className="w-full h-auto py-3 justify-start text-left" onClick={onUnfollowFull}>
+              <Button variant="destructive" className="w-full h-auto py-3 justify-start text-start" onClick={onUnfollowFull}>
                 <div>
                   <p className="font-medium">Unfollow, clear everything</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Remove from Following and reset watch progress.</p>
@@ -773,6 +790,7 @@ function SeasonEpisodes({
     currentRating: number | null;
   } | null>(null);
   const [watchPlan, setWatchPlan] = useState<EpisodeWatchPlan | null>(null);
+  const L = (en: string, ar: string) => (isArabicShow ? ar : en);
 
   const ratingByEpisode = new Map<string, number>(
     (episodeRatings.data?.items ?? []).map((rating) => [
@@ -822,13 +840,13 @@ function SeasonEpisodes({
       onCompletion?.(result?.completion);
       setWatchPlan(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to mark episodes");
+      toast.error(error instanceof Error ? error.message : L("Failed to mark episodes", "تعذّر تحديث الحلقات"));
     }
   };
 
   const markAllWatched = async () => {
     if (!watchPlanReady) {
-      toast.error("Earlier episode history is still loading. Try again in a moment.");
+      toast.error(L("Earlier episode history is still loading. Try again in a moment.", "ما زال سجل الحلقات السابقة قيد التحميل. أعد المحاولة بعد لحظات."));
       return;
     }
     const plan = buildSeasonWatchPlan({
@@ -837,7 +855,7 @@ function SeasonEpisodes({
       watchedKeys: watchedSet,
     });
     if (plan.selectedEpisodes.length === 0) {
-      toast.info(releasedEpisodes.length === 0 ? "No released episodes in this season yet" : "All released episodes already watched");
+      toast.info(releasedEpisodes.length === 0 ? L("No released episodes in this season yet", "لا توجد حلقات معروضة في هذا الموسم بعد") : L("All released episodes already watched", "شاهدت جميع الحلقات المعروضة بالفعل"));
       return;
     }
     if (plan.previousUnwatched.length > 0) {
@@ -849,7 +867,7 @@ function SeasonEpisodes({
 
   const rewatchSeason = async () => {
     if (releasedEpisodes.length === 0 || releasedEpisodes.some((episode: any) => !isEpisodeWatched(episode))) {
-      toast.info("Finish every released episode in this season before recording a full-season rewatch.");
+      toast.info(L("Finish every released episode in this season before recording a full-season rewatch.", "أكمل جميع حلقات هذا الموسم المعروضة قبل تسجيل إعادة مشاهدة الموسم."));
       return;
     }
     if (!window.confirm(`Record one rewatch for all ${releasedEpisodes.length} released episodes in ${currentSeason?.name || `Season ${season}`}?`)) return;
@@ -861,13 +879,13 @@ function SeasonEpisodes({
       });
       showWatchUndo(`${currentSeason?.name || `Season ${season}`} rewatch recorded for every released episode.`, result);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to record season rewatch");
+      toast.error(error instanceof Error ? error.message : L("Failed to record season rewatch", "تعذّر تسجيل إعادة مشاهدة الموسم"));
     }
   };
 
   const toggleEpisode = async (episode: { season_number: number; episode_number: number; name: string; air_date?: string | null }) => {
     if (!isReleased(episode)) {
-      toast.info("This episode has not aired yet.");
+      toast.info(L("This episode has not aired yet.", "لم تُعرض هذه الحلقة بعد."));
       return;
     }
     const sn = episode.season_number;
@@ -886,13 +904,13 @@ function SeasonEpisodes({
         });
         showWatchUndo(`S${sn}E${en} marked as unwatched.`, result);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to update episode");
+        toast.error(error instanceof Error ? error.message : L("Failed to update episode", "تعذّر تحديث الحلقة"));
       }
       return;
     }
 
     if (!watchPlanReady) {
-      toast.error("Earlier episode history is still loading. Try again in a moment.");
+      toast.error(L("Earlier episode history is still loading. Try again in a moment.", "ما زال سجل الحلقات السابقة قيد التحميل. أعد المحاولة بعد لحظات."));
       return;
     }
 
@@ -910,11 +928,11 @@ function SeasonEpisodes({
 
   const openEpisodeRating = (episode: { season_number: number; episode_number: number; name: string; air_date?: string | null }) => {
     if (!isReleased(episode)) {
-      toast.info("Episode rating unlocks after the episode airs.");
+      toast.info(L("Episode rating unlocks after the episode airs.", "يُفتح تقييم الحلقة بعد عرضها."));
       return;
     }
     if (!isEpisodeWatched(episode)) {
-      toast.info("Mark this episode as watched before rating it.");
+      toast.info(L("Mark this episode as watched before rating it.", "علّم الحلقة كمُشاهَدة قبل تقييمها."));
       return;
     }
     const key = `${episode.season_number}-${episode.episode_number}`;
@@ -947,9 +965,9 @@ function SeasonEpisodes({
         seasonNumber: episode.season_number,
         episodeNumber: episode.episode_number,
       });
-      toast.success("Episode rating removed. Show rating was not changed.");
+      toast.success(L("Episode rating removed. Show rating was not changed.", "حُذف تقييم الحلقة. لم يتغيّر تقييم المسلسل."));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove episode rating");
+      toast.error(error instanceof Error ? error.message : L("Failed to remove episode rating", "تعذّر حذف تقييم الحلقة"));
     }
   };
 
@@ -958,7 +976,7 @@ function SeasonEpisodes({
       const result = await episodeToggle.mutateAsync({ action: "rewatch", showId: tvId, seasonNumber: episode.season_number, episodeNumber: episode.episode_number, episodeName: episode.name });
       showWatchUndo(`S${episode.season_number}E${episode.episode_number} rewatch recorded.`, result);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to record rewatch");
+      toast.error(error instanceof Error ? error.message : L("Failed to record rewatch", "تعذّر تسجيل إعادة المشاهدة"));
     }
   };
 
@@ -987,10 +1005,10 @@ function SeasonEpisodes({
 
         <div className="mp-season-actions flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={markAllWatched} disabled={seasonData.isLoading || bulkEpisodeToggle.isPending || episodeToggle.isPending || releasedEpisodes.length === 0 || !watchPlanReady}>
-            <CheckCheck className="w-4 h-4 mr-1.5" /> Mark season watched
+            <CheckCheck className="w-4 h-4 me-1.5" /> Mark season watched
           </Button>
           <Button variant="secondary" size="sm" onClick={() => void rewatchSeason()} disabled={seasonData.isLoading || bulkEpisodeToggle.isPending || episodeToggle.isPending || releasedEpisodes.length === 0 || releasedEpisodes.some((episode: any) => !isEpisodeWatched(episode))}>
-            <RotateCcw className="w-4 h-4 mr-1.5" /> Rewatch season
+            <RotateCcw className="w-4 h-4 me-1.5" /> Rewatch season
           </Button>
         </div>
       </div>
@@ -1017,6 +1035,20 @@ function SeasonEpisodes({
             <div key={i} className="h-72 shimmer rounded-xl" />
           ))}
         </div>
+      ) : seasons.length > 0 && seasonData.isError ? (
+        <ErrorState
+          compact
+          arabic={isArabicShow}
+          title={isArabicShow ? "تعذّر تحميل حلقات الموسم" : "Couldn’t load this season’s episodes"}
+          onRetry={() => void seasonData.refetch()}
+        />
+      ) : (seasonData.data?.episodes.length ?? 0) === 0 ? (
+        <EmptyState
+          icon={<Tv className="size-8" />}
+          title={isArabicShow ? "لا توجد حلقات في هذا الموسم بعد" : "No episodes in this season yet"}
+          description={isArabicShow ? "ستظهر الحلقات هنا فور إعلانها." : "Episodes will appear here as soon as they are announced."}
+          className="py-10"
+        />
       ) : (
         <div className="mp-episode-grid">
           {seasonData.data?.episodes.map((ep, idx) => {
@@ -1065,7 +1097,7 @@ function SeasonEpisodes({
                     <div className="mp-episode-heading flex items-start justify-between gap-2">
                       <h4 className="font-semibold text-sm line-clamp-1">
                         {ep.name || `Episode ${ep.episode_number}`}
-                        {futureEpisode && <Badge variant="outline" className="ml-2 text-[9px]">Upcoming</Badge>}
+                        {futureEpisode && <Badge variant="outline" className="ms-2 text-xs">{isArabicShow ? "قريبًا" : "Upcoming"}</Badge>}
                       </h4>
                     </div>
                     <details className="mp-episode-details">
@@ -1091,17 +1123,17 @@ function SeasonEpisodes({
                       </div>
                     </details>
                     <div className="mp-episode-actions flex items-center gap-1.5 mt-2 flex-wrap">
-                      {isWatched && <Button type="button" variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => void recordEpisodeRewatch(ep)} disabled={episodeToggle.isPending}>Rewatch ({(watched.data?.items ?? []).find((item: any) => item.seasonNumber === ep.season_number && item.episodeNumber === ep.episode_number)?.rewatchCount ?? 0})</Button>}
+                      {isWatched && <Button type="button" variant="outline" size="sm" className="h-10 text-xs" onClick={() => void recordEpisodeRewatch(ep)} disabled={episodeToggle.isPending}>Rewatch ({(watched.data?.items ?? []).find((item: any) => item.seasonNumber === ep.season_number && item.episodeNumber === ep.episode_number)?.rewatchCount ?? 0})</Button>}
                       <Button
                         type="button"
                         variant={ratingByEpisode.has(`${ep.season_number}-${ep.episode_number}`) ? "secondary" : "outline"}
                         size="sm"
-                        className="h-7 text-[11px]"
+                        className="h-10 text-xs"
                         disabled={!released || !isWatched || episodeRatingMutate.isPending}
                         onClick={() => openEpisodeRating(ep)}
                         title={!released ? "Rating unlocks after air date" : !isWatched ? "Watch this episode first" : "Rate this episode independently"}
                       >
-                        {(!released || !isWatched) ? <Lock className="w-3 h-3 mr-1" /> : <Star className="w-3 h-3 mr-1 fill-current" />}
+                        {(!released || !isWatched) ? <Lock className="w-3.5 h-3.5 me-1" /> : <Star className="w-3.5 h-3.5 me-1 fill-current" />}
                         {ratingByEpisode.has(`${ep.season_number}-${ep.episode_number}`)
                           ? `Your episode rating: ${ratingByEpisode.get(`${ep.season_number}-${ep.episode_number}`)}/100`
                           : !released
@@ -1115,13 +1147,13 @@ function SeasonEpisodes({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          className="size-10 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => removeEpisodeRating(ep)}
                           disabled={episodeRatingMutate.isPending}
                           aria-label="Remove episode rating"
                           title="Remove episode rating only"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
                     </div>
@@ -1139,8 +1171,13 @@ function SeasonEpisodes({
         title={ratingTarget ? `${showTitle} — S${ratingTarget.seasonNumber}E${ratingTarget.episodeNumber}: ${ratingTarget.episodeName}` : showTitle}
         poster={showPoster ? img(showPoster, "w185") : null}
         initialRating={ratingTarget?.currentRating ?? null}
-        description="This rating belongs only to this watched episode. It does not rate the whole series or change episode progress."
-        submitLabel={ratingTarget?.currentRating == null ? "Save Episode Rating" : "Update Episode Rating"}
+        locale={isArabicShow ? "ar" : "en"}
+        description={isArabicShow
+          ? "هذا التقييم يخص هذه الحلقة المُشاهَدة فقط. لا يقيّم المسلسل كاملًا ولا يغيّر تقدّم الحلقات."
+          : "This rating belongs only to this watched episode. It does not rate the whole series or change episode progress."}
+        submitLabel={ratingTarget?.currentRating == null
+          ? (isArabicShow ? "حفظ تقييم الحلقة" : "Save Episode Rating")
+          : (isArabicShow ? "تحديث تقييم الحلقة" : "Update Episode Rating")}
         onRate={saveEpisodeRating}
       />
       <EpisodeWatchConfirmationDialog
