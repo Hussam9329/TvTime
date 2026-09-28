@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { SafeImage } from "@/components/media/safe-image";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { useEpisodeImages, useEpisodeToggle, useSeasonDetail, useTvDetail } from "@/hooks/use-tmdb";
@@ -114,6 +115,57 @@ type SeasonCompletionState = Pick<WatchNextItem,
   "tmdbId" | "title" | "poster" | "showBackdrop" | "seasonNumber" | "nextSeasonNumber" | "isAnime" | "isArabic"
 >;
 
+type QueueTone = "default" | "new" | "behind" | "paused";
+type QueueFilter = "all" | "new" | "continue" | "behind" | "paused";
+
+const QUEUE_FILTERS: Record<QueueFilter, { label: string; title: string; subtitle: string; icon: React.ReactNode }> = {
+  all: { label: "All", title: "Your Queue", subtitle: "Everything with an episode ready, in priority order", icon: <ListRestart className="h-4 w-4" /> },
+  new: { label: "New", title: "New Episodes", subtitle: "Episodes released after your last watch", icon: <Sparkles className="h-4 w-4" /> },
+  continue: { label: "In progress", title: "Continue Watching", subtitle: "Shows you have already started", icon: <Play className="h-4 w-4" /> },
+  behind: { label: "Falling behind", title: "Falling Behind", subtitle: "Shows with a growing episode backlog", icon: <Flame className="h-4 w-4" /> },
+  paused: { label: "Paused", title: "Paused", subtitle: "No episode activity for 30 days or more", icon: <PauseCircle className="h-4 w-4" /> },
+};
+
+function filterItems(sections: ReturnType<typeof categorizeItems>, filter: Exclude<QueueFilter, "all">) {
+  if (filter === "new") return sections.newEpisodes;
+  if (filter === "continue") return sections.continueWatching;
+  if (filter === "behind") return sections.fallingBehind;
+  return sections.paused;
+}
+
+function QueueFilterBar({
+  value,
+  onChange,
+  counts,
+}: {
+  value: QueueFilter;
+  onChange: (value: QueueFilter) => void;
+  counts: Record<QueueFilter, number>;
+}) {
+  const filters = (Object.keys(QUEUE_FILTERS) as QueueFilter[]).filter((key) => key === "all" || counts[key] > 0);
+  if (filters.length <= 2) return null;
+  return (
+    <ToggleGroup
+      type="single"
+      value={value}
+      onValueChange={(next) => { if (next) onChange(next as QueueFilter); }}
+      className="tvtime-watch-filters no-scrollbar flex w-full max-w-full justify-start gap-2 overflow-x-auto rounded-none"
+      aria-label="Filter your queue"
+    >
+      {filters.map((key) => (
+        <ToggleGroupItem
+          key={key}
+          value={key}
+          className="h-9 flex-none gap-1.5 rounded-full border border-border bg-card/60 px-4 text-sm font-semibold text-muted-foreground first:rounded-full last:rounded-full hover:bg-muted hover:text-foreground data-[state=on]:border-primary/50 data-[state=on]:bg-primary/15 data-[state=on]:text-primary"
+        >
+          {QUEUE_FILTERS[key].label}
+          <span className="tabular-nums opacity-70">{counts[key]}</span>
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
 export function WatchNextView() {
   const goTv = useNav((state) => state.goTv);
   const episodeToggle = useEpisodeToggle();
@@ -123,6 +175,7 @@ export function WatchNextView() {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [deferredIds, setDeferredIds] = useState<number[]>([]);
   const [seasonCompletion, setSeasonCompletion] = useState<SeasonCompletionState | null>(null);
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
 
   useEffect(() => {
     try {
@@ -164,6 +217,14 @@ export function WatchNextView() {
   const featured = orderedItems[0] ?? null;
   const remainingItems = orderedItems.slice(1);
   const sections = categorizeItems(remainingItems);
+  const toneById = new Map<number, QueueTone>([
+    ...sections.newEpisodes.map((item) => [item.tmdbId, "new"] as const),
+    ...sections.fallingBehind.map((item) => [item.tmdbId, "behind"] as const),
+    ...sections.paused.map((item) => [item.tmdbId, "paused"] as const),
+  ]);
+  // A filter whose list emptied (e.g. after marking the last new episode) falls back to All.
+  const activeFilter: QueueFilter = queueFilter !== "all" && filterItems(sections, queueFilter).length === 0 ? "all" : queueFilter;
+  const filteredItems = activeFilter === "all" ? remainingItems : filterItems(sections, activeFilter);
 
   const markWatched = async (item: EnrichedWatchNextItem) => {
     try {
@@ -290,59 +351,37 @@ export function WatchNextView() {
                 <EmptyReady key="empty" />
               )}
 
+              {remainingItems.length > 0 && (
+                <QueueFilterBar
+                  key="filters"
+                  value={activeFilter}
+                  onChange={setQueueFilter}
+                  counts={{
+                    all: remainingItems.length,
+                    new: sections.newEpisodes.length,
+                    continue: sections.continueWatching.length,
+                    behind: sections.fallingBehind.length,
+                    paused: sections.paused.length,
+                  }}
+                />
+              )}
               <WatchSection
-                key="continue"
-                icon={<Play className="h-4 w-4" />}
-                title="Continue Watching"
-                subtitle="Shows you have already started"
-                items={sections.continueWatching}
+                key="queue"
+                icon={QUEUE_FILTERS[activeFilter].icon}
+                title={QUEUE_FILTERS[activeFilter].title}
+                subtitle={QUEUE_FILTERS[activeFilter].subtitle}
+                items={filteredItems}
+                toneById={toneById}
                 episodeTogglePending={episodeToggle.isPending}
                 pendingId={episodeToggle.variables?.showId}
                 onMark={markWatched}
                 onOpen={goTv}
                 onNotNow={notNow}
               />
-              <WatchSection
-                key="new"
-                icon={<Sparkles className="h-4 w-4" />}
-                title="New Episodes"
-                subtitle="Episodes released after your last watch"
-                items={sections.newEpisodes}
-                episodeTogglePending={episodeToggle.isPending}
-                pendingId={episodeToggle.variables?.showId}
-                onMark={markWatched}
-                onOpen={goTv}
-                onNotNow={notNow}
-                tone="new"
-              />
-              <WatchSection
-                key="behind"
-                icon={<Flame className="h-4 w-4" />}
-                title="Falling Behind"
-                subtitle="Shows with a growing episode backlog"
-                items={sections.fallingBehind}
-                episodeTogglePending={episodeToggle.isPending}
-                pendingId={episodeToggle.variables?.showId}
-                onMark={markWatched}
-                onOpen={goTv}
-                onNotNow={notNow}
-                tone="behind"
-              />
-              <UpToDateSection key="up-to-date" items={query.data?.upToDate ?? []} onOpen={goTv} />
-              <UpcomingSection key="coming-soon" items={query.data?.upcoming ?? []} onOpen={goTv} />
-              <WatchSection
-                key="paused"
-                icon={<PauseCircle className="h-4 w-4" />}
-                title="Paused"
-                subtitle="No episode activity for 30 days or more"
-                items={sections.paused}
-                episodeTogglePending={episodeToggle.isPending}
-                pendingId={episodeToggle.variables?.showId}
-                onMark={markWatched}
-                onOpen={goTv}
-                onNotNow={notNow}
-                tone="paused"
-              />
+              <div key="later" className="tvtime-watch-later">
+                <UpcomingSection items={query.data?.upcoming ?? []} onOpen={goTv} />
+                <UpToDateSection items={query.data?.upToDate ?? []} onOpen={goTv} />
+              </div>
             </AnimatePresence>
           )}
         </>
@@ -557,7 +596,6 @@ function FeaturedWatchCard({
           <div className="tvtime-watch-featured__meta">
             <span><Clock3 className="h-3.5 w-3.5" />{runtime}m</span>
             <span><CalendarDays className="h-3.5 w-3.5" />{releasedLabel(airDate)}</span>
-            <span>{item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}</span>
             {resolvedIsSeasonFinale && <span className="tvtime-watch-finale-label"><Sparkles /> Season finale</span>}
           </div>
           <ProgressBar item={item} progress={progress} runtime={runtime} featured />
@@ -723,7 +761,7 @@ function WatchSection({
   onMark,
   onOpen,
   onNotNow,
-  tone = "default",
+  toneById,
   rail = false,
 }: {
   icon: React.ReactNode;
@@ -735,12 +773,12 @@ function WatchSection({
   onMark: (item: EnrichedWatchNextItem) => Promise<void>;
   onOpen: (id: number) => void;
   onNotNow: (item: EnrichedWatchNextItem) => void;
-  tone?: "default" | "new" | "behind" | "paused";
+  toneById: Map<number, QueueTone>;
   rail?: boolean;
 }) {
   if (items.length === 0) return null;
   return (
-    <motion.section layout className="tvtime-watch-section" data-tone={tone} data-layout={rail ? "rail" : "grid"}>
+    <motion.section layout className="tvtime-watch-section" data-layout={rail ? "rail" : "grid"}>
       <SectionHeading icon={icon} title={title} subtitle={subtitle} count={items.length} />
       <div className="tvtime-watch-card-grid">
         <AnimatePresence mode="popLayout" initial={false}>
@@ -753,7 +791,7 @@ function WatchSection({
               onMark={() => void onMark(item)}
               onOpen={() => onOpen(item.tmdbId)}
               onNotNow={() => onNotNow(item)}
-              tone={tone}
+              tone={toneById.get(item.tmdbId) ?? "default"}
             />
           ))}
         </AnimatePresence>
@@ -777,7 +815,7 @@ function CompactWatchCard({
   onMark: () => void;
   onOpen: () => void;
   onNotNow: () => void;
-  tone: "default" | "new" | "behind" | "paused";
+  tone: QueueTone;
 }) {
   const isMobile = useMobileViewport();
   const swipeRef = useRef(false);
@@ -837,26 +875,16 @@ function CompactWatchCard({
             <span>{episodeName}</span>
             <small>{runtime}m • {formatReadyTime(remainingMinutes(item, runtime))} left</small>
           </span>
-          {item.isNewEpisode && <NewEpisodeBadge />}
         </button>
         <div className="tvtime-watch-card__body">
           <div className="tvtime-watch-card__topline">
-            <PersonalStatus item={item} />
-            <span
-              className="tvtime-watch-card__ready"
-              title={item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}
-            >
+            <QueueTag item={item} tone={tone} />
+            <span className="tvtime-watch-card__ready">
               {item.readyEpisodes === 1 ? "1 episode ready" : `${item.readyEpisodes} episodes ready`}
             </span>
           </div>
           <button type="button" className="tvtime-watch-card__title" onClick={handleOpen}>{item.title}</button>
           <p className="tvtime-watch-card__episode"><strong>{episodeCode(item)}</strong><span>—</span>{episodeName}</p>
-          <div className="tvtime-watch-card__meta">
-            <span><Clock3 />{runtime}m</span>
-            <span><CalendarDays />{releasedLabel(item.episodeAirDate)}</span>
-            {item.isSeasonFinale && <span><Sparkles />Season finale</span>}
-            {tone === "paused" && <span><PauseCircle />{daysSince(item.lastActivity)}d away</span>}
-          </div>
           <ProgressBar item={item} progress={progress} runtime={runtime} />
           <div className="tvtime-watch-card__actions">
             <Button type="button" size="sm" variant="outline" className="tvtime-watch-card__mark" onClick={onMark} disabled={disabled}>
@@ -868,10 +896,10 @@ function CompactWatchCard({
               size="sm"
               variant="ghost"
               className="tvtime-watch-card__details"
-              onClick={handleOpen}
-              aria-label={`View ${item.title} details`}
+              onClick={onNotNow}
+              aria-label={`Move ${item.title} to the end of your queue`}
             >
-              <Eye /> View
+              Not now
             </Button>
           </div>
         </div>
@@ -903,6 +931,14 @@ function ProgressBar({
       </div>
     </div>
   );
+}
+
+function QueueTag({ item, tone }: { item: EnrichedWatchNextItem; tone: QueueTone }) {
+  if (tone === "new") return <NewEpisodeBadge />;
+  if (item.isSeasonFinale) return <span className="tvtime-watch-tag" data-tone="finale"><Sparkles />Season finale</span>;
+  if (tone === "paused") return <span className="tvtime-watch-tag" data-tone="paused"><PauseCircle />{daysSince(item.lastActivity)}d away</span>;
+  if (tone === "behind") return <span className="tvtime-watch-tag" data-tone="behind"><Flame />Falling behind</span>;
+  return <span className="tvtime-watch-tag"><Clock3 />{releasedLabel(item.episodeAirDate)}</span>;
 }
 
 function PersonalStatus({ item }: { item: Pick<WatchNextItem, "status" | "watchedEpisodes"> }) {
@@ -952,17 +988,13 @@ function UpcomingSection({ items, onOpen }: { items: UpcomingItem[]; onOpen: (id
         subtitle="The next confirmed episodes for shows with no backlog"
         count={items.length}
       />
-      <div className="tvtime-watch-upcoming-grid">
+      <div className="tvtime-watch-upcoming-list">
         {items.map((item) => (
-          <button key={item.tmdbId} type="button" className="tvtime-watch-upcoming-card" onClick={() => onOpen(item.tmdbId)}>
-            <span className="tvtime-watch-upcoming-card__artwork" aria-hidden="true">
-              <SafeImage src={item.poster} alt="" fill variant="backdrop" sizes="(max-width: 767px) 100vw, 70vw" />
-            </span>
-            <span className="tvtime-watch-upcoming-card__poster"><SafeImage src={item.poster} alt="" fill variant="poster" sizes="72px" /></span>
-            <span className="tvtime-watch-upcoming-card__copy">
+          <button key={item.tmdbId} type="button" className="tvtime-watch-complete-row" onClick={() => onOpen(item.tmdbId)}>
+            <span className="tvtime-watch-complete-row__poster"><SafeImage src={item.poster} alt="" fill variant="poster" sizes="48px" /></span>
+            <span className="min-w-0 flex-1 text-start">
               <strong>{item.title}</strong>
-              <span>{episodeCode(item)}{item.episodeName ? ` — ${item.episodeName}` : ""}</span>
-              <small><CalendarDays />{formatAirDate(item.airDate)}</small>
+              <small>{episodeCode(item)}{item.episodeName ? ` — ${item.episodeName}` : ""} · {formatAirDate(item.airDate)}</small>
             </span>
             <span className="tvtime-watch-upcoming-card__countdown">{countdownLabel(item.airDate)}</span>
           </button>
