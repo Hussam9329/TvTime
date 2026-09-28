@@ -1230,7 +1230,10 @@ export function useStats() {
     queryKey: ["lib", "stats", userId || getClientUserId()],
     queryFn: async () => {
       const res = await fetch(withUserId(new URL("/api/library/stats", window.location.origin)), { headers: userHeaders() });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "Failed to load stats");
+      }
       return res.json();
     },
     staleTime: 60_000,

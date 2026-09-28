@@ -8,8 +8,18 @@ import { img } from "@/lib/tmdb";
 import { useNav } from "@/lib/store";
 import { SafeImage } from "@/components/media/safe-image";
 import { PageTitlebar } from "@/components/ui/page-titlebar";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 
-const PIE_COLORS = ["oklch(0.62 0.23 16)", "oklch(0.65 0.18 320)", "oklch(0.7 0.15 180)", "oklch(0.72 0.18 80)", "oklch(0.6 0.2 260)"];
+// Chart series follow the theme chart tokens so they stay on-brand in both themes.
+const PIE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
+const CHART_TOOLTIP_STYLE = {
+  background: "var(--popover)",
+  color: "var(--popover-foreground)",
+  border: "1px solid var(--border)",
+  borderRadius: 12,
+};
 
 export function StatsView() {
   const stats = useStats();
@@ -17,17 +27,36 @@ export function StatsView() {
 
   if (stats.isLoading) {
     return (
-      <div className="tvtime-stats-page space-y-5">
+      <div className="tvtime-stats-page space-y-5" aria-busy="true">
         <PageTitlebar title="Your Statistics" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 shimmer rounded-xl" />)}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-28 shimmer rounded-2xl" />)}
+        </div>
+        <div className="h-32 shimmer rounded-2xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="h-72 shimmer rounded-2xl lg:col-span-2" />
+          <div className="h-72 shimmer rounded-2xl" />
+          <div className="h-72 shimmer rounded-2xl" />
         </div>
       </div>
     );
   }
 
   const d = stats.data;
-  if (!d) return null;
+  if (stats.isError || !d) {
+    return (
+      <div className="tvtime-stats-page space-y-5">
+        <PageTitlebar title="Your Statistics" />
+        <Card>
+          <ErrorState
+            title="Couldn’t load your statistics"
+            description="Your collection is safe. The statistics service didn’t respond — try again in a moment."
+            onRetry={() => void stats.refetch()}
+          />
+        </Card>
+      </div>
+    );
+  }
 
   const counts = d.counts;
   const wt = d.watchTime || { totalMinutes: 0, totalHours: 0, movieMinutes: 0, episodeMinutes: 0 };
@@ -42,11 +71,11 @@ export function StatsView() {
       {/* Big numbers */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <BigStat icon={<Film className="w-5 h-5" />} label="All movies watched" value={counts.watchedMoviesAll ?? counts.watchedMovies} color="from-primary/20 to-primary/5" />
-        <BigStat icon={<Tv className="w-5 h-5" />} label="Episodes watched" value={counts.watchedEpisodes} color="from-purple-500/20 to-purple-500/5" />
-        <BigStat icon={<Bell className="w-5 h-5" />} label="TV shows following" value={counts.following} color="from-amber-500/20 to-amber-500/5" />
-        <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic movies" value={counts.arabicMovies ?? (counts.watchedArabicMovies ?? 0) + (counts.watchlistArabicMovies ?? 0)} color="from-emerald-500/20 to-emerald-500/5" />
-        <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic TV following" value={counts.followingArabicShows ?? 0} color="from-orange-500/20 to-orange-500/5" />
-        <BigStat icon={<BookOpen className="w-5 h-5" />} label="All watchlists" value={counts.watchlist} color="from-cyan-500/20 to-cyan-500/5" />
+        <BigStat icon={<Tv className="w-5 h-5" />} label="Episodes watched" value={counts.watchedEpisodes} color="from-chart-2/20 to-chart-2/5" />
+        <BigStat icon={<Bell className="w-5 h-5" />} label="TV shows following" value={counts.following} color="from-chart-4/20 to-chart-4/5" />
+        <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic movies" value={counts.arabicMovies ?? (counts.watchedArabicMovies ?? 0) + (counts.watchlistArabicMovies ?? 0)} color="from-chart-3/20 to-chart-3/5" />
+        <BigStat icon={<Languages className="w-5 h-5" />} label="Arabic TV following" value={counts.followingArabicShows ?? 0} color="from-chart-4/15 to-chart-4/5" />
+        <BigStat icon={<BookOpen className="w-5 h-5" />} label="All watchlists" value={counts.watchlist} color="from-chart-5/20 to-chart-5/5" />
       </div>
 
       {/* Watch time hero */}
@@ -74,8 +103,8 @@ export function StatsView() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card className="p-4 bg-gradient-to-br from-primary/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Star className="h-4 w-4 text-primary" /> Most watched genre</p><p className="mt-2 text-2xl font-black">{d.insights?.topGenres?.[0]?.genre ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.topGenres?.[0]?.percentage ?? 0}% of your genre profile · {d.insights?.topGenres?.[0]?.count ?? 0} titles</p></Card>
-        <Card className="p-4 bg-gradient-to-br from-amber-500/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-primary" /> Best release year</p><p className="mt-2 text-2xl font-black">{d.insights?.bestYear?.year ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.bestYear?.count ?? 0} watched titles</p></Card>
-        <Card className="p-4 bg-gradient-to-br from-fuchsia-500/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Layers3 className="h-4 w-4 text-fuchsia-400" /> Longest show</p><p className="mt-2 line-clamp-1 text-xl font-black">{d.insights?.longestShow?.title ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.longestShow?.episodes ?? 0} episodes</p></Card>
+        <Card className="p-4 bg-gradient-to-br from-chart-4/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-primary" /> Best release year</p><p className="mt-2 text-2xl font-black">{d.insights?.bestYear?.year ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.bestYear?.count ?? 0} watched titles</p></Card>
+        <Card className="p-4 bg-gradient-to-br from-chart-2/15 to-transparent"><p className="text-xs text-muted-foreground flex items-center gap-1.5"><Layers3 className="h-4 w-4 text-chart-2" /> Longest show</p><p className="mt-2 line-clamp-1 text-xl font-black">{d.insights?.longestShow?.title ?? "—"}</p><p className="text-xs text-muted-foreground">{d.insights?.longestShow?.episodes ?? 0} episodes</p></Card>
       </div>
 
       {d.genreDistribution?.items && d.genreDistribution.items.length > 0 && (
@@ -85,14 +114,14 @@ export function StatsView() {
               <h3 className="font-bold">Your genre profile</h3>
               <p className="text-xs text-muted-foreground">Real distribution across the genres attached to titles you watch or actively track.</p>
             </div>
-            <span className="text-[11px] font-semibold text-muted-foreground">Genre coverage: {d.genreDistribution.coveragePercentage}%</span>
+            <span className="text-xs font-semibold text-muted-foreground">Genre coverage: {d.genreDistribution.coveragePercentage}%</span>
           </div>
           <div className="space-y-2.5">
             {d.genreDistribution.items.slice(0, 8).map((item) => (
               <div key={item.genre} className="tvtime-genre-distribution-row grid items-center gap-2 text-xs">
                 <span className="truncate font-medium">{item.genre}</span>
                 <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${Math.max(0, Math.min(100, item.percentage))}%` }} />
+                  <div className="h-full bg-gradient-to-r from-primary to-chart-2" style={{ width: `${Math.max(0, Math.min(100, item.percentage))}%` }} />
                 </div>
                 <span className="text-right tabular-nums text-muted-foreground">{item.percentage}% · {item.count}</span>
               </div>
@@ -136,7 +165,7 @@ export function StatsView() {
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ background: "oklch(0.21 0.025 280)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 8 }} />
+                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -151,15 +180,15 @@ export function StatsView() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={d.ratingDist} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="value" stroke="var(--muted-foreground)" fontSize={11} />
-                  <YAxis allowDecimals={false} stroke="var(--muted-foreground)" fontSize={11} />
-                  <Tooltip contentStyle={{ background: "oklch(0.21 0.025 280)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 8 }} />
-                  <Bar dataKey="count" name="Ratings" fill="oklch(0.62 0.23 16)" radius={[4, 4, 0, 0]} />
+                  <XAxis dataKey="value" stroke="var(--muted-foreground)" fontSize={12} />
+                  <YAxis allowDecimals={false} stroke="var(--muted-foreground)" fontSize={12} />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                  <Bar dataKey="count" name="Ratings" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">No ratings yet</div>
+            <EmptyState className="h-56 py-0" icon={<Star className="size-8" />} title="No ratings yet" description="Rate titles you’ve watched to see your distribution here." />
           )}
           <p className="text-center text-sm text-muted-foreground mt-2">
             Average: <span className="text-primary font-bold">{d.avgRating ? d.avgRating.toFixed(1) : "—"}</span> / 100
@@ -177,9 +206,13 @@ export function StatsView() {
 
       {/* Empty state CTA */}
       {(counts.watchedMoviesAll ?? counts.watchedMovies) === 0 && counts.watchedEpisodes === 0 && counts.watchlist === 0 && counts.following === 0 && (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground mb-4">You haven't tracked anything yet. Start exploring!</p>
-          <button type="button" data-ui-action="link" onClick={() => setView("discover")} className="text-primary font-semibold underline">Go to Discover →</button>
+        <Card>
+          <EmptyState
+            icon={<Film className="size-8" />}
+            title="You haven’t tracked anything yet"
+            description="Add movies and shows to your collection and your statistics will appear here."
+            action={<Button type="button" onClick={() => setView("discover")}>Go to Discover</Button>}
+          />
         </Card>
       )}
     </div>
@@ -217,7 +250,7 @@ function ActivityChart({ movies, episodes }: { movies: { month: string; count: n
     }));
 
   if (data.length === 0) {
-    return <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">No activity yet — start watching!</div>;
+    return <EmptyState className="h-56 py-0" icon={<TrendingUp className="size-8" />} title="No activity yet" description="Mark movies or episodes as watched to build your monthly timeline." />;
   }
 
   return (
@@ -225,12 +258,12 @@ function ActivityChart({ movies, episodes }: { movies: { month: string; count: n
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-          <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={11} />
-          <YAxis allowDecimals={false} stroke="var(--muted-foreground)" fontSize={11} />
-          <Tooltip contentStyle={{ background: "oklch(0.21 0.025 280)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 8 }} />
+          <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
+          <YAxis allowDecimals={false} stroke="var(--muted-foreground)" fontSize={12} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar dataKey="Movies" stackId="a" fill="oklch(0.62 0.23 16)" radius={[0, 0, 0, 0]} />
-          <Bar dataKey="Episodes" stackId="a" fill="oklch(0.65 0.18 320)" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="Movies" stackId="a" fill="var(--chart-1)" radius={[0, 0, 0, 0]} />
+          <Bar dataKey="Episodes" stackId="a" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -260,7 +293,7 @@ function TopShowRow({ showId, count, rank, max, onGo }: { showId: number; count:
       aria-label={`Open ${title}`}
       className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left group"
     >
-      <span className="w-7 h-7 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">{rank}</span>
+      <span className="size-8 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">{rank}</span>
       <div className="relative w-10 h-14 rounded-md overflow-hidden bg-muted flex-shrink-0">
         {poster ? (
           <SafeImage src={img(poster, "w92")} alt={title} fill variant="poster" />

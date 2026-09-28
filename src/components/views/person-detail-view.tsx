@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
@@ -51,10 +53,17 @@ export function PersonDetailView() {
 
   if (detail.isError || !detail.data) {
     return (
-      <div className="text-center py-20 text-muted-foreground">
-        <p>Failed to load person.</p>
-        <Button variant="outline" className="mt-4" onClick={back}>Go back</Button>
-      </div>
+      <ErrorState
+        title="Couldn’t load this person"
+        description="Something went wrong while loading their profile and credits. Check your connection and try again."
+        onRetry={() => void detail.refetch()}
+        action={(
+          <Button variant="ghost" onClick={back}>
+            <ArrowLeft aria-hidden="true" /> Go back
+          </Button>
+        )}
+        className="py-20"
+      />
     );
   }
 
@@ -90,19 +99,19 @@ export function PersonDetailView() {
   return (
     <div className="tvtime-person-detail-page space-y-6">
       <Button variant="ghost" size="sm" onClick={back} className="text-muted-foreground">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Back
+        <ArrowLeft className="w-4 h-4 me-1" /> Back
       </Button>
 
       {/* Hero with profile */}
       <div data-ui-surface="hero" className="relative rounded-2xl overflow-hidden border border-border/50 -mt-4">
-        <div className="relative bg-gradient-to-br from-primary/20 via-purple-500/10 to-transparent p-6 sm:p-8">
+        <div className="relative bg-gradient-to-br from-primary/20 via-primary/5 to-transparent p-6 sm:p-8">
           <div className="absolute inset-0 opacity-30">
             {knownFor[0]?.backdrop_path && (
               <SafeImage src={img(knownFor[0].backdrop_path, "w1280")} alt="" fill variant="backdrop" className="blur-2xl" />
             )}
           </div>
           <div className="relative flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-            <div className="tvtime-person-profile relative w-36 aspect-[2/3] sm:w-48 overflow-hidden rounded-[1.1rem] border border-primary/35 bg-muted shadow-2xl flex-shrink-0">
+            <div className="tvtime-person-profile relative w-36 aspect-[2/3] sm:w-48 overflow-hidden rounded-2xl border border-primary/35 bg-muted shadow-2xl flex-shrink-0">
               {p.profile_path ? (
                 <SafeImage
                   src={img(p.profile_path, "w500")}
@@ -119,11 +128,11 @@ export function PersonDetailView() {
                 </div>
               )}
             </div>
-            <div className="min-w-0 flex-1 text-center sm:pt-2 sm:text-left">
+            <div className="min-w-0 flex-1 text-center sm:pt-2 sm:text-start">
               <h1 className="view-page-title text-2xl sm:text-4xl font-extrabold tracking-tight drop-shadow-lg">{p.name}</h1>
               {p.known_for_department && (
                 <Badge variant="secondary" className="mt-2 bg-primary/20 text-primary border-0">
-                  <Briefcase className="w-3 h-3 mr-1" /> {p.known_for_department}
+                  <Briefcase className="w-3 h-3 me-1" /> {p.known_for_department}
                 </Badge>
               )}
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mt-3 text-sm text-muted-foreground">
@@ -182,9 +191,9 @@ export function PersonDetailView() {
       {/* Full filmography */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="tvtime-person-credit-tabs w-full justify-start overflow-x-auto no-scrollbar">
-          <TabsTrigger value="movies"><Film className="w-4 h-4 mr-1.5" />Movies ({movieCredits.length})</TabsTrigger>
-          <TabsTrigger value="tv"><Tv className="w-4 h-4 mr-1.5" />TV Shows ({tvCredits.length})</TabsTrigger>
-          <TabsTrigger value="self"><Users className="w-4 h-4 mr-1.5" />Self ({selfCredits.length})</TabsTrigger>
+          <TabsTrigger value="movies"><Film className="w-4 h-4 me-1.5" />Movies ({movieCredits.length})</TabsTrigger>
+          <TabsTrigger value="tv"><Tv className="w-4 h-4 me-1.5" />TV Shows ({tvCredits.length})</TabsTrigger>
+          <TabsTrigger value="self"><Users className="w-4 h-4 me-1.5" />Self ({selfCredits.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="movies" className="mt-4">
@@ -199,7 +208,7 @@ export function PersonDetailView() {
           {selfCredits.length > 0 ? (
             <KnownForCards items={selfCredits} onGoMovie={goMovie} onGoTv={goTv} />
           ) : (
-            <p className="py-8 text-center text-muted-foreground">No self appearances available.</p>
+            <EmptyState icon={<Users className="size-8" />} title="No self appearances available." className="py-8" />
           )}
         </TabsContent>
       </Tabs>
@@ -231,7 +240,7 @@ function KnownForCards({ items, onGoMovie, onGoTv }: { items: any[]; onGoMovie: 
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: Math.min(i * 0.03, 0.3) }}
                 onClick={() => isMovie ? onGoMovie(c.id) : onGoTv(c.id)}
-                className="tvtime-person-credit group min-w-0 text-left"
+                className="tvtime-person-credit group min-w-0 text-start"
               >
                 <Card className="tvtime-person-credit__card overflow-hidden p-0 border-border/50 transition-[border-color,box-shadow,background-color] duration-200">
                   <div className="tvtime-person-credit__poster relative aspect-[2/3] overflow-hidden bg-muted">
@@ -271,7 +280,13 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
   );
 
   if (items.length === 0) {
-    return <p className="text-muted-foreground text-center py-8">No credits available.</p>;
+    return (
+      <EmptyState
+        icon={type === "movie" ? <Film className="size-8" /> : <Tv className="size-8" />}
+        title={type === "movie" ? "No movie credits available." : "No TV credits available."}
+        className="py-8"
+      />
+    );
   }
   return (
     <div className="tvtime-person-filmography-grid">
@@ -289,7 +304,7 @@ function FilmographyList({ items, type, onGo }: { items: any[]; type: "movie" | 
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: Math.min(i * 0.01, 0.3) }}
             onClick={() => onGo(c.id)}
-            className="tvtime-person-credit group min-w-0 text-left"
+            className="tvtime-person-credit group min-w-0 text-start"
           >
             <Card className="tvtime-person-credit__card overflow-hidden p-0 transition-[border-color,box-shadow,background-color] duration-200">
               <div className="tvtime-person-credit__poster relative aspect-[2/3] overflow-hidden bg-muted">

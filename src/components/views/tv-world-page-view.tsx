@@ -66,8 +66,8 @@ export function TvWorldPageView({
     <div
       className={cn("tvtime-world-view tvtime-tv-world-view tvtime-movie-hub tvtime-tv-hub", pageClassName)}
       data-tv-world={trackingWorld}
-      dir={isArabic ? "rtl" : undefined}
-      lang={isArabic ? "ar" : undefined}
+      dir={isArabic ? "rtl" : "ltr"}
+      lang={isArabic ? "ar" : "en"}
     >
       <header className="tvtime-movie-hub__titlebar">
         <div className="min-w-0">

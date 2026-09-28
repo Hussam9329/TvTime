@@ -381,7 +381,7 @@ export function Header() {
         data-scrolled={headerScrolled ? "true" : "false"}
         data-detail-view={isDetailView ? "true" : "false"}
       >
-        <div className="tvtime-header-inner">
+        <div className="tvtime-header-inner mx-auto w-full max-w-[var(--app-content-width,90rem)]">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button
@@ -530,13 +530,13 @@ export function Header() {
                   data-ui-action="icon"
                   type="button"
                   onClick={clearSearch}
-                  className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                  className="absolute right-0 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground"
                   aria-label="Clear search"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               ) : (
-                <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-border/70 bg-background/70 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-border/70 bg-background/70 px-1.5 py-0.5 text-xs font-semibold leading-none text-muted-foreground">
                   /
                 </kbd>
               )}
@@ -581,7 +581,7 @@ export function Header() {
                   {notifUnread > 0 && (
                     <span
                       aria-hidden="true"
-                      className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-black leading-none text-primary-foreground ring-2 ring-background"
+                      className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-black leading-none tabular-nums text-primary-foreground ring-2 ring-background"
                     >
                       {notifUnread > 9 ? "9+" : notifUnread}
                     </span>
@@ -621,7 +621,7 @@ export function Header() {
             </Avatar>
             <span className="tvtime-profile-copy max-w-24 pr-1 text-left">
               <span className="block truncate text-xs font-bold">{userName}</span>
-              <span className="block text-[9px] text-muted-foreground">View profile</span>
+              <span className="block text-xs text-muted-foreground">View profile</span>
             </span>
           </button>
           </div>
@@ -632,7 +632,7 @@ export function Header() {
           <form
             id="tvtime-mobile-search"
             onSubmit={onSubmitSearch}
-            className="tvtime-mobile-search-panel tvtime-mobile-experience-only mx-auto max-w-[1920px] px-3 py-2"
+            className="tvtime-mobile-search-panel tvtime-mobile-experience-only mx-auto w-full max-w-[var(--app-content-width,90rem)] px-3 py-2"
             role="dialog"
             aria-modal="true"
             aria-label="Search movies, shows, anime and people"
@@ -652,7 +652,7 @@ export function Header() {
                   data-ui-action="icon"
                   type="button"
                   onClick={() => { clearSearch(); setMobileSearchOpen(false); }}
-                  className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
+                  className="absolute right-0.5 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent"
                   aria-label="Close search"
                 >
                   <X className="h-4 w-4" />
@@ -763,7 +763,7 @@ export function Header() {
 function NavGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-1.5 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <p className="mb-1.5 px-3 text-xs font-black uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
       <div className="space-y-1">{children}</div>
     </div>
   );

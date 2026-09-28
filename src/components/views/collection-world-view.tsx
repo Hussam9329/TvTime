@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNav } from "@/lib/store";
 import { useMedia, useMediaUpdate, useLibraryCounts, type MediaItemDB } from "@/hooks/use-tmdb";
 import { Card } from "@/components/ui/card";
+import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { FilterField, FilterGrid, FilterPanel, FilterSection } from "@/components/ui/filter-panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, AlertCircle, Clock3, MoreHorizontal, Grid2X2, List, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Film, Tv, Star, Search, ArrowUpDown, Check, Play, Sparkles, Clock3, MoreHorizontal, Grid2X2, List, SlidersHorizontal, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { StructuredRatingDialog, type StructuredRatingResult } from "@/components/media/structured-rating-dialog";
@@ -385,26 +386,26 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
               <TabsTrigger value="watchlist" className="h-10 min-w-36">
                 <WorldIcon className="mr-2 h-4 w-4" />
                 {isArabicWorld ? "قائمة المشاهدة" : "Watchlist"}
-                <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchlistCount}</span>
+                <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-xs tabular-nums">{watchlistCount}</span>
               </TabsTrigger>
               {world === "anime" && (
                 <TabsTrigger value="not-started" className="h-10 min-w-36">
                   <Clock3 className="mr-2 h-4 w-4" />
                   Not Started
-                  <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{notStartedCount}</span>
+                  <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-xs tabular-nums">{notStartedCount}</span>
                 </TabsTrigger>
               )}
               {world === "anime" && (
                 <TabsTrigger value="watching" className="h-10 min-w-36">
                   <Play className="mr-2 h-4 w-4" />
                   In Progress
-                  <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchingCount}</span>
+                  <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-xs tabular-nums">{watchingCount}</span>
                 </TabsTrigger>
               )}
               <TabsTrigger value="watched" className="h-10 min-w-36">
                 <Check className="mr-2 h-4 w-4" />
                 {isArabicWorld ? "تمت مشاهدتها" : "Watched"}
-                <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] tabular-nums">{watchedCount}</span>
+                <span className="ml-2 rounded-full bg-background/70 px-2 py-0.5 text-xs tabular-nums">{watchedCount}</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -414,7 +415,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           <FilterSection title={isArabicWorld ? "النوع" : "Genre"} divided className="tvtime-library-filter-genre">
             <FilterField label={isArabicWorld ? "نوع الفيلم" : "Movie genre"}>
               <Select value={filterGenre || "all"} onValueChange={(value) => { setFilterGenre(value === "all" ? "" : value); setPage(0); }}>
-                <SelectTrigger className="h-9 w-full max-w-sm text-sm" aria-label={isArabicWorld ? "تصفية الأفلام حسب النوع" : "Filter movies by genre"}>
+                <SelectTrigger className="h-10 w-full max-w-sm rounded-xl text-sm" aria-label={isArabicWorld ? "تصفية الأفلام حسب النوع" : "Filter movies by genre"}>
                   <SelectValue placeholder={isArabicWorld ? "كل الأنواع" : "All genres"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -432,19 +433,19 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           <FilterGrid className="lg:grid-cols-[minmax(0,1fr)_auto]">
             <FilterField label={isArabicWorld ? "البحث في المجموعة" : "Search collection"}>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(event) => { setSearch(event.target.value); setPage(0); }}
                   placeholder={config.searchPlaceholder}
-                  className="h-9 pl-9"
+                  className="h-10 ps-9"
                 />
               </div>
             </FilterField>
 
             <FilterField label={isArabicWorld ? "الترتيب حسب" : "Sort by"}>
-              <div className="tvtime-collection-sort-options flex min-h-9 flex-wrap items-center gap-1 rounded-lg border border-border/50 bg-muted/25 p-1 lg:min-w-[310px]">
-                <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 text-muted-foreground" />
+              <div className="tvtime-collection-sort-options flex min-h-10 flex-wrap items-center gap-1 rounded-xl border border-border/50 bg-muted/25 p-1 lg:min-w-[310px]">
+                <ArrowUpDown aria-hidden="true" className="ms-1.5 h-3.5 w-3.5 text-muted-foreground" />
                 {[
                   { value: "smart", label: isArabicWorld ? "ذكي" : "Smart" },
                   { value: "addedAt", label: isArabicWorld ? "الأحدث إضافة" : "Recent" },
@@ -455,8 +456,10 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
                 ].map((option) => (
                   <button
                     key={option.value}
+                    type="button"
+                    aria-pressed={sortBy === option.value}
                     onClick={() => { setSortBy(option.value); setPage(0); }}
-                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    className={`min-h-8 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                       sortBy === option.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -499,7 +502,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
                 { label: "8+", value: [8, 10] },
                 { label: "7+", value: [7, 10] },
                 { label: "6+", value: [6, 10] },
-                { label: "All", value: [0, 10] },
+                { label: isArabicWorld ? "الكل" : "All", value: [0, 10] },
               ]}
               onChange={(next) => { setTmdbRatingRange(next); setPage(0); }}
             />
@@ -520,7 +523,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
                 { label: "90+", value: [90, 100] },
                 { label: "80+", value: [80, 100] },
                 { label: "70+", value: [70, 100] },
-                { label: "All", value: [0, 100] },
+                { label: isArabicWorld ? "الكل" : "All", value: [0, 100] },
               ]}
               onChange={(next) => { setUserRatingRange(next); setPage(0); }}
             />
@@ -538,7 +541,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
             {isArabicWorld ? "شاهدتها" : "Watched"}
           </button>
         </div>
-        <Button type="button" variant="outline" size="sm" className="h-9" onClick={openMobileFilters}>
+        <Button type="button" variant="outline" className="h-10" onClick={openMobileFilters}>
           <SlidersHorizontal className="h-4 w-4" />
           {isArabicWorld ? `فلتر${activeFilterCount ? ` · ${activeFilterCount}` : ""}` : `Filters${activeFilterCount ? ` · ${activeFilterCount}` : ""}`}
         </Button>
@@ -549,8 +552,8 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           {isArabicWorld ? "يُعرض" : "Showing"} <span className="font-bold text-foreground">{visibleItems.length}</span> {isArabicWorld ? "من" : "of"} <span className="font-bold text-foreground">{total}</span> {world === "movies" ? "movies" : world === "asian-movies" ? "Asian movies" : world === "arabic-movies" ? "فيلماً عربياً" : tab === "not-started" ? "anime series not started" : tab === "watching" ? "anime series in progress" : animeMediaKind === "movie" ? "anime movies" : animeMediaKind === "series" ? "anime series" : "anime titles"}
         </p>
         <div className="flex justify-end gap-1" aria-label={isArabicWorld ? "طريقة عرض المكتبة" : "Library layout"}>
-          <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("grid")} title={isArabicWorld ? "شبكة البوسترات" : "Poster grid"}><Grid2X2 className="h-4 w-4" /></Button>
-          <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="h-8 w-8" onClick={() => changeLayout("list")} title={isArabicWorld ? "قائمة مختصرة" : "Compact list"}><List className="h-4 w-4" /></Button>
+          <Button size="icon" variant={layout === "grid" ? "default" : "outline"} className="size-10" onClick={() => changeLayout("grid")} title={isArabicWorld ? "شبكة البوسترات" : "Poster grid"}><Grid2X2 className="h-4 w-4" /></Button>
+          <Button size="icon" variant={layout === "list" ? "default" : "outline"} className="size-10" onClick={() => changeLayout("list")} title={isArabicWorld ? "قائمة مختصرة" : "Compact list"}><List className="h-4 w-4" /></Button>
         </div>
 
       </div>
@@ -561,19 +564,19 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
           {Array.from({ length: 12 }).map((_, index) => (
             usesHomePosterGrid
               ? <MediaCardSkeleton key={index} />
-              : <div key={index} className="aspect-[2/3] shimmer rounded-lg" />
+              : <div key={index} className="aspect-[2/3] shimmer rounded-2xl" />
           ))}
         </div>
       ) : media.isError ? (
-        <Card className="p-12 text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-rose-400" />
-          <p className="font-medium text-foreground text-lg">Failed to load your library</p>
-          <p className="text-sm text-muted-foreground mt-1">Your data was not deleted. This is a connection error.</p>
-          <Button variant="outline" className="mt-4" onClick={() => media.refetch()}>Retry</Button>
-        </Card>
+        <ErrorState
+          arabic={isArabicWorld}
+          title={isArabicWorld ? "تعذّر تحميل مجموعتك" : "Couldn’t load your collection"}
+          description={isArabicWorld ? "بياناتك لم تُحذف. حدث خطأ في الاتصال، أعد المحاولة." : "Your data was not deleted. This is a connection error — try again."}
+          onRetry={() => void media.refetch()}
+        />
       ) : visibleItems.length === 0 ? (
         <EmptyState
-          icon={<WorldIcon className="w-12 h-12" />}
+          icon={<WorldIcon className="size-8" />}
           title={
             search
               ? (isArabicWorld ? "لا توجد نتائج مطابقة" : "No matching results")
@@ -591,7 +594,7 @@ export function CollectionWorldView({ world, embedded = false, onDiscover }: { w
               : tab === "watchlist"
                 ? (isArabicWorld ? "ابدأ بإضافة أفلام عربية من صفحة الاستكشاف." : `Add ${world === "anime" ? "Anime titles" : world === "asian-movies" ? "Asian movies" : "movies"} from Discover.`)
                 : tab === "watched"
-                  ? "Mark a title as watched and it will appear here."
+                  ? (isArabicWorld ? "حدّد فيلماً كمُشاهَد وسيظهر هنا." : "Mark a title as watched and it will appear here.")
                   : "Add Anime series from Discover and track their released episodes."
           }
           action={
@@ -712,7 +715,7 @@ function RangeFilter({
               key={preset.label}
               type="button"
               onClick={() => onChange(preset.value)}
-              className="shrink-0 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground active:scale-[0.97]"
+              className="shrink-0 rounded-full border border-border/60 bg-background/70 min-h-8 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground active:scale-95"
             >
               {preset.label}
             </button>
@@ -749,7 +752,7 @@ function RangeFilter({
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-md">
         <label className="space-y-1">
-          <span className="text-[11px] font-medium text-muted-foreground">{fromLabel}</span>
+          <span className="text-xs font-medium text-muted-foreground">{fromLabel}</span>
           <Input
             type="number"
             inputMode={isFloat ? "decimal" : "numeric"}
@@ -760,11 +763,11 @@ function RangeFilter({
             onChange={(event) => setFromDraft(event.target.value)}
             onBlur={commitFrom}
             onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") setFromDraft(fmt(value[0])); }}
-            className="h-9 tabular-nums"
+            className="h-10 tabular-nums"
           />
         </label>
         <label className="space-y-1">
-          <span className="text-[11px] font-medium text-muted-foreground">{toLabel}</span>
+          <span className="text-xs font-medium text-muted-foreground">{toLabel}</span>
           <Input
             type="number"
             inputMode={isFloat ? "decimal" : "numeric"}
@@ -775,7 +778,7 @@ function RangeFilter({
             onChange={(event) => setToDraft(event.target.value)}
             onBlur={commitTo}
             onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") setToDraft(fmt(value[1])); }}
-            className="h-9 tabular-nums"
+            className="h-10 tabular-nums"
           />
         </label>
       </div>
@@ -788,7 +791,7 @@ function MiniStat({ label, value, watched = false }: { label: string; value: num
     <Card className="tvtime-library-stat p-2 text-center">
       <span className="tvtime-library-stat__icon" aria-hidden="true">{watched ? <Star /> : <Film />}</span>
       <p className="text-lg font-bold text-primary">{value}</p>
-      <p className="text-[9px] text-muted-foreground leading-tight">{label}</p>
+      <p className="text-xs text-muted-foreground leading-tight">{label}</p>
     </Card>
   );
 }
@@ -848,7 +851,7 @@ function CollectionMediaCard({
   const handleOpenDetails = () => {
     const tmdbId = Number(item.tmdbId);
     if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
-      toast.info("This item doesn't have a valid TMDB profile to open.");
+      toast.info(arabicUi ? "لا يملك هذا العنصر صفحة TMDB صالحة لفتحها." : "This item doesn't have a valid TMDB profile to open.");
       return;
     }
     if (isMovie) goMovie(tmdbId);
@@ -875,7 +878,7 @@ function CollectionMediaCard({
         watchedAt: new Date().toISOString(),
         status: "watched",
       });
-      showWatchUndo(`Marked as watched · Your rating ${item.userRating}/100`, result);
+      showWatchUndo(arabicUi ? `تمت المشاهدة · تقييمك ${item.userRating}/100` : `Marked as watched · Your rating ${item.userRating}/100`, result);
       return;
     }
     setRatingOpen(true);
@@ -905,7 +908,9 @@ function CollectionMediaCard({
           status: null,
         }
       : { id: item.id, ratingBreakdown: null });
-    showWatchUndo(isMovie
+    showWatchUndo(arabicUi && isMovie
+      ? "أُزيل التقييم وأصبح الفيلم غير مُشاهَد"
+      : isMovie
       ? "Rating removed and movie marked as not watched"
       : "Rating removed and Finished status cleared", result);
   };
@@ -917,7 +922,7 @@ function CollectionMediaCard({
       watchedAt: null,
       status: null,
     });
-    showWatchUndo("Removed from Watched. Rating was preserved.", result);
+    showWatchUndo(arabicUi ? "أُزيل من المُشاهَدة مع الاحتفاظ بالتقييم." : "Removed from Watched. Rating was preserved.", result);
   };
 
   // Quick remove from watchlist — clears status only, doesn't touch watched/rating.
@@ -927,7 +932,7 @@ function CollectionMediaCard({
       id: item.id,
       status: null,
     });
-    showWatchUndo("Removed from watchlist", result);
+    showWatchUndo(arabicUi ? "أُزيل من قائمة المشاهدة" : "Removed from watchlist", result);
   };
 
   const finishSwipe = async () => {
@@ -957,8 +962,8 @@ function CollectionMediaCard({
       >
         {enableSwipe && tab === "watchlist" && (
           <div className="tvtime-swipe-actions" aria-hidden="true">
-            <span data-side="right"><Check className="h-4 w-4" /> Watched</span>
-            <span data-side="left">Remove</span>
+            <span data-side="right"><Check className="h-4 w-4" /> {arabicUi ? "شاهدته" : "Watched"}</span>
+            <span data-side="left">{arabicUi ? "إزالة" : "Remove"}</span>
           </div>
         )}
         <Card
@@ -1040,7 +1045,7 @@ function CollectionMediaCard({
           <div className={useHomePresentation ? "tvtime-media-copy" : `flex min-w-0 items-center gap-2 border-t border-border/60 bg-card px-3 py-2.5 ${layout === "list" ? "" : "min-h-[4.5rem]"}`}>
             <div className="min-w-0 flex-1">
               <h3 className={useHomePresentation ? "tvtime-media-title line-clamp-2 text-start" : "line-clamp-1 text-sm font-semibold leading-tight text-foreground"} title={displayTitle}>{displayTitle}</h3>
-              <div className={useHomePresentation ? "tvtime-media-meta" : "mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground"}>
+              <div className={useHomePresentation ? "tvtime-media-meta" : "mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"}>
                 {item.year && <span>{item.year}</span>}
                 {item.year && <span aria-hidden="true">•</span>}
                 <span className="inline-flex min-w-0 items-center gap-1">
@@ -1054,7 +1059,7 @@ function CollectionMediaCard({
                 <Button
                   size="sm"
                   variant="outline"
-                  className={useHomePresentation ? "tvtime-media-menu absolute z-20 h-8 w-8 p-0" : "h-8 w-8 shrink-0 p-0"}
+                  className={useHomePresentation ? "tvtime-media-menu absolute z-20 h-8 w-8 p-0" : "size-10 shrink-0 p-0"}
                   aria-label={`${arabicUi ? "إجراءات إضافية لـ" : "More actions for"} ${displayTitle}`}
                   title={arabicUi ? "إجراءات إضافية" : "More actions"}
                 >
@@ -1068,27 +1073,27 @@ function CollectionMediaCard({
                 </DropdownMenuItem>
                 {!isWatchedTab && (
                   <DropdownMenuItem onSelect={() => void handleMarkWatched()} disabled={update.isPending}>
-                    <Check /> {item.type === "series" ? "Open episode tracking" : "Mark as watched"}
+                    <Check /> {item.type === "series" ? "Open episode tracking" : arabicUi ? "تحديد كمُشاهَد" : "Mark as watched"}
                   </DropdownMenuItem>
                 )}
                 {isWatchedTab && item.type === "movie" && (
                   <DropdownMenuItem onSelect={() => setRatingOpen(true)}>
-                    <Star /> {userRating != null ? "Change rating" : "Rate"}
+                    <Star /> {arabicUi ? (userRating != null ? "تغيير التقييم" : "تقييم") : userRating != null ? "Change rating" : "Rate"}
                   </DropdownMenuItem>
                 )}
                 {isWatchedTab && userRating != null && (
                   <DropdownMenuItem onSelect={() => void handleRemoveRating()} disabled={update.isPending}>
-                    {isMovie ? "Remove rating & watched" : "Remove rating & Finished"}
+                    {arabicUi && isMovie ? "إزالة التقييم والمشاهدة" : isMovie ? "Remove rating & watched" : "Remove rating & Finished"}
                   </DropdownMenuItem>
                 )}
                 {tab === "watchlist" && (
                   <DropdownMenuItem variant="destructive" onSelect={() => void handleQuickUnwatch()} disabled={update.isPending}>
-                    Remove from watchlist
+                    {arabicUi ? "إزالة من قائمة المشاهدة" : "Remove from watchlist"}
                   </DropdownMenuItem>
                 )}
                 {isWatchedTab && (
                   <DropdownMenuItem variant="destructive" onSelect={() => void handleUnwatch()} disabled={update.isPending}>
-                    Remove from Watched
+                    {arabicUi ? "إزالة من المُشاهَدة" : "Remove from Watched"}
                   </DropdownMenuItem>
                 )}
 
@@ -1112,8 +1117,10 @@ function CollectionMediaCard({
           : isMovie
             ? "عدّل تقييمك مباشرة من 100 أو استخدم الأسئلة العشرة."
             : "عدّل تقييم المسلسل مباشرة من 100 أو استخدم الأسئلة العشرة."}
-        submitLabel={(score) => isMovie && !item.watched ? `Save rating & mark watched · ${score}/100` : `Save rating · ${score}/100`}
-        successMessage={isMovie && !item.watched
+        submitLabel={(score) => arabicUi ? (isMovie && !item.watched ? `حفظ التقييم وتحديده كمُشاهَد · ${score}/100` : `حفظ التقييم · ${score}/100`) : isMovie && !item.watched ? `Save rating & mark watched · ${score}/100` : `Save rating · ${score}/100`}
+        successMessage={arabicUi
+          ? (isMovie && !item.watched ? (score) => `تمت المشاهدة · تقييمك ${score}/100` : (score) => `تم التقييم ${score}/100`)
+          : isMovie && !item.watched
           ? (score) => `Marked as watched · Your rating ${score}/100`
           : (score) => `Rated ${score}/100`}
       />

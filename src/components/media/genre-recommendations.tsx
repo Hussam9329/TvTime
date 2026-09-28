@@ -88,38 +88,46 @@ function GenreRecommendationContent() {
   const tvGenre1 = userTvGenres[0] || fallbackTvGenre;
   const isPersonalized = userMovieGenres.length > 0 || userTvGenres.length > 0;
 
+  // Genre lists that failed to load would otherwise leave permanent shimmer
+  // placeholders; skip those optional rows once loading has settled.
   return (
     <>
-      <DeferredRecommendationRow ready={Boolean(movieGenre1)}>
-        {movieGenre1 && (
-          <MovieGenreRow
-            genre={movieGenre1}
-            sortBy="vote_average.desc"
-            rating={7}
-            title={isPersonalized ? `Top ${movieGenre1.name} Movies • For You` : `Top ${movieGenre1.name} Movies`}
-            personalized={isPersonalized}
-          />
-        )}
-      </DeferredRecommendationRow>
-      <DeferredRecommendationRow ready={Boolean(tvGenre1)}>
-        {tvGenre1 && (
-          <TvGenreRow
-            genre={tvGenre1}
-            title={isPersonalized ? `Popular ${tvGenre1.name} Shows • For You` : `Popular ${tvGenre1.name} Shows`}
-            personalized={isPersonalized}
-          />
-        )}
-      </DeferredRecommendationRow>
-      <DeferredRecommendationRow ready={Boolean(movieGenre2)}>
-        {movieGenre2 && (
-          <MovieGenreRow
-            genre={movieGenre2}
-            sortBy="popularity.desc"
-            title={isPersonalized ? `Trending ${movieGenre2.name} Movies • For You` : `Trending ${movieGenre2.name} Movies`}
-            personalized={isPersonalized}
-          />
-        )}
-      </DeferredRecommendationRow>
+      {(movieGenre1 || movieGenres.isLoading) && (
+        <DeferredRecommendationRow ready={Boolean(movieGenre1)}>
+          {movieGenre1 && (
+            <MovieGenreRow
+              genre={movieGenre1}
+              sortBy="vote_average.desc"
+              rating={7}
+              title={isPersonalized ? `Top ${movieGenre1.name} Movies • For You` : `Top ${movieGenre1.name} Movies`}
+              personalized={isPersonalized}
+            />
+          )}
+        </DeferredRecommendationRow>
+      )}
+      {(tvGenre1 || tvGenres.isLoading) && (
+        <DeferredRecommendationRow ready={Boolean(tvGenre1)}>
+          {tvGenre1 && (
+            <TvGenreRow
+              genre={tvGenre1}
+              title={isPersonalized ? `Popular ${tvGenre1.name} Shows • For You` : `Popular ${tvGenre1.name} Shows`}
+              personalized={isPersonalized}
+            />
+          )}
+        </DeferredRecommendationRow>
+      )}
+      {(movieGenre2 || movieGenres.isLoading) && (
+        <DeferredRecommendationRow ready={Boolean(movieGenre2)}>
+          {movieGenre2 && (
+            <MovieGenreRow
+              genre={movieGenre2}
+              sortBy="popularity.desc"
+              title={isPersonalized ? `Trending ${movieGenre2.name} Movies • For You` : `Trending ${movieGenre2.name} Movies`}
+              personalized={isPersonalized}
+            />
+          )}
+        </DeferredRecommendationRow>
+      )}
     </>
   );
 }
@@ -235,7 +243,7 @@ function RecommendationPlaceholder() {
       <div className="h-5 w-48 rounded-md shimmer" />
       <div className="mt-4 flex gap-3 overflow-hidden">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-44 w-[116px] shrink-0 rounded-xl shimmer sm:w-[142px]" />
+          <div key={index} className="h-44 w-[116px] shrink-0 rounded-2xl shimmer sm:w-[142px]" />
         ))}
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNav } from "@/lib/store";
 import { useDiscoverMovies, useFilteredDiscover, useMovieGenres, useTvGenres } from "@/hooks/use-tmdb";
 import { MediaGrid } from "@/components/media/media-card";
@@ -23,10 +23,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { X } from "lucide-react";
 import {
-  ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, AlertCircle,
+  ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal,
   Compass, Star, TrendingUp, Calendar, Clock, Search, Type,
-  Sparkles, Info,
+  Sparkles, Info, Tags, Languages, ShieldCheck, Users,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { ErrorState } from "@/components/ui/error-state";
 import { toast } from "sonner";
 import { ASIAN_ORIGIN_COUNTRY_QUERY } from "@/lib/asian-media";
 import {
@@ -88,6 +90,21 @@ const SORT_OPTIONS_TV_AR = [
   { value: "name.asc", label: "أبجدياً أ-ي" },
   { value: "name.desc", label: "أبجدياً ي-أ" },
 ];
+
+/** One trigger geometry for every Discover select so the filter grid reads as a single control set. */
+const FILTER_TRIGGER_CLASS = "h-10 w-full rounded-xl text-sm font-medium";
+/** The multi-select genre menu mirrors the shared Select trigger (same data-slot, so theme CSS applies identically). */
+const FILTER_GENRE_TRIGGER_CLASS =
+  "flex h-10 w-full items-center justify-between gap-2 whitespace-nowrap rounded-xl border border-input bg-transparent px-3 py-2 text-sm font-medium shadow-xs outline-none transition-[color,background-color,border-color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50";
+
+function FilterTriggerLabel({ icon: Icon, children }: { icon?: LucideIcon; children: ReactNode }) {
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2 text-start">
+      {Icon && <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+      <span className="min-w-0 truncate">{children}</span>
+    </span>
+  );
+}
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1899 }, (_, i) => CURRENT_YEAR - i);
@@ -507,7 +524,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                   key={p.id}
                   variant={(p.id === "miniseries" || p.id === "anthology") && tvFormat === p.id ? "secondary" : "outline"}
                   size="sm"
-                  className="tvtime-discover-preset-button"
+                  className="tvtime-discover-preset-button text-xs font-semibold"
                   onClick={() => applyPreset(p.id)}
                   aria-pressed={(p.id === "miniseries" || p.id === "anthology") ? tvFormat === p.id : undefined}
                 >
@@ -523,11 +540,12 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           <div className="tvtime-discover-active-filters">
             <span className="tvtime-discover-active-label">{isArabic ? "مفعّلة" : "Active"}</span>
             {activeFilterChips.map((chip, i) => (
-              <Badge key={i} variant="default" className="gap-1 py-0.5 pl-2 pr-1 text-[11px]">
+              <Badge key={i} variant="default" className="gap-1 py-0.5 pl-2 pr-1 text-xs">
                 {chip.label}
                 <button
                   onClick={chip.clear}
-                  className="ml-0.5 rounded-full p-0.5 hover:bg-foreground/20"
+                  type="button"
+                  className="relative ml-0.5 rounded-full p-0.5 after:absolute after:-inset-2 after:content-[''] hover:bg-foreground/20"
                   aria-label={`Clear ${chip.label}`}
                 >
                   <X className="h-2.5 w-2.5" />
@@ -547,9 +565,9 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
               className="tvtime-discover-status-toggle w-full justify-start sm:w-auto"
               size="sm"
             >
-              <ToggleGroupItem value="all" className="h-9 flex-1 px-3 text-xs sm:flex-none">{isArabic ? "الكل" : "Everything"}</ToggleGroupItem>
-              <ToggleGroupItem value="unseen" className="h-9 flex-1 px-3 text-xs sm:flex-none">{unseenLabel}</ToggleGroupItem>
-              <ToggleGroupItem value="seen" className="h-9 flex-1 px-3 text-xs sm:flex-none">{seenLabel}</ToggleGroupItem>
+              <ToggleGroupItem value="all" className="h-10 flex-1 px-3 text-xs font-semibold sm:flex-none">{isArabic ? "الكل" : "Everything"}</ToggleGroupItem>
+              <ToggleGroupItem value="unseen" className="h-10 flex-1 px-3 text-xs font-semibold sm:flex-none">{unseenLabel}</ToggleGroupItem>
+              <ToggleGroupItem value="seen" className="h-10 flex-1 px-3 text-xs font-semibold sm:flex-none">{seenLabel}</ToggleGroupItem>
             </ToggleGroup>
           </div>
         </FilterSection>
@@ -559,10 +577,10 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
             <FilterField label={isArabic ? "الأنواع" : "Genres"}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-9 w-full justify-between text-sm">
-                    <span className="truncate">{selectedGenreLabel}</span>
-                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  </Button>
+                  <button type="button" data-slot="select-trigger" data-size="default" className={FILTER_GENRE_TRIGGER_CLASS}>
+                    <FilterTriggerLabel icon={Tags}>{selectedGenreLabel}</FilterTriggerLabel>
+                    <ChevronDown className="size-4 opacity-50" aria-hidden="true" />
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="max-h-80 w-[260px] overflow-y-auto">
                   <DropdownMenuLabel>{isArabic ? "الأنواع" : "Genres"}</DropdownMenuLabel>
@@ -593,9 +611,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
             <FilterField label={isArabic ? "الترتيب حسب" : "Sort by"}>
               <Select value={sortBy} onValueChange={(v) => { setSortBy(v); resetPagination(); }}>
-                <SelectTrigger className="h-9 w-full text-sm">
-                  <TrendingUp className="mr-1.5 h-3.5 w-3.5" />
-                  <SelectValue placeholder={isArabic ? "الترتيب حسب" : "Sort by"} />
+                <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                  <FilterTriggerLabel icon={TrendingUp}><SelectValue placeholder={isArabic ? "الترتيب حسب" : "Sort by"} /></FilterTriggerLabel>
                 </SelectTrigger>
                 <SelectContent>
                   {sortOptions.map((o) => (
@@ -610,9 +627,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
             <FilterField label={isArabic ? "من سنة" : "From year"}>
               <Select value={fromYear || "any"} onValueChange={(v) => updateYears("min", v === "any" ? "" : v)}>
-                <SelectTrigger className="h-9 w-full text-sm">
-                  <Calendar className="mr-1.5 h-3.5 w-3.5" />
-                  <SelectValue placeholder={isArabic ? "من سنة" : "From year"} />
+                <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                  <FilterTriggerLabel icon={Calendar}><SelectValue placeholder={isArabic ? "من سنة" : "From year"} /></FilterTriggerLabel>
                 </SelectTrigger>
                 <SelectContent className="max-h-96">
                   <SelectItem value="any">{isArabic ? "أي سنة بداية" : "Any from year"}</SelectItem>
@@ -623,9 +639,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
             <FilterField label={isArabic ? "إلى سنة" : "To year"}>
               <Select value={toYear || "any"} onValueChange={(v) => updateYears("max", v === "any" ? "" : v)}>
-                <SelectTrigger className="h-9 w-full text-sm">
-                  <Calendar className="mr-1.5 h-3.5 w-3.5" />
-                  <SelectValue placeholder={isArabic ? "إلى سنة" : "To year"} />
+                <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                  <FilterTriggerLabel icon={Calendar}><SelectValue placeholder={isArabic ? "إلى سنة" : "To year"} /></FilterTriggerLabel>
                 </SelectTrigger>
                 <SelectContent className="max-h-96">
                   <SelectItem value="any">{isArabic ? "أي سنة نهاية" : "Any to year"}</SelectItem>
@@ -641,8 +656,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                   disabled={Boolean(forcedLang)}
                   onValueChange={(v) => { setLanguage(v === "any" ? "" : v); resetPagination(); }}
                 >
-                  <SelectTrigger className="h-9 w-full text-sm">
-                    <SelectValue placeholder={isArabic ? "اللغة" : "Language"} />
+                  <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                    <FilterTriggerLabel icon={Languages}><SelectValue placeholder={isArabic ? "اللغة" : "Language"} /></FilterTriggerLabel>
                   </SelectTrigger>
                   <SelectContent>
                     {forcedLang && forcedLanguageLabel ? (
@@ -654,8 +669,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                 </Select>
               ) : (
                 <Select value={certification || "any"} onValueChange={(v) => { setCertification(v === "any" ? "" : v); resetPagination(); }}>
-                  <SelectTrigger className="h-9 w-full text-sm">
-                    <SelectValue placeholder={isArabic ? "التصنيف العمري" : "Certification"} />
+                  <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                    <FilterTriggerLabel icon={ShieldCheck}><SelectValue placeholder={isArabic ? "التصنيف العمري" : "Certification"} /></FilterTriggerLabel>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="any">{isArabic ? "أي تصنيف" : "Any certification"}</SelectItem>
@@ -678,7 +693,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                   <Sparkles className="h-3.5 w-3.5" />
                   {advancedOpen ? (isArabic ? "إخفاء الفلاتر المتقدمة" : "Hide advanced filters") : (isArabic ? "إظهار الفلاتر المتقدمة" : "Show advanced filters")}
                   {advancedFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 text-[10px]">
+                    <Badge variant="secondary" className="ml-1 h-5 text-xs">
                       {advancedFilterCount}
                     </Badge>
                   )}
@@ -697,8 +712,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                           disabled={Boolean(forcedLang)}
                           onValueChange={(v) => { setLanguage(v === "any" ? "" : v); resetPagination(); }}
                         >
-                          <SelectTrigger className="h-9 w-full text-sm">
-                            <SelectValue placeholder={isArabic ? "اللغة" : "Language"} />
+                          <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                            <FilterTriggerLabel icon={Languages}><SelectValue placeholder={isArabic ? "اللغة" : "Language"} /></FilterTriggerLabel>
                           </SelectTrigger>
                           <SelectContent>
                             {forcedLang && forcedLanguageLabel ? (
@@ -713,9 +728,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
                     <FilterField label={isArabic ? "أقل تقييم TMDB" : "Minimum TMDB score"}>
                       <Select value={userScoreMin || "any"} onValueChange={(v) => updateScores("min", v === "any" ? "" : v)}>
-                        <SelectTrigger className="h-9 w-full text-sm">
-                          <Star className="mr-1.5 h-3.5 w-3.5" />
-                          <SelectValue placeholder={isArabic ? "أقل تقييم" : "Min user score"} />
+                        <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                          <FilterTriggerLabel icon={Star}><SelectValue placeholder={isArabic ? "أقل تقييم" : "Min user score"} /></FilterTriggerLabel>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="any">{isArabic ? "بدون حد أدنى" : "Any min score"}</SelectItem>
@@ -726,9 +740,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
                     <FilterField label={isArabic ? "أعلى تقييم TMDB" : "Maximum TMDB score"}>
                       <Select value={userScoreMax || "any"} onValueChange={(v) => updateScores("max", v === "any" ? "" : v)}>
-                        <SelectTrigger className="h-9 w-full text-sm">
-                          <Star className="mr-1.5 h-3.5 w-3.5" />
-                          <SelectValue placeholder={isArabic ? "أعلى تقييم" : "Max user score"} />
+                        <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                          <FilterTriggerLabel icon={Star}><SelectValue placeholder={isArabic ? "أعلى تقييم" : "Max user score"} /></FilterTriggerLabel>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="any">{isArabic ? "بدون حد أعلى" : "Any max score"}</SelectItem>
@@ -739,8 +752,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
                     <FilterField label={isArabic ? "أقل عدد تصويتات" : "Minimum votes"}>
                       <Select value={minVotes || "any"} onValueChange={(v) => { setMinVotes(v === "any" ? "" : v); resetPagination(); }}>
-                        <SelectTrigger className="h-9 w-full text-sm">
-                          <SelectValue placeholder={isArabic ? "أقل تصويتات" : "Min votes"} />
+                        <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                          <FilterTriggerLabel icon={Users}><SelectValue placeholder={isArabic ? "أقل تصويتات" : "Min votes"} /></FilterTriggerLabel>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="any">{isArabic ? "أي عدد تصويتات" : "Any votes"}</SelectItem>
@@ -761,9 +774,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                   <FilterGrid className="lg:grid-cols-3">
                     <FilterField label={isArabic ? "أقل مدة" : "Minimum runtime"}>
                       <Select value={runtimeMin || "any"} onValueChange={(v) => updateRuntimes("min", v === "any" ? "" : v)}>
-                        <SelectTrigger className="h-9 w-full text-sm">
-                          <Clock className="mr-1.5 h-3.5 w-3.5" />
-                          <SelectValue placeholder={isArabic ? "أقل مدة" : "Min runtime"} />
+                        <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                          <FilterTriggerLabel icon={Clock}><SelectValue placeholder={isArabic ? "أقل مدة" : "Min runtime"} /></FilterTriggerLabel>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="any">{isArabic ? "بدون حد أدنى" : "Any min runtime"}</SelectItem>
@@ -775,9 +787,8 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
 
                     <FilterField label={isArabic ? "أعلى مدة" : "Maximum runtime"}>
                       <Select value={runtimeMax || "any"} onValueChange={(v) => updateRuntimes("max", v === "any" ? "" : v)}>
-                        <SelectTrigger className="h-9 w-full text-sm">
-                          <Clock className="mr-1.5 h-3.5 w-3.5" />
-                          <SelectValue placeholder={isArabic ? "أعلى مدة" : "Max runtime"} />
+                        <SelectTrigger className={FILTER_TRIGGER_CLASS}>
+                          <FilterTriggerLabel icon={Clock}><SelectValue placeholder={isArabic ? "أعلى مدة" : "Max runtime"} /></FilterTriggerLabel>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="any">{isArabic ? "بدون حد أعلى" : "Any max runtime"}</SelectItem>
@@ -794,14 +805,14 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
                           value={keywords}
                           onChange={(e) => { setKeywords(e.target.value); resetPagination(); }}
                           placeholder={isArabic ? "فلترة بالكلمات المفتاحية..." : "Filter by keywords..."}
-                          className="h-9 pl-8 text-sm"
+                          className="h-10 rounded-xl pl-8 text-sm"
                         />
                       </div>
                     </FilterField>
                   </FilterGrid>
 
                   {(runtimeMin || runtimeMax) && (
-                    <div className="mt-2 flex items-center gap-1.5 text-[11px] leading-tight text-amber-500/80">
+                    <div className="mt-2 flex items-center gap-1.5 text-xs leading-tight text-chart-4">
                       <Info className="h-3 w-3" />
                       <span>{isArabic ? (effectiveIsTV ? "تعتمد المدة على مدة الحلقة المعتادة في TMDB." : "المدة تقريبية لأن TMDB قد يخزن أكثر من نسخة للفيلم نفسه.") : effectiveIsTV ? "Runtime uses TMDB's typical episode duration." : "Runtime is approximate because TMDB may store multiple cuts of the same film."}</span>
                     </div>
@@ -835,26 +846,21 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
         </p>
         {!isLoading && (
           <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-            {activeFilters > 0 && <Badge variant="secondary" className="h-7 rounded-lg px-2.5">{activeFilters} {isArabic ? "فلتر مفعّل" : "active filters"}</Badge>}
-            <Badge variant="outline" className="h-7 rounded-lg px-2.5 font-medium tabular-nums">{isArabic ? "الصفحة" : "Page"} {page}</Badge>
+            {activeFilters > 0 && <Badge variant="secondary" className="h-7 rounded-full px-2.5">{activeFilters} {isArabic ? "فلتر مفعّل" : "active filters"}</Badge>}
+            <Badge variant="outline" className="h-7 rounded-full px-2.5 font-medium tabular-nums">{isArabic ? "الصفحة" : "Page"} {page}</Badge>
           </div>
         )}
       </div>
 
       {/* Error */}
       {isError && (
-        <div className="feedback-state feedback-state--error flex flex-col items-center justify-center px-4 py-14 text-center" role="alert">
-          <div className="feedback-state__icon mb-4 flex size-20 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-            <AlertCircle className="h-9 w-9" aria-hidden="true" />
-          </div>
-          <h2 className="feedback-state__title text-lg font-bold">{isArabic ? "تعذر تحميل هذه النتائج" : <>We couldn&apos;t load these results</>}</h2>
-          <p className="feedback-state__description mt-1 max-w-md text-sm text-muted-foreground">
-            {isArabic ? "لم تستجب خدمة TMDB. تحقق من الاتصال وحاول مرة أخرى." : showMe === "all" ? "TMDB did not respond. Check your connection and try again." : "Your filtered catalogue could not be loaded. Try again without changing your filters."}
-          </p>
-          <Button variant="outline" size="sm" className="mt-5" onClick={() => void query.refetch()}>
-            {isArabic ? "حاول مجدداً" : "Try again"}
-          </Button>
-        </div>
+        <ErrorState
+          arabic={isArabic}
+          title={isArabic ? "تعذر تحميل هذه النتائج" : "We couldn’t load these results"}
+          description={isArabic ? "لم تستجب خدمة TMDB. تحقق من الاتصال وحاول مرة أخرى." : showMe === "all" ? "TMDB did not respond. Check your connection and try again." : "Your filtered catalogue could not be loaded. Try again without changing your filters."}
+          onRetry={() => void query.refetch()}
+          retryLabel={isArabic ? "حاول مجدداً" : "Try again"}
+        />
       )}
 
       {/* Loading */}
@@ -863,11 +869,11 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
       {/* Empty */}
       {!isLoading && !isError && items.length === 0 && (
         <EmptyState
-          icon={<SlidersHorizontal className="h-9 w-9" />}
+          icon={<SlidersHorizontal className="size-9" />}
           title={isArabic ? "لا توجد عناوين تطابق هذه الفلاتر" : showMe === "all" ? "No titles match these filters" : `No ${showMe === "seen" ? seenLabel.toLowerCase() : unseenLabel.toLowerCase()} titles match`}
           description={isArabic ? "وسّع نطاق السنوات أو أزل أحد الأنواع أو أعد ضبط الفلاتر." : "Broaden the year range, remove a genre, or reset the filters to discover more titles."}
           action={activeFilters > 0 ? (
-            <Button variant="outline" size="sm" className="mt-4" onClick={resetAll}>
+            <Button variant="outline" onClick={resetAll}>
               {isArabic ? "إعادة ضبط الفلاتر" : "Reset all filters"}
             </Button>
           ) : undefined}
@@ -885,7 +891,7 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
         || (usesCursorPagination && (page > 1 || filteredQuery.data?.has_more))
       ) && (
         <div className="flex items-center justify-center gap-2 pt-4">
-          <Button variant="outline" size="sm" disabled={page === 1 || query.isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          <Button variant="outline" disabled={page === 1 || query.isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             <ChevronLeft className="w-4 h-4" /> {isArabic ? "السابق" : "Prev"}
           </Button>
           <span className="text-sm text-muted-foreground px-3">
@@ -894,7 +900,6 @@ export function DiscoverView({ world = "movies", embedded = false, title, subtit
           </span>
           <Button
             variant="outline"
-            size="sm"
             disabled={query.isFetching || (usesCursorPagination ? !filteredQuery.data?.has_more : page >= totalPages)}
             onClick={() => {
               if (!usesCursorPagination) {

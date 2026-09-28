@@ -48,14 +48,14 @@ export function EpisodeWatchConfirmationDialog({
       <AlertDialogContent className="tvtime-episode-watch-dialog">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500 dark:text-amber-400" />
             Earlier episodes are not watched
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-3 text-left">
+          <AlertDialogDescription className="space-y-3 text-start">
             <span className="block">
               You are marking <strong className="text-foreground">{plan.targetLabel}</strong> as watched, but {previousLabel}{seasonContext}.
             </span>
-            <span className="block rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs leading-relaxed">
+            <span className="block rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs leading-relaxed">
               Choose exactly what should change. Nothing earlier will be marked unless you select the option that includes previous episodes.
             </span>
           </AlertDialogDescription>

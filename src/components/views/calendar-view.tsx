@@ -4,6 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Clock3, RefreshCw, Tv2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { PageTitlebar } from "@/components/ui/page-titlebar";
 import { useNav } from "@/lib/store";
 import { userHeaders, withUserId } from "@/lib/client-user";
 
@@ -40,24 +43,41 @@ export function CalendarView() {
 
   return (
     <div className="space-y-5 py-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Upcoming</p>
-          <h1 className="text-3xl font-black tracking-tight">Calendar</h1>
-          <p className="mt-1 text-sm text-muted-foreground">The next 30 days for shows you actively follow.</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching}>
-          <RefreshCw className={`mr-1.5 h-4 w-4 ${query.isFetching ? "animate-spin" : ""}`} /> Refresh
+      <PageTitlebar title="Calendar" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">The next 30 days for shows you actively follow.</p>
+        <Button variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}>
+          <RefreshCw className={`h-4 w-4 ${query.isFetching ? "animate-spin" : ""}`} aria-hidden="true" /> Refresh
         </Button>
       </div>
 
-      {query.isError && <Card className="p-6 text-sm text-destructive">Calendar data could not be loaded.</Card>}
+      {query.isLoading && (
+        <div className="space-y-4" aria-busy="true" aria-label="Loading calendar">
+          {[0, 1].map((group) => (
+            <section key={group}>
+              <div className="mb-2 h-5 w-48 animate-pulse rounded-full bg-muted" />
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {[0, 1, 2].map((card) => (
+                  <div key={card} className="h-28 animate-pulse rounded-2xl border border-border bg-card" />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+      {query.isError && (
+        <ErrorState
+          title="Couldn’t load your calendar"
+          description="Your tracked shows are safe. Check your connection and try again."
+          onRetry={() => void query.refetch()}
+        />
+      )}
       {!query.isLoading && !query.isError && groups.size === 0 && (
-        <Card className="p-8 text-center">
-          <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h2 className="mt-3 font-bold">No scheduled episodes in the next 30 days</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Tracked shows: {query.data?.trackedShows ?? 0}. Some shows may still be waiting for refreshed TMDB metadata.</p>
-        </Card>
+        <EmptyState
+          icon={<CalendarDays className="size-8" />}
+          title="No scheduled episodes in the next 30 days"
+          description={`Tracked shows: ${query.data?.trackedShows ?? 0}. Some shows may still be waiting for refreshed TMDB metadata.`}
+        />
       )}
 
       <div className="space-y-4">
@@ -69,7 +89,7 @@ export function CalendarView() {
             </div>
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {items.map((item) => (
-                <button key={`${item.tmdbId}-${item.airDate}`} type="button" onClick={() => goTv(item.tmdbId)} className="text-left">
+                <button key={`${item.tmdbId}-${item.airDate}`} type="button" onClick={() => goTv(item.tmdbId)} className="rounded-2xl text-left">
                   <Card className="h-full p-4 transition-colors hover:bg-accent/50">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

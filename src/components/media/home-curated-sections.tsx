@@ -98,7 +98,7 @@ function CuratedRowsPlaceholder({ rows }: { rows: number }) {
       <div className="h-5 w-48 rounded-md shimmer" />
       <div className="mt-4 flex gap-3 overflow-hidden">
         {Array.from({ length: 4 }).map((__, cardIndex) => (
-          <div key={cardIndex} className="h-44 w-[116px] shrink-0 rounded-xl shimmer sm:w-[142px]" />
+          <div key={cardIndex} className="h-44 w-[116px] shrink-0 rounded-2xl shimmer sm:w-[142px]" />
         ))}
       </div>
     </div>

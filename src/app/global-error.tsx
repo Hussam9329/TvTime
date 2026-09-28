@@ -17,7 +17,7 @@ export default function GlobalError({
   const buttonBase = {
     minHeight: "44px",
     padding: "0.65rem 1rem",
-    borderRadius: "10px",
+    borderRadius: "12px",
     cursor: "pointer",
     fontSize: "0.95rem",
     fontWeight: 650,
@@ -31,8 +31,8 @@ export default function GlobalError({
           padding: "1rem",
           fontFamily:
             "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-          background: "#0a0a0f",
-          color: "#fafafa",
+          background: "#0a0d11",
+          color: "#f5f1e8",
           minHeight: "100dvh",
           display: "flex",
           alignItems: "center",
@@ -50,9 +50,10 @@ export default function GlobalError({
             style={{
               width: "64px",
               height: "64px",
-              borderRadius: "18px",
-              background: "rgba(225, 29, 72, 0.14)",
-              color: "#fb7185",
+              borderRadius: "16px",
+              background: "rgba(237, 189, 112, 0.12)",
+              border: "1px solid rgba(237, 189, 112, 0.28)",
+              color: "#edbd70",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -72,7 +73,7 @@ export default function GlobalError({
           </h1>
           <p
             id="global-error-description"
-            style={{ color: "#a1a1aa", lineHeight: 1.6, fontSize: "0.95rem", margin: "0 0 1.5rem" }}
+            style={{ color: "#a8a29a", lineHeight: 1.6, fontSize: "0.95rem", margin: "0 0 1.5rem" }}
           >
             No data was changed. Try starting the application again or reload this page.
             {error.digest && (
@@ -83,8 +84,9 @@ export default function GlobalError({
                     display: "inline-block",
                     marginTop: "0.75rem",
                     padding: "0.3rem 0.55rem",
-                    background: "rgba(255,255,255,0.06)",
-                    borderRadius: "6px",
+                    background: "#151a21",
+                    border: "1px solid #262c35",
+                    borderRadius: "8px",
                     fontSize: "0.75rem",
                     fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                   }}
@@ -101,9 +103,9 @@ export default function GlobalError({
               onClick={reset}
               style={{
                 ...buttonBase,
-                background: "#e11d48",
-                color: "white",
-                border: "1px solid #e11d48",
+                background: "#edbd70",
+                color: "#100c05",
+                border: "1px solid #edbd70",
               }}
             >
               Try again
@@ -113,9 +115,9 @@ export default function GlobalError({
               onClick={() => window.location.reload()}
               style={{
                 ...buttonBase,
-                background: "transparent",
-                color: "#fafafa",
-                border: "1px solid #3f3f46",
+                background: "#151a21",
+                color: "#f5f1e8",
+                border: "1px solid #2e3440",
               }}
             >
               Reload page

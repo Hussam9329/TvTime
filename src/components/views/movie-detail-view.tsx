@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { StructuredRatingDialog, type StructuredRatingResult } from "@/components/media/structured-rating-dialog";
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
@@ -25,6 +27,7 @@ import {
   mediaCollectionWorldForItem,
 } from "@/lib/media-world-pipeline";
 import { useWatchUndo } from "@/hooks/use-watch-undo";
+import { ratingToneClass } from "@/lib/rating-tone";
 
 export function MovieDetailView() {
   const { movieId, back, goPerson } = useNav();
@@ -58,11 +61,22 @@ export function MovieDetailView() {
   }
 
   if (detail.isError || !detail.data) {
+    const arabicError = mediaState.data?.isArabic === true;
     return (
-      <div className="text-center py-20 text-muted-foreground">
-        <p>Failed to load movie.</p>
-        <Button variant="outline" className="mt-4" onClick={back}>Go back</Button>
-      </div>
+      <ErrorState
+        arabic={arabicError}
+        title={arabicError ? "تعذّر تحميل الفيلم" : "Couldn’t load this movie"}
+        description={arabicError
+          ? "حدث خطأ أثناء جلب تفاصيل الفيلم. تحقق من الاتصال ثم أعد المحاولة."
+          : "Something went wrong while loading the movie details. Check your connection and try again."}
+        onRetry={() => void detail.refetch()}
+        action={(
+          <Button variant="ghost" onClick={back}>
+            <ArrowLeft className="rtl:rotate-180" aria-hidden="true" /> {arabicError ? "رجوع" : "Go back"}
+          </Button>
+        )}
+        className="py-20"
+      />
     );
   }
 
@@ -92,6 +106,7 @@ export function MovieDetailView() {
   const filmweenSearchTitle = isArabicMovie ? ((m as any).english_title || displayTitle) : displayTitle;
   const voduSearchTitle = displayTitle;
   const cinemanaSearchTitle = displayTitle;
+  const t = (en: string, ar: string) => (isArabicMovie ? ar : en);
 
   const cast = (m as any).credits?.cast?.slice(0, 16) ?? [];
   const recommendationCandidates = (((m as any).recommendations?.results ?? []) as MediaItem[])
@@ -133,9 +148,9 @@ export function MovieDetailView() {
         originCountry: originCountries,
         originalLanguage: m.original_language,
       });
-      toast.success(inWatchlist ? "Removed from watchlist" : "Added to watchlist");
+      toast.success(inWatchlist ? t("Removed from watchlist", "أُزيل من قائمة المشاهدة") : t("Added to watchlist", "أُضيف إلى قائمة المشاهدة"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update watchlist");
+      toast.error(error instanceof Error ? error.message : t("Failed to update watchlist", "تعذّر تحديث قائمة المشاهدة"));
     }
   };
 
@@ -160,9 +175,9 @@ export function MovieDetailView() {
           originalLanguage: m.original_language,
           ...(myRatingBreakdown ? { ratingBreakdown: myRatingBreakdown } : {}),
         });
-        showWatchUndo(`Marked as watched · Your rating ${myRating}/100`, result);
+        showWatchUndo(t(`Marked as watched · Your rating ${myRating}/100`, `تمت المشاهدة · تقييمك ${myRating}/100`), result);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to update watch status");
+        toast.error(error instanceof Error ? error.message : t("Failed to update watch status", "تعذّر تحديث حالة المشاهدة"));
       }
       return;
     }
@@ -181,18 +196,18 @@ export function MovieDetailView() {
         originCountry: originCountries,
         originalLanguage: m.original_language,
       });
-      showWatchUndo("Marked as not watched", result);
+      showWatchUndo(t("Marked as not watched", "أُلغيت المشاهدة"), result);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update watch status");
+      toast.error(error instanceof Error ? error.message : t("Failed to update watch status", "تعذّر تحديث حالة المشاهدة"));
     }
   };
 
   const onRewatch = async () => {
     try {
       const result = await watchedToggle.mutateAsync({ action: "rewatch", tmdbId: m.id, title: displayTitle, posterPath: m.poster_path, runtime: m.runtime });
-      showWatchUndo("Rewatch recorded", result);
+      showWatchUndo(t("Rewatch recorded", "سُجّلت إعادة المشاهدة"), result);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to record rewatch");
+      toast.error(error instanceof Error ? error.message : t("Failed to record rewatch", "تعذّر تسجيل إعادة المشاهدة"));
     }
   };
 
@@ -214,7 +229,7 @@ export function MovieDetailView() {
         userRating: score,
       });
     }
-    if (!isWatched) throw new Error("Mark this movie watched before rating it.");
+    if (!isWatched) throw new Error(t("Mark this movie watched before rating it.", "علّم الفيلم كمُشاهَد قبل تقييمه."));
     return ratingMutate.mutateAsync({
       action: "set",
       mediaType: "movie",
@@ -236,18 +251,13 @@ export function MovieDetailView() {
   const onRemoveRating = async () => {
     try {
       const result = await ratingMutate.mutateAsync({ action: "remove", mediaType: "movie", tmdbId: m.id });
-      showWatchUndo("Rating removed and movie marked as not watched", result);
+      showWatchUndo(t("Rating removed and movie marked as not watched", "حُذف التقييم وأُلغيت مشاهدة الفيلم"), result);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove rating");
+      toast.error(error instanceof Error ? error.message : t("Failed to remove rating", "تعذّر حذف التقييم"));
     }
   };
 
-  const ratingColor = myRating == null
-    ? "text-muted-foreground"
-    : myRating >= 80 ? "text-emerald-400"
-    : myRating >= 60 ? "text-amber-400"
-    : myRating >= 40 ? "text-orange-400"
-    : "text-rose-400";
+  const ratingColor = ratingToneClass(myRating);
   const stateLoading = mediaState.isLoading && !stateItem;
 
   return (
@@ -260,7 +270,7 @@ export function MovieDetailView() {
         </div>
       </div>
       <Button variant="ghost" size="sm" onClick={back} className="mp-back text-muted-foreground">
-        <ArrowLeft className="w-4 h-4 mr-1" /> {isArabicMovie ? "رجوع" : "Back"}
+        <ArrowLeft className="w-4 h-4 me-1 rtl:rotate-180" /> {isArabicMovie ? "رجوع" : "Back"}
       </Button>
 
       <section className="mp-hero">
@@ -447,7 +457,7 @@ export function MovieDetailView() {
         <TabsContent value="overview" className="mp-overview space-y-4 mt-4">
           <div>
             <h3 className="text-lg font-bold mb-2">{isArabicMovie ? "القصة" : "Synopsis"}</h3>
-            <p className="text-foreground/80 leading-relaxed" dir="auto">{m.overview || "No overview available."}</p>
+            <p className="text-foreground/80 leading-relaxed" dir="auto">{m.overview || t("No overview available.", "لا يتوفر ملخص.")}</p>
           </div>
           {recommendations.length > 0 && (
             <MediaRow title={isArabicMovie ? "اقتراحات لك" : "Recommendations"} icon={<Sparkles className="w-5 h-5" />} items={recommendations} forcedMediaType="movie" />
@@ -482,15 +492,19 @@ export function MovieDetailView() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">{isArabicMovie ? "لا تتوفر معلومات عن طاقم العمل." : "No cast information available."}</p>
+            <EmptyState
+              icon={<Users className="size-8" />}
+              title={isArabicMovie ? "لا تتوفر معلومات عن طاقم العمل." : "No cast information available."}
+              className="py-8"
+            />
           )}
         </TabsContent>
 
         {m.budget > 0 && (
           <TabsContent value="details" className="mt-4">
             <div className="mp-content-grid">
-              <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label={isArabicMovie ? "الميزانية" : "Budget"} value={`$${m.budget.toLocaleString()}`} />
-              <DetailCard icon={<DollarSign className="w-5 h-5 text-emerald-400" />} label={isArabicMovie ? "الإيرادات" : "Revenue"} value={`$${m.revenue.toLocaleString()}`} />
+              <DetailCard icon={<DollarSign className="w-5 h-5 text-primary" />} label={isArabicMovie ? "الميزانية" : "Budget"} value={`$${m.budget.toLocaleString()}`} />
+              <DetailCard icon={<DollarSign className="w-5 h-5 text-primary" />} label={isArabicMovie ? "الإيرادات" : "Revenue"} value={`$${m.revenue.toLocaleString()}`} />
               <DetailCard icon={<Calendar className="w-5 h-5 text-primary" />} label={isArabicMovie ? "تاريخ الإصدار" : "Release date"} value={releaseDate?.full || "—"} />
               <DetailCard icon={<Clock className="w-5 h-5 text-primary" />} label={isArabicMovie ? "المدة" : "Runtime"} value={runtime || "—"} />
               <DetailCard icon={<Film className="w-5 h-5 text-primary" />} label={isArabicMovie ? "الحالة" : "Status"} value={m.status || "—"} />
@@ -516,7 +530,7 @@ export function MovieDetailView() {
                 <button
                   key={v.id}
                   onClick={() => window.open(`https://www.youtube.com/watch?v=${v.key}`, "_blank")}
-                  className="group text-left"
+                  className="group text-start"
                 >
                   <Card className="overflow-hidden p-0 hover:border-primary/40 transition-colors">
                     <div className="relative aspect-video bg-black">
@@ -551,13 +565,16 @@ export function MovieDetailView() {
         onRate={onRateSubmit}
         initialBreakdown={myRatingBreakdown}
         legacyInitialRating={myRating}
+        locale={isArabicMovie ? "ar" : "en"}
         description={ratingIntent === "complete"
-          ? "قيّم مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتم اعتبار الفيلم مُشاهَدًا."
-          : "عدّل تقييمك مباشرة من 100 أو استخدم الأسئلة العشرة."}
-        submitLabel={(score) => ratingIntent === "complete" ? `Save rating & mark watched · ${score}/100` : `Update rating · ${score}/100`}
+          ? t("Rate directly out of 100 or answer the ten questions. Saving marks the movie as watched.", "قيّم مباشرة من 100 أو جاوب على الأسئلة العشرة. بعد الحفظ يتم اعتبار الفيلم مُشاهَدًا.")
+          : t("Update your rating directly out of 100 or use the ten questions.", "عدّل تقييمك مباشرة من 100 أو استخدم الأسئلة العشرة.")}
+        submitLabel={(score) => ratingIntent === "complete"
+          ? t(`Save rating & mark watched · ${score}/100`, `حفظ التقييم واعتباره مُشاهَدًا · ${score}/100`)
+          : t(`Update rating · ${score}/100`, `تحديث التقييم · ${score}/100`)}
         successMessage={ratingIntent === "complete"
-          ? (score) => `Marked as watched · Your rating ${score}/100`
-          : (score) => `Rated ${score}/100`}
+          ? (score) => t(`Marked as watched · Your rating ${score}/100`, `تمت المشاهدة · تقييمك ${score}/100`)
+          : (score) => t(`Rated ${score}/100`, `تم التقييم ${score}/100`)}
       />
     </div>
   );
@@ -566,7 +583,7 @@ export function MovieDetailView() {
 function DetailCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <Card className="p-4 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">{icon}</div>
+      <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">{icon}</div>
       <div>
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="font-semibold">{value}</p>

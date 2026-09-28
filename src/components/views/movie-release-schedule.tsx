@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Film, Search, Tv } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Film, Search, Tv } from "lucide-react";
 import { useMediaStates, useReleaseSchedule } from "@/hooks/use-tmdb";
 import { dateOnlyFromLocalDate, formatDateOnly } from "@/lib/date-only";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CatalogueArtwork } from "@/components/media/catalogue-artwork";
@@ -159,8 +160,8 @@ export function ReleaseSchedule({
             </Button>
           </div>
           <div className="tvtime-release-search relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isRTL ? "ابحث في جدول الإصدارات..." : "Search this release schedule..."} className="pl-9" />
+            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isRTL ? "ابحث في جدول الإصدارات..." : "Search this release schedule..."} className="ps-9" />
           </div>
         </div>
       </div>
@@ -168,18 +169,19 @@ export function ReleaseSchedule({
       {schedule.isLoading ? (
         <MediaGrid items={[]} loading forcedMediaType={mediaType} presentation="home" />
       ) : schedule.isError ? (
-        <Card className="feedback-state feedback-state--error p-12 text-center" role="alert">
-          <AlertCircle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
-          <p className="font-semibold">{isRTL ? `تعذر تحميل جدول ${mediaLabel}` : `Could not load the ${mediaLabel} schedule`}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{isRTL ? "مكتبتك لم تتأثر. قد تكون خدمة TMDB غير متاحة مؤقتاً." : "Your library is unaffected. TMDB may be temporarily unavailable."}</p>
-          <Button variant="outline" className="mt-4" onClick={() => schedule.refetch()}>{isRTL ? "إعادة المحاولة" : "Retry"}</Button>
-        </Card>
+        <ErrorState
+          arabic={isRTL}
+          title={isRTL ? `تعذر تحميل جدول ${mediaLabel}` : `Could not load the ${mediaLabel} schedule`}
+          description={isRTL ? "مكتبتك لم تتأثر. قد تكون خدمة TMDB غير متاحة مؤقتاً." : "Your library is unaffected. TMDB may be temporarily unavailable."}
+          onRetry={() => void schedule.refetch()}
+        />
       ) : groups.length === 0 ? (
-        <Card className="feedback-state feedback-state--empty p-12 text-center text-muted-foreground" role="status">
-          {isTV ? <Tv className="mx-auto mb-3 h-10 w-10 opacity-40" /> : <Film className="mx-auto mb-3 h-10 w-10 opacity-40" />}
-          <p className="font-medium">{isRTL ? `لا توجد إصدارات ضمن ${mediaLabel} في هذه الفترة` : `No ${mediaLabel} releases match this window`}</p>
-          {search && <Button variant="outline" size="sm" className="mt-4" onClick={() => setSearch("")}>{isRTL ? "مسح البحث" : "Clear search"}</Button>}
-        </Card>
+        <EmptyState
+          icon={isTV ? <Tv className="size-8" /> : <Film className="size-8" />}
+          title={isRTL ? `لا توجد إصدارات ضمن ${mediaLabel} في هذه الفترة` : `No ${mediaLabel} releases match this window`}
+          description={search ? (isRTL ? "لا توجد نتائج مطابقة لبحثك في هذه الفترة." : "Nothing in this window matches your search.") : undefined}
+          action={search ? <Button variant="outline" onClick={() => setSearch("")}>{isRTL ? "مسح البحث" : "Clear search"}</Button> : undefined}
+        />
       ) : (
         <div className="space-y-4">
           <div className="tvtime-release-schedule__summary flex items-center justify-between gap-3 text-sm text-muted-foreground">

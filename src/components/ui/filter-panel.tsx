@@ -79,15 +79,15 @@ export function FilterPanel({
             <div className="tvtime-filter-sheet-topbar">
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold">{title}</p>
-                {activeCount > 0 && <p className="text-[11px] text-muted-foreground">{activeCount} {activeLabel}</p>}
+                {activeCount > 0 && <p className="text-xs text-muted-foreground">{activeCount} {activeLabel}</p>}
               </div>
               <div className="flex items-center gap-1">
                 {onReset && activeCount > 0 && (
-                  <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-xs" onClick={onReset}>
+                  <Button type="button" variant="ghost" size="sm" className="h-10 px-2 text-xs" onClick={onReset}>
                     <RotateCcw className="h-3.5 w-3.5" /> {resetLabel}
                   </Button>
                 )}
-                <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSheetOpen(false)} aria-label="Close filters">
+                <Button type="button" variant="ghost" size="icon" onClick={() => setSheetOpen(false)} aria-label="Close filters">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -121,7 +121,7 @@ export function FilterPanel({
             <SlidersHorizontal className="h-4 w-4 shrink-0 text-primary" />
             <span>{title}</span>
             {activeCount > 0 && (
-              <Badge variant="secondary" className="h-5 text-[10px] tabular-nums">
+              <Badge variant="secondary" className="h-5 text-xs tabular-nums">
                 {activeCount} {activeLabel}
               </Badge>
             )}
@@ -137,7 +137,7 @@ export function FilterPanel({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-9 min-w-0 flex-1 text-xs sm:flex-none"
+              className="h-10 min-w-0 flex-1 text-xs sm:flex-none"
               onClick={onReset}
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -149,7 +149,7 @@ export function FilterPanel({
               type="button"
               variant={mobileOpen ? "secondary" : "outline"}
               size="sm"
-              className="tvtime-mobile-experience-only h-9 min-w-0 flex-1"
+              className="tvtime-mobile-experience-only h-10 min-w-0 flex-1"
               onClick={() => setSheetOpen(!mobileOpen)}
               aria-expanded={mobileOpen}
               aria-controls={contentId}
@@ -211,7 +211,7 @@ export function FilterSection({
       {(title || description) && (
         <div>
           {title && (
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
               {title}
             </h3>
           )}
@@ -250,7 +250,7 @@ export function FilterField({ label, description, children, className }: FilterF
     <div className={cn("tvtime-filter-field min-w-0 space-y-1.5", className)}>
       <div className="px-0.5">
         <div className="text-xs font-medium text-foreground/80">{label}</div>
-        {description && <div className="mt-0.5 text-[11px] text-muted-foreground">{description}</div>}
+        {description && <div className="mt-0.5 text-xs text-muted-foreground">{description}</div>}
       </div>
       <div className="min-w-0 [&>*]:w-full">{children}</div>
     </div>

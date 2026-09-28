@@ -19,7 +19,7 @@ import {
 import { MediaRow } from "@/components/media/media-row";
 import { SafeImage } from "@/components/media/safe-image";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { ErrorState } from "@/components/ui/error-state";
 import { mediaStateKey, useAnimeHub, useMediaStates, type AnimeHubItem } from "@/hooks/use-tmdb";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import { useHeroCarousel } from "@/hooks/use-hero-carousel";
@@ -65,19 +65,19 @@ export function AnimeHubOverview({ onBrowse }: { onBrowse: () => void }) {
   if (hub.isLoading) return <AnimeHubSkeleton />;
   if (hub.isError || !data) {
     return (
-      <Card className="tvtime-movie-hub__error" role="alert">
-        <Sparkles aria-hidden="true" />
-        <h2>Could not load your Anime world</h2>
-        <p>Your library is safe. The Anime catalogue may be temporarily unavailable.</p>
-        <Button variant="outline" onClick={() => hub.refetch()}>Retry</Button>
-      </Card>
+      <ErrorState
+        title="Could not load your Anime world"
+        description="Your library is safe. The Anime catalogue may be temporarily unavailable."
+        retryLabel="Retry"
+        onRetry={() => void hub.refetch()}
+      />
     );
   }
 
   return (
     <div className="tvtime-movie-hub__overview tvtime-anime-hub__overview">
       {featured.length > 0 ? <AnimeHubHero items={featured} /> : states.isLoading ? (
-        <div className="h-[clamp(22rem,48vw,34rem)] rounded-[1.5rem] shimmer" aria-hidden="true" />
+        <div className="h-[clamp(22rem,48vw,34rem)] rounded-3xl shimmer" aria-hidden="true" />
       ) : null}
 
       {data.shelves.continueWatching.length > 0 ? (
@@ -215,7 +215,7 @@ function EmptyHubRow({
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
-      <Button size="sm" variant="outline" onClick={onAction}>{action}</Button>
+      <Button variant="outline" onClick={onAction}>{action}</Button>
     </section>
   );
 }
@@ -265,22 +265,22 @@ function AnimeHubHero({ items }: { items: AnimeHubItem[] }) {
           transition={{ duration: reduceMotion ? 0 : 0.32, ease: "easeOut" }}
         >
           <div className="tvtime-movie-hub-hero__meta">
-            <span><Sparkles /> Unwatched spotlight</span>
+            <span><Sparkles aria-hidden="true" /> Unwatched spotlight</span>
             <span>{mediaType === "movie" ? "Movie" : "Series"}</span>
             {getYear(item) && <span>{getYear(item)}</span>}
-            {item.vote_average > 0 && <span><Star className="fill-current" /> {item.vote_average.toFixed(1)}</span>}
+            {item.vote_average > 0 && <span><Star className="fill-current" aria-hidden="true" /> {item.vote_average.toFixed(1)}</span>}
           </div>
           <h2>{getTitle(item)}</h2>
           <p className="line-clamp-2">{item.overview}</p>
           <div className="tvtime-movie-hub-hero__actions">
-            <Button size="lg" onClick={openDetails}><Play className="fill-current" /> View details</Button>
+            <Button size="lg" onClick={openDetails}><Play className="fill-current" aria-hidden="true" /> View details</Button>
           </div>
         </motion.div>
       </AnimatePresence>
 
       {items.length > 1 && (
         <div data-carousel-controls className="tvtime-home-hero__carousel-controls relative z-20" aria-label="Featured unseen Anime slides">
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(-1)} aria-label="Previous Anime spotlight"><ChevronLeft /></button>
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(-1)} aria-label="Previous Anime spotlight"><ChevronLeft aria-hidden="true" /></button>
           <div className="tvtime-home-hero__carousel-dots">
             {items.map((candidate, index) => (
               <button
@@ -294,7 +294,7 @@ function AnimeHubHero({ items }: { items: AnimeHubItem[] }) {
               />
             ))}
           </div>
-          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(1)} aria-label="Next Anime spotlight"><ChevronRight /></button>
+          <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(1)} aria-label="Next Anime spotlight"><ChevronRight aria-hidden="true" /></button>
         </div>
       )}
     </motion.section>
@@ -305,7 +305,7 @@ function AnimeHubSkeleton() {
   return (
     <div className="tvtime-movie-hub__skeleton" role="status" aria-busy="true" aria-label="Loading Anime hub">
       <span className="sr-only">Loading Anime hub…</span>
-      <div className="h-[clamp(22rem,48vw,34rem)] rounded-[1.5rem] shimmer" />
+      <div className="h-[clamp(22rem,48vw,34rem)] rounded-3xl shimmer" />
       {Array.from({ length: 5 }).map((_, section) => (
         <div key={section}>
           <div className="mb-3 h-6 w-44 rounded shimmer" />

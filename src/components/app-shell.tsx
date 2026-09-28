@@ -321,7 +321,7 @@ export function AppShell({ initialRoute }: { initialRoute: NavigationEntry }) {
           dir={viewMetadata.direction}
           aria-label={viewMetadata.accessibleLabel}
           data-view={view}
-          className="tvtime-main-content flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6"
+          className="tvtime-main-content flex-1 max-w-[var(--app-content-width,90rem)] w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6"
         >
           <div key={routeKey} className="tvtime-view-transition animate-fade-in-up">
           {/* HomeView stays eager — it is the landing page and the first thing
