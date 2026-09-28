@@ -4,8 +4,9 @@ import { mediaStateKey, useHomeFeed, useMediaStates, useRecentlyWatched, useStat
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import { MEDIA_CARD_ROW_WIDTH_CLASS } from "@/components/media/media-card";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
+import { TabbedMediaRow } from "@/components/media/tabbed-media-row";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
-import { ArrowRight, ChevronLeft, ChevronRight, Compass, Flame, TrendingUp, Star, Calendar, Tv, Clock, Film, Play, BookOpen, Check, Languages, Globe2 } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Compass, Flame, Star, Tv, Clock, Film, Play, BookOpen, Check, Languages, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/error-state";
 import { useNav } from "@/lib/store";
@@ -103,37 +104,28 @@ export function HomeView() {
   const sharedLibraryStateSource = { data: homeLibraryStates.data };
   const homeFeedFailed = homeFeed.isError && !homeFeed.data;
 
+  const heroFallback = homeFeed.isLoading ? <HomeHeroSkeleton /> : null;
+
   return (
     <div className="tvtime-home-view">
-      {/* Hero featured */}
-      {homeFeed.isLoading
-        ? <HomeHeroSkeleton />
-        : heroItems.length > 0
-          ? <Hero items={heroItems} />
-          : null}
+      {heroItems.length > 0 ? <Hero items={heroItems} /> : heroFallback}
 
-      {/* Library overview */}
+      {/* Personal: pick up where you left off, then the collection at a glance */}
+      <RecentlyWatched />
+
       {stats.data && (
-        <section className="tvtime-library-overview" aria-labelledby="library-overview-title">
+        <section className="tvtime-library-overview tvtime-collection-overview" aria-labelledby="collection-overview-title">
           <div className="tvtime-library-overview__header">
-            <div className="min-w-0">
-              <p className="tvtime-eyebrow">Your library</p>
-              <h2 id="library-overview-title" className="text-xl font-extrabold tracking-tight sm:text-2xl">
-                Everything you watch, at a glance
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Jump back into a collection or review your viewing history.
-              </p>
-            </div>
+            <h2 id="collection-overview-title" className="text-lg font-extrabold tracking-tight sm:text-xl">
+              Your collection
+            </h2>
+            <Button variant="ghost" size="sm" onClick={() => setView("stats")}>
+              View statistics
+              <ArrowRight className="rtl:rotate-180" aria-hidden="true" />
+            </Button>
           </div>
 
           <div className="tvtime-stat-grid">
-            <QuickStat
-              icon={<BookOpen />}
-              label="All Movie Watchlists"
-              value={stats.data.counts.movieWatchlistAll ?? 0}
-              onClick={() => setView("stats")}
-            />
             <QuickStat
               icon={<Film />}
               label="All Movies Watched"
@@ -153,36 +145,6 @@ export function HomeView() {
               onClick={() => setView("stats")}
             />
             <QuickStat
-              icon={<Star />}
-              label="Anime Collection"
-              value={stats.data.counts.animeTitles ?? 0}
-              onClick={() => setView("anime")}
-            />
-            <QuickStat
-              icon={<Languages />}
-              label="Arabic Movies"
-              value={stats.data.counts.arabicMovies ?? 0}
-              onClick={() => setView("arabic-movies")}
-            />
-            <QuickStat
-              icon={<Languages />}
-              label="Arabic TV"
-              value={stats.data.counts.arabicShows ?? 0}
-              onClick={() => setView("arabic-tv")}
-            />
-            <QuickStat
-              icon={<Globe2 />}
-              label="Asian Movies"
-              value={stats.data.counts.asianMovies ?? 0}
-              onClick={() => setView("asian-movies")}
-            />
-            <QuickStat
-              icon={<Globe2 />}
-              label="Asian TV"
-              value={stats.data.counts.asianShows ?? 0}
-              onClick={() => setView("asian-tv")}
-            />
-            <QuickStat
               icon={<Clock />}
               label="Watch time"
               value={stats.data.watchTime?.totalHours || 0}
@@ -190,12 +152,50 @@ export function HomeView() {
               onClick={() => setView("stats")}
             />
           </div>
+
+          <div className="tvtime-collection-overview__worlds" aria-label="Collections by world">
+            <WorldChip
+              icon={<BookOpen />}
+              label="All Movie Watchlists"
+              value={stats.data.counts.movieWatchlistAll ?? 0}
+              onClick={() => setView("stats")}
+            />
+            <WorldChip
+              icon={<Star />}
+              label="Anime Collection"
+              value={stats.data.counts.animeTitles ?? 0}
+              onClick={() => setView("anime")}
+            />
+            <WorldChip
+              icon={<Languages />}
+              label="Arabic Movies"
+              value={stats.data.counts.arabicMovies ?? 0}
+              onClick={() => setView("arabic-movies")}
+            />
+            <WorldChip
+              icon={<Languages />}
+              label="Arabic TV"
+              value={stats.data.counts.arabicShows ?? 0}
+              onClick={() => setView("arabic-tv")}
+            />
+            <WorldChip
+              icon={<Globe2 />}
+              label="Asian Movies"
+              value={stats.data.counts.asianMovies ?? 0}
+              onClick={() => setView("asian-movies")}
+            />
+            <WorldChip
+              icon={<Globe2 />}
+              label="Asian TV"
+              value={stats.data.counts.asianShows ?? 0}
+              onClick={() => setView("asian-tv")}
+            />
+          </div>
         </section>
       )}
 
-      {/* Recently watched movies and shows */}
-      <RecentlyWatched />
-
+      {/* Browse: what's popular right now, grouped by medium */}
+      <HomeSectionHeading eyebrow="Browse" title="What’s on right now" />
       {homeFeedFailed ? (
         <ErrorState
           title="Couldn’t load Home"
@@ -209,62 +209,63 @@ export function HomeView() {
             icon={<Flame className="w-5 h-5" />}
             items={standardTrending}
             loading={homeFeed.isLoading}
+            hint="Movies and shows everyone is watching this week"
+            showCount={false}
             libraryStateSource={sharedLibraryStateSource}
           />
-          <MediaRow
-            title="Popular Movies"
-            icon={<TrendingUp className="w-5 h-5" />}
-            items={popularMovieItems}
-            loading={homeFeed.isLoading}
-            onSeeAll={() => setView("discover")}
+          <TabbedMediaRow
+            title="Movies"
+            icon={<Film className="w-5 h-5" />}
+            hint={null}
+            compactCards={false}
+            onSeeAll={() => setView("movies")}
             libraryStateSource={sharedLibraryStateSource}
+            tabs={[
+              { value: "popular", label: "Popular", items: popularMovieItems.slice(0, HOME_ROW_ITEM_LIMIT), loading: homeFeed.isLoading, forcedMediaType: "movie" },
+              { value: "top-rated", label: "Top rated", items: topMovieItems.slice(0, HOME_ROW_ITEM_LIMIT), loading: homeFeed.isLoading, forcedMediaType: "movie" },
+              { value: "upcoming", label: "Coming soon", items: upcomingMovieItems.slice(0, HOME_ROW_ITEM_LIMIT), loading: homeFeed.isLoading, forcedMediaType: "movie" },
+            ]}
           />
-          <MediaRow
-            title="On The Air"
+          <TabbedMediaRow
+            title="TV Shows"
             icon={<Tv className="w-5 h-5" />}
-            items={onAirTvItems}
-            loading={homeFeed.isLoading}
-            forcedMediaType="tv"
+            hint={null}
+            compactCards={false}
+            onSeeAll={() => setView("tv-shows")}
             libraryStateSource={sharedLibraryStateSource}
-          />
-          <MediaRow
-            title="Popular TV Shows"
-            icon={<Tv className="w-5 h-5" />}
-            items={popularTvItems}
-            loading={homeFeed.isLoading}
-            onSeeAll={() => setView("discover")}
-            forcedMediaType="tv"
-            libraryStateSource={sharedLibraryStateSource}
-          />
-          <MediaRow
-            title="Top Rated Movies"
-            icon={<Star className="w-5 h-5" />}
-            items={topMovieItems}
-            loading={homeFeed.isLoading}
-            libraryStateSource={sharedLibraryStateSource}
-          />
-          <MediaRow
-            title="Top Rated TV Shows"
-            icon={<Star className="w-5 h-5" />}
-            items={topTvItems}
-            loading={homeFeed.isLoading}
-            forcedMediaType="tv"
-            libraryStateSource={sharedLibraryStateSource}
-          />
-          <MediaRow
-            title="Upcoming Movies"
-            icon={<Calendar className="w-5 h-5" />}
-            items={upcomingMovieItems}
-            loading={homeFeed.isLoading}
-            libraryStateSource={sharedLibraryStateSource}
+            tabs={[
+              { value: "on-air", label: "On the air", items: onAirTvItems.slice(0, HOME_ROW_ITEM_LIMIT), loading: homeFeed.isLoading, forcedMediaType: "tv" },
+              { value: "popular", label: "Popular", items: popularTvItems.slice(0, HOME_ROW_ITEM_LIMIT), loading: homeFeed.isLoading, forcedMediaType: "tv" },
+              { value: "top-rated", label: "Top rated", items: topTvItems.slice(0, HOME_ROW_ITEM_LIMIT), loading: homeFeed.isLoading, forcedMediaType: "tv" },
+            ]}
           />
         </>
       )}
 
-      {/* Genre-based recommendations */}
+      {/* Personalised and editorial picks, loaded as they scroll into view */}
+      <HomeSectionHeading eyebrow="For you" title="Picked from your taste" />
       <GenreRecommendations />
       <HomeCuratedSections />
     </div>
+  );
+}
+
+function HomeSectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <header className="tvtime-home-section-heading">
+      <p className="tvtime-eyebrow">{eyebrow}</p>
+      <h2 className="text-xl font-extrabold tracking-tight sm:text-2xl">{title}</h2>
+    </header>
+  );
+}
+
+function WorldChip({ icon, label, value, onClick }: { icon: React.ReactNode; label: string; value: number; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="tvtime-world-chip" aria-label={`${label}: ${value}`}>
+      <span className="tvtime-world-chip__icon" aria-hidden="true">{icon}</span>
+      <span className="tvtime-world-chip__label">{label}</span>
+      <strong className="tvtime-world-chip__value tabular-nums">{value}</strong>
+    </button>
   );
 }
 

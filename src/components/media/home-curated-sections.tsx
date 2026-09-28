@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { Award, BellRing, Clapperboard, Gem, History, Languages, Sparkles, Star, Timer, Trophy } from "lucide-react";
+import { Award, History, Languages, Sparkles, Timer } from "lucide-react";
 import {
   useDiscoverMovies,
   useDiscoverTv,
   useMediaStates,
   useMovieDetail,
-  useOnTheAirTv,
   useRecentlyWatched,
   useTvDetail,
   useWatchlist,
 } from "@/hooks/use-tmdb";
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
+import { TabbedMediaRow } from "@/components/media/tabbed-media-row";
 import type { MediaItem } from "@/lib/tmdb";
 import {
   filterAndPrioritizeMediaCollectionWorldItems,
@@ -112,9 +112,9 @@ function CuratedLeadGroup() {
   const latestIsTv = latest?.kind === "tv";
   const movieDetail = useMovieDetail(!latestIsTv ? latestId : null);
   const tvDetail = useTvDetail(latestIsTv ? latestId : null);
-  const newEpisodes = useOnTheAirTv(1);
   const hiddenGems = useDiscoverMovies({ sort_by: "vote_average.desc", rating: 7, voteCount: 50 });
   const acclaimed = useDiscoverMovies({ sort_by: "vote_average.desc", rating: 8, voteCount: 1000 });
+  const awards = useDiscoverMovies({ sort_by: "vote_average.desc", rating: 7, keywordQuery: "Academy Award winner" });
 
   const latestDetail = latestIsTv ? tvDetail.data : movieDetail.data;
   const becauseWorld = detailCollectionWorld(latestDetail, latestIsTv);
@@ -127,10 +127,6 @@ function CuratedLeadGroup() {
     : [];
   const becauseLoading = recently.isLoading
     || (latestId != null && (movieDetail.isLoading || tvDetail.isLoading));
-  const episodeItems = filterAndPrioritizeMediaCollectionWorldItems(
-    validItems(newEpisodes.data?.results ?? []),
-    "standard-tv",
-  ).slice(0, CURATED_ITEM_LIMIT);
   const hiddenItems = filterAndPrioritizeMediaCollectionWorldItems(
     validItems((hiddenGems.data?.results ?? []).filter((item) => Number(item.vote_count || 0) < 2500)),
     "movies",
@@ -140,7 +136,12 @@ function CuratedLeadGroup() {
     "movies",
   ).slice(0, CURATED_ITEM_LIMIT);
 
-  const allItems = [becauseItems, episodeItems, hiddenItems, acclaimedItems].flat();
+  const awardItems = filterAndPrioritizeMediaCollectionWorldItems(
+    validItems(awards.data?.results ?? []),
+    "movies",
+  ).slice(0, CURATED_ITEM_LIMIT);
+
+  const allItems = [becauseItems, hiddenItems, acclaimedItems, awardItems].flat();
   const states = useMediaStates(allItems.map((item) => ({
     tmdbId: Number(item.id),
     mediaType: item.media_type === "tv" ? "tv" as const : "movie" as const,
@@ -149,24 +150,28 @@ function CuratedLeadGroup() {
 
   return (
     <>
-      {(becauseLoading || becauseItems.length > 0) && <MediaRow title={`Because You Watched ${latest?.title || ""}`} icon={<Sparkles className="h-5 w-5" />} items={becauseItems} loading={becauseLoading} forcedMediaType={latestIsTv ? "tv" : "movie"} libraryStateSource={stateSource} />}
-      <MediaRow title="New Episodes" icon={<BellRing className="h-5 w-5" />} items={episodeItems} loading={newEpisodes.isLoading} forcedMediaType="tv" libraryStateSource={stateSource} />
-      <MediaRow title="Hidden Gems" icon={<Gem className="h-5 w-5" />} items={hiddenItems} loading={hiddenGems.isLoading} forcedMediaType="movie" libraryStateSource={stateSource} />
-      <MediaRow title="Critically Acclaimed" icon={<Star className="h-5 w-5" />} items={acclaimedItems} loading={acclaimed.isLoading} forcedMediaType="movie" libraryStateSource={stateSource} />
+      {(becauseLoading || becauseItems.length > 0) && <MediaRow title={`Because You Watched ${latest?.title || ""}`} hint={null} showCount={false} icon={<Sparkles className="h-5 w-5" />} items={becauseItems} loading={becauseLoading} forcedMediaType={latestIsTv ? "tv" : "movie"} libraryStateSource={stateSource} />}
+      <TabbedMediaRow
+        title="Critics’ Picks"
+        icon={<Award className="h-5 w-5" />}
+        hint="Highly rated films worth your time"
+        compactCards={false}
+        libraryStateSource={stateSource}
+        tabs={[
+          { value: "acclaimed", label: "Critically acclaimed", items: acclaimedItems, loading: acclaimed.isLoading, forcedMediaType: "movie" },
+          { value: "hidden-gems", label: "Hidden gems", items: hiddenItems, loading: hiddenGems.isLoading, forcedMediaType: "movie" },
+          { value: "awards", label: "Award winners", items: awardItems, loading: awards.isLoading, forcedMediaType: "movie" },
+        ]}
+      />
     </>
   );
 }
 
 function CuratedDiscoveryGroup() {
-  const awards = useDiscoverMovies({ sort_by: "vote_average.desc", rating: 7, keywordQuery: "Academy Award winner" });
   const shortMovies = useDiscoverMovies({ sort_by: "popularity.desc", rating: 6, voteCount: 100, runtimeLte: 90 });
   const miniSeries = useDiscoverTv({ sort_by: "vote_average.desc", rating: 7, voteCount: 100, keywordQuery: "miniseries" });
   const completed = useDiscoverTv({ sort_by: "vote_average.desc", rating: 7, voteCount: 500, keywordQuery: "ended series" });
 
-  const awardItems = filterAndPrioritizeMediaCollectionWorldItems(
-    validItems(awards.data?.results ?? []),
-    "movies",
-  ).slice(0, CURATED_ITEM_LIMIT);
   const shortItems = filterAndPrioritizeMediaCollectionWorldItems(
     validItems(shortMovies.data?.results ?? []),
     "movies",
@@ -180,7 +185,7 @@ function CuratedDiscoveryGroup() {
     "standard-tv",
   ).slice(0, CURATED_ITEM_LIMIT);
 
-  const allItems = [awardItems, shortItems, miniItems, completedItems].flat();
+  const allItems = [shortItems, miniItems, completedItems].flat();
   const states = useMediaStates(allItems.map((item) => ({
     tmdbId: Number(item.id),
     mediaType: item.media_type === "tv" ? "tv" as const : "movie" as const,
@@ -189,10 +194,18 @@ function CuratedDiscoveryGroup() {
 
   return (
     <>
-      <MediaRow title="Award Winners" icon={<Award className="h-5 w-5" />} items={awardItems} loading={awards.isLoading} forcedMediaType="movie" libraryStateSource={stateSource} />
-      <MediaRow title="Short Movies" icon={<Timer className="h-5 w-5" />} items={shortItems} loading={shortMovies.isLoading} forcedMediaType="movie" libraryStateSource={stateSource} />
-      <MediaRow title="Mini-Series" icon={<Clapperboard className="h-5 w-5" />} items={miniItems} loading={miniSeries.isLoading} forcedMediaType="tv" libraryStateSource={stateSource} />
-      <MediaRow title="Completed Shows" icon={<Trophy className="h-5 w-5" />} items={completedItems} loading={completed.isLoading} forcedMediaType="tv" libraryStateSource={stateSource} />
+      <TabbedMediaRow
+        title="Quick Watches"
+        icon={<Timer className="h-5 w-5" />}
+        hint="Short films and series you can finish"
+        compactCards={false}
+        libraryStateSource={stateSource}
+        tabs={[
+          { value: "short-movies", label: "Under 90 minutes", items: shortItems, loading: shortMovies.isLoading, forcedMediaType: "movie" },
+          { value: "mini-series", label: "Mini-series", items: miniItems, loading: miniSeries.isLoading, forcedMediaType: "tv" },
+          { value: "completed", label: "Completed shows", items: completedItems, loading: completed.isLoading, forcedMediaType: "tv" },
+        ]}
+      />
     </>
   );
 }
@@ -233,9 +246,18 @@ function CuratedLibraryGroup() {
 
   return (
     <>
-      <MediaRow title="Forgotten Watchlist" icon={<History className="h-5 w-5" />} items={forgottenItems} loading={watchlist.isLoading} libraryStateSource={stateSource} />
-      <MediaRow title="Arabic Trending" icon={<Languages className="h-5 w-5" />} items={arabicTrendingItems} loading={arabicMovies.isLoading || arabicTv.isLoading} libraryStateSource={stateSource} />
-      <MediaRow title="Arabic Classics" icon={<Languages className="h-5 w-5" />} items={classicItems} loading={arabicClassics.isLoading} forcedMediaType="movie" libraryStateSource={stateSource} />
+      <MediaRow title="Still on Your Watchlist" icon={<History className="h-5 w-5" />} hint="The titles you saved the longest ago" showCount={false} items={forgottenItems} loading={watchlist.isLoading} libraryStateSource={stateSource} />
+      <TabbedMediaRow
+        title="Arabic Picks"
+        icon={<Languages className="h-5 w-5" />}
+        hint="From the Arabic movie and TV worlds"
+        compactCards={false}
+        libraryStateSource={stateSource}
+        tabs={[
+          { value: "trending", label: "Trending", items: arabicTrendingItems, loading: arabicMovies.isLoading || arabicTv.isLoading },
+          { value: "classics", label: "Classics", items: classicItems, loading: arabicClassics.isLoading, forcedMediaType: "movie" },
+        ]}
+      />
     </>
   );
 }
