@@ -1,12 +1,12 @@
 "use client";
 
-import { mediaStateKey, useHomeFeed, useMediaStates, useRecentlyWatched, useStats, type MediaBatchState } from "@/hooks/use-tmdb";
+import { mediaStateKey, useHomeFeed, useMediaStates, useMovieDetail, useRecentlyWatched, useStats, useTvDetail, useWatchlistToggle, type MediaBatchState } from "@/hooks/use-tmdb";
 import { MediaRow as BaseMediaRow } from "@/components/media/media-row";
 import { MEDIA_CARD_ROW_WIDTH_CLASS } from "@/components/media/media-card";
 import { GenreRecommendations } from "@/components/media/genre-recommendations";
 import { TabbedMediaRow } from "@/components/media/tabbed-media-row";
 import { HomeCuratedSections } from "@/components/media/home-curated-sections";
-import { ArrowRight, ChevronLeft, ChevronRight, Compass, Flame, Star, Tv, Clock, Film, Play, BookOpen, Check, Languages, Globe2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Compass, Flame, Plus, Star, TrendingUp, Tv, Clock, Film, Play, BookOpen, Check, Languages, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/error-state";
 import { useNav } from "@/lib/store";
@@ -15,7 +15,9 @@ import { SafeImage } from "@/components/media/safe-image";
 import { WatchedIndicator } from "@/components/media/watched-indicator";
 import { TmdbScoreIndicator } from "@/components/media/tmdb-score-indicator";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useRef, type ComponentProps } from "react";
+import { useRef, useState, type ComponentProps } from "react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import "./home-view.css";
 import { toast } from "sonner";
 import { useHeroCarousel } from "@/hooks/use-hero-carousel";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
@@ -108,7 +110,7 @@ export function HomeView() {
 
   return (
     <div className="tvtime-home-view">
-      {heroItems.length > 0 ? <Hero items={heroItems} /> : heroFallback}
+      {heroItems.length > 0 ? <Hero items={heroItems} libraryStates={homeLibraryStates.data} /> : heroFallback}
 
       {/* Personal: pick up where you left off, then the collection at a glance */}
       <RecentlyWatched />
@@ -303,17 +305,50 @@ function QuickStat({ icon, label, value, suffix, onClick }: { icon: React.ReactN
   );
 }
 
-function Hero({ items }: { items: MediaItem[] }) {
+function Hero({ items, libraryStates }: { items: MediaItem[]; libraryStates?: Record<string, MediaBatchState> }) {
   const goMovie = useNav((s) => s.goMovie);
   const goTv = useNav((s) => s.goTv);
   const setView = useNav((s) => s.setView);
   const shouldReduceMotion = useReducedMotion();
   const carousel = useHeroCarousel({ itemCount: items.length, reducedMotion: shouldReduceMotion });
+  const watchlistToggle = useWatchlistToggle();
   const activeIndex = carousel.activeIndex;
   const item = items[activeIndex] ?? items[0];
   const mediaType = item.media_type === "tv" || !item.title ? "tv" : "movie";
   const title = getTitle(item);
   const slideKey = `${mediaType}-${item.id}`;
+  // Tagline and network only exist on the detail payload; the active slide's
+  // detail is cached by React Query, so cycling back costs nothing.
+  const movieDetail = useMovieDetail(mediaType === "movie" ? item.id : null);
+  const tvDetail = useTvDetail(mediaType === "tv" ? item.id : null);
+  const detail = mediaType === "movie" ? movieDetail.data : tvDetail.data;
+  const tagline = detail?.tagline?.trim() || null;
+  const network = mediaType === "tv" ? tvDetail.data?.networks?.find((entry) => entry.logo_path) ?? null : null;
+  const inWatchlist = Boolean(libraryStates?.[mediaStateKey(mediaType, item.id)]?.inWatchlist);
+  const openDetails = () => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id));
+  const counter = (value: number) => String(value).padStart(2, "0");
+
+  const toggleWatchlist = async () => {
+    try {
+      await watchlistToggle.mutateAsync({
+        action: inWatchlist ? "remove" : "add",
+        mediaType,
+        tmdbId: item.id,
+        title,
+        posterPath: item.poster_path,
+        backdropPath: item.backdrop_path,
+        overview: item.overview,
+        releaseDate: item.release_date || item.first_air_date,
+        voteAverage: item.vote_average,
+        genreIds: item.genre_ids,
+        originalLanguage: item.original_language ?? null,
+        originCountry: item.origin_country ?? null,
+      });
+      toast.success(inWatchlist ? `${title} removed from your watchlist` : `${title} added to your watchlist`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn’t update your watchlist");
+    }
+  };
 
   return (
     <motion.section
@@ -324,18 +359,20 @@ function Hero({ items }: { items: MediaItem[] }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: shouldReduceMotion ? 0 : 0.6 }}
-      className="tvtime-home-hero relative overflow-hidden"
+      className="tvtime-stage"
       aria-label={`Featured ${mediaType === "movie" ? "movie" : "TV show"}: ${title}`}
       aria-roledescription="carousel"
     >
+      {/* Full-bleed artwork: the backdrop spans the whole viewport, behind the header. */}
       <AnimatePresence initial={false}>
         <motion.div
           key={`backdrop-${slideKey}`}
-          className="tvtime-home-hero__backdrop absolute inset-0"
-          initial={{ opacity: 0, scale: shouldReduceMotion ? 1 : 1.025 }}
+          className="tvtime-stage__backdrop"
+          initial={{ opacity: 0, scale: shouldReduceMotion ? 1 : 1.04 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: shouldReduceMotion ? 0 : 0.65, ease: "easeOut" }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.8, ease: "easeOut" }}
+          aria-hidden="true"
         >
           <SafeImage
             src={img(item.backdrop_path, "original")}
@@ -348,99 +385,125 @@ function Hero({ items }: { items: MediaItem[] }) {
           />
         </motion.div>
       </AnimatePresence>
-      <div className="tvtime-home-hero__scrim absolute inset-0 bg-gradient-to-r from-black/85" aria-hidden="true" />
-      <div className="tvtime-home-hero__glow absolute inset-0" aria-hidden="true" />
+      <div className="tvtime-stage__scrim bg-gradient-to-r from-black/85" aria-hidden="true" />
+      <div className="tvtime-stage__fade" aria-hidden="true" />
 
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={`content-${slideKey}`}
-          className="tvtime-home-hero__content relative z-10 grid min-h-[clamp(27rem,48vw,35rem)] items-end gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_clamp(10rem,18vw,14rem)] lg:p-12"
-          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: shouldReduceMotion ? 0 : -8 }}
-          transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: "easeOut" }}
-        >
-          <div className="min-w-0 self-end">
-            <div className="tvtime-home-hero__meta">
-              <span className="tvtime-home-hero__featured">
-                <Flame aria-hidden="true" />
-                Featured
-              </span>
-              <span>{mediaType === "movie" ? "Movie" : "TV Show"}</span>
-              {getYear(item) && <span>{getYear(item)}</span>}
-              {item.vote_average > 0 && (
-                <span className="tvtime-home-hero__rating inline-flex items-center gap-1">
-                  <Star className="fill-current" aria-hidden="true" />
-                  {item.vote_average.toFixed(1)}
-                </span>
+      <div className="tvtime-stage__inner">
+        {items.length > 1 && (
+          <div data-carousel-controls className="tvtime-stage__controls tvtime-home-hero__carousel-controls" aria-label="Trending spotlight slides">
+            <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(-1)} aria-label="Previous spotlight">
+              <ChevronLeft aria-hidden="true" />
+            </button>
+            <div className="tvtime-home-hero__carousel-dots">
+              {items.map((slide, index) => (
+                <button
+                  key={`${slide.media_type ?? "media"}-${slide.id}-${index === activeIndex ? carousel.cycleVersion : 0}`}
+                  type="button"
+                  className="tvtime-home-hero__carousel-dot"
+                  data-active={index === activeIndex ? "true" : "false"}
+                  onClick={() => carousel.selectSlide(index)}
+                  aria-label={`Show spotlight ${index + 1}: ${getTitle(slide)}`}
+                  aria-current={index === activeIndex ? "true" : undefined}
+                />
+              ))}
+            </div>
+            <button type="button" className="tvtime-home-hero__carousel-arrow" onClick={() => carousel.moveSlide(1)} aria-label="Next spotlight">
+              <ChevronRight aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={`content-${slideKey}`}
+            className="tvtime-stage__content"
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: shouldReduceMotion ? 0 : -8 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.36, ease: "easeOut" }}
+          >
+            <div className="tvtime-stage__copy">
+              <p className="tvtime-stage__eyebrow">Featured today</p>
+              <div className="tvtime-stage__chips">
+                <span className="tvtime-stage__chip is-featured"><Flame aria-hidden="true" />Featured</span>
+                <span className="tvtime-stage__chip">{mediaType === "movie" ? "Movie" : "TV Show"}</span>
+                {getYear(item) && <span className="tvtime-stage__chip">{getYear(item)}</span>}
+                {item.vote_average > 0 && (
+                  <span className="tvtime-stage__chip is-rating"><Star className="fill-current" aria-hidden="true" />{item.vote_average.toFixed(1)}</span>
+                )}
+                {network?.logo_path && (
+                  <span className="tvtime-stage__chip is-network" title={network.name}>
+                    <SafeImage src={img(network.logo_path, "w92")} alt={network.name} width={46} height={16} variant="logo" />
+                  </span>
+                )}
+              </div>
+
+              <h1 className="tvtime-stage__title">{title}</h1>
+              {tagline && <p className="tvtime-stage__tagline">{tagline}</p>}
+              <p className="tvtime-stage__overview line-clamp-3 text-white/85">{item.overview}</p>
+
+              <div className="tvtime-stage__actions">
+                <Button size="lg" className="tvtime-stage__primary" onClick={openDetails}>
+                  <Play className="fill-current" aria-hidden="true" />
+                  View details
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="tvtime-stage__secondary"
+                  onClick={() => void toggleWatchlist()}
+                  disabled={watchlistToggle.isPending}
+                  aria-pressed={inWatchlist}
+                >
+                  {inWatchlist ? <Check aria-hidden="true" /> : <Plus aria-hidden="true" />}
+                  {inWatchlist ? "In watchlist" : "Add to watchlist"}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="tvtime-stage__icon-button"
+                  onClick={() => setView("discover")}
+                  aria-label="Explore more titles"
+                  title="Explore more"
+                >
+                  <Compass aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="tvtime-stage__aside">
+              {items.length > 1 && (
+                <p className="tvtime-stage__counter" aria-hidden="true">
+                  <strong>{counter(activeIndex + 1)}</strong> / {counter(items.length)}
+                </p>
               )}
+              <button type="button" className="tvtime-stage__poster" onClick={openDetails} aria-label={`Open ${title}`}>
+                <span className="tvtime-stage__poster-label">Trending spotlight</span>
+                <span className="tvtime-stage__poster-art">
+                  <SafeImage src={imgOrPlaceholder(item.poster_path, "w500")} alt="" fill variant="poster" priority sizes="220px" />
+                </span>
+                <span className="tvtime-stage__poster-title">{title}</span>
+                <span className="tvtime-stage__poster-trend">Now trending <TrendingUp aria-hidden="true" /></span>
+              </button>
             </div>
-
-            <h1 className="tvtime-home-hero__title">{title}</h1>
-            <p className="tvtime-home-hero__overview line-clamp-3 text-white/85">{item.overview}</p>
-
-            <div className="tvtime-home-hero__actions">
-              <Button size="lg" onClick={() => (mediaType === "movie" ? goMovie(item.id) : goTv(item.id))}>
-                <Play className="fill-current" aria-hidden="true" />
-                View details
-              </Button>
-              <Button size="lg" variant="secondary" onClick={() => setView("discover")}>
-                <Compass className="h-4 w-4" aria-hidden="true" />
-                Explore more
-              </Button>
-            </div>
-          </div>
-
-          <div className="tvtime-home-hero__poster hidden w-full lg:block" aria-hidden="true">
-            <div className="relative aspect-[2/3] overflow-hidden rounded-2xl">
-              <SafeImage
-                src={imgOrPlaceholder(item.poster_path, "w500")}
-                alt=""
-                fill
-                variant="poster"
-                priority
-              />
-            </div>
-            <span>Trending spotlight</span>
-          </div>
-        </motion.div>
-      </AnimatePresence>
-
-      {items.length > 1 && (
-        <div data-carousel-controls className="tvtime-home-hero__carousel-controls relative z-20" aria-label="Trending spotlight slides">
-          <button
-            type="button"
-            className="tvtime-home-hero__carousel-arrow"
-            onClick={() => carousel.moveSlide(-1)}
-            aria-label="Previous spotlight"
-          >
-            <ChevronLeft aria-hidden="true" />
-          </button>
-          <div className="tvtime-home-hero__carousel-dots">
-            {items.map((slide, index) => (
-              <button
-                key={`${slide.media_type ?? "media"}-${slide.id}-${index === activeIndex ? carousel.cycleVersion : 0}`}
-                type="button"
-                className="tvtime-home-hero__carousel-dot"
-                data-active={index === activeIndex ? "true" : "false"}
-                onClick={() => carousel.selectSlide(index)}
-                aria-label={`Show spotlight ${index + 1}: ${getTitle(slide)}`}
-                aria-current={index === activeIndex ? "true" : undefined}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            className="tvtime-home-hero__carousel-arrow"
-            onClick={() => carousel.moveSlide(1)}
-            aria-label="Next spotlight"
-          >
-            <ChevronRight aria-hidden="true" />
-          </button>
-        </div>
-      )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </motion.section>
   );
+}
+
+type RecentKind = "all" | "movie" | "tv" | "anime";
+const RECENT_FILTERS: Array<{ value: RecentKind; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "movie", label: "Movies" },
+  { value: "tv", label: "TV Shows" },
+  { value: "anime", label: "Anime" },
+];
+
+function recentKind(item: { kind: "movie" | "tv"; isAnime?: boolean }): Exclude<RecentKind, "all"> {
+  if (item.isAnime) return "anime";
+  return item.kind;
 }
 
 function RecentlyWatched() {
@@ -448,11 +511,16 @@ function RecentlyWatched() {
   const goMovie = useNav((state) => state.goMovie);
   const goTv = useNav((state) => state.goTv);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const items = recently.data?.items ?? [];
+  const [kind, setKind] = useState<RecentKind>("all");
+  const allItems = recently.data?.items ?? [];
+  const availableKinds = new Set(allItems.map(recentKind));
+  const filters = RECENT_FILTERS.filter((filter) => filter.value === "all" || availableKinds.has(filter.value));
+  const activeKind = kind !== "all" && !availableKinds.has(kind) ? "all" : kind;
+  const items = activeKind === "all" ? allItems : allItems.filter((item) => recentKind(item) === activeKind);
   const dragHandlers = useHorizontalDragScroll({
     scrollKey: recently.isLoading ? undefined : "home:recently-watched",
     scrollRef,
-    restoreDependency: `${recently.isLoading}:${items.length}`,
+    restoreDependency: `${recently.isLoading}:${items.length}:${activeKind}`,
   });
 
   const handleGo = (item: any) => {
@@ -467,19 +535,18 @@ function RecentlyWatched() {
 
   if (recently.isLoading) {
     return (
-      <section className="tvtime-media-row" role="status" aria-busy="true" aria-label="Loading recently watched titles">
+      <section className="tvtime-media-row tvtime-recent" role="status" aria-busy="true" aria-label="Loading recently watched titles">
         <span className="sr-only">Loading recently watched titles…</span>
-        <div className="tvtime-section-heading" aria-hidden="true">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="tvtime-section-heading__icon"><Clock /></span>
-            <h2 className="text-lg font-extrabold tracking-tight sm:text-xl">Recently Watched</h2>
+        <div className="tvtime-recent__header" aria-hidden="true">
+          <div>
+            <h2 className="tvtime-display-heading">Recently Watched</h2>
+            <p>Your latest viewing activity</p>
           </div>
         </div>
         <div className="tvtime-recent-scroller no-scrollbar flex overflow-x-auto" aria-hidden="true">
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className={`tvtime-media-row-item tvtime-recent-card flex-shrink-0 ${MEDIA_CARD_ROW_WIDTH_CLASS}`}>
               <div className="aspect-[2/3] rounded-2xl shimmer" />
-              <div className="mx-auto mt-2.5 h-2.5 w-20 rounded shimmer" />
             </div>
           ))}
         </div>
@@ -487,21 +554,30 @@ function RecentlyWatched() {
     );
   }
 
-  if (items.length === 0) return null;
+  if (allItems.length === 0) return null;
 
   return (
-    <section className="tvtime-media-row">
-      <div className="tvtime-section-heading">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="tvtime-section-heading__icon" aria-hidden="true"><Clock /></span>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate text-lg font-extrabold tracking-tight sm:text-xl">Recently Watched</h2>
-              <span className="tvtime-section-heading__count tabular-nums">{recently.data?.total ?? items.length}</span>
-            </div>
-            <p className="tvtime-section-heading__hint">Your latest viewing activity</p>
-          </div>
+    <section className="tvtime-media-row tvtime-recent" aria-labelledby="recently-watched-title">
+      <div className="tvtime-recent__header">
+        <div>
+          <h2 id="recently-watched-title" className="tvtime-display-heading">Recently Watched</h2>
+          <p>Your latest viewing activity</p>
         </div>
+        {filters.length > 2 && (
+          <ToggleGroup
+            type="single"
+            value={activeKind}
+            onValueChange={(value) => { if (value) setKind(value as RecentKind); }}
+            className="tvtime-recent__filters"
+            aria-label="Filter recently watched"
+          >
+            {filters.map((filter) => (
+              <ToggleGroupItem key={filter.value} value={filter.value} className="tvtime-recent__filter">
+                {filter.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        )}
       </div>
       <div
         ref={scrollRef}
@@ -550,6 +626,13 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
   const detailHref = item.hasProfile && Number.isFinite(tmdbId) && tmdbId > 0
     ? `/${isMovie ? "movie" : "tv"}/${tmdbId}`
     : undefined;
+  const total = Number(item.totalEpisodes) || 0;
+  const watchedCount = Number(item.watchedEpisodeCount) || 0;
+  const progress = !isMovie && total > 0 ? Math.min(100, Math.round((watchedCount / total) * 100)) : null;
+  const meta = isMovie
+    ? ["Movie", item.year].filter(Boolean).join(" • ")
+    : item.seasonNumber != null && item.episodeNumber != null ? `S${item.seasonNumber} E${item.episodeNumber}` : "TV Show";
+  const shortDate = item.watchedAt ? new Date(item.watchedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
 
   return (
     <div
@@ -581,7 +664,7 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           fetchPriority={index === 0 ? "high" : "auto"}
           className="tvtime-media-poster__image object-cover"
         />
-        <div className="tvtime-media-poster__veil pointer-events-none absolute inset-0" aria-hidden="true" />
+        <div className="tvtime-recent-card__veil pointer-events-none absolute inset-0" aria-hidden="true" />
         {(isMovie || isFinishedShow) && (
           <WatchedIndicator
             rating={item.userRating}
@@ -589,12 +672,22 @@ function RecentlyWatchedCard({ item, index, onGo }: { item: any; index: number; 
           />
         )}
         {!isMovie && !isFinishedShow && <TmdbScoreIndicator rating={item.publicRating} />}
+        <div className="tvtime-recent-card__info">
+          <p className="tvtime-recent-card__title">{title}</p>
+          <p className="tvtime-recent-card__meta">{meta}</p>
+          {progress != null ? (
+            <div className="tvtime-recent-card__progress" aria-label={`${progress}% of episodes watched`}>
+              <span className="tvtime-recent-card__track"><span style={{ width: `${progress}%` }} /></span>
+              <span className="tabular-nums">{progress}%</span>
+            </div>
+          ) : (
+            <p className="tvtime-recent-card__status">
+              <CheckCircle2 aria-hidden="true" />
+              {shortDate ? `Watched · ${shortDate}` : "Watched"}
+            </p>
+          )}
+        </div>
       </div>
-      {watchedDate && (
-        <p className="tvtime-recent-date" aria-label={`Watched ${watchedDate}`}>
-          {watchedDate}
-        </p>
-      )}
     </div>
   );
 }

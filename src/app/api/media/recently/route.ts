@@ -21,6 +21,11 @@ type RecentlyItem = {
   status?: string | null;
   userRating?: number | null;
   publicRating?: number | null;
+  year?: string | null;
+  isAnime?: boolean;
+  /** TV only: episodes watched and the show's episode total, for progress. */
+  watchedEpisodeCount?: number | null;
+  totalEpisodes?: number | null;
 };
 
 function toIso(value: Date | string | null | undefined) {
@@ -75,12 +80,23 @@ export async function GET(req: NextRequest) {
           take: 200,
         })
       : [];
+    const watchedCounts = showIds.length
+      ? await db.watchedEpisode.groupBy({
+          by: ["showId"],
+          where: { userId: user.id, showId: { in: showIds } },
+          _count: { _all: true },
+        })
+      : [];
+    const watchedCountByShow = new Map(watchedCounts.map((row) => [row.showId, row._count._all] as const));
     const showMeta = new Map<number, {
       title: string;
       posterPath: string | null;
       status: string | null;
       userRating: number | null;
       publicRating: number | null;
+      year: string | null;
+      isAnime: boolean;
+      totalEpisodes: number | null;
     }>();
     for (const show of nonArabicShows) {
       const id = validTmdbId(show.tmdbId);
@@ -91,6 +107,9 @@ export async function GET(req: NextRequest) {
           status: show.status,
           userRating: show.userRating,
           publicRating: show.rating ? Number.parseFloat(show.rating) : null,
+          year: show.year ?? null,
+          isAnime: show.isAnime,
+          totalEpisodes: show.episodes ?? null,
         });
       }
     }
@@ -110,6 +129,8 @@ export async function GET(req: NextRequest) {
         status: movie.status,
         userRating: movie.userRating,
         publicRating: movie.rating ? Number.parseFloat(movie.rating) : null,
+        year: movie.year ?? null,
+        isAnime: movie.isAnime,
       });
     }
 
@@ -132,6 +153,10 @@ export async function GET(req: NextRequest) {
         status: meta?.status ?? null,
         userRating: meta?.userRating ?? null,
         publicRating: meta?.publicRating ?? null,
+        year: meta?.year ?? null,
+        isAnime: meta?.isAnime ?? false,
+        watchedEpisodeCount: tmdbId ? watchedCountByShow.get(tmdbId) ?? null : null,
+        totalEpisodes: meta?.totalEpisodes ?? null,
       });
     }
 

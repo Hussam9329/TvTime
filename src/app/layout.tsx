@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import "./cinema-theme.css";
 import "./catalogue-layout.css";
@@ -16,6 +16,14 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Editorial display face for the wordmark, Home hero titles and section headings.
+const displayFont = Playfair_Display({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  display: "swap",
 });
 
 const siteUrl = "https://tvtime-iota.vercel.app";
@@ -111,7 +119,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://image.tmdb.org" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased bg-background text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} min-h-dvh antialiased bg-background text-foreground`}
       >
         <Providers>{children}</Providers>
         <SonnerToaster position="top-center" richColors />
